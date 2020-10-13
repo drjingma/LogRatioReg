@@ -14,7 +14,7 @@ A few relevant papers.
 
 **Data**
 
-The first data set comes from the following papers. The response variable is BMI, and predictors are microbiome otu data obtained with 16S. 
+The first data set comes from the following papers. The response variable is BMI, and predictors are microbiome otu data obtained with 16S. There are 98 samples and 87 variables. Note the predictors (`X`) are sparse. In addition, the total number of reads varies greatly across samples. To remove the artificial differences in total reads, we transformed the raw counts into compositional data after replacing zero counts by the maximum rounding error 0.5. This is a common practice as seen in Lin et al. (2014).  
 
   - Wu, Gary D., et al. "Linking long-term dietary patterns with gut microbial enterotypes." Science 334.6052 (2011): 105-108.
   - Lin, Wei, et al. "Variable selection in regression with compositional covariates." Biometrika 101.4 (2014): 785-797.

@@ -10,7 +10,12 @@ This folder consists of code for implementing the COAT method (see [here](https:
 
 **Refs**
 
-A few relevant papers. 
+A few relevant papers:
+
+  - Lin, Wei, et al. "Variable selection in regression with compositional covariates." Biometrika 101.4 (2014): 785-797.
+  - Rivera-Pinto, J., et al. "Balances: a new perspective for microbiome analysis." mSystems 3.4 (2018).
+  - Bates, Stephen, and Robert Tibshirani. "Log‐ratio lasso: Scalable, sparse estimation for log‐ratio models." Biometrics 75.2 (2019): 613-624.
+  - Quinn, Thomas P., and Ionas Erb. "Interpretable Log Contrasts for the Classification of Health Biomarkers: a New Approach to Balance Selection." mSystems 5.2 (2020).
 
 **Data**
 

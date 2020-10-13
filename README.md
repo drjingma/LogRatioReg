@@ -12,6 +12,7 @@ This folder consists of code for implementing the COAT method (see [here](https:
 
 A few relevant papers:
 
+  - Pawlowsky-Glahn, Vera, Juan José Egozcue, and Raimon Tolosana Delgado. "Principal balances." (2011).
   - Lin, Wei, et al. "Variable selection in regression with compositional covariates." Biometrika 101.4 (2014): 785-797.
   - Rivera-Pinto, J., et al. "Balances: a new perspective for microbiome analysis." mSystems 3.4 (2018).
   - Bates, Stephen, and Robert Tibshirani. "Log‐ratio lasso: Scalable, sparse estimation for log‐ratio models." Biometrics 75.2 (2019): 613-624.

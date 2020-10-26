@@ -190,7 +190,7 @@ ggsave("predvtruey110220.pdf",
        device = "pdf",
        path = image_path,
        scale = 1,
-       width = 4,
+       width = 6,
        height = 4,
        units = c("in")
 )

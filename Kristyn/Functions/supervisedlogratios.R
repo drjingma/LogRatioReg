@@ -68,7 +68,7 @@ fitGlmnet = function(X, y, lambda){
   lambda_new = exp(seq(max(lambda), min(lambda) + 2, length.out = 100))
   cv_exact2 = cv.glmnet(x = X, y = y, lambda = lambda_new)
   refit_exact = glmnet(x = X,y = y, family = 'gaussian', lambda = cv_exact2$lambda.min)
-  return(list(beta = refit_exact$beta, lambda = refit_exact$lambda))
+  return(list(glmnet = refit_exact, beta = refit_exact$beta, lambda = refit_exact$lambda))
 }
 
 # fit SLR given data (X, y), linkage, and (optional) lambda
@@ -78,16 +78,13 @@ fitSLRLasso = function(X, y, linkage, lambda = NULL, allow.noise = FALSE){
   Xb = computeBalances(btree, X)
   
   # lasso fit
-  cv_exact = cv.glmnet(x = Xb, y = y, lambda = lambda)
-  lambda = log(cv_exact$lambda)
-  lambda_new = exp(seq(max(lambda), min(lambda) + 2, length.out = 100))
-  cv_exact2 = cv.glmnet(x = Xb, y = y, lambda = lambda_new)
-  refit_exact = glmnet(x = Xb,y = y, family = 'gaussian', lambda = cv_exact2$lambda.min)
+  glm.temp = fitGlmnet(Xb, y, lambda)
   
   return(list(
+    glmnet = glm.temp$glmnet, 
     btree = btree,
-    betahat = as.vector(refit_exact$beta), 
-    lambda = refit_exact$lamdba
+    betahat = as.vector(glm.temp$beta), 
+    lambda = glm.temp$lamdba
   ))
 }
 # tried using the fitting function in Dr. Ma's code, but changed my mind

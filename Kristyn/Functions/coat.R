@@ -13,6 +13,7 @@ fitCOATLasso = function(X, y, linkage, lambda = NULL){
   glm.temp = fitGlmnet(Xb, y, lambda)
   
   return(list(
+    glmnet = glm.temp$glmnet,
     btree = coat_tree,
     betahat = as.vector(glm.temp$beta), 
     lambda = glm.temp$lamdba

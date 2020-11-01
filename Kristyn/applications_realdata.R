@@ -30,7 +30,7 @@ dim(X.prop) # 98 x 87
 #   into training and test sets
 prop_zero_per_sample = as.vector(apply(X, 1, function(a) sum(a == 0.5) / ncol(X)))
 prop_zero_per_otu = as.vector(apply(X, 2, function(a) sum(a == 0.5) / nrow(X)))
-X = X[, prop_zero_per_otu < 0.97] # take out OTUs with less than 5% nonzero
+X = X[, prop_zero_per_otu < 0.95] # take out OTUs with less than 5% nonzero
 X.prop = X.prop[, prop_zero_per_otu < 0.97]
 
 # separate into training and test sets
@@ -104,7 +104,6 @@ test_slrLASSO = fitSLRLasso(X.prop.tr, y.tr, linkage = "complete") # works now!
 
 # fit to test data
 slrLassofit = function(x){
-  # names(x) = test_slrLASSO$btree$labels
   xb = computeBalances(test_slrLASSO$btree, x)
   predict(test_slrLASSO$glmnet, newx = xb, type = "response")
 }
@@ -119,10 +118,8 @@ slr_btree$labels = 1:length(slr_btree$labels)
 ### trying coat
 test_coatLASSO = fitCOATLasso(X.prop.tr, y.tr, linkage = "complete")
 coatLassofit = function(x){
-  # names(x) = test_slrLASSO$btree$labels
   xb = computeBalances(test_coatLASSO$btree, x)
   predict(test_coatLASSO$glmnet, newx = xb, type = "response")
-  # xb %*% test_coatLASSO$betahat
 }
 coatLassoyhat = coatLassofit(X.prop.te)
 coatLassoMSE = mean(coatLassoyhat - y.te)^2
@@ -133,7 +130,14 @@ coat_btree$labels = 1:length(coat_btree$labels)
 # plot(coat_btree)
 
 # trying principle balances
-# test_pbLASSO = fitPBLasso(X.prop.tr, y.tr, lambda = NULL)
+test_pbLASSO = fitPBLasso(X.prop.tr, y.tr, lambda = NULL)
+pbLassofit = function(x){
+  sbp_pba = pba(x)
+  xb = sbp_pba@pba
+  predict(test_pbLASSO$glmnet, newx = xb, type = "response")
+}
+pbLassoyhat = pbLassofit(X.prop.te)
+pbLassoMSE = mean(pbLassoyhat - y.te)^2
 
 
 
@@ -143,9 +147,11 @@ comp.0beta = sum(betahatcompositional == 0) / length(betahatcompositional)
 classic.0beta = sum(betahatclassic == 0) / length(betahatclassic)
 slr.0beta = sum(test_slrLASSO$betahat == 0) / length(test_slrLASSO$betahat)
 coat.0beta = sum(test_coatLASSO$betahat == 0) / length(test_coatLASSO$betahat)
+pb.0beta = sum(test_pbLASSO$betahat == 0) / length(test_pbLASSO$betahat)
 compare.0beta = data.frame(compositionalLasso = comp.0beta, 
                            classicLasso = classic.0beta, 
                            coatLasso = coat.0beta,
+                           pbLasso = pb.0beta, 
                            slrLasso = slr.0beta)
 compare.0beta
 
@@ -153,6 +159,7 @@ compare.0beta
 compare.mse = data.frame(compositionalLasso = compositionalLassoMSE, 
                          classicLasso = classicLassoMSE, 
                          coatLasso = coatLassoMSE,
+                         PBLasso = pbLassoMSE, 
                          slrLasso = slrLassoMSE)
 compare.mse
 
@@ -185,15 +192,15 @@ ggplot(ggdata2, aes(x = trueresponse, y = predicted, color = type)) +
   facet_wrap(vars(type)) +
   geom_point() + 
   theme_bw()
-ggsave("predvtruey110220.pdf",
-       plot = last_plot(),
-       device = "pdf",
-       path = image_path,
-       scale = 1,
-       width = 6,
-       height = 4,
-       units = c("in")
-)
+# ggsave("predvtruey110220.pdf",
+#        plot = last_plot(),
+#        device = "pdf",
+#        path = image_path,
+#        scale = 1,
+#        width = 6,
+#        height = 4,
+#        units = c("in")
+# )
 
 
 

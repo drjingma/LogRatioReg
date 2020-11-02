@@ -2,11 +2,14 @@ workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
 setwd(workdir)
 
 # Kristyn sources
-source("Kristyn/Functions/classic_lasso.R")
-source("Kristyn/Functions/compositional_lasso.R")
-source("Kristyn/Functions/supervisedlogratios.R")
-source("Kristyn/Functions/coat.R")
-source("Kristyn/Functions/principlebalances.R")
+functions_path = "Kristyn/Functions/"
+source(paste0(functions_path, "classic_lasso.R"))
+source(paste0(functions_path, "compositional_lasso.R"))
+source(paste0(functions_path, "supervisedlogratios.R"))
+source(paste0(functions_path, "coat.R"))
+source(paste0(functions_path, "principlebalances.R"))
+source(paste0(functions_path, "propr.R"))
+source(paste0(functions_path, "selbal.R"))
 
 # Dr. Ma sources
 source("RCode/func_libs.R")
@@ -15,6 +18,9 @@ source("COAT-master/coat.R")
 # libraries
 library(mvtnorm)
 library(balance)
+# devtools::install_github(repo = "UVic-omics/selbal")
+library(selbal)
+library(propr)
 library(microbenchmark)
 library(ggplot2)
 image_path = "/home/kristyn/Pictures"
@@ -115,7 +121,10 @@ slr_btree = test_slrLASSO$btree
 slr_btree$labels = 1:length(slr_btree$labels)
 # plot(slr_btree)
 
-### trying coat
+################################################################################
+#  coat
+################################################################################
+
 test_coatLASSO = fitCOATLasso(X.prop.tr, y.tr, linkage = "complete")
 coatLassofit = function(x){
   xb = computeBalances(test_coatLASSO$btree, x)
@@ -129,6 +138,35 @@ coat_btree = test_coatLASSO$btree
 coat_btree$labels = 1:length(coat_btree$labels)
 # plot(coat_btree)
 
+################################################################################
+#  propr
+################################################################################
+
+test_proprLASSO = fitproprLasso(X.prop.tr, y.tr, linkage = "complete")
+proprLassofit = function(x){
+  xb = computeBalances(test_proprLASSO$btree, x)
+  predict(test_proprLASSO$glmnet, newx = xb, type = "response")
+}
+proprLassoyhat = proprLassofit(X.prop.te)
+proprLassoMSE = mean(proprLassoyhat - y.te)^2
+
+# plot dendrogram
+propr_btree = test_proprLASSO$btree
+propr_btree$labels = 1:length(propr_btree$labels)
+# plot(propr_btree)
+
+################################################################################
+#  selbal
+################################################################################
+
+selbalfit = fitselbal(X.prop.tr, y.tr)
+selbalyhat = selbalfit(X.prop.te)
+selbalMSE = mean(selbalyhat - y.te)^2
+
+################################################################################
+#  principle balances
+################################################################################
+
 # trying principle balances
 test_pbLASSO = fitPBLasso(X.prop.tr, y.tr, lambda = NULL)
 pbLassofit = function(x){
@@ -139,7 +177,9 @@ pbLassofit = function(x){
 pbLassoyhat = pbLassofit(X.prop.te)
 pbLassoMSE = mean(pbLassoyhat - y.te)^2
 
-
+################################################################################
+#  comparing methods' results
+################################################################################
 
 
 # seeing proportion of 0 beta elts
@@ -148,20 +188,36 @@ classic.0beta = sum(betahatclassic == 0) / length(betahatclassic)
 slr.0beta = sum(test_slrLASSO$betahat == 0) / length(test_slrLASSO$betahat)
 coat.0beta = sum(test_coatLASSO$betahat == 0) / length(test_coatLASSO$betahat)
 pb.0beta = sum(test_pbLASSO$betahat == 0) / length(test_pbLASSO$betahat)
+propr.0beta = sum(test_proprLASSO$betahat == 0) / length(test_proprLASSO$betahat)
+# selbal?
 compare.0beta = data.frame(compositionalLasso = comp.0beta, 
                            classicLasso = classic.0beta, 
-                           coatLasso = coat.0beta,
-                           pbLasso = pb.0beta, 
-                           slrLasso = slr.0beta)
-compare.0beta
+                           coat = coat.0beta,
+                           pb = pb.0beta, 
+                           propr = propr.0beta, 
+                           slr = slr.0beta)
+round(compare.0beta, 3)
 
 # compare MSEs of three methods
 compare.mse = data.frame(compositionalLasso = compositionalLassoMSE, 
                          classicLasso = classicLassoMSE, 
-                         coatLasso = coatLassoMSE,
-                         PBLasso = pbLassoMSE, 
-                         slrLasso = slrLassoMSE)
-compare.mse
+                         coat = coatLassoMSE,
+                         principle = pbLassoMSE, 
+                         selbal = selbalMSE, 
+                         propr = proprLassoMSE, 
+                         supervised = slrLassoMSE)
+round(compare.mse, 3)
+
+# 5-fold CV to compute MSE
+#
+#
+#
+#
+#
+#
+#
+#
+#
 
 
 ### plot proportion of zeros in OTUs and samples
@@ -183,14 +239,23 @@ ggplot(ggdata, aes(y = var, x = type, fill = type)) + geom_boxplot() + theme_bw(
 
 # plot predicted response against true response
 ggdata2 = data.frame(
-  predicted = as.vector(c(compositionalLassoyhat, classicLassoyhat, coatLassoyhat, slrLassoyhat)), 
-  trueresponse = rep(y.te, 4), 
-  type =  rep(c("compositionalLasso", "classicLasso", "coatLasso", "slrLasso"), 
-              c(length(compositionalLassoyhat), length(classicLassoyhat), length(coatLassoyhat), length(slrLassoyhat)))
+  predicted = as.vector(c(
+    compositionalLassoyhat, 
+    classicLassoyhat, 
+    coatLassoyhat, 
+    pbLassoyhat, 
+    selbalyhat, 
+    proprLassoyhat, 
+    slrLassoyhat)), 
+  trueresponse = rep(y.te, 7), 
+  type =  rep(c(
+    "CompLasso", "Lasso", "COAT", "Principle","selbal", "propr", "Supervised"), 
+    c(rep(length(y), 7)))
 )
 ggplot(ggdata2, aes(x = trueresponse, y = predicted, color = type)) + 
   facet_wrap(vars(type)) +
   geom_point() + 
+  geom_abline(intercept = 0, slope = 1, alpha = 0.25) + 
   theme_bw()
 # ggsave("predvtruey110220.pdf",
 #        plot = last_plot(),

@@ -78,6 +78,45 @@ compositionalLassoyhat = apply(X.prop.te, 1, compositionalLassofit)
 compositionalLassoMSE = mean(compositionalLassoyhat - y.te)^2
 
 ################################################################################
+#  subcompositional lasso
+################################################################################
+
+# y = log(X) beta + epsilon
+# subject to constraint sum_{i = 1}^p beta_i == 1
+
+# betahat from compositional Lasso
+test_cvSubCompLASSO =  cv.func(
+  method="ConstrLasso", y.tr, log(X.prop.tr), Cmat=matrix(1, dim(X.prop.tr)[2], 1), 
+  lambda=NULL, nlam=50, intercept=TRUE, scaling=TRUE, nfolds=10, maxiter=1000, 
+  tol=1e-4, seed=0)
+  # ConstrLasso(
+  # y.tr, X.prop.tr, Cmat = rep(1, dim(X.prop.tr)[2]), lambda = NULL, nlam = 50, 
+  # intercept = TRUE, scaling = TRUE, maxiter = 1000, tol = 1e-8)
+  # cvCompositionalLASSO(log(X.prop.tr) ,y.tr, lambda_seq = NULL, n_lambda = 30, k = 10)
+# plot(test_cvCompLASSO$cvm ~ test_cvCompLASSO$lambda_seq, type = "l")
+
+saveRDS(test_cvSubCompLASSO, "scLasso.rds")
+
+betahatsubcomp = test_cvSubCompLASSO$bet[, which.min(test_cvSubCompLASSO$cvm)]
+betahat0subcomp = test_cvSubCompLASSO$int[which.min(test_cvSubCompLASSO$cvm)]
+
+# check constraint
+sum(betahatsubcomp) # very small
+
+subcompLassofit = function(x){
+  betahat0subcomp + log(x) %*% betahatsubcomp
+}
+
+subcompLassoyhat = apply(X.prop.te, 1, subcompLassofit)
+subcompLassoMSE = mean(subcompLassoyhat - y.te)^2
+
+# compare to my compositional lasso
+print(cbind(betahatsubcomp, betahatcompositional))
+sum((betahatsubcomp - betahatcompositional)^2)
+which(betahatsubcomp != 0)
+which(betahatcompositional != 0)
+
+################################################################################
 # classic lasso
 ################################################################################
 

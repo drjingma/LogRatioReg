@@ -43,6 +43,7 @@ load(paste0(workdir, DataFolder, "BMI.rda"))
 # dim(raw_data) # 98 x 89
 # dim(X) # 98 x 87
 # dim(X.prop) # 98 x 87
+log.X.prop = log(X.prop)
 n = dim(X)[1]
 num.genera = dim(X)[2]
 
@@ -70,10 +71,10 @@ cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
 # Fit Lasso for each fold removed
 for (j in 1:cv.K){
   # Training data
-  Xtrain = X.prop[idfold != j, ]
+  Xtrain = log.X.prop[idfold != j, ]
   Ytrain = y[idfold != j]
   # Test data
-  Xtest = X.prop[idfold == j, ]
+  Xtest = log.X.prop[idfold == j, ]
   Ytest = y[idfold == j]
   
   # Fit LASSO on that fold using fitLASSOcompositional
@@ -113,8 +114,8 @@ lambda_min_index = which.min(cvm)
 lambda_min = Lasso_j$lambda_seq[lambda_min_index]
 
 # final fit
-Lasso_select = fitCompositionalLASSO(X.prop, y, lambda_min)
-XYdata = data.frame(X.prop, y = y)
+Lasso_select = fitCompositionalLASSO(log.X.prop, y, lambda_min)
+XYdata = data.frame(log.X.prop, y = y)
 non0.betas = Lasso_select$beta_mat != 0 # diff lambda = diff col
 selected_variables = non0.betas
 if(all(!selected_variables)){ # if none selected
@@ -142,11 +143,12 @@ bs.finalfits = list()
 bs.selected_variables = matrix(NA, num.genera, bs.n)
 rownames(bs.selected_variables) = colnames(X)
 for(b in 1:bs.n){
-  set.seed(bs.seed + 1)
+  set.seed(bs.seed + b)
+  print(paste0("starting bootstrap ", b))
   
   # resample the data
   bs.resample = sample(1:n, n, replace = TRUE)
-  X.prop.bs = X.prop[bs.resample, ]
+  log.X.prop.bs = log.X.prop[bs.resample, ]
   y.bs = y[bs.resample]
   
   # refitted CV
@@ -164,10 +166,10 @@ for(b in 1:bs.n){
   # Fit Lasso for each fold removed
   for (j in 1:cv.K){
     # Training data
-    Xtrain = X.prop.bs[idfold != j, ]
+    Xtrain = log.X.prop.bs[idfold != j, ]
     Ytrain = y.bs[idfold != j]
     # Test data
-    Xtest = X.prop.bs[idfold == j, ]
+    Xtest = log.X.prop.bs[idfold == j, ]
     Ytest = y.bs[idfold == j]
     
     # Fit LASSO on that fold using fitLASSOcompositional
@@ -207,8 +209,8 @@ for(b in 1:bs.n){
   lambda_min = Lasso_j$lambda_seq[lambda_min_index]
   
   # final fit
-  Lasso_select.bs = fitCompositionalLASSO(X.prop, y, lambda_min)
-  XYdata = data.frame(X.prop, y = y)
+  Lasso_select.bs = fitCompositionalLASSO(log.X.prop.bs, y, lambda_min)
+  XYdata = data.frame(log.X.prop.bs, y = y)
   non0.betas = Lasso_select.bs$beta_mat != 0 # diff lambda = diff col
   selected_variables = non0.betas
   if(all(!selected_variables)){ # if none selected
@@ -228,10 +230,18 @@ for(b in 1:bs.n){
   # record which variables were selected in this fit
   bs.selected_variables[, b] = selected_variables
 }
+bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
+bs.selection_percentages = apply(bs.selected_variables_numeric, 1, sum)
+names(bs.selection_percentages) = rownames(bs.selected_variables)
+bs.results = list(
+  seed = bs.seed, 
+  finalfits = bs.finalfits, 
+  selected_variables = bs.selected_variables, 
+  selection_percentages = bs.selection_percentages
+)
+# saveRDS(bs.results, file = "lin_bootstrap_results.rds")
 
-
-
-
-
-
+which(bs.selection_percentages > 50)
+sort(bs.selection_percentages)
+bs.selection_percentages["Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella"]
 

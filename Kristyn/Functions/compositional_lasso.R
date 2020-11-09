@@ -94,18 +94,21 @@ fitCompositionalLASSOstandardized_seq = function(
     n_lambda = length(lambda_seq)
   }
   
-  # Apply fitLASSOstandardized going from largest to smallest lambda (make sure supplied eps is carried over). Use warm starts strategy discussed in class for setting the starting values.
+  # Apply fitLASSOstandardized going from largest to smallest lambda (make sure supplied eps is carried over).
   if(length(lambda_seq) != n_lambda) stop("lambda_seq does not have length equal to n_lambda")
   
   fitLASSOstd_init = fitCompositionalLASSOstandardized(
     Xtilde, Ytilde, lambda_seq[1], beta_start = NULL, eps, mu)
   beta_mat = matrix(rep(fitLASSOstd_init$beta, n_lambda), p, n_lambda)
   fmin_vec = rep(fitLASSOstd_init$fmin, n_lambda)
-  for(i in 2:n_lambda){
-    fitLASSOstd = fitCompositionalLASSOstandardized(
-      Xtilde, Ytilde, lambda_seq[i], beta_start = beta_mat[ , (i - 1)], eps, mu)
-    beta_mat[ , i] = fitLASSOstd$beta
-    fmin_vec[i] = fitLASSOstd$fmin
+  # Use warm starts strategy for setting the starting values.
+  if(n_lambda > 1){
+    for(i in 2:n_lambda){
+      fitLASSOstd = fitCompositionalLASSOstandardized(
+        Xtilde, Ytilde, lambda_seq[i], beta_start = beta_mat[ , (i - 1)], eps, mu)
+      beta_mat[ , i] = fitLASSOstd$beta
+      fmin_vec[i] = fitLASSOstd$fmin
+    }
   }
   
   # Return output
@@ -123,9 +126,9 @@ fitCompositionalLASSOstandardized_seq = function(
 # eps - precision level for convergence assessment, default 0.0001
 fitCompositionalLASSO = function(
   X ,Y, lambda_seq = NULL, n_lambda = 50, eps = 0.0001, mu = 1){
-  
   n = dim(X)[1]
   p = dim(X)[2]
+  if(!is.null(lambda_seq)) n_lambda = length(lambda_seq)
   
   # Center and standardize X,Y based on standardizeXY function
   stdXY = standardizeXY(X, Y)
@@ -167,6 +170,7 @@ fitCompositionalLASSO = function(
 cvCompositionalLASSO = function(
   X ,Y, lambda_seq = NULL, n_lambda = 50, k = 10, eps = 0.0001, mu = 1){
   n = dim(X)[1]
+  if(!is.null(lambda_seq)) n_lambda = length(lambda_seq)
   
   # Fit Lasso on original data using fitLASSO
   Lasso = fitCompositionalLASSO(

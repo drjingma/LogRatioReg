@@ -1,19 +1,3 @@
-# pred.from.selbal <- function(x,y,xt,yt){
-#   fit <- selbal::selbal(x,y,draw=F)
-#   design <- cbind(rep(1,nrow(x)), fit[[1]])
-#   bal_lm <- lm(y~design)
-#   
-#   contrast_selbal <- matrix(0,ncol(x),1)
-#   rownames(contrast_selbal) <- colnames(x)
-#   contrast_selbal[match(fit[[2]],rownames(contrast_selbal)),1] <- 1
-#   contrast_selbal[match(fit[[3]],rownames(contrast_selbal)),1] <- -1
-#   design[,2] <- balance.fromSBP(xt,contrast_selbal)
-#   mse.pred <- mean((yt - predict(bal_lm, newx=design))^2)
-#   
-#   return(list(mse.pred=mse.pred,pos=fit[[2]],neg=fit[[3]],coeff=bal_lm$coefficients))
-# } 
-
-
 fitselbal = function(X, y){
   # fit selbal - computes balances internally?
   fit = selbal::selbal(X, y, draw = FALSE)

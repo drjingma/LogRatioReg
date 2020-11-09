@@ -23,6 +23,7 @@ library(selbal)
 library(propr)
 library(microbenchmark)
 library(ggplot2)
+library(logratiolasso) # bates & tibshirani 2019
 image_path = "/home/kristyn/Pictures"
 
 # data

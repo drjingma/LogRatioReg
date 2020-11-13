@@ -241,7 +241,7 @@ bs.results = list(
 )
 # saveRDS(bs.results, file = "lin_bootstrap_results.rds")
 
-which(bs.selection_percentages > 50)
+bs.selection_percentages[which(bs.selection_percentages >= 70)]
 sort(bs.selection_percentages)
 bs.selection_percentages["Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella"]
 

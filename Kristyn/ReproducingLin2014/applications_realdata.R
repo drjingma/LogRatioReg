@@ -89,10 +89,10 @@ test_cvSubCompLASSO =  cv.func(
   method="ConstrLasso", y.tr, log(X.prop.tr), Cmat=matrix(1, dim(X.prop.tr)[2], 1), 
   lambda=NULL, nlam=50, intercept=TRUE, scaling=TRUE, nfolds=10, maxiter=1000, 
   tol=1e-4, seed=0)
-  # ConstrLasso(
-  # y.tr, X.prop.tr, Cmat = rep(1, dim(X.prop.tr)[2]), lambda = NULL, nlam = 50, 
-  # intercept = TRUE, scaling = TRUE, maxiter = 1000, tol = 1e-8)
-  # cvCompositionalLASSO(log(X.prop.tr) ,y.tr, lambda_seq = NULL, n_lambda = 30, k = 10)
+# ConstrLasso(
+# y.tr, X.prop.tr, Cmat = rep(1, dim(X.prop.tr)[2]), lambda = NULL, nlam = 50, 
+# intercept = TRUE, scaling = TRUE, maxiter = 1000, tol = 1e-8)
+# cvCompositionalLASSO(log(X.prop.tr) ,y.tr, lambda_seq = NULL, n_lambda = 30, k = 10)
 # plot(test_cvCompLASSO$cvm ~ test_cvCompLASSO$lambda_seq, type = "l")
 
 saveRDS(test_cvSubCompLASSO, "scLasso.rds")
@@ -306,10 +306,3 @@ ggplot(ggdata2, aes(x = trueresponse, y = predicted, color = type)) +
 #        height = 4,
 #        units = c("in")
 # )
-
-
-
-
-
-
-

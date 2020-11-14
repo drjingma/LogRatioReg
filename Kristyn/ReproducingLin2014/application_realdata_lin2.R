@@ -26,6 +26,7 @@ source(paste0(functions_path, "propr.R"))
 source(paste0(functions_path, "selbal.R"))
 
 # settings
+tol = 1e-5
 
 # Cross-validation
 cv.seed = 1234

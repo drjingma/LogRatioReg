@@ -107,7 +107,7 @@ for (j in 1:cv.K){
 }
 
 # Calculate CV(lambda) for each value of lambda
-cvm = (1 / n) * colSums(cvm_sqerror)
+cvm = colMeans(cvm_sqerror)
 
 # Find lambda_min = argmin{CV(lambda)}
 lambda_min_index = which.min(cvm)
@@ -202,7 +202,7 @@ for(b in 1:bs.n){
   }
   
   # Calculate CV(lambda) for each value of lambda
-  cvm = (1 / n) * colSums(cvm_sqerror)
+  cvm = colMeans(cvm_sqerror)
   
   # Find lambda_min = argmin{CV(lambda)}
   lambda_min_index = which.min(cvm)

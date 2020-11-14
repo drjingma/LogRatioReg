@@ -26,7 +26,7 @@ source(paste0(functions_path, "propr.R"))
 source(paste0(functions_path, "selbal.R"))
 
 # settings
-tol = 1e-5
+tol = 1e-4
 
 # Cross-validation
 cv.seed = 1234
@@ -86,8 +86,10 @@ for (j in 1:cv.K){
   XYdata = data.frame(Xtrain, y = Ytrain)
   Lasso_j = ConstrLasso(
     Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
-    intercept=TRUE, scaling=TRUE, tol=tol)
+    intercept = TRUE, scaling = TRUE, tol = tol)
   non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
+  print(paste0("for run", j, ", which na : ", which(is.na(non0.betas))))
+  print(paste0("for run", j, ", which nan : ", which(is.nan(non0.betas))))
   for(m in 1:cv.n_lambda){
     # get refitted coefficients, after model selection and w/o penalization
     selected_variables = non0.betas[, m]
@@ -110,11 +112,11 @@ for (j in 1:cv.K){
 }
 
 # Calculate CV(lambda) for each value of lambda
-cvm = (1 / n) * colSums(cvm_sqerror)
+cvm = colMeans(cvm_sqerror)
 
 # Find lambda_min = argmin{CV(lambda)}
 lambda_min_index = which.min(cvm)
-lambda_min = Lasso_j$lambda_seq[lambda_min_index]
+lambda_min = Lasso_j$lambda[lambda_min_index]
 
 # final fit
 Lasso_select = ConstrLasso(
@@ -210,11 +212,11 @@ for(b in 1:bs.n){
   }
   
   # Calculate CV(lambda) for each value of lambda
-  cvm = (1 / n) * colSums(cvm_sqerror)
+  cvm = colMeans(cvm_sqerror)
   
   # Find lambda_min = argmin{CV(lambda)}
   lambda_min_index = which.min(cvm)
-  lambda_min = Lasso_j$lambda_seq[lambda_min_index]
+  lambda_min = Lasso_j$lambda[lambda_min_index]
   
   # final fit
   Lasso_select.bs = ConstrLasso(

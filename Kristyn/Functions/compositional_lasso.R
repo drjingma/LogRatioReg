@@ -213,7 +213,7 @@ cvCompositionalLASSO = function(
   
   # Calculate CV(lambda) and SE_CV(lambda) for each value of lambda
   cvse = sqrt(apply(cvse_errorsd, 2, var)) / sqrt(k)
-  cvm = (1 / n) * colSums(cvm_sqerror)
+  cvm = colMeans(cvm_sqerror)
   
   # Find lambda_min = argmin{CV(lambda)}
   lambda_min_index = which.min(cvm)

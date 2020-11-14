@@ -59,7 +59,7 @@ fitCompositionalLASSOstandardized = function(
     }
     objective = compositionalLasso(Xtilde, Ytilde, mu, beta, gamma = alpha * mu, lambda)
     objectives = c(objectives, objective) # for testing ########################
-    difference = old_objective - objective
+    difference = abs(old_objective - objective) # should be positive, but just in case
     old_objective = objective
     # update alpha
     alpha = alpha + sum(beta)

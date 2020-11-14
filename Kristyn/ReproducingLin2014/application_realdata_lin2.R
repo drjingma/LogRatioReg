@@ -88,8 +88,6 @@ for (j in 1:cv.K){
     Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
     intercept = TRUE, scaling = TRUE, tol = tol)
   non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
-  print(paste0("for run", j, ", which na : ", which(is.na(non0.betas))))
-  print(paste0("for run", j, ", which nan : ", which(is.nan(non0.betas))))
   for(m in 1:cv.n_lambda){
     # get refitted coefficients, after model selection and w/o penalization
     selected_variables = non0.betas[, m]

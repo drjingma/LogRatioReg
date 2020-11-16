@@ -66,8 +66,8 @@ fitCompositionalLASSOstandardized = function(
     # update alpha
     alpha = alpha + sum(beta)
     difference_beta = sqrt(sum((old_beta - beta)^2))
-    print(paste0("difference in beta: ", difference_beta))
-    print(paste0("difference in loss: ", difference))
+    # print(paste0("difference in beta: ", difference_beta))
+    # print(paste0("difference in loss: ", difference))
   }
   fmin = old_objective
   return(list(beta = beta, fmin = fmin, objectives = objectives))

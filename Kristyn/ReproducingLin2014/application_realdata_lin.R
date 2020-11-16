@@ -239,7 +239,7 @@ bs.results = list(
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
-# saveRDS(bs.results, file = "lin_bootstrap_results.rds")
+saveRDS(bs.results, file = "lin_bootstrap_results.rds")
 
 bs.selection_percentages[which(bs.selection_percentages >= 70)]
 sort(bs.selection_percentages)

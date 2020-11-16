@@ -79,9 +79,10 @@ for (j in 1:cv.K){
   
   # Fit LASSO on that fold using fitLASSOcompositional
   # first, take out columns that have all 0.5's, because they shouldn't be selected anyway (and lead to problems)
-  cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
-  Xtrain = Xtrain[, !cols.0.5]
-  Xtest = Xtest[, !cols.0.5]
+  # cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
+  # print(any(cols.0.5))
+  # Xtrain = Xtrain[, !cols.0.5]
+  # Xtest = Xtest[, !cols.0.5]
   XYdata = data.frame(Xtrain, y = Ytrain)
   Lasso_j = fitCompositionalLASSO(Xtrain ,Ytrain, n_lambda = cv.n_lambda) # a problem in centering and scaling X cols with all 0.5's
   non0.betas = Lasso_j$beta_mat != 0 # diff lambda = diff col
@@ -174,9 +175,9 @@ for(b in 1:bs.n){
     
     # Fit LASSO on that fold using fitLASSOcompositional
     # first, take out columns that have all 0.5's, because they shouldn't be selected anyway (and lead to problems)
-    cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
-    Xtrain = Xtrain[, !cols.0.5]
-    Xtest = Xtest[, !cols.0.5]
+    # cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
+    # Xtrain = Xtrain[, !cols.0.5]
+    # Xtest = Xtest[, !cols.0.5]
     XYdata = data.frame(Xtrain, y = Ytrain)
     Lasso_j = fitCompositionalLASSO(Xtrain ,Ytrain, n_lambda = cv.n_lambda) # a problem in centering and scaling X cols with all 0.5's
     non0.betas = Lasso_j$beta_mat != 0 # diff lambda = diff col
@@ -239,7 +240,7 @@ bs.results = list(
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
-saveRDS(bs.results, file = "lin_bootstrap_results.rds")
+saveRDS(bs.results, file = "lin_bootstrap_results1.rds")
 
 bs.selection_percentages[which(bs.selection_percentages >= 70)]
 sort(bs.selection_percentages)

@@ -89,13 +89,6 @@ test_cvSubCompLASSO =  cv.func(
   method="ConstrLasso", y.tr, log(X.prop.tr), Cmat=matrix(1, dim(X.prop.tr)[2], 1), 
   lambda=NULL, nlam=50, intercept=TRUE, scaling=TRUE, nfolds=10, maxiter=1000, 
   tol=1e-4, seed=0)
-# ConstrLasso(
-# y.tr, X.prop.tr, Cmat = rep(1, dim(X.prop.tr)[2]), lambda = NULL, nlam = 50, 
-# intercept = TRUE, scaling = TRUE, maxiter = 1000, tol = 1e-8)
-# cvCompositionalLASSO(log(X.prop.tr) ,y.tr, lambda_seq = NULL, n_lambda = 30, k = 10)
-# plot(test_cvCompLASSO$cvm ~ test_cvCompLASSO$lambda_seq, type = "l")
-
-saveRDS(test_cvSubCompLASSO, "scLasso.rds")
 
 betahatsubcomp = test_cvSubCompLASSO$bet[, which.min(test_cvSubCompLASSO$cvm)]
 betahat0subcomp = test_cvSubCompLASSO$int[which.min(test_cvSubCompLASSO$cvm)]
@@ -115,6 +108,56 @@ print(cbind(betahatsubcomp, betahatcompositional))
 sum((betahatsubcomp - betahatcompositional)^2)
 which(betahatsubcomp != 0)
 which(betahatcompositional != 0)
+
+# what happens when they use the same lambda sequence?
+lambda_seq = test_cvSubCompLASSO$lambda
+test_cvCompLASSO2 = cvCompositionalLASSO(log(X.prop.tr) ,y.tr, lambda_seq = lambda_seq, k = 10)
+betahatcomp2 = test_cvCompLASSO2$beta_mat[, test_cvCompLASSO2$cvm_idx]
+betahat0comp2 = test_cvCompLASSO2$beta0_vec[test_cvCompLASSO2$cvm_idx]
+# check constraint
+sum(betahatcomp2)
+compLassofit2 = function(x){
+  betahat0comp2 + log(x) %*% betahatcomp2
+}
+compLassoyhat2 = apply(X.prop.te, 1, compLassofit2)
+compLassoMSE2 = mean(compLassoyhat2 - y.te)^2
+# compare to my compositional lasso
+print(cbind(betahatsubcomp, betahatcomp2))
+sum((betahatsubcomp - betahatcomp2)^2)
+which(betahatsubcomp != 0)
+which(betahatcomp2 != 0)
+lambda_min_subcomp = test_cvSubCompLASSO$lambda[which.min(test_cvSubCompLASSO$cvm)]
+lambda_min_comp2 = test_cvCompLASSO2$lambda_seq[test_cvCompLASSO2$cvm_idx]
+
+# what happens when they use the same lambda value?
+lambda_val = lambda_min_subcomp
+# my version
+test_cvCompLASSO.lam = fitCompositionalLASSO(log(X.prop.tr) ,y.tr, lambda_val)
+betahatcomp.lam = test_cvCompLASSO.lam$beta_mat[, 1]
+betahat0complam = test_cvCompLASSO.lam$beta0_vec
+# check constraint
+sum(betahatcomp.lam)
+# implemented version
+test_cvSubCompLASSO.lam =  ConstrLasso(
+  y.tr, log(X.prop.tr), Cmat = matrix(1, dim(log(X.prop.tr))[2], 1), 
+  lambda = lambda_val, nlam = 1, intercept=TRUE, scaling=TRUE, maxiter=1000, 
+  tol=1e-4)
+betahatsubcomp.lam = test_cvSubCompLASSO.lam$bet
+betahat0subcomp.lam = test_cvSubCompLASSO.lam$int
+# compare
+# check constraint
+sum(betahatcomp.lam)
+sum(betahatsubcomp.lam)
+# check lambdas are actually same
+test_cvCompLASSO.lam$lambda_seq
+test_cvSubCompLASSO.lam$lambda
+# compare betas
+print(cbind(betahatsubcomp.lam, betahatcomp.lam))
+sum((betahatsubcomp.lam - betahatcomp.lam)^2)
+which(betahatsubcomp.lam != 0)
+which(betahatcomp.lam != 0)
+lambda_min_subcomp = test_cvSubCompLASSO$lambda[which.min(test_cvSubCompLASSO$cvm)]
+lambda_min_comp2 = test_cvCompLASSO2$lambda_seq[test_cvCompLASSO2$cvm_idx]
 
 ################################################################################
 # classic lasso

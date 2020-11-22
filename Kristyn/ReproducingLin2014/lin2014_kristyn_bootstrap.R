@@ -1,5 +1,5 @@
-workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
-setwd(workdir)
+# workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
+# setwd(workdir)
 
 # libraries
 library(mvtnorm)
@@ -18,7 +18,7 @@ source("COAT-master/coat.R")
 # Kristyn sources
 functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "classic_lasso.R"))
-source(paste0(functions_path, "compositional_lasso_diffbeta.R"))
+source(paste0(functions_path, "compositional_lasso.R"))
 source(paste0(functions_path, "supervisedlogratios.R"))
 source(paste0(functions_path, "coat.R"))
 source(paste0(functions_path, "principlebalances.R"))
@@ -79,9 +79,10 @@ for (j in 1:cv.K){
   
   # Fit LASSO on that fold using fitLASSOcompositional
   # first, take out columns that have all 0.5's, because they shouldn't be selected anyway (and lead to problems)
-  cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
-  Xtrain = Xtrain[, !cols.0.5]
-  Xtest = Xtest[, !cols.0.5]
+  # cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
+  # print(any(cols.0.5))
+  # Xtrain = Xtrain[, !cols.0.5]
+  # Xtest = Xtest[, !cols.0.5]
   XYdata = data.frame(Xtrain, y = Ytrain)
   Lasso_j = fitCompositionalLASSO(Xtrain ,Ytrain, n_lambda = cv.n_lambda) # a problem in centering and scaling X cols with all 0.5's
   non0.betas = Lasso_j$beta_mat != 0 # diff lambda = diff col
@@ -174,9 +175,9 @@ for(b in 1:bs.n){
     
     # Fit LASSO on that fold using fitLASSOcompositional
     # first, take out columns that have all 0.5's, because they shouldn't be selected anyway (and lead to problems)
-    cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
-    Xtrain = Xtrain[, !cols.0.5]
-    Xtest = Xtest[, !cols.0.5]
+    # cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
+    # Xtrain = Xtrain[, !cols.0.5]
+    # Xtest = Xtest[, !cols.0.5]
     XYdata = data.frame(Xtrain, y = Ytrain)
     Lasso_j = fitCompositionalLASSO(Xtrain ,Ytrain, n_lambda = cv.n_lambda) # a problem in centering and scaling X cols with all 0.5's
     non0.betas = Lasso_j$beta_mat != 0 # diff lambda = diff col
@@ -239,9 +240,17 @@ bs.results = list(
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
-saveRDS(bs.results, file = "lin_bootstrap_results_diffbeta.rds")
+# saveRDS(bs.results, file = "lin_bootstrap_results1.rds")
 
 bs.selection_percentages[which(bs.selection_percentages >= 70)]
 sort(bs.selection_percentages)
-bs.selection_percentages["Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella"]
-
+final.selected = colnames(log.X.prop)[which(bs.selection_percentages >= 50)]
+final.selected = c(
+  "Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Rikenellaceae.Alistipes",
+  "Bacteria.Firmicutes.Clostridia.Clostridiales.Clostridiaceae.Clostridium", 
+  "Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Acidaminococcus", 
+  "Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella")
+final.data = data.frame(log.X.prop[, final.selected], y)
+final.lm = lm(y ~ ., final.data)
+final.lm.noint = lm(y ~ -1 + ., final.data)
+final.lm.noint2 = lm(y ~ ., as.data.frame(scale(final.data, center = apply(final.data, 2, mean), scale = apply(final.data, 2, sd))))

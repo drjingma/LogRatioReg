@@ -5,7 +5,6 @@
 library(mvtnorm)
 library(balance)
 library(selbal)
-library(propr)
 library(microbenchmark)
 library(ggplot2)
 library(logratiolasso) # bates & tibshirani 2019
@@ -22,7 +21,6 @@ source(paste0(functions_path, "compositional_lasso_diffbeta.R"))
 source(paste0(functions_path, "supervisedlogratios.R"))
 source(paste0(functions_path, "coat.R"))
 source(paste0(functions_path, "principlebalances.R"))
-source(paste0(functions_path, "propr.R"))
 source(paste0(functions_path, "selbal.R"))
 
 # settings

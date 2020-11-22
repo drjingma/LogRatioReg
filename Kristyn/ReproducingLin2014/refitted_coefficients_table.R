@@ -8,7 +8,6 @@ library(selbal)
 library(microbenchmark)
 library(ggplot2)
 library(logratiolasso) # bates & tibshirani 2019
-image_path = "/home/kristyn/Pictures"
 
 # Dr. Ma sources
 source("RCode/func_libs.R")
@@ -27,7 +26,7 @@ source(paste0(functions_path, "selbal.R"))
 # 98 samples, 87 genera
 # replace zero counts with 0.5 (maximum rounding error)
 DataFolder <- "/Data/"
-load(paste0(workdir, DataFolder, "BMI.rda"))
+load(paste0("Data/", "BMI.rda"))
 log.X.prop = log(X.prop)
 # dim(raw_data) # 98 x 89
 # dim(X) # 98 x 87

@@ -8,7 +8,6 @@ library(selbal)
 library(microbenchmark)
 library(ggplot2)
 library(logratiolasso) # bates & tibshirani 2019
-image_path = "/home/kristyn/Pictures"
 
 # Dr. Ma sources
 source("RCode/func_libs.R")
@@ -36,8 +35,7 @@ bs.n = 100
 # data
 # 98 samples, 87 genera
 # replace zero counts with 0.5 (maximum rounding error)
-DataFolder <- "/Data/"
-load(paste0(workdir, DataFolder, "BMI.rda"))
+load(paste0("Data/", "BMI.rda"))
 # dim(raw_data) # 98 x 89
 # dim(X) # 98 x 87
 # dim(X.prop) # 98 x 87
@@ -237,7 +235,9 @@ bs.results = list(
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
-saveRDS(bs.results, file = "lin_bootstrap_results_diffbeta.rds")
+saveRDS(bs.results, 
+        file = paste0("/Kristyn/ReproducingLin2014", 
+                      "lin_kristyn_diffbeta_bootstrap_results.rds"))
 
 bs.selection_percentages[which(bs.selection_percentages >= 70)]
 sort(bs.selection_percentages)

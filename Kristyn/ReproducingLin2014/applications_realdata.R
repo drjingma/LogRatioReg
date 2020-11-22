@@ -25,8 +25,7 @@ library(logratiolasso) # bates & tibshirani 2019
 image_path = "/home/kristyn/Pictures"
 
 # data
-DataFolder <- "/Data/"
-load(paste0(workdir, DataFolder, "BMI.rda"))
+load(paste0("Data/", "BMI.rda"))
 dim(raw_data) # 98 x 89
 dim(X) # 98 x 87
 dim(X.prop) # 98 x 87

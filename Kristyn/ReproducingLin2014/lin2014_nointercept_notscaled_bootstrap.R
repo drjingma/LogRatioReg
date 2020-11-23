@@ -82,7 +82,7 @@ for (j in 1:cv.K){
   XYdata = data.frame(Xtrain, y = Ytrain)
   Lasso_j = ConstrLasso(
     Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
-    intercept = TRUE, scaling = TRUE, tol = tol)
+    intercept = FALSE, scaling = FALSE, tol = tol)
   non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
   for(m in 1:cv.n_lambda){
     # get refitted coefficients, after model selection and w/o penalization
@@ -116,7 +116,7 @@ lambda_min = Lasso_j$lambda[lambda_min_index]
 Lasso_select = ConstrLasso(
   y, log.X.prop, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
   lambda = lambda_min, nlam = 1, 
-  intercept=TRUE, scaling=TRUE, tol=tol)
+  intercept = FALSE, scaling = FALSE, tol=tol)
 XYdata = data.frame(log.X.prop, y = y)
 non0.betas = Lasso_select$bet != 0 # diff lambda = diff col
 selected_variables = non0.betas
@@ -182,7 +182,7 @@ for(b in 1:bs.n){
     XYdata = data.frame(Xtrain, y = Ytrain)
     Lasso_j = ConstrLasso(
       Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
-      intercept = TRUE, scaling = TRUE, tol = tol)
+      intercept = FALSE, scaling = FALSE, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
       # get refitted coefficients, after model selection and w/o penalization
@@ -216,7 +216,7 @@ for(b in 1:bs.n){
   Lasso_select.bs = ConstrLasso(
     y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
     lambda = lambda_min, nlam = 1, 
-    intercept=TRUE, scaling=TRUE, tol=tol)
+    intercept = FALSE, scaling = FALSE, tol=tol)
   XYdata = data.frame(log.X.prop.bs, y = y.bs)
   non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
   selected_variables = non0.betas
@@ -246,10 +246,8 @@ bs.results = list(
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
-saveRDS(bs.results, 
-        file = paste0("Kristyn/ReproducingLin2014/lin2014_bootstrap_results_new.rds"))
+saveRDS(bs.results,
+        file = paste0("Kristyn/ReproducingLin2014/lin2014_nointercept_notscaled_bootstrap_results.rds"))
 
 which(bs.selection_percentages > 50)
 sort(bs.selection_percentages)
-bs.selection_percentages["Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella"]
-

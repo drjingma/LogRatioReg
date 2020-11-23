@@ -91,7 +91,7 @@ for (j in 1:cv.K){
       refit = lm(y ~ 1, data = XYdata)
     } else{ # otherwise, fit on selected variables
       refit = lm(
-        as.formula(paste("y", "~",
+        as.formula(paste("y", "~-1+",
                          paste(colnames(XYdata)[which(selected_variables)], 
                                collapse = "+"),
                          sep = "")),
@@ -124,7 +124,7 @@ if(all(!selected_variables)){ # if none selected
   finalfit = lm(y ~ 1, data = XYdata)
 } else{ # otherwise, fit on selected variables
   finalfit = lm(
-    as.formula(paste("y", "~",
+    as.formula(paste("y", "~-1+",
                      paste(colnames(XYdata)[which(selected_variables)], 
                            collapse = "+"),
                      sep = "")),
@@ -191,7 +191,7 @@ for(b in 1:bs.n){
         refit = lm(y ~ 1, data = XYdata)
       } else{ # otherwise, fit on selected variables
         refit = lm(
-          as.formula(paste("y", "~",
+          as.formula(paste("y", "~-1+",
                            paste(colnames(XYdata)[which(selected_variables)], 
                                  collapse = "+"),
                            sep = "")),
@@ -224,7 +224,7 @@ for(b in 1:bs.n){
     finalfit.bs = lm(y ~ 1, data = XYdata)
   } else{ # otherwise, fit on selected variables
     finalfit.bs = lm(
-      as.formula(paste("y", "~",
+      as.formula(paste("y", "~-1+",
                        paste(colnames(XYdata)[which(selected_variables)], 
                              collapse = "+"),
                        sep = "")),
@@ -247,7 +247,7 @@ bs.results = list(
   selection_percentages = bs.selection_percentages
 )
 saveRDS(bs.results, 
-        file = paste0("Kristyn/ReproducingLin2014/lin2014_bootstrap_results_new.rds"))
+        file = paste0("Kristyn/ReproducingLin2014/lin2014_bootstrap_results_lmnoint.rds"))
 
 which(bs.selection_percentages > 50)
 sort(bs.selection_percentages)

@@ -49,7 +49,6 @@ final.selected = c(
 final.data = data.frame(log.X.prop[, final.selected], y)
 final.lm = lm(y ~ ., final.data)
 coefficients(final.lm)
-beta.lm = coefficients(final.lm)[-1]
 
 ################################################################################
 # fit lm withOUT intercept : lm(y ~ -1 + log.X.prop)
@@ -57,6 +56,38 @@ beta.lm = coefficients(final.lm)[-1]
 final.lm.noint = lm(y ~ -1 + ., final.data)
 coefficients(final.lm.noint)
 beta.lm.noint = coefficients(final.lm.noint)
+
+# constrained - no centering or scaling: 
+# beta-bar = beta-hat - (X'X)^(-1) 1 [1' (X'X)^(-1) 1]^(-1) (1' beta-hat)
+Xmat = log.X.prop[, final.selected]
+beta.hat = solve(crossprod(Xmat), crossprod(Xmat, y))
+Q = as.matrix(rep(1, dim(Xmat)[2]))
+beta.bar = beta.hat - solve(crossprod(Xmat), Q) %*% 
+  solve(crossprod(Q, solve(crossprod(Xmat), Q)), crossprod(Q, beta.hat))
+sum(beta.bar)
+beta.bar
+# constrained - scaling
+x.sd = apply(Xmat,2,sd)
+Xmat.s = scale(Xmat, center=F, scale=x.sd)
+beta.hat.s = solve(crossprod(Xmat.s), crossprod(Xmat.s, y))
+beta.bar.s = beta.hat.s - solve(crossprod(Xmat.s), Q) %*% 
+  solve(crossprod(Q, solve(crossprod(Xmat.s), Q)), crossprod(Q, beta.hat.s))
+sum(beta.bar.s)
+beta.bar.s
+beta.bar.s2 = beta.bar.s * x.sd
+sum(beta.bar.s2) # not satisfied anymore
+# constrained - with intercept
+y.mean = mean(y)
+y.c = y - y.mean
+x.mean = colMeans(Xmat)
+Xmat.c = scale(Xmat, center=x.mean, scale=F)
+beta.hat.c = solve(crossprod(Xmat.c), crossprod(Xmat.c, y.c))
+beta.bar.c = beta.hat.c - solve(crossprod(Xmat.c), Q) %*% 
+  solve(crossprod(Q, solve(crossprod(Xmat.c), Q)), crossprod(Q, beta.hat.c))
+sum(beta.bar.c)
+beta.bar.c
+beta.bar.c0 <- y.mean - as.vector(x.mean%*%beta.bar.c)
+
 
 ################################################################################
 # fit lm with intercept, scaling input : lm(y ~ -1 + log.X.prop.scaled)
@@ -77,7 +108,7 @@ coefficients(final.lm.noint.scaledX)
 beta.lm.noint.scaledX = coefficients(final.lm.noint.scaledX)
 
 ################################################################################
-# fit lm with intercept, standardizing input : lm(y.scaled ~ -1 + log.X.prop.std)
+# fit lm with intercept, standardizing input : lm(y ~ -1 + log.X.prop.std)
 ################################################################################
 log.X.prop.std = scale(log.X.prop, 
                           center = apply(log.X.prop, 2, mean), 
@@ -88,7 +119,7 @@ coefficients(final.lm.stdX)
 beta.lm.stdX = coefficients(final.lm.stdX)[-1]
 
 ################################################################################
-# fit lm withOUT intercept, standardizing input & output : lm(y.scaled ~ -1 + log.X.prop.scaled)
+# fit lm withOUT intercept, standardizing input : lm(y ~ -1 + log.X.prop.scaled)
 ################################################################################
 final.lm.noint.stdX = lm(y ~ -1 + ., final.data.stdX)
 coefficients(final.lm.noint.stdX)
@@ -142,3 +173,147 @@ for(i in 1:ncol(betas)){
 }
 l2norm
 dist.paper
+
+
+################################################################################
+# Trying to take out genera that are too sparse #
+################################################################################
+# we don't want the proportion of zeroes for an otu to be too big
+#   (i.e. otu is too sparse, not in many samples)
+length.too.sparse = 25
+too.sparse = seq(from = 0.866, to = 1, length = length.too.sparse)
+prop_zero_per_sample = as.vector(apply(X, 1, function(a) sum(a == 0.5) / ncol(X)))
+prop_zero_per_otu = as.vector(apply(X, 2, function(a) sum(a == 0.5) / nrow(X)))
+# lm
+lm.l2norms = rep(NA, length.too.sparse)
+lm.dists = rep(NA, length.too.sparse)
+lm.noint.l2norms = rep(NA, length.too.sparse)
+lm.noint.dists = rep(NA, length.too.sparse)
+# lm, scale
+lm.scale.l2norms = rep(NA, length.too.sparse)
+lm.scale.dists = rep(NA, length.too.sparse)
+lm.noint.scale.l2norms = rep(NA, length.too.sparse)
+lm.noint.scale.dists = rep(NA, length.too.sparse)
+# lm, std
+lm.std.l2norms = rep(NA, length.too.sparse)
+lm.std.dists = rep(NA, length.too.sparse)
+lm.noint.std.l2norms = rep(NA, length.too.sparse)
+lm.noint.std.dists = rep(NA, length.too.sparse)
+# start calculations
+beta.paper = c(-0.76, -1.35, 0.61, 1.50)
+for(i in 1:length(too.sparse)){
+  prop.zero = too.sparse[i]
+  print(paste0("### for genera with less than ", prop.zero, " percent zeroes, ... ###"))
+  X.prune = X[, prop_zero_per_otu < prop.zero] # take out OTUs with less than (1 - prop.zero)% nonzero
+  contains.final.selected = all(final.selected %in% colnames(X.prune))
+  if(!contains.final.selected){
+    print("skipping, since doesn't contain all 4 genera")
+    next
+  }
+  X.prop.prune <- sweep(X.prune, MARGIN = 1, STATS = rowSums(X.prune), FUN = "/")
+  log.X.prop.prune = log(X.prop.prune)
+  ################################################################################
+  # fit lm with intercept : lm(y ~ log.X.prop)
+  ################################################################################
+  data.i = data.frame(log.X.prop.prune[, final.selected], y)
+  lm.i = lm(y ~ ., data.i)
+  beta.i = coefficients(lm.i)[-1]
+  lm.l2norms[i] = sqrt(crossprod(beta.i))
+  lm.dists[i] = sqrt(sum((beta.i - beta.paper)^2))
+  ################################################################################
+  # fit lm withOUT intercept : lm(y ~ -1 + log.X.prop)
+  ################################################################################
+  lm.i = lm(y ~ -1 + ., data.i)
+  beta.i = coefficients(lm.i)
+  lm.noint.l2norms[i] = sqrt(crossprod(beta.i))
+  lm.noint.dists[i] = sqrt(sum((beta.i - beta.paper)^2))
+  ################################################################################
+  # fit lm with intercept, scaling input : lm(y ~ -1 + log.X.prop.scaled)
+  ################################################################################
+  log.X.prop.scaled = scale(log.X.prop.prune, 
+                            center = FALSE, 
+                            scale = apply(log.X.prop.prune, 2, sd))
+  data.i = data.frame(log.X.prop.scaled[, final.selected], y)
+  lm.i = lm(y ~ ., data.i)
+  beta.i = coefficients(lm.i)[-1]
+  lm.scale.l2norms[i] = sqrt(crossprod(beta.i))
+  lm.scale.dists[i] = sqrt(sum((beta.i - beta.paper)^2))
+  ################################################################################
+  # fit lm withOUT intercept, scaling input : lm(y ~ -1 + log.X.prop.scaled)
+  ################################################################################
+  lm.i = lm(y ~ -1 + ., data.i)
+  beta.i = coefficients(lm.i)
+  lm.noint.scale.l2norms[i] = sqrt(crossprod(beta.i))
+  lm.noint.scale.dists[i] = sqrt(sum((beta.i - beta.paper)^2))
+  ################################################################################
+  # fit lm with intercept, standardizing input : lm(y.scaled ~ -1 + log.X.prop.std)
+  ################################################################################
+  log.X.prop.std = scale(log.X.prop.prune, 
+                         center = apply(log.X.prop.prune, 2, mean), 
+                         scale = apply(log.X.prop.prune, 2, sd))
+  data.i = data.frame(log.X.prop.std[, final.selected], y = y)
+  lm.i = lm(y ~ ., data.i)
+  beta.i = coefficients(lm.i)[-1]
+  lm.std.l2norms[i] = sqrt(crossprod(beta.i))
+  lm.std.dists[i] = sqrt(sum((beta.i - beta.paper)^2))
+  ################################################################################
+  # fit lm withOUT intercept, standardizing input & output : lm(y.scaled ~ -1 + log.X.prop.scaled)
+  ################################################################################
+  lm.i = lm(y ~ -1 + ., data.i)
+  beta.i = coefficients(lm.i)
+  lm.noint.std.l2norms[i] = sqrt(crossprod(beta.i))
+  lm.noint.std.dists[i] = sqrt(sum((beta.i - beta.paper)^2))
+}
+# plot results
+library(reshape2)
+l2data = data.frame(
+  x = too.sparse,
+  lm = lm.l2norms, 
+  noint = lm.noint.l2norms, 
+  scale = lm.scale.l2norms, 
+  noint.scale = lm.noint.scale.l2norms, 
+  std = lm.std.l2norms, 
+  noint.std = lm.noint.std.l2norms
+)
+l2data.melt = melt(
+  l2data, 
+  measure.vars = c("lm", "noint", "scale", "noint.scale", "std", "noint.std"), 
+  variable.name = "fit")
+ggplot(data = l2data.melt, aes(x = x, y = value)) + 
+  geom_line() + 
+  facet_wrap(vars(fit), scales = "free")
+ggsave("l2norms_112320.pdf",
+       plot = last_plot(),
+       device = "pdf",
+       path = image_path,
+       scale = 1,
+       width = 6,
+       height = 4,
+       units = c("in")
+)
+dist.data = data.frame(
+  x = too.sparse,
+  lm = lm.dists, 
+  noint = lm.noint.dists, 
+  scale = lm.scale.dists, 
+  noint.scale = lm.noint.scale.dists, 
+  std = lm.std.dists, 
+  noint.std = lm.noint.std.dists
+)
+dist.data.melt = melt(
+  dist.data, 
+  measure.vars = c("lm", "noint", "scale", "noint.scale", "std", "noint.std"), 
+  variable.name = "fit")
+ggplot(data = dist.data.melt, aes(x = x, y = value)) + 
+  geom_line() + 
+  facet_wrap(vars(fit), scales = "free")
+ggsave("dists_112320.pdf",
+       plot = last_plot(),
+       device = "pdf",
+       path = image_path,
+       
+       scale = 1,
+       width = 6,
+       height = 4,
+       units = c("in")
+)

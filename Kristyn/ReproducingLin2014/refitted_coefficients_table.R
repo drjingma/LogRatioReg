@@ -35,7 +35,7 @@ n = dim(X)[1]
 num.genera = dim(X)[2]
 
 # testing with centered and/or scaled y
-y = scale(y, center = F, scale = F)
+# y = scale(y, center = F, scale = F)
 
 final.selected = c(
   "Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Rikenellaceae.Alistipes",
@@ -48,7 +48,7 @@ final.selected = c(
 ################################################################################
 final.data = data.frame(log.X.prop[, final.selected], y)
 final.lm = lm(y ~ ., final.data)
-coefficients(final.lm)
+beta.lm = coefficients(final.lm)[-1]
 
 ################################################################################
 # fit lm withOUT intercept : lm(y ~ -1 + log.X.prop)
@@ -56,38 +56,6 @@ coefficients(final.lm)
 final.lm.noint = lm(y ~ -1 + ., final.data)
 coefficients(final.lm.noint)
 beta.lm.noint = coefficients(final.lm.noint)
-
-# constrained - no centering or scaling: 
-# beta-bar = beta-hat - (X'X)^(-1) 1 [1' (X'X)^(-1) 1]^(-1) (1' beta-hat)
-Xmat = log.X.prop[, final.selected]
-beta.hat = solve(crossprod(Xmat), crossprod(Xmat, y))
-Q = as.matrix(rep(1, dim(Xmat)[2]))
-beta.bar = beta.hat - solve(crossprod(Xmat), Q) %*% 
-  solve(crossprod(Q, solve(crossprod(Xmat), Q)), crossprod(Q, beta.hat))
-sum(beta.bar)
-beta.bar
-# constrained - scaling
-x.sd = apply(Xmat,2,sd)
-Xmat.s = scale(Xmat, center=F, scale=x.sd)
-beta.hat.s = solve(crossprod(Xmat.s), crossprod(Xmat.s, y))
-beta.bar.s = beta.hat.s - solve(crossprod(Xmat.s), Q) %*% 
-  solve(crossprod(Q, solve(crossprod(Xmat.s), Q)), crossprod(Q, beta.hat.s))
-sum(beta.bar.s)
-beta.bar.s
-beta.bar.s2 = beta.bar.s * x.sd
-sum(beta.bar.s2) # not satisfied anymore
-# constrained - with intercept
-y.mean = mean(y)
-y.c = y - y.mean
-x.mean = colMeans(Xmat)
-Xmat.c = scale(Xmat, center=x.mean, scale=F)
-beta.hat.c = solve(crossprod(Xmat.c), crossprod(Xmat.c, y.c))
-beta.bar.c = beta.hat.c - solve(crossprod(Xmat.c), Q) %*% 
-  solve(crossprod(Q, solve(crossprod(Xmat.c), Q)), crossprod(Q, beta.hat.c))
-sum(beta.bar.c)
-beta.bar.c
-beta.bar.c0 <- y.mean - as.vector(x.mean%*%beta.bar.c)
-
 
 ################################################################################
 # fit lm with intercept, scaling input : lm(y ~ -1 + log.X.prop.scaled)

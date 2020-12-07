@@ -187,10 +187,10 @@ for(b in 1:bs.n){
   # Fit Lasso for each fold removed
   for (j in 1:cv.K){
     # Training data
-    Xtrain = log.X.prop[idfold != j, ]
+    Xtrain = log.X.prop.bs[idfold != j, ]
     Ytrain = y[idfold != j]
     # Test data
-    Xtest = log.X.prop[idfold == j, ]
+    Xtest = log.X.prop.bs[idfold == j, ]
     Ytest = y[idfold == j]
     
     # Fit LASSO on that fold using fitLASSOcompositional
@@ -253,7 +253,7 @@ for(b in 1:bs.n){
   
   # final fit
   Lasso_select = ConstrLasso(
-    y, log.X.prop, Cmat = matrix(1, dim(log.X.prop)[2], 1),
+    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop.bs)[2], 1),
     lambda = lambda_min, nlam = 1,
     intercept = TRUE, scaling = TRUE, tol=tol)
   selected_variables = Lasso_select$bet != 0 # diff lambda = diff col

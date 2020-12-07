@@ -288,7 +288,8 @@ for(b in 1:bs.n){
   bs.selected_variables[, b] = selected_variables
 }
 bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
-bs.selection_percentages = apply(bs.selected_variables_numeric, 1, sum)
+bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN = 
+                                   function(x) sum(x, na.rm = TRUE))
 names(bs.selection_percentages) = rownames(bs.selected_variables)
 bs.results = list(
   seed = bs.seed,  

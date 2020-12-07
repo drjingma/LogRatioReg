@@ -188,10 +188,10 @@ for(b in 1:bs.n){
   for (j in 1:cv.K){
     # Training data
     Xtrain = log.X.prop.bs[idfold != j, ]
-    Ytrain = y[idfold != j]
+    Ytrain = y.bs[idfold != j]
     # Test data
     Xtest = log.X.prop.bs[idfold == j, ]
-    Ytest = y[idfold == j]
+    Ytest = y.bs[idfold == j]
     
     # Fit LASSO on that fold using fitLASSOcompositional
     # first, take out columns that have all 0.5's, because they shouldn't be selected anyway (and lead to problems)

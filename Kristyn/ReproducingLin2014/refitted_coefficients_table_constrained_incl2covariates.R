@@ -51,7 +51,7 @@ beta.paper = c(-0.76, -1.35, 0.61, 1.50)
 ################################################################################
 # CONSTRAINED LINEAR MODEL
 ################################################################################
-
+par(mfrow = c(2, 3))
 # constrained - no centering or scaling: 
 # beta-bar = beta-hat - (X'X)^(-1) 1 [1' (X'X)^(-1) 1]^(-1) (1' beta-hat)
 Xmat = log.X.prop[, final.selected]
@@ -65,13 +65,17 @@ Q = as.matrix(c(rep(1, dim(Xmat)[2] - dim(totalcaloricfatintake)[2]),
                 rep(0, dim(totalcaloricfatintake)[2])))
 beta.bar = beta.hat - solve(crossprod(Xmat), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat), Q)), crossprod(Q, beta.hat))
-beta.bar = beta.bar[-c(5, 6)]
-sum(beta.bar)
-beta.bar
-l2 = sqrt(crossprod(beta.bar))
-dist.t = sqrt(sum((beta.bar - beta.paper)^2))
-l2
-dist.t
+# beta.bar = beta.bar[-c(5, 6)]
+# sum(beta.bar)
+# beta.bar
+# l2 = sqrt(crossprod(beta.bar))
+# dist.t = sqrt(sum((beta.bar - beta.paper)^2))
+# l2
+# dist.t
+yhat = Xmat %*% beta.bar
+xyrange = range(y, yhat)
+plot(main = "no intercept", x = y, y = yhat, xlim = xyrange, ylim = xyrange); abline(0, 1, lty = 2)
+
 
 # constrained - scaling
 x.sd = apply(Xmat,2,sd)
@@ -79,19 +83,27 @@ Xmat.s = scale(Xmat, center=F, scale=x.sd)
 beta.hat.s = solve(crossprod(Xmat.s), crossprod(Xmat.s, y))
 beta.bar.s = beta.hat.s - solve(crossprod(Xmat.s), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat.s), Q)), crossprod(Q, beta.hat.s))
-sum(beta.bar.s)
-beta.bar.s
-l2.s = sqrt(crossprod(beta.bar.s))
-dist.t.s = sqrt(sum((beta.bar.s - beta.paper)^2))
-l2.s
-dist.t.s
+# beta.bar.s = beta.bar.s[-c(5, 6)]
+# sum(beta.bar.s)
+# beta.bar.s
+# l2.s = sqrt(crossprod(beta.bar.s))
+# dist.t.s = sqrt(sum((beta.bar.s - beta.paper)^2))
+# l2.s
+# dist.t.s
+yhat = Xmat.s %*% beta.bar.s
+xyrange = range(y, yhat)
+plot(main = "no int, scaled", x = y, y = yhat, xlim = xyrange, ylim = xyrange); abline(0, 1, lty = 2)
+#
 beta.bar.s2 = beta.bar.s / x.sd
-sum(beta.bar.s2) # not satisfied anymore
-beta.bar.s2
-l2.s2 = sqrt(crossprod(beta.bar.s2))
-dist.t.s2 = sqrt(sum((beta.bar.s2 - beta.paper)^2))
-l2.s2
-dist.t.s2
+# sum(beta.bar.s2) # not satisfied anymore
+# beta.bar.s2
+# l2.s2 = sqrt(crossprod(beta.bar.s2))
+# dist.t.s2 = sqrt(sum((beta.bar.s2 - beta.paper)^2))
+# l2.s2
+# dist.t.s2
+yhat = Xmat.s %*% beta.bar.s2
+xyrange = range(y, yhat)
+plot(main = "no int, back-scaled", x = y, y = yhat, xlim = xyrange, ylim = xyrange); abline(0, 1, lty = 2)
 
 # constrained - with intercept
 y.mean = mean(y)
@@ -109,47 +121,60 @@ beta.hat.lmint0 = y.mean - as.vector(x.mean%*%beta.hat.c) # also match
 # compute beta.bar, constrained fit
 beta.bar.c = beta.hat.c - solve(crossprod(Xmat.c), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat.c), Q)), crossprod(Q, beta.hat.c))
-sum(beta.bar.c)
-beta.bar.c
 beta.bar.c0 <- y.mean - as.vector(x.mean%*%beta.bar.c)
 # constrained - with intercept, including in Xmat
 Xmat.c2 = cbind(1, Xmat)
 beta.hat.c2 = solve(crossprod(Xmat.c2), crossprod(Xmat.c2, y))
-Q2 = c(0, as.matrix(rep(1, dim(Xmat)[2])))
+Q2 = c(0, Q)
 beta.bar.c2 = beta.hat.c2 - solve(crossprod(Xmat.c2), Q2) %*% 
   solve(crossprod(Q2, solve(crossprod(Xmat.c2), Q2)), crossprod(Q2, beta.hat.c2))
-sum(beta.bar.c2[-1])
+sum(beta.bar.c2[-c(1, 6, 7)])
 beta.bar.c2 
 all.equal(c(beta.bar.c0, beta.bar.c), as.numeric(beta.bar.c2)) # this matches the above
-l2.c = sqrt(crossprod(beta.bar.c))
-dist.t.c = sqrt(sum((beta.bar.c - beta.paper)^2))
-l2.c
-dist.t.c
+# beta.bar.c = beta.bar.c[-c(5, 6)]
+# sum(beta.bar.c)
+# beta.bar.c
+# l2.c = sqrt(crossprod(beta.bar.c))
+# dist.t.c = sqrt(sum((beta.bar.c - beta.paper)^2))
+# l2.c
+# dist.t.c
+yhat = beta.bar.c0 + Xmat.c %*% beta.bar.c
+xyrange = range(y, yhat)
+plot(main = "with intercept", x = y, y = yhat, xlim = xyrange, ylim = xyrange); abline(0, 1, lty = 2)
 
 # constrained - with intercept and scaling (standardizing, bc need to center for intercept)
 Xmat.cs = scale(Xmat, center=x.mean, scale=x.sd)
 beta.hat.cs = solve(crossprod(Xmat.cs), crossprod(Xmat.cs, y.c))
 beta.bar.cs = beta.hat.cs - solve(crossprod(Xmat.cs), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat.cs), Q)), crossprod(Q, beta.hat.cs))
-sum(beta.bar.cs)
-beta.bar.cs
+# beta.bar.cs = beta.bar.cs[-c(5, 6)]
+# sum(beta.bar.cs)
+# beta.bar.cs
 beta.bar.cs0 <- y.mean - as.vector(x.mean%*%beta.bar.cs)
 beta.bar.cs0
-l2.cs = sqrt(crossprod(beta.bar.cs))
-dist.t.cs = sqrt(sum((beta.bar.cs - beta.paper)^2))
-l2.cs
-dist.t.cs
+# l2.cs = sqrt(crossprod(beta.bar.cs))
+# dist.t.cs = sqrt(sum((beta.bar.cs - beta.paper)^2))
+# l2.cs
+# dist.t.cs
+yhat = beta.bar.cs0 + Xmat.cs %*% beta.bar.cs
+xyrange = range(y, yhat)
+plot(main = "with int, std.", x = y, y = yhat, xlim = xyrange, ylim = xyrange); abline(0, 1, lty = 2)
+#
 beta.bar.cs2 = beta.bar.cs / x.sd
 beta.bar.cs2
 sum(beta.bar.cs2) # not satisfied anymore
 beta.bar.cs02 <- y.mean - as.vector(x.mean%*%beta.bar.cs2)
 beta.bar.cs02
-sum(beta.bar.cs02, beta.bar.cs2)
-sum(beta.bar.cs2) # not satisfied anymore
-l2.cs2 = sqrt(crossprod(beta.bar.cs2))
-dist.t.cs2 = sqrt(sum((beta.bar.cs2 - beta.paper)^2))
-l2.cs2
-dist.t.cs2
+# sum(beta.bar.cs02, beta.bar.cs2)
+# beta.bar.cs2 = beta.bar.cs2[-c(5, 6)]
+# sum(beta.bar.cs2) # not satisfied anymore
+# l2.cs2 = sqrt(crossprod(beta.bar.cs2))
+# dist.t.cs2 = sqrt(sum((beta.bar.cs2 - beta.paper)^2))
+# l2.cs2
+# dist.t.cs2
+yhat = beta.bar.cs02 + Xmat.cs %*% beta.bar.cs2
+xyrange = range(y, yhat)
+plot(main = "with in, back-std.", x = y, y = yhat, xlim = xyrange, ylim = xyrange); abline(0, 1, lty = 2)
 
 ################################################################################
 # CONSTRAINED LINEAR MODEL -- SUBCOMPOSITION

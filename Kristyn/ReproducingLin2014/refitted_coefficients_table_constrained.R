@@ -1,3 +1,4 @@
+# OUTDATED. SEE refitted_vs_observed_plot.R
 # workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
 # setwd(workdir)
 
@@ -37,6 +38,19 @@ num.genera = dim(X)[2]
 # testing with centered and/or scaled y
 # y = scale(y, center = T, scale = T)
 
+# try removing the 5 obese observations
+sort(y)
+sort(scale(y))
+# they have BMI (y) > 36
+# include = y < 36
+# # checking if rows still sum to 1
+# apply(X.prop, MARGIN = 1, sum)
+# X = X[include, ]
+# X.prop = X.prop[include, ]
+# apply(X.prop, MARGIN = 1, sum)
+# log.X.prop = log.X.prop[include, ]
+# y = y[include]
+
 final.selected = c(
   "Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Rikenellaceae.Alistipes",
   "Bacteria.Firmicutes.Clostridia.Clostridiales.Clostridiaceae.Clostridium", 
@@ -59,12 +73,38 @@ all.equal(as.numeric(beta.hat), as.numeric(beta.hat.lm)) # they match, as expect
 Q = as.matrix(rep(1, dim(Xmat)[2]))
 beta.bar = beta.hat - solve(crossprod(Xmat), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat), Q)), crossprod(Q, beta.hat))
-sum(beta.bar)
-beta.bar
-l2 = sqrt(crossprod(beta.bar))
-dist.t = sqrt(sum((beta.bar - beta.paper)^2))
-l2
-dist.t
+# sum(beta.bar)
+# beta.bar
+# l2 = sqrt(crossprod(beta.bar))
+# dist.t = sqrt(sum((beta.bar - beta.paper)^2))
+# l2
+# dist.t
+yhat = Xmat %*% beta.bar
+# par(mfrow = c(2, 3))
+# xyrange = range(y, yhat.paper, yhat)
+# plot(main = "no intercept", x = y, y = yhat.paper, col = 2,
+#      xlim = xyrange, ylim = xyrange)
+# abline(0, 1, lty = 2)
+# points(x = y, y = yhat)
+# what happens if we calculate intercept?
+betabar0 = as.numeric(mean(y) - colMeans(Xmat) %*% beta.bar)
+yhat = betabar0 + Xmat %*% beta.bar
+beta0.paper = as.numeric(mean(y) - beta.paper %*% colMeans(Xmat))
+yhat.paper = beta0.paper + Xmat %*% beta.paper
+xyrange = range(y, yhat.paper)
+par(mfrow = c(1, 1))
+plot(main = "", xlab = "Observed BMI", ylab = "Fitted BMI",
+     x = y, y = yhat.paper, col = 1,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+
+par(mfrow = c(2, 3))
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "no intercept", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
 
 # constrained - scaling
 x.sd = apply(Xmat,2,sd)
@@ -72,19 +112,38 @@ Xmat.s = scale(Xmat, center=F, scale=x.sd)
 beta.hat.s = solve(crossprod(Xmat.s), crossprod(Xmat.s, y))
 beta.bar.s = beta.hat.s - solve(crossprod(Xmat.s), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat.s), Q)), crossprod(Q, beta.hat.s))
-sum(beta.bar.s)
-beta.bar.s
-l2.s = sqrt(crossprod(beta.bar.s))
-dist.t.s = sqrt(sum((beta.bar.s - beta.paper)^2))
-l2.s
-dist.t.s
+# sum(beta.bar.s)
+# beta.bar.s
+# l2.s = sqrt(crossprod(beta.bar.s))
+# dist.t.s = sqrt(sum((beta.bar.s - beta.paper)^2))
+# l2.s
+# dist.t.s
+yhat = Xmat.s %*% beta.bar.s
+yhat = Xmat %*% beta.bar.s
+# yhat.paper = beta0.paper + Xmat.s %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "no int, scaled", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
+# back-scale
 beta.bar.s2 = beta.bar.s / x.sd
-sum(beta.bar.s2) # not satisfied anymore
-beta.bar.s2
-l2.s2 = sqrt(crossprod(beta.bar.s2))
-dist.t.s2 = sqrt(sum((beta.bar.s2 - beta.paper)^2))
-l2.s2
-dist.t.s2
+# sum(beta.bar.s2) # not satisfied anymore
+# beta.bar.s2
+# l2.s2 = sqrt(crossprod(beta.bar.s2))
+# dist.t.s2 = sqrt(sum((beta.bar.s2 - beta.paper)^2))
+# l2.s2
+# dist.t.s2
+yhat = Xmat.s %*% beta.bar.s2
+yhat = Xmat %*% beta.bar.s2
+# yhat.paper = beta0.paper + Xmat.s %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "no int, back-scaled", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
 
 # constrained - with intercept
 y.mean = mean(y)
@@ -92,12 +151,6 @@ y.c = y - y.mean
 x.mean = colMeans(Xmat)
 Xmat.c = scale(Xmat, center=x.mean, scale=F)
 beta.hat.c = solve(crossprod(Xmat.c), crossprod(Xmat.c, y.c))
-# check that it matches lm() #
-beta.hat.lmint = coefficients(lm(y ~ Xmat))
-# coefficients when centering match when not-centering (just not intercept, since centering gets rid of intercept)
-all.equal(as.numeric(coefficients(lm(y ~ Xmat))[-1]), 
-          as.numeric(coefficients(lm(y.c ~ Xmat.c))[-1]))
-all.equal(as.numeric(beta.hat.c), as.numeric(beta.hat.lmint)[-1]) # they match, as expected
 beta.hat.lmint0 = y.mean - as.vector(x.mean%*%beta.hat.c) # also match
 # compute beta.bar, constrained fit
 beta.bar.c = beta.hat.c - solve(crossprod(Xmat.c), Q) %*% 
@@ -105,6 +158,14 @@ beta.bar.c = beta.hat.c - solve(crossprod(Xmat.c), Q) %*%
 sum(beta.bar.c)
 beta.bar.c
 beta.bar.c0 <- y.mean - as.vector(x.mean%*%beta.bar.c)
+
+beta.hat.notc = solve(crossprod(Xmat), crossprod(Xmat, y))
+beta.hat.lmint0 = y.mean - as.vector(x.mean%*%beta.hat.notc) # also match
+beta.bar.notc = beta.hat.notc - solve(crossprod(Xmat), Q) %*% 
+  solve(crossprod(Q, solve(crossprod(Xmat), Q)), crossprod(Q, beta.hat.notc))
+sum(beta.bar.notc)
+beta.bar.notc
+beta.bar.notc0 <- y.mean - as.vector(x.mean%*%beta.hat.notc)
 # constrained - with intercept, including in Xmat
 Xmat.c2 = cbind(1, Xmat)
 beta.hat.c2 = solve(crossprod(Xmat.c2), crossprod(Xmat.c2, y))
@@ -114,10 +175,19 @@ beta.bar.c2 = beta.hat.c2 - solve(crossprod(Xmat.c2), Q2) %*%
 sum(beta.bar.c2[-1])
 beta.bar.c2 
 all.equal(c(beta.bar.c0, beta.bar.c), as.numeric(beta.bar.c2)) # this matches the above
-l2.c = sqrt(crossprod(beta.bar.c))
-dist.t.c = sqrt(sum((beta.bar.c - beta.paper)^2))
-l2.c
-dist.t.c
+# l2.c = sqrt(crossprod(beta.bar.c))
+# dist.t.c = sqrt(sum((beta.bar.c - beta.paper)^2))
+# l2.c
+# dist.t.c
+yhat = beta.bar.c0 + Xmat.c %*% beta.bar.c
+yhat = beta.bar.c0 + Xmat %*% beta.bar.c
+# yhat.paper = beta0.paper + Xmat.c %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "with intercept", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
 
 # constrained - with intercept and scaling (standardizing, bc need to center for intercept)
 Xmat.cs = scale(Xmat, center=x.mean, scale=x.sd)
@@ -128,10 +198,20 @@ sum(beta.bar.cs)
 beta.bar.cs
 beta.bar.cs0 <- y.mean - as.vector(x.mean%*%beta.bar.cs)
 beta.bar.cs0
-l2.cs = sqrt(crossprod(beta.bar.cs))
-dist.t.cs = sqrt(sum((beta.bar.cs - beta.paper)^2))
-l2.cs
-dist.t.cs
+# l2.cs = sqrt(crossprod(beta.bar.cs))
+# dist.t.cs = sqrt(sum((beta.bar.cs - beta.paper)^2))
+# l2.cs
+# dist.t.cs
+yhat = beta.bar.cs0 + Xmat.cs %*% beta.bar.cs
+yhat = beta.bar.cs0 + Xmat %*% beta.bar.cs
+# yhat.paper = beta0.paper + Xmat.cs %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "with int, std.", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
+#
 beta.bar.cs2 = beta.bar.cs / x.sd
 beta.bar.cs2
 sum(beta.bar.cs2) # not satisfied anymore
@@ -143,6 +223,15 @@ l2.cs2 = sqrt(crossprod(beta.bar.cs2))
 dist.t.cs2 = sqrt(sum((beta.bar.cs2 - beta.paper)^2))
 l2.cs2
 dist.t.cs2
+yhat = beta.bar.cs02 + Xmat.cs %*% beta.bar.cs2
+yhat = beta.bar.cs02 + Xmat %*% beta.bar.cs2
+# yhat.paper = beta0.paper + Xmat.cs %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "with int, back-std.", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
 
 ################################################################################
 # CONSTRAINED LINEAR MODEL -- SUBCOMPOSITION
@@ -162,12 +251,20 @@ all.equal(as.numeric(beta.hat.sub), as.numeric(beta.hat.lm)) # they match, as ex
 Q = as.matrix(rep(1, dim(Xmat.sub)[2]))
 beta.bar.sub = beta.hat.sub - solve(crossprod(Xmat.sub), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat.sub), Q)), crossprod(Q, beta.hat.sub))
-sum(beta.bar.sub)
-beta.bar.sub
-l2.sub = sqrt(crossprod(beta.bar.sub))
-dist.t.sub = sqrt(sum((beta.bar.sub - beta.paper)^2))
-l2.sub
-dist.t.sub
+# sum(beta.bar.sub)
+# beta.bar.sub
+# l2.sub = sqrt(crossprod(beta.bar.sub))
+# dist.t.sub = sqrt(sum((beta.bar.sub - beta.paper)^2))
+# l2.sub
+# dist.t.sub
+yhat = Xmat.sub %*% beta.bar.sub
+# yhat.paper = beta0.paper + Xmat.sub %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "no intercept", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
 
 # constrained - scaling
 x.sd.sub = apply(Xmat.sub,2,sd)
@@ -175,10 +272,20 @@ Xmat.sub.s = scale(Xmat.sub, center=F, scale=x.sd.sub)
 beta.hat.sub.s = solve(crossprod(Xmat.sub.s), crossprod(Xmat.sub.s, y))
 beta.bar.sub.s = beta.hat.sub.s - solve(crossprod(Xmat.sub.s), Q) %*% 
   solve(crossprod(Q, solve(crossprod(Xmat.sub.s), Q)), crossprod(Q, beta.hat.sub.s))
-sum(beta.bar.sub.s)
-beta.bar.sub.s
-l2.sub.s = sqrt(crossprod(beta.bar.sub.s))
-dist.t.sub.s = sqrt(sum((beta.bar.sub.s - beta.paper)^2))
+# sum(beta.bar.sub.s)
+# beta.bar.sub.s
+# l2.sub.s = sqrt(crossprod(beta.bar.sub.s))
+# dist.t.sub.s = sqrt(sum((beta.bar.sub.s - beta.paper)^2))
+yhat = Xmat.sub.s %*% beta.bar.sub.s
+yhat = Xmat.sub %*% beta.bar.sub.s
+# yhat.paper = beta0.paper + Xmat.sub.s %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "no int, scaled", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
+#
 l2.sub.s
 dist.t.sub.s
 beta.bar.sub.s2 = beta.bar.sub.s / x.sd.sub
@@ -188,6 +295,15 @@ l2.sub.s2 = sqrt(crossprod(beta.bar.sub.s2))
 dist.t.sub.s2 = sqrt(sum((beta.bar.sub.s2 - beta.paper)^2))
 l2.sub.s2
 dist.t.sub.s2
+yhat = Xmat.sub.s %*% beta.bar.sub.s2
+yhat = Xmat.sub %*% beta.bar.sub.s2
+# yhat.paper = beta0.paper + Xmat.sub.s %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "no int, back-scaled", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
 
 # constrained - with intercept
 y.mean = mean(y)
@@ -221,6 +337,15 @@ l2.sub.c = sqrt(crossprod(beta.bar.sub.c))
 dist.t.sub.c = sqrt(sum((beta.bar.sub.c - beta.paper)^2))
 l2.sub.c
 dist.t.sub.c
+yhat = Xmat.sub.c2 %*% beta.hat.sub.c2
+yhat = Xmat.sub %*% beta.hat.sub.c2
+# yhat.paper = beta0.paper + Xmat.sub.c %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "with intercept", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
 
 # constrained - with intercept and scaling (standardizing, bc need to center for intercept)
 Xmat.sub.cs = scale(Xmat.sub, center=x.mean.sub, scale=x.sd.sub)
@@ -235,6 +360,16 @@ l2.sub.cs = sqrt(crossprod(beta.bar.sub.cs))
 dist.t.sub.cs = sqrt(sum((beta.bar.sub.cs - beta.paper)^2))
 l2.sub.cs
 dist.t.sub.cs
+yhat = beta.bar.sub.cs0 + Xmat.sub.cs %*% beta.bar.sub.cs
+yhat = beta.bar.sub.cs0 + Xmat.sub %*% beta.bar.sub.cs
+# yhat.paper = beta0.paper + Xmat.sub.c %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "with int, std.", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)
+#
 beta.bar.sub.cs2 = beta.bar.sub.cs / x.sd.sub
 beta.bar.sub.cs2
 sum(beta.bar.sub.cs2) # not satisfied anymore
@@ -246,3 +381,12 @@ l2.sub.cs2 = sqrt(crossprod(beta.bar.sub.cs2))
 dist.t.sub.cs2 = sqrt(sum((beta.bar.sub.cs2 - beta.paper)^2))
 l2.sub.cs2
 dist.t.sub.cs2
+yhat = beta.bar.sub.cs02 + Xmat.sub.cs %*% beta.bar.sub.cs2
+yhat = beta.bar.sub.cs02 + Xmat.sub %*% beta.bar.sub.cs2
+# yhat.paper = beta0.paper + Xmat.sub.cs %*% beta.paper
+# xyrange = range(y, yhat.paper, yhat)
+plot(main = "with int, back-std.", ylab = "yhat", xlab = "y", 
+     x = y, y = yhat.paper, col = 2,
+     xlim = xyrange, ylim = xyrange)
+abline(0, 1, lty = 2)
+points(x = y, y = yhat)

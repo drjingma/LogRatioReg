@@ -1,0 +1,625 @@
+
+R version 3.6.3 (2020-02-29) -- "Holding the Windsock"
+Copyright (C) 2020 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
+> # setwd(workdir)
+> 
+> # libraries
+> library(mvtnorm)
+> library(balance)
+> library(selbal)
+> library(microbenchmark)
+> library(ggplot2)
+> library(logratiolasso) # bates & tibshirani 2019
+> 
+> # Dr. Ma sources
+> source("RCode/func_libs.R")
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: read.xls support for 'XLSX' (Excel 2007+) files ENABLED.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Loading required package: Matrix
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+> source("COAT-master/coat.R")
+> 
+> # Kristyn sources
+> functions_path = "Kristyn/Functions/"
+> source(paste0(functions_path, "classic_lasso.R"))
+> source(paste0(functions_path, "compositional_lasso.R"))
+> source(paste0(functions_path, "supervisedlogratios.R"))
+> source(paste0(functions_path, "coat.R"))
+> source(paste0(functions_path, "principlebalances.R"))
+> source(paste0(functions_path, "selbal.R"))
+> 
+> # settings
+> tol = 1e-4
+> 
+> # Cross-validation
+> cv.seed = 1234
+> cv.n_lambda = 100
+> 
+> # Bootstrap
+> bs.seed = 1997
+> bs.n = 100
+> 
+> # data
+> # 98 samples, 87 genera
+> # replace zero counts with 0.5 (maximum rounding error)
+> load(paste0("Data/", "BMI.rda"))
+> # dim(raw_data) # 98 x 89
+> # dim(X) # 98 x 87
+> # dim(X.prop) # 98 x 87
+> log.X.prop = log(X.prop)
+> n = dim(X)[1]
+> num.genera = dim(X)[2]
+> 
+> ################################################################################
+> # Choosing the tuning parameter -- an example of what goes on in the bootstrap #
+> ################################################################################
+> 
+> # Lin et. al. 2014 applied the proposed method using a refitted version of 
+> #   ten-fold cross-validation to choose the tuning parameter, where
+> #   the prediction of each sample split is computed with the refitted coeffs
+> #   (obtained after model selection and without penalization)
+> 
+> # Split the data into 10 folds
+> cv.K = 10
+> set.seed(cv.seed)
+> shuffle = sample(1:n)
+> idfold = (shuffle %% cv.K) + 1
+> n_fold = as.vector(table(idfold))
+> 
+> # Do cross-validation
+> # calculate squared error (prediction error?) for each fold, 
+> #   needed for CV(lambda) calculation
+> cvm = rep(NA, cv.n_lambda) # want to have CV(lambda)
+> cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
+> # Fit Lasso for each fold removed
+> for (j in 1:cv.K){
++   # Training data
++   Xtrain = log.X.prop[idfold != j, ]
++   Ytrain = y[idfold != j]
++   # Test data
++   Xtest = log.X.prop[idfold == j, ]
++   Ytest = y[idfold == j]
++   
++   # Fit LASSO on that fold using fitLASSOcompositional
++   # first, take out columns that have all 0.5's, because they shouldn't be selected anyway (and lead to problems)
++   # cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
++   # Xtrain = Xtrain[, !cols.0.5]
++   # Xtest = Xtest[, !cols.0.5]
++   XYdata = data.frame(Xtrain, y = Ytrain)
++   Lasso_j = ConstrLasso(
++     Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
++     intercept = TRUE, scaling = FALSE, tol = tol)
++   non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
++   for(m in 1:cv.n_lambda){
++     # get refitted coefficients, after model selection and w/o penalization
++     selected_variables = non0.betas[, m]
++     if(all(!selected_variables)){ # if none selected
++       refit = lm(y ~ 1, data = XYdata)
++     } else{ # otherwise, fit on selected variables
++       refit = lm(
++         as.formula(paste("y", "~-1+",
++                          paste(colnames(XYdata)[which(selected_variables)], 
++                                collapse = "+"),
++                          sep = "")),
++         data=XYdata)
++     }
++     # calculate squared error (prediction error?)
++     # if(!all.equal(colnames(Xtest), colnames(Xtrain))) stop("Xtrain and Xtest don't have the same variable names")
++     newx = Xtest[, selected_variables, drop = FALSE]
++     Ypred = predict(refit, newdata = data.frame(newx), type = "response")
++     cvm_sqerror[j, m] = sum(crossprod(Ytest - Ypred))
++   }
++ }
+There were 50 or more warnings (use warnings() to see the first 50)
+> 
+> # Calculate CV(lambda) for each value of lambda
+> cvm = colMeans(cvm_sqerror)
+> 
+> # Find lambda_min = argmin{CV(lambda)}
+> lambda_min_index = which.min(cvm)
+> lambda_min = Lasso_j$lambda[lambda_min_index]
+> 
+> # final fit
+> Lasso_select = ConstrLasso(
++   y, log.X.prop, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
++   lambda = lambda_min, nlam = 1, 
++   intercept = TRUE, scaling = FALSE, tol=tol)
+> XYdata = data.frame(log.X.prop, y = y)
+> non0.betas = Lasso_select$bet != 0 # diff lambda = diff col
+> selected_variables = non0.betas
+> if(all(!selected_variables)){ # if none selected
++   finalfit = lm(y ~ 1, data = XYdata)
++ } else{ # otherwise, fit on selected variables
++   finalfit = lm(
++     as.formula(paste("y", "~-1+",
++                      paste(colnames(XYdata)[which(selected_variables)], 
++                            collapse = "+"),
++                      sep = "")),
++     data=XYdata)
++ }
+> finalfit
+
+Call:
+lm(formula = y ~ 1, data = XYdata)
+
+Coefficients:
+(Intercept)  
+      24.48  
+
+> # ... now what?
+> # do this a bunch of times (bootstrap)
+> 
+> ################################################################################
+> # Actual work: Selecting the genera #
+> ################################################################################
+> 
+> # They generate 100 bootstrap samples and use the same CV procedure to select 
+> #   the genera (for stable selection results)
+> 
+> bs.finalfits = list()
+> bs.selected_variables = matrix(NA, num.genera, bs.n)
+> rownames(bs.selected_variables) = colnames(X)
+> for(b in 1:bs.n){
++   set.seed(bs.seed + b)
++   print(paste0("starting bootstrap ", b))
++   
++   # resample the data
++   bs.resample = sample(1:n, n, replace = TRUE)
++   log.X.prop.bs = log.X.prop[bs.resample, ]
++   y.bs = y[bs.resample]
++   
++   # refitted CV
++   # Split the data into 10 folds
++   cv.K = 10
++   shuffle = sample(1:n)
++   idfold = (shuffle %% cv.K) + 1
++   n_fold = as.vector(table(idfold))
++   
++   # Do cross-validation
++   # calculate squared error (prediction error?) for each fold, 
++   #   needed for CV(lambda) calculation
++   cvm = rep(NA, cv.n_lambda) # want to have CV(lambda)
++   cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
++   # Fit Lasso for each fold removed
++   for (j in 1:cv.K){
++     # Training data
++     Xtrain = log.X.prop.bs[idfold != j, ]
++     Ytrain = y.bs[idfold != j]
++     # Test data
++     Xtest = log.X.prop.bs[idfold == j, ]
++     Ytest = y.bs[idfold == j]
++     
++     # Fit LASSO on that fold using fitLASSOcompositional
++     # first, take out columns that have all 0.5's, because they shouldn't be selected anyway (and lead to problems)
++     # cols.0.5 = apply(Xtrain, 2, FUN = function(vec) all(vec == 0.5))
++     # Xtrain = Xtrain[, !cols.0.5]
++     # Xtest = Xtest[, !cols.0.5]
++     XYdata = data.frame(Xtrain, y = Ytrain)
++     Lasso_j = ConstrLasso(
++       Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
++       intercept = TRUE, scaling = FALSE, tol = tol)
++     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
++     for(m in 1:cv.n_lambda){
++       # get refitted coefficients, after model selection and w/o penalization
++       selected_variables = non0.betas[, m]
++       if(all(!selected_variables)){ # if none selected
++         refit = lm(y ~ 1, data = XYdata)
++       } else{ # otherwise, fit on selected variables
++         refit = lm(
++           as.formula(paste("y", "~-1+",
++                            paste(colnames(XYdata)[which(selected_variables)], 
++                                  collapse = "+"),
++                            sep = "")),
++           data=XYdata)
++       }
++       # calculate squared error (prediction error?)
++       # if(!all.equal(colnames(Xtest), colnames(Xtrain))) stop("Xtrain and Xtest don't have the same variable names")
++       newx = Xtest[, selected_variables, drop = FALSE]
++       Ypred = predict(refit, newdata = data.frame(newx), type = "response")
++       cvm_sqerror[j, m] = sum(crossprod(Ytest - Ypred))
++     }
++   }
++   
++   # Calculate CV(lambda) for each value of lambda
++   cvm = colMeans(cvm_sqerror)
++   
++   # Find lambda_min = argmin{CV(lambda)}
++   lambda_min_index = which.min(cvm)
++   lambda_min = Lasso_j$lambda[lambda_min_index]
++   
++   # final fit
++   Lasso_select.bs = ConstrLasso(
++     y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
++     lambda = lambda_min, nlam = 1, 
++     intercept = TRUE, scaling = FALSE, tol=tol)
++   XYdata = data.frame(log.X.prop.bs, y = y.bs)
++   non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
++   selected_variables = non0.betas
++   if(all(!selected_variables)){ # if none selected
++     finalfit.bs = lm(y ~ 1, data = XYdata)
++   } else{ # otherwise, fit on selected variables
++     finalfit.bs = lm(
++       as.formula(paste("y", "~-1+",
++                        paste(colnames(XYdata)[which(selected_variables)], 
++                              collapse = "+"),
++                        sep = "")),
++       data=XYdata)
++   }
++   
++   # save the final fit for this bootstrap
++   bs.finalfits[[b]] = finalfit.bs
++   
++   # record which variables were selected in this fit
++   bs.selected_variables[, b] = selected_variables
++ }
+[1] "starting bootstrap 1"
+[1] "starting bootstrap 2"
+[1] "starting bootstrap 3"
+[1] "starting bootstrap 4"
+[1] "starting bootstrap 5"
+[1] "starting bootstrap 6"
+[1] "starting bootstrap 7"
+[1] "starting bootstrap 8"
+[1] "starting bootstrap 9"
+[1] "starting bootstrap 10"
+[1] "starting bootstrap 11"
+[1] "starting bootstrap 12"
+[1] "starting bootstrap 13"
+[1] "starting bootstrap 14"
+[1] "starting bootstrap 15"
+[1] "starting bootstrap 16"
+[1] "starting bootstrap 17"
+[1] "starting bootstrap 18"
+[1] "starting bootstrap 19"
+[1] "starting bootstrap 20"
+[1] "starting bootstrap 21"
+[1] "starting bootstrap 22"
+[1] "starting bootstrap 23"
+[1] "starting bootstrap 24"
+[1] "starting bootstrap 25"
+[1] "starting bootstrap 26"
+[1] "starting bootstrap 27"
+[1] "starting bootstrap 28"
+[1] "starting bootstrap 29"
+[1] "starting bootstrap 30"
+[1] "starting bootstrap 31"
+[1] "starting bootstrap 32"
+[1] "starting bootstrap 33"
+[1] "starting bootstrap 34"
+[1] "starting bootstrap 35"
+[1] "starting bootstrap 36"
+[1] "starting bootstrap 37"
+[1] "starting bootstrap 38"
+[1] "starting bootstrap 39"
+[1] "starting bootstrap 40"
+[1] "starting bootstrap 41"
+[1] "starting bootstrap 42"
+[1] "starting bootstrap 43"
+[1] "starting bootstrap 44"
+[1] "starting bootstrap 45"
+[1] "starting bootstrap 46"
+[1] "starting bootstrap 47"
+[1] "starting bootstrap 48"
+[1] "starting bootstrap 49"
+[1] "starting bootstrap 50"
+[1] "starting bootstrap 51"
+[1] "starting bootstrap 52"
+[1] "starting bootstrap 53"
+[1] "starting bootstrap 54"
+[1] "starting bootstrap 55"
+[1] "starting bootstrap 56"
+[1] "starting bootstrap 57"
+[1] "starting bootstrap 58"
+[1] "starting bootstrap 59"
+[1] "starting bootstrap 60"
+[1] "starting bootstrap 61"
+[1] "starting bootstrap 62"
+[1] "starting bootstrap 63"
+[1] "starting bootstrap 64"
+[1] "starting bootstrap 65"
+[1] "starting bootstrap 66"
+[1] "starting bootstrap 67"
+[1] "starting bootstrap 68"
+[1] "starting bootstrap 69"
+[1] "starting bootstrap 70"
+[1] "starting bootstrap 71"
+[1] "starting bootstrap 72"
+[1] "starting bootstrap 73"
+[1] "starting bootstrap 74"
+[1] "starting bootstrap 75"
+[1] "starting bootstrap 76"
+[1] "starting bootstrap 77"
+[1] "starting bootstrap 78"
+[1] "starting bootstrap 79"
+[1] "starting bootstrap 80"
+[1] "starting bootstrap 81"
+[1] "starting bootstrap 82"
+[1] "starting bootstrap 83"
+[1] "starting bootstrap 84"
+[1] "starting bootstrap 85"
+[1] "starting bootstrap 86"
+[1] "starting bootstrap 87"
+[1] "starting bootstrap 88"
+[1] "starting bootstrap 89"
+[1] "starting bootstrap 90"
+[1] "starting bootstrap 91"
+[1] "starting bootstrap 92"
+[1] "starting bootstrap 93"
+[1] "starting bootstrap 94"
+[1] "starting bootstrap 95"
+[1] "starting bootstrap 96"
+[1] "starting bootstrap 97"
+[1] "starting bootstrap 98"
+[1] "starting bootstrap 99"
+[1] "starting bootstrap 100"
+There were 50 or more warnings (use warnings() to see the first 50)
+> bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
+> bs.selection_percentages = apply(bs.selected_variables_numeric, 1, sum)
+> names(bs.selection_percentages) = rownames(bs.selected_variables)
+> bs.results = list(
++   seed = bs.seed, 
++   finalfits = bs.finalfits, 
++   selected_variables = bs.selected_variables, 
++   selection_percentages = bs.selection_percentages
++ )
+> saveRDS(bs.results,
++         file = paste0("Kristyn/ReproducingLin2014/lin2014_notscaled_bootstrap_results_lmnoint.rds"))
+> 
+> 
+> which(bs.selection_percentages > 50)
+                  Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Rikenellaceae.Alistipes 
+                                                                                        16 
+                   Bacteria.Firmicutes.Clostridia.Clostridiales.Clostridiaceae.Clostridium 
+                                                                                        28 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Dorea 
+                                                                                        41 
+                Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Oscillibacter 
+                                                                                        53 
+                 Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Ruminococcus 
+                                                                                        54 
+              Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Acidaminococcus 
+                                                                                        57 
+                    Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Dialister 
+                                                                                        59 
+                    Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Megamonas 
+                                                                                        60 
+Bacteria.Firmicutes.Erysipelotrichi.Erysipelotrichales.Erysipelotrichaceae.Catenibacterium 
+                                                                                        67 
+> sort(bs.selection_percentages)
+          Bacteria.Bacteroidetes.Flavobacteria.Flavobacteriales.Flavobacteriaceae.Capnocytophaga 
+                                                                                               0 
+               Bacteria.Firmicutes.Bacilli.Bacillales.Bacillales_incertae_sedis.Rummeliibacillus 
+                                                                                               0 
+                          Bacteria.Firmicutes.Bacilli.Lactobacillales.Leuconostocaceae.Weissella 
+                                                                                               0 
+                     Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XI.Anaerococcus 
+                                                                                               0 
+                    Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XI.Peptoniphilus 
+                                                                                               0 
+                       Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Oribacterium 
+                                                                                               0 
+                      Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Robinsoniella 
+                                                                                               0 
+           Bacteria.Firmicutes.Clostridia.Clostridiales.Peptostreptococcaceae.Peptostreptococcus 
+                                                                                               0 
+                Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Acetanaerobacterium 
+                                                                                               0 
+                Bacteria.Fusobacteria.Fusobacteria.Fusobacteriales.Leptotrichiaceae.Leptotrichia 
+                                                                                               0 
+    Bacteria.Proteobacteria.Alphaproteobacteria.Rhizobiales.Methylobacteriaceae.Methylobacterium 
+                                                                                               0 
+Bacteria.Proteobacteria.Deltaproteobacteria.Desulfovibrionales.Desulfovibrionaceae.Desulfovibrio 
+                                                                                               0 
+   Bacteria.Proteobacteria.Gammaproteobacteria.Xanthomonadales.Xanthomonadaceae.Stenotrophomonas 
+                                                                                               0 
+         Bacteria.Actinobacteria.Actinobacteria.Coriobacteriales.Coriobacteriaceae.Gordonibacter 
+                                                                                               1 
+             Bacteria.Actinobacteria.Actinobacteria.Coriobacteriales.Coriobacteriaceae.Olsenella 
+                                                                                               1 
+                        Bacteria.Firmicutes.Bacilli.Lactobacillales.Enterococcaceae.Enterococcus 
+                                                                                               1 
+                      Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Lactonifactor 
+                                                                                               1 
+                  Bacteria.Synergistetes.Synergistia.Synergistales.Synergistaceae.Cloacibacillus 
+                                                                                               1 
+                  Bacteria.Synergistetes.Synergistia.Synergistales.Synergistaceae.Pyramidobacter 
+                                                                                               1 
+       Bacteria.Actinobacteria.Actinobacteria.Coriobacteriales.Coriobacteriaceae.Asaccharobacter 
+                                                                                               2 
+               Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Porphyromonadaceae.Porphyromonas 
+                                                                                               2 
+                                     Bacteria.Firmicutes.Bacilli.Bacillales.Bacillaceae.Bacillus 
+                                                                                               2 
+                       Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XI.Parvimonas 
+                                                                                               2 
+                   Bacteria.Lentisphaerae.Lentisphaeria.Victivallales.Victivallaceae.Victivallis 
+                                                                                               2 
+             Bacteria.Actinobacteria.Actinobacteria.Coriobacteriales.Coriobacteriaceae.Atopobium 
+                                                                                               3 
+               Bacteria.Actinobacteria.Actinobacteria.Coriobacteriales.Coriobacteriaceae.Slackia 
+                                                                                               3 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Eubacteriaceae.Anaerofustis 
+                                                                                               3 
+                 Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Pseudobutyrivibrio 
+                                                                                               3 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Sporobacter 
+                                                                                               3 
+                    Bacteria.Firmicutes.Bacilli.Lactobacillales.Carnobacteriaceae.Granulicatella 
+                                                                                               4 
+                        Bacteria.Firmicutes.Bacilli.Lactobacillales.Streptococcaceae.Lactococcus 
+                                                                                               4 
+                       Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XI.Finegoldia 
+                                                                                               4 
+                      Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XIV.Howardella 
+                                                                                               4 
+                       Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Anaerostipes 
+                                                                                               4 
+                 Bacteria.Proteobacteria.Betaproteobacteria.Neisseriales.Neisseriaceae.Neisseria 
+                                                                                               4 
+Bacteria.Proteobacteria.Epsilonproteobacteria.Campylobacterales.Campylobacteraceae.Campylobacter 
+                                                                                               4 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Anaerofilum 
+                                                                                               5 
+                                Bacteria.Firmicutes.Bacilli.Bacillales.Staphylococcaceae.Gemella 
+                                                                                               8 
+                           Bacteria.Firmicutes.Bacilli.Lactobacillales.Aerococcaceae.Abiotrophia 
+                                                                                               8 
+               Bacteria.Fusobacteria.Fusobacteria.Fusobacteriales.Fusobacteriaceae.Fusobacterium 
+                                                                                               8 
+     Bacteria.Proteobacteria.Gammaproteobacteria.Aeromonadales.Succinivibrionaceae.Succinivibrio 
+                                                                                               9 
+                  Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XIII.Mogibacterium 
+                                                                                              10 
+    Bacteria.Verrucomicrobia.Verrucomicrobiae.Verrucomicrobiales.Verrucomicrobiaceae.Akkermansia 
+                                                                                              10 
+        Bacteria.Firmicutes.Erysipelotrichi.Erysipelotrichales.Erysipelotrichaceae.Solobacterium 
+                                                                                              11 
+        Bacteria.Proteobacteria.Gammaproteobacteria.Pseudomonadales.Pseudomonadaceae.Pseudomonas 
+                                                                                              11 
+                         Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Zymophilus 
+                                                                                              12 
+         Bacteria.Proteobacteria.Betaproteobacteria.Burkholderiales.Oxalobacteraceae.Oxalobacter 
+                                                                                              17 
+                     Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Bacteroidaceae.Bacteroides 
+                                                                                              19 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Mitsuokella 
+                                                                                              20 
+                      Bacteria.Firmicutes.Bacilli.Lactobacillales.Lactobacillaceae.Lactobacillus 
+                                                                                              23 
+                         Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XIV.Blautia 
+                                                                                              23 
+                     Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Butyricicoccus 
+                                                                                              23 
+                   Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Succiniclasticum 
+                                                                                              24 
+                      Bacteria.Firmicutes.Bacilli.Lactobacillales.Streptococcaceae.Streptococcus 
+                                                                                              25 
+                  Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Prevotellaceae.Paraprevotella 
+                                                                                              27 
+                      Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Anaerotruncus 
+                                                                                              27 
+         Bacteria.Firmicutes.Erysipelotrichi.Erysipelotrichales.Erysipelotrichaceae.Turicibacter 
+                                                                                              27 
+           Bacteria.Actinobacteria.Actinobacteria.Coriobacteriales.Coriobacteriaceae.Eggerthella 
+                                                                                              28 
+           Bacteria.Actinobacteria.Actinobacteria.Coriobacteriales.Coriobacteriaceae.Collinsella 
+                                                                                              29 
+                   Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Faecalibacterium 
+                                                                                              29 
+             Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Porphyromonadaceae.Parabacteroides 
+                                                                                              30 
+           Bacteria.Firmicutes.Erysipelotrichi.Erysipelotrichales.Erysipelotrichaceae.Holdemania 
+                                                                                              31 
+                          Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Roseburia 
+                                                                                              32 
+               Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Porphyromonadaceae.Butyricimonas 
+                                                                                              37 
+        Bacteria.Firmicutes.Erysipelotrichi.Erysipelotrichales.Erysipelotrichaceae.Coprobacillus 
+                                                                                              37 
+        Bacteria.Proteobacteria.Betaproteobacteria.Burkholderiales.Alcaligenaceae.Parasutterella 
+                                                                                              37 
+                 Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Porphyromonadaceae.Odoribacter 
+                                                                                              40 
+                    Bacteria.Firmicutes.Clostridia.Clostridiales.Incertae_Sedis_XIII.Anaerovorax 
+                                                                                              40 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Megasphaera 
+                                                                                              41 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Veillonella 
+                                                                                              41 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella 
+                                                                                              42 
+                      Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Prevotellaceae.Prevotella 
+                                                                                              43 
+                        Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Coprococcus 
+                                                                                              43 
+                         Bacteria.Firmicutes.Clostridia.Clostridiales.Eubacteriaceae.Eubacterium 
+                                                                                              46 
+                 Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Porphyromonadaceae.Barnesiella 
+                                                                                              47 
+                    Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Subdoligranulum 
+                                                                                              48 
+              Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Phascolarctobacterium 
+                                                                                              49 
+            Bacteria.Proteobacteria.Betaproteobacteria.Burkholderiales.Alcaligenaceae.Sutterella 
+                                                                                              50 
+                       Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Ruminococcus 
+                                                                                              56 
+                          Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Dialister 
+                                                                                              56 
+                      Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Oscillibacter 
+                                                                                              57 
+      Bacteria.Firmicutes.Erysipelotrichi.Erysipelotrichales.Erysipelotrichaceae.Catenibacterium 
+                                                                                              60 
+                              Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Dorea 
+                                                                                              62 
+                        Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Rikenellaceae.Alistipes 
+                                                                                              64 
+                          Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Megamonas 
+                                                                                              69 
+                         Bacteria.Firmicutes.Clostridia.Clostridiales.Clostridiaceae.Clostridium 
+                                                                                              77 
+                    Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Acidaminococcus 
+                                                                                              77 
+> 
+> proc.time()
+    user   system  elapsed 
+6921.494    2.871 6924.557 

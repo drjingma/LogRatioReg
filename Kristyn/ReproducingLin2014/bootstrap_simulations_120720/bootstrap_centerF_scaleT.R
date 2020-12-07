@@ -291,7 +291,6 @@ bs.selection_percentages = apply(bs.selected_variables_numeric, 1, sum)
 names(bs.selection_percentages) = rownames(bs.selected_variables)
 bs.results = list(
   seed = bs.seed, 
-  finalfits = bs.finalfits, 
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )

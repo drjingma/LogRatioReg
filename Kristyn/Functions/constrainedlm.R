@@ -31,21 +31,31 @@ standardize <- function(X, Y, center = FALSE, scale = FALSE){
 }
 
 backStandardize <- function(stdXY, betahat, scale = FALSE){
+  which.covariates = rownames(betahat)
   if(scale){
     betahat.tilde = betahat
-    betahat = diag(stdXY$weights) %*% betahat.tilde
+    wts = stdXY$weights[which.covariates]
+    betahat = diag(wts) %*% betahat.tilde
   }
-  betahat0 = as.numeric(stdXY$Ymean - crossprod(stdXY$Xmeans, betahat))
+  betahat0 = as.numeric(stdXY$Ymean - crossprod(stdXY$Xmeans[which.covariates], 
+                                                betahat))
   return(list(
     betahat0 = betahat0, 
     betahat = betahat))
 }
 
 clm <- function(X, Y, Q){
-  betahat = solve(crossprod(X), crossprod(X, Y))
+  betahat = coefficients(lm(Y ~ -1 + X))
+  names(betahat) = colnames(X)
+  betahat = na.omit(betahat)
+  if(!is.null(na.action(betahat))){
+    warning("clm : some parameters are ommitted because NA in betahat")
+    X = X[, names(betahat)]
+    Q = as.matrix(rep(1, length(betahat)))
+  }
   # compute beta.bar, constrained fit
-  Q = as.matrix(rep(1, dim(X)[2]))
-  betabar = betahat - solve(crossprod(X), Q) %*% 
-    solve(crossprod(Q, solve(crossprod(X), Q)), crossprod(Q, betahat))
+  XtXinvQ = solve(crossprod(X), Q)
+  betabar = betahat - XtXinvQ %*% 
+    solve(crossprod(Q, XtXinvQ), crossprod(Q, betahat))
   return(betabar)
 }

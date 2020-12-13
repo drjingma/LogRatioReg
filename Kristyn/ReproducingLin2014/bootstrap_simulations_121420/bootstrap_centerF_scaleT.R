@@ -100,7 +100,7 @@ for(b in 1:bs.n){
     XYdata = data.frame(Xtrain, y = Ytrain)
     Lasso_j = ConstrLasso(
       Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda,
-      intercept = TRUE, scaling = TRUE, tol = tol)
+      intercept = FALSE, scaling = TRUE, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
       # get refitted coefficients, after model selection and w/o penalization
@@ -138,12 +138,13 @@ for(b in 1:bs.n){
   Lasso_select = ConstrLasso(
     y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop.bs)[2], 1),
     lambda = lambda_min, nlam = 1,
-    intercept = TRUE, scaling = TRUE, tol=tol)
+    intercept = FALSE, scaling = TRUE, tol=tol)
   selected_variables = Lasso_select$bet != 0 # diff lambda = diff col
   # record which variables were selected in this fit
   bs.selected_variables[, b] = selected_variables
   # note: unless we're gonna estimate MSE(yhat), there is no need to get the
   #   actual constrained linear model.
+  print(colnames(X)[selected_variables])
 }
 bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
 bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN = 
@@ -159,4 +160,4 @@ saveRDS(bs.results,
                       "/bootstrap_simulations_121420",
                       "/bootstraps_cFsT.rds"))
 
-# sort(bs.selection_percentages)
+sort(bs.selection_percentages)

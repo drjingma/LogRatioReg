@@ -144,6 +144,7 @@ for(b in 1:bs.n){
   bs.selected_variables[, b] = selected_variables
   # note: unless we're gonna estimate MSE(yhat), there is no need to get the
   #   actual constrained linear model.
+  print(colnames(X)[selected_variables])
 }
 bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
 bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN = 
@@ -159,4 +160,4 @@ saveRDS(bs.results,
                       "/bootstrap_simulations_121420",
                       "/bootstraps_cTsT.rds"))
 
-# sort(bs.selection_percentages)
+sort(bs.selection_percentages)

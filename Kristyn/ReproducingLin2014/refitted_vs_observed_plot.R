@@ -158,6 +158,36 @@ sqrt(sum((betabar.bstd.orig$betahat - betahat.paper)^2))
 # calculate MSE(yhat)
 MSEyhat(y, yhat.orig)
 
+# check mgcv::pcls
+library(mgcv)
+M = list(
+  y = y,
+  w = rep(1, length(y)),
+  X = Xmat, 
+  C = Q,
+  S = NULL,
+  off = NULL, 
+  sp = NULL, 
+  p = betahat.paper, 
+  Ain = NULL, 
+  bin = NULL
+)
+pcls(M) # REQUIRES inequality constraints...
+
+# check limSolve::lsei
+library(limSolve)
+Xmat2 = cbind(1, Xmat)
+Q2 = rbind(0, Q)
+colnames(Xmat2)[1] = "Intercept"
+rownames(Q2) = colnames(Xmat2)
+all.equal(as.numeric(lsei(A = Xmat2, B = y)$X), 
+          as.numeric(coefficients(lm(y ~ Xmat))), 
+          tol = 1e-5)
+lsei.fit = lsei(A = Xmat2, B = y, E = t(Q2), F = 0)
+predict(lsei.fit)
+
+betabar.bstd.orig
+
 ################################################################################
 # Scale
 ################################################################################

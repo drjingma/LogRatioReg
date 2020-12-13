@@ -9,6 +9,7 @@ library(selbal)
 library(microbenchmark)
 library(ggplot2)
 library(logratiolasso) # bates & tibshirani 2019
+library(limSolve) # for constrained lm
 
 # Dr. Ma sources
 source("RCode/func_libs.R")
@@ -34,6 +35,8 @@ L2distance <- function(x1, x2){
 }
 
 # settings
+std.center = TRUE
+std.scale = FALSE
 tol = 1e-4
 
 # Cross-validation
@@ -77,13 +80,12 @@ for(b in 1:bs.n){
   # refitted CV
   # Split the data into 10 folds
   cv.K = 10
-  set.seed(cv.seed)
   shuffle = sample(1:n)
   idfold = (shuffle %% cv.K) + 1
   n_fold = as.vector(table(idfold))
   
   # Do cross-validation
-  # calculate squared error (prediction error?) for each fold,
+  # calculate squared error (prediction error?) for each fold, 
   #   needed for CV(lambda) calculation
   cvm = rep(NA, cv.n_lambda) # want to have CV(lambda)
   cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
@@ -97,14 +99,14 @@ for(b in 1:bs.n){
     Ytest = y.bs[idfold == j]
     
     # Fit LASSO on that fold using fitLASSOcompositional
-    XYdata = data.frame(Xtrain, y = Ytrain)
     Lasso_j = ConstrLasso(
-      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda,
-      intercept = TRUE, scaling = TRUE, tol = tol)
+      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
+      nlam = cv.n_lambda, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
-      # get refitted coefficients, after model selection and w/o penalization
+      print(paste0("b = ",b, ", j = ", j, ", m = ", m))
       selected_variables = non0.betas[, m]
+      # get refitted coefficients, after model selection and w/o penalization
       if(all(!selected_variables)){ # if none selected
         refit = lm(Ytrain ~ 1)
         predictCLM = function(X) coefficients(refit)
@@ -112,13 +114,12 @@ for(b in 1:bs.n){
         # fit to the subsetted data
         Xtrain.sub = Xtrain[, selected_variables, drop = FALSE]
         Q = as.matrix(rep(1, sum(selected_variables)))
-        # fit betabar
-        stdXY = standardize(Xtrain.sub, Ytrain, center = TRUE, scale = FALSE)
-        betabar = clm(stdXY$Xtilde, stdXY$Ytilde, Q)
-        betabar.bstd = backStandardize(stdXY, betabar, scale = FALSE)
+        stdXY = standardize(Xtrain.sub, Ytrain, center = std.center, scale = std.scale)
+        betahat = clm(stdXY$Xtilde, stdXY$Ytilde, Q)
+        betahat.bstd = backStandardize(stdXY, betahat)
         predictCLM = function(X){
-          betabar.bstd$betahat0 +
-            X[, rownames(betabar), drop = FALSE] %*% betabar.bstd$betahat
+          betahat.bstd$betahat0 +
+            X[, names(betahat), drop = FALSE] %*% betahat.bstd$betahat
         }
       }
       # calculate squared error (prediction error?)
@@ -135,11 +136,12 @@ for(b in 1:bs.n){
   lambda_min = Lasso_j$lambda[lambda_min_index]
   
   # final fit
-  Lasso_select = ConstrLasso(
-    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop.bs)[2], 1),
-    lambda = lambda_min, nlam = 1,
-    intercept = TRUE, scaling = TRUE, tol=tol)
-  selected_variables = Lasso_select$bet != 0 # diff lambda = diff col
+  Lasso_select.bs = ConstrLasso(
+    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
+    lambda = lambda_min, nlam = 1, tol=tol)
+  XYdata = data.frame(log.X.prop.bs, y = y.bs)
+  non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
+  selected_variables = non0.betas
   # record which variables were selected in this fit
   bs.selected_variables[, b] = selected_variables
   # note: unless we're gonna estimate MSE(yhat), there is no need to get the

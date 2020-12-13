@@ -102,10 +102,9 @@ bs.selected_variables = foreach(
     Ytest = y.bs[idfold == j]
     
     # Fit LASSO on that fold using fitLASSOcompositional
-    XYdata = data.frame(Xtrain, y = Ytrain)
     Lasso_j = ConstrLasso(
-      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda,
-      intercept = TRUE, scaling = TRUE, tol = tol)
+      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
+      nlam = cv.n_lambda, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
       # get refitted coefficients, after model selection and w/o penalization
@@ -120,7 +119,7 @@ bs.selected_variables = foreach(
         # fit betabar
         stdXY = standardize(Xtrain.sub, Ytrain, center = std.center, scale = std.scale)
         betabar = clm(stdXY$Xtilde, stdXY$Ytilde, Q)
-        betabar.bstd = backStandardize(stdXY, betabar, scale = FALSE)
+        betabar.bstd = backStandardize(stdXY, betabar)
         predictCLM = function(X){
           betabar.bstd$betahat0 +
             X[, rownames(betabar), drop = FALSE] %*% betabar.bstd$betahat
@@ -142,8 +141,7 @@ bs.selected_variables = foreach(
   # final fit
   Lasso_select = ConstrLasso(
     y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop.bs)[2], 1),
-    lambda = lambda_min, nlam = 1,
-    intercept = TRUE, scaling = TRUE, tol=tol)
+    lambda = lambda_min, nlam = 1, tol=tol)
   selected_variables = Lasso_select$bet != 0 # diff lambda = diff col
   # record which variables were selected in this fit
   # note: unless we're gonna estimate MSE(yhat), there is no need to get the

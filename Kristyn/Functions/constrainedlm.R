@@ -32,7 +32,7 @@ standardize <- function(X, Y, center = FALSE, scale = FALSE){
 }
 
 backStandardize <- function(stdXY, betahat, scale = FALSE){
-  which.covariates = rownames(betahat)
+  which.covariates = names(betahat)
   if(scale){
     betahat.tilde = betahat
     wts = stdXY$weights[which.covariates]
@@ -58,5 +58,8 @@ clm <- function(X, Y, Q){
   XtXinvQ = solve(crossprod(X), Q)
   betabar = betahat - XtXinvQ %*% 
     solve(crossprod(Q, XtXinvQ), crossprod(Q, betahat))
+  betabar.names = rownames(betabar)
+  betabar = as.vector(betabar)
+  names(betabar) = betabar.names
   return(betabar)
 }

@@ -1,3 +1,5 @@
+# a parallelized version of ../bootstrap_simulations_112320/lin2014_bootstrap.R
+
 # workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
 # setwd(workdir)
 getwd()
@@ -34,9 +36,18 @@ source(paste0(functions_path, "principlebalances.R"))
 source(paste0(functions_path, "selbal.R"))
 source(paste0(functions_path, "constrainedlm.R"))
 
+# functions
+# manual lm
+lm2 <- function(X, Y){
+  betahat = coefficients(lm(Y ~ -1 + X))
+  names(betahat) = colnames(X)
+  betahat = na.omit(betahat)
+  return(betahat)
+}
+
 # settings
 std.center = TRUE
-std.scale = TRUE
+std.scale = FALSE
 tol = 1e-4
 
 # Cross-validation
@@ -88,7 +99,7 @@ bs.selected_variables = foreach(
   n_fold = as.vector(table(idfold))
   
   # Do cross-validation
-  # calculate squared error (prediction error?) for each fold,
+  # calculate squared error (prediction error?) for each fold, 
   #   needed for CV(lambda) calculation
   cvm = rep(NA, cv.n_lambda) # want to have CV(lambda)
   cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
@@ -103,26 +114,25 @@ bs.selected_variables = foreach(
     
     # Fit LASSO on that fold using fitLASSOcompositional
     Lasso_j = ConstrLasso(
-      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda,
-      intercept = TRUE, scaling = TRUE, tol = tol)
+      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
+      nlam = cv.n_lambda, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
-      # get refitted coefficients, after model selection and w/o penalization
+      print(paste0("b = ",b, ", j = ", j, ", m = ", m))
       selected_variables = non0.betas[, m]
+      # get refitted coefficients, after model selection and w/o penalization
       if(all(!selected_variables)){ # if none selected
         refit = lm(Ytrain ~ 1)
         predictCLM = function(X) coefficients(refit)
       } else{ # otherwise, fit on selected variables
         # fit to the subsetted data
         Xtrain.sub = Xtrain[, selected_variables, drop = FALSE]
-        Q = as.matrix(rep(1, sum(selected_variables)))
-        # fit betabar
         stdXY = standardize(Xtrain.sub, Ytrain, center = std.center, scale = std.scale)
-        betabar = clm(stdXY$Xtilde, stdXY$Ytilde, Q)
-        betabar.bstd = backStandardize(stdXY, betabar, scale = FALSE)
+        betahat = lm2(stdXY$Xtilde, stdXY$Ytilde)
+        betahat.bstd = backStandardize(stdXY, betahat)
         predictCLM = function(X){
-          betabar.bstd$betahat0 +
-            X[, rownames(betabar), drop = FALSE] %*% betabar.bstd$betahat
+          betahat.bstd$betahat0 +
+            X[, names(betahat), drop = FALSE] %*% betahat.bstd$betahat
         }
       }
       # calculate squared error (prediction error?)
@@ -139,14 +149,13 @@ bs.selected_variables = foreach(
   lambda_min = Lasso_j$lambda[lambda_min_index]
   
   # final fit
-  Lasso_select = ConstrLasso(
-    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop.bs)[2], 1),
-    lambda = lambda_min, nlam = 1,
-    intercept = TRUE, scaling = TRUE, tol=tol)
-  selected_variables = Lasso_select$bet != 0 # diff lambda = diff col
-  # record which variables were selected in this fit
-  # note: unless we're gonna estimate MSE(yhat), there is no need to get the
-  #   actual constrained linear model.
+  Lasso_select.bs = ConstrLasso(
+    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
+    lambda = lambda_min, nlam = 1, tol=tol)
+  XYdata = data.frame(log.X.prop.bs, y = y.bs)
+  non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
+  selected_variables = non0.betas
+  # record which variables were selected
   selected_variables
 }
 rownames(bs.selected_variables) = colnames(X)
@@ -165,8 +174,21 @@ saveRDS(bs.results,
         file = paste0("Kristyn/ReproducingLin2014",
                       "/bootstrap_simulations_121420",
                       "/bootstraps", 
-                      "_c", std.center,
-                      "_s", std.scale,
+                      "_112320",
+                      "_manual",
                       ".rds"))
 
 sort(bs.selection_percentages)
+
+# Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Rikenellaceae.Alistipes 
+# 53 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Megamonas 
+# 53 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Zymophilus 
+# 54 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella 
+# 78 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Clostridiaceae.Clostridium 
+# 79 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Acidaminococcus 
+# 86 

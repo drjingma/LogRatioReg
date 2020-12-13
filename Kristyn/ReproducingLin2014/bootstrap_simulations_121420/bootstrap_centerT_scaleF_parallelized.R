@@ -10,6 +10,18 @@ library(microbenchmark)
 library(ggplot2)
 library(logratiolasso) # bates & tibshirani 2019
 
+# set up parallelization
+library(doFuture)
+library(parallel)
+registerDoFuture()
+nworkers = detectCores()
+plan(multisession, workers = nworkers)
+
+library(doRNG)
+set.seed(123)
+
+library(progressr)
+
 # Dr. Ma sources
 source("RCode/func_libs.R")
 source("COAT-master/coat.R")
@@ -22,22 +34,12 @@ source(paste0(functions_path, "principlebalances.R"))
 source(paste0(functions_path, "selbal.R"))
 source(paste0(functions_path, "constrainedlm.R"))
 
-# helper functions
-MSEyhat <- function(y, yhat){
-  sqrt(sum((y - yhat)^2)) / length(y)
-}
-L2norm <- function(x){
-  sqrt(crossprod(x))
-}
-L2distance <- function(x1, x2){
-  sqrt(sum((x1 - x2)^2))
-}
-
 # settings
+std.center = TRUE
+std.scale = FALSE
 tol = 1e-4
 
 # Cross-validation
-cv.seed = 1234
 cv.n_lambda = 100
 
 # Bootstrap
@@ -63,11 +65,15 @@ num.genera = dim(X)[2]
 #   the genera (for stable selection results)
 
 # bs.finalfits = list()
-bs.selected_variables = matrix(NA, num.genera, bs.n)
-rownames(bs.selected_variables) = colnames(X)
-for(b in 1:bs.n){
-  set.seed(bs.seed + b)
-  print(paste0("starting bootstrap ", b))
+
+registerDoRNG(bs.seed)
+bs.selected_variables = foreach(
+  b = 1:bs.n, 
+  .combine = cbind, 
+  .noexport = c("ConstrLassoC0")
+) %dopar% {
+  source("RCode/func_libs.R")
+  # cannot print
   
   # resample the data
   bs.resample = sample(1:n, n, replace = TRUE)
@@ -77,7 +83,6 @@ for(b in 1:bs.n){
   # refitted CV
   # Split the data into 10 folds
   cv.K = 10
-  set.seed(cv.seed)
   shuffle = sample(1:n)
   idfold = (shuffle %% cv.K) + 1
   n_fold = as.vector(table(idfold))
@@ -113,7 +118,7 @@ for(b in 1:bs.n){
         Xtrain.sub = Xtrain[, selected_variables, drop = FALSE]
         Q = as.matrix(rep(1, sum(selected_variables)))
         # fit betabar
-        stdXY = standardize(Xtrain.sub, Ytrain, center = FALSE, scale = FALSE)
+        stdXY = standardize(Xtrain.sub, Ytrain, center = std.center, scale = std.scale)
         betabar = clm(stdXY$Xtilde, stdXY$Ytilde, Q)
         betabar.bstd = backStandardize(stdXY, betabar, scale = FALSE)
         predictCLM = function(X){
@@ -141,11 +146,12 @@ for(b in 1:bs.n){
     intercept = TRUE, scaling = TRUE, tol=tol)
   selected_variables = Lasso_select$bet != 0 # diff lambda = diff col
   # record which variables were selected in this fit
-  bs.selected_variables[, b] = selected_variables
   # note: unless we're gonna estimate MSE(yhat), there is no need to get the
   #   actual constrained linear model.
-  print(colnames(X)[selected_variables])
+  selected_variables
 }
+rownames(bs.selected_variables) = colnames(X)
+
 bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
 bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN = 
                                    function(x) sum(x, na.rm = TRUE))
@@ -155,9 +161,13 @@ bs.results = list(
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
+
 saveRDS(bs.results,
-        file = paste0("Kristyn/ReproducingLin2014", 
+        file = paste0("Kristyn/ReproducingLin2014",
                       "/bootstrap_simulations_121420",
-                      "/bootstraps_cFsF.rds"))
+                      "/bootstraps", 
+                      "_c", std.center,
+                      "_s", std.scale,
+                      ".rds"))
 
 sort(bs.selection_percentages)

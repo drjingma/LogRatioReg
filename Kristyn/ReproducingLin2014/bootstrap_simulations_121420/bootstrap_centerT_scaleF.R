@@ -100,7 +100,7 @@ for(b in 1:bs.n){
     XYdata = data.frame(Xtrain, y = Ytrain)
     Lasso_j = ConstrLasso(
       Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda,
-      intercept = TRUE, scaling = FALSE, tol = tol)
+      intercept = TRUE, scaling = TRUE, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
       # get refitted coefficients, after model selection and w/o penalization
@@ -138,7 +138,7 @@ for(b in 1:bs.n){
   Lasso_select = ConstrLasso(
     y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop.bs)[2], 1),
     lambda = lambda_min, nlam = 1,
-    intercept = TRUE, scaling = FALSE, tol=tol)
+    intercept = TRUE, scaling = TRUE, tol=tol)
   selected_variables = Lasso_select$bet != 0 # diff lambda = diff col
   # record which variables were selected in this fit
   bs.selected_variables[, b] = selected_variables

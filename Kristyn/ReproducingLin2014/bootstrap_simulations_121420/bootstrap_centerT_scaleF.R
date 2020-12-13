@@ -162,4 +162,9 @@ saveRDS(bs.results,
                       "/bootstrap_simulations_121420",
                       "/bootstraps_cTsF.rds"))
 
-sort(bs.selection_percentages)
+sort(bs.selection_percentages) / b
+# got up to b = 19, j = 10, m = 97
+# before encountered solve issue in clm -- solve(crossprod(X), Q)
+# the problem is that there are 59 variables, and even though
+# qr(X)$rank = 59, qr(crossprod(X))$rank = 58
+# which leads to issues because Q is 59x1.

@@ -55,7 +55,15 @@ clm <- function(X, Y, Q){
     Q = as.matrix(rep(1, length(betahat)))
   }
   # compute beta.bar, constrained fit
-  XtXinvQ = solve(crossprod(X), Q)
+  XtXinvQ = tryCatch(
+    {
+      solve(crossprod(X), Q)
+    },
+    error = function(e){
+      print("clm() : error in solve(crossprod(X), Q) -- perturb!")
+      solve(crossprod(X) + (1e-15) * diag(dim(Q)[1]), Q)
+    }
+  )
   betabar = betahat - XtXinvQ %*% 
     solve(crossprod(Q, XtXinvQ), crossprod(Q, betahat))
   betabar.names = rownames(betabar)

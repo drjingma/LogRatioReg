@@ -157,6 +157,6 @@ bs.results = list(
 saveRDS(bs.results,
         file = paste0("Kristyn/ReproducingLin2014", 
                       "/bootstrap_simulations_121420",
-                      "/bootstraps_cTsF.rds"))
+                      "/bootstraps_cTsT.rds"))
 
 # sort(bs.selection_percentages)

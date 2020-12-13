@@ -25,6 +25,7 @@ standardize <- function(X, Y, center = FALSE, scale = FALSE){
   } else{
     Xtilde = X
   }
+  colnames(Xtilde) = colnames(X)
   
   # Return the mean of Y and means of columns of X, as well as weights to be used in back-scaling (that is sqrt(X_j'X_j/n))
   return(list(Xtilde = Xtilde, Ytilde = Ytilde, Ymean = Ymean, Xmeans = Xmeans, weights = weights))

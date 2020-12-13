@@ -1,4 +1,4 @@
-# a parallelized version of ../bootstrap_simulations_112320/lin2014_bootstrap.R
+# uses limSolve::lsei() instead of my own clm()
 
 # workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
 # setwd(workdir)
@@ -13,18 +13,6 @@ library(ggplot2)
 library(logratiolasso) # bates & tibshirani 2019
 library(limSolve) # for constrained lm
 
-# set up parallelization
-library(doFuture)
-library(parallel)
-registerDoFuture()
-nworkers = detectCores()
-plan(multisession, workers = nworkers)
-
-library(doRNG)
-set.seed(123)
-
-library(progressr)
-
 # Dr. Ma sources
 source("RCode/func_libs.R")
 source("COAT-master/coat.R")
@@ -37,21 +25,13 @@ source(paste0(functions_path, "principlebalances.R"))
 source(paste0(functions_path, "selbal.R"))
 source(paste0(functions_path, "constrainedlm.R"))
 
-# functions
-# manual lm
-lm2 <- function(X, Y){
-  betahat = coefficients(lm(Y ~ -1 + X))
-  names(betahat) = colnames(X)
-  betahat = na.omit(betahat)
-  return(betahat)
-}
-
 # settings
 std.center = TRUE
 std.scale = FALSE
 tol = 1e-4
 
 # Cross-validation
+cv.seed = 1234
 cv.n_lambda = 100
 
 # Bootstrap
@@ -77,16 +57,11 @@ num.genera = dim(X)[2]
 #   the genera (for stable selection results)
 
 # bs.finalfits = list()
-
-registerDoRNG(bs.seed)
-bs.selected_variables = foreach(
-  b = 1:bs.n, 
-  .combine = cbind, 
-  .noexport = c("ConstrLassoC0")
-) %dopar% {
-  source("RCode/func_libs.R")
-  library(limSolve)
-  # cannot print
+bs.selected_variables = matrix(NA, num.genera, bs.n)
+rownames(bs.selected_variables) = colnames(X)
+for(b in 1:bs.n){
+  set.seed(bs.seed + b)
+  print(paste0("starting bootstrap ", b))
   
   # resample the data
   bs.resample = sample(1:n, n, replace = TRUE)
@@ -160,12 +135,12 @@ bs.selected_variables = foreach(
   XYdata = data.frame(log.X.prop.bs, y = y.bs)
   non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
   selected_variables = non0.betas
-  # record which variables were selected
-  selected_variables
-  
+  # record which variables were selected in this fit
+  bs.selected_variables[, b] = selected_variables
+  # note: unless we're gonna estimate MSE(yhat), there is no need to get the
+  #   actual constrained linear model.
+  print(colnames(X)[selected_variables])
 }
-rownames(bs.selected_variables) = colnames(X)
-
 bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
 bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN = 
                                    function(x) sum(x, na.rm = TRUE))
@@ -175,14 +150,13 @@ bs.results = list(
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
-
 saveRDS(bs.results,
-        file = paste0("Kristyn/ReproducingLin2014",
+        file = paste0("Kristyn/ReproducingLin2014", 
                       "/bootstrap_simulations_121420",
-                      "/bootstraps", 
-                      "_121420",
-                      ".rds"))
+                      "/bootstraps_cTsF.rds"))
 
-sort(bs.selection_percentages)
+sort(bs.selection_percentages) / b
 
-# Error in { : task 1 failed - "non-conformable arguments"
+# problem: non-conformable arguments
+# added drop = FALSE in X[, selected_variables, drop = FALSE] %*% lsei.fit$X[-1]
+#   of predictCLM()

@@ -82,6 +82,8 @@ for(b in 1:bs.n){
   cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
   # Fit Lasso for each fold removed
   for (j in 1:cv.K){
+    print(paste0("starting cv fold j = ", j))
+    
     # Training data
     Xtrain = log.X.prop.bs[idfold != j, ]
     Ytrain = y.bs[idfold != j]
@@ -95,7 +97,6 @@ for(b in 1:bs.n){
       nlam = cv.n_lambda, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
-      print(paste0("b = ",b, ", j = ", j, ", m = ", m))
       selected_variables = non0.betas[, m]
       # get refitted coefficients, after model selection and w/o penalization
       if(all(!selected_variables)){ # if none selected

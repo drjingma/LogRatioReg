@@ -76,7 +76,6 @@ bs.selected_variables = foreach(
   .noexport = c("ConstrLassoC0")
 ) %dopar% {
   source("RCode/func_libs.R")
-  # cannot print
   
   # resample the data
   bs.resample = sample(1:n, n, replace = TRUE)
@@ -110,7 +109,6 @@ bs.selected_variables = foreach(
       nlam = cv.n_lambda, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
-      print(paste0("b = ",b, ", j = ", j, ", m = ", m))
       selected_variables = non0.betas[, m]
       # get refitted coefficients, after model selection and w/o penalization
       if(all(!selected_variables)){ # if none selected
@@ -172,5 +170,4 @@ saveRDS(bs.results,
                       ".rds"))
 
 sort(bs.selection_percentages)
-
-# Error in { : task 1 failed - "non-conformable arguments"
+# no issues now!

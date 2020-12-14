@@ -61,7 +61,7 @@ clm <- function(X, Y, Q){
     },
     error = function(e){
       print("clm() : error in solve(crossprod(X), Q) -- perturb!")
-      solve(crossprod(X) + (1e-15) * diag(dim(Q)[1]), Q)
+      solve(crossprod(X) + (1e-10) * diag(dim(Q)[1]), Q)
     }
   )
   betabar = betahat - XtXinvQ %*% 

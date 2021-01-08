@@ -186,7 +186,7 @@ bs.results = list(
 saveRDS(bs.results,
         file = paste0("Kristyn/ReproducingLin2014",
                       "/bootstrap_simulations_121420/using_subcompositions",
-                      "/bootstraps", 
+                      "/bootstraps_sub", 
                       "_121420",
                       ".rds"))
 

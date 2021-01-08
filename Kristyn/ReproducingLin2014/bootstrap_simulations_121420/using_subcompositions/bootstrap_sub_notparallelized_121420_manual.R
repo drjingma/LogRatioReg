@@ -168,7 +168,7 @@ bs.results = list(
 saveRDS(bs.results,
         file = paste0("Kristyn/ReproducingLin2014", 
                       "/bootstrap_simulations_121420/using_subcompositions",
-                      "/bootstraps_121420_notparallel_manual.rds"))
+                      "/bootstraps_sub_121420_notparallel_manual.rds"))
 
 sort(bs.selection_percentages) / b
 # got up to b = 19, j = 10, m = 97

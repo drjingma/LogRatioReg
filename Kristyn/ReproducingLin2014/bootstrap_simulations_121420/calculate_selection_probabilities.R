@@ -80,7 +80,7 @@ sort(res0$selection_percentages)
 # 85 
 
 ################################################################################
-# read in output from bootstrap_centerT_scaleF.R
+# read in output from bootstrap_notparallelized_121420_manual.R
 ################################################################################
 res2 = readRDS(paste0(
   "Kristyn/ReproducingLin2014/bootstrap_simulations_121420",
@@ -102,7 +102,7 @@ sort(res2$selection_percentages)
 # 90 
 
 ################################################################################
-# read in output from bootstrap_centerT_scaleF2.R
+# read in output from bootstrap_notparallelized_121420.R
 ################################################################################
 res3 = readRDS(paste0(
   "Kristyn/ReproducingLin2014/bootstrap_simulations_121420",
@@ -122,3 +122,29 @@ sort(res3$selection_percentages)
 # 84 
 # Bacteria.Firmicutes.Clostridia.Clostridiales.Clostridiaceae.Clostridium 
 # 91
+
+################################################################################
+# read in output from using_subcompositions/bootstrap_parallelized_121420.R
+################################################################################
+res00 = readRDS(paste0(
+  "Kristyn/ReproducingLin2014/bootstrap_simulations_121420/using_subcompositions",
+  "/bootstraps_sub_121420.rds"))
+dim(res00$selected_variables)
+all(!is.na(res00$selected_variables)) # no NAs
+sort(res00$selection_percentages)
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Megamonas 
+# 50 
+# Bacteria.Bacteroidetes.Bacteroidia.Bacteroidales.Rikenellaceae.Alistipes 
+# 51 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Lachnospiraceae.Dorea 
+# 51 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Ruminococcaceae.Oscillibacter 
+# 51 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Zymophilus 
+# 53 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Allisonella 
+# 78 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Clostridiaceae.Clostridium 
+# 80 
+# Bacteria.Firmicutes.Clostridia.Clostridiales.Veillonellaceae.Acidaminococcus 
+# 85

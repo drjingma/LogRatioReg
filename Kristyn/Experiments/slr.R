@@ -1,3 +1,5 @@
+# a parallelized version of ../bootstrap_simulations_112320/lin2014_bootstrap.R
+
 # workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
 # setwd(workdir)
 getwd()
@@ -9,6 +11,7 @@ library(selbal)
 library(microbenchmark)
 library(ggplot2)
 library(logratiolasso) # bates & tibshirani 2019
+library(limSolve) # for constrained lm
 
 # set up parallelization
 library(doFuture)
@@ -34,9 +37,18 @@ source(paste0(functions_path, "principlebalances.R"))
 source(paste0(functions_path, "selbal.R"))
 source(paste0(functions_path, "constrainedlm.R"))
 
+# functions
+# manual lm
+lm2 <- function(X, Y){
+  betahat = coefficients(lm(Y ~ -1 + X))
+  names(betahat) = colnames(X)
+  betahat = na.omit(betahat)
+  return(betahat)
+}
+
 # settings
 std.center = TRUE
-std.scale = TRUE
+std.scale = FALSE
 tol = 1e-4
 
 # Cross-validation
@@ -73,22 +85,22 @@ bs.selected_variables = foreach(
   .noexport = c("ConstrLassoC0")
 ) %dopar% {
   source("RCode/func_libs.R")
-  # cannot print
+  library(limSolve)
   
   # resample the data
   bs.resample = sample(1:n, n, replace = TRUE)
   log.X.prop.bs = log.X.prop[bs.resample, ]
   y.bs = y[bs.resample]
   
-  # refitted CV
+  # refitted CV:
   # Split the data into 10 folds
   cv.K = 10
   shuffle = sample(1:n)
   idfold = (shuffle %% cv.K) + 1
   n_fold = as.vector(table(idfold))
   
-  # Do cross-validation
-  # calculate squared error (prediction error?) for each fold,
+  # Do cross-validation:
+  # calculate squared error (prediction error?) for each fold, 
   #   needed for CV(lambda) calculation
   cvm = rep(NA, cv.n_lambda) # want to have CV(lambda)
   cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
@@ -103,26 +115,27 @@ bs.selected_variables = foreach(
     
     # Fit LASSO on that fold using fitLASSOcompositional
     Lasso_j = ConstrLasso(
-      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda,
-      intercept = TRUE, scaling = TRUE, tol = tol)
+      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
+      nlam = cv.n_lambda, tol = tol)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
-      # get refitted coefficients, after model selection and w/o penalization
       selected_variables = non0.betas[, m]
+      # get refitted coefficients, after model selection and w/o penalization
       if(all(!selected_variables)){ # if none selected
         refit = lm(Ytrain ~ 1)
         predictCLM = function(X) coefficients(refit)
       } else{ # otherwise, fit on selected variables
         # fit to the subsetted data
         Xtrain.sub = Xtrain[, selected_variables, drop = FALSE]
+        Xtrain.sub2 = cbind(1, Xtrain.sub)
         Q = as.matrix(rep(1, sum(selected_variables)))
-        # fit betabar
-        stdXY = standardize(Xtrain.sub, Ytrain, center = std.center, scale = std.scale)
-        betabar = clm(stdXY$Xtilde, stdXY$Ytilde, Q)
-        betabar.bstd = backStandardize(stdXY, betabar, scale = FALSE)
+        Q2 = rbind(0, Q)
+        colnames(Xtrain.sub2)[1] = "Intercept"
+        rownames(Q2) = colnames(Xtrain.sub2)
+        lsei.fit = lsei(A = Xtrain.sub2, B = Ytrain, E = t(Q2), F = 0)
         predictCLM = function(X){
-          betabar.bstd$betahat0 +
-            X[, rownames(betabar), drop = FALSE] %*% betabar.bstd$betahat
+          lsei.fit$X[1] +
+            X[, selected_variables, drop = FALSE] %*% lsei.fit$X[-1]
         }
       }
       # calculate squared error (prediction error?)
@@ -139,15 +152,15 @@ bs.selected_variables = foreach(
   lambda_min = Lasso_j$lambda[lambda_min_index]
   
   # final fit
-  Lasso_select = ConstrLasso(
-    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop.bs)[2], 1),
-    lambda = lambda_min, nlam = 1,
-    intercept = TRUE, scaling = TRUE, tol=tol)
-  selected_variables = Lasso_select$bet != 0 # diff lambda = diff col
-  # record which variables were selected in this fit
-  # note: unless we're gonna estimate MSE(yhat), there is no need to get the
-  #   actual constrained linear model.
+  Lasso_select.bs = ConstrLasso(
+    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
+    lambda = lambda_min, nlam = 1, tol=tol)
+  XYdata = data.frame(log.X.prop.bs, y = y.bs)
+  non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
+  selected_variables = non0.betas
+  # record which variables were selected
   selected_variables
+  
 }
 rownames(bs.selected_variables) = colnames(X)
 
@@ -165,8 +178,8 @@ saveRDS(bs.results,
         file = paste0("Kristyn/ReproducingLin2014",
                       "/bootstrap_simulations_121420",
                       "/bootstraps", 
-                      "_c", std.center,
-                      "_s", std.scale,
+                      "_121420",
                       ".rds"))
 
 sort(bs.selection_percentages)
+# no problems! yay.

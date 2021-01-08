@@ -22,16 +22,6 @@ getSupervisedTree = function(X, y, linkage, allow.noise = FALSE){
       if(j == k){
         cormat[j, k] = 1
       } else{
-        if(all(Zjk == 0)){
-          if(allow.noise){
-            Zjk = rnorm(n, 0, 1e-10) # add noise if Zjk = 0vec
-          } else{
-            print(j)
-            print(k)
-            print(Zjk)
-            stop(paste0("Zjk == 0vec for j = ", j, " and k = ", k ," leads to correlation NA"))
-          }
-        }
         # off-diagonal = cor(Zjk, y)
         Zjk_demeaned = Zjk - mean(Zjk)
         cormat[j, k] = cor(Zjk_demeaned, y_demeaned)
@@ -62,23 +52,31 @@ computeBalances = function(btree_slr, X){
   return(balances_slr)
 }
 
-fitGlmnet = function(X, y, lambda){
-  cv_exact = cv.glmnet(x = X, y = y, lambda = lambda)
+fitGlmnet = function(X, y, lambda, nlambda = 100, nfolds = 10){
+  # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
+  cv_exact = cv.glmnet(x = X, y = y, lambda = lambda, nfolds = nfolds)
+  # get a new lambda sequence (why?)
   lambda = log(cv_exact$lambda)
-  lambda_new = exp(seq(max(lambda), min(lambda) + 2, length.out = 100))
-  cv_exact2 = cv.glmnet(x = X, y = y, lambda = lambda_new)
-  refit_exact = glmnet(x = X,y = y, family = 'gaussian', lambda = cv_exact2$lambda.min)
-  return(list(glmnet = refit_exact, beta = refit_exact$beta, lambda = refit_exact$lambda))
+  lambda_new = exp(seq(max(lambda), min(lambda) + 2, length.out = nlambda))
+  # fit cv.glmnet to choose lambda based on cross-validation
+  cv_exact2 = cv.glmnet(x = X, y = y, lambda = lambda_new, nfolds = nfolds)
+  # fit glmnet to the chosen lambda
+  refit_exact = glmnet(x = X,y = y, family = 'gaussian', 
+                       lambda = cv_exact2$lambda.min)
+  return(list(cv.glmnet = cv_exact2, 
+              glmnet = refit_exact, 
+              beta = refit_exact$beta, 
+              lambda = refit_exact$lambda))
 }
 
 # fit SLR given data (X, y), linkage, and (optional) lambda
 # this version is the clean version
-fitSLRLasso = function(X, y, linkage, lambda = NULL, allow.noise = FALSE){
-  btree = getSupervisedTree(X, y, linkage, allow.noise)
+fitSLRLasso = function(X, y, linkage, lambda = NULL, nlambda, nfolds){
+  btree = getSupervisedTree(X, y, linkage)
   Xb = computeBalances(btree, X)
   
   # lasso fit
-  glm.temp = fitGlmnet(Xb, y, lambda)
+  glm.temp = fitGlmnet(Xb, y, lambda, nfolds)
   
   return(list(
     glmnet = glm.temp$glmnet, 
@@ -86,32 +84,4 @@ fitSLRLasso = function(X, y, linkage, lambda = NULL, allow.noise = FALSE){
     betahat = as.vector(glm.temp$beta), 
     lambda = glm.temp$lamdba
   ))
-}
-# tried using the fitting function in Dr. Ma's code, but changed my mind
-fitSLRLasso0 = function(X, y, linkage, lambda = NULL, allow.noise = TRUE){
-  # divide dataset into training and validation set
-  #   (dataset might be a training set being further divided for validation)
-  # n = dim(X)[1]
-  # shuffle = sample(1:n)
-  # # id_tv = (shuffle %% 2) + 1
-  # id_tv = (shuffle %% 3) + 1
-  # n_tv = as.vector(table(id_tv))
-  # Xtrain.tmp = X[id_tv %in% c(1, 2), ]
-  # Xvalid.tmp = X[id_tv == 3, ]
-  # ytrain.tmp = y[id_tv %in% c(1, 2)]
-  # yvalid.tmp = y[id_tv == 3]
-  # # fit
-  btree = getSupervisedTree(X, y, linkage, allow.noise)
-  # Xtrainb = computeBalances(btree, Xtrain.tmp)
-  # Xvalidb = computeBalances(btree, Xvalid.tmp)
-  Xb = computeBalances(btree, X)
-  
-  # lasso fit
-  glm.temp = fitGlmnet(Xb, y, lambda)
-  
-  return(list(
-    btree = btree,
-    betahat = as.vector(glm.temp$beta), 
-    lambda = glm.temp$lamdba
-    ))
 }

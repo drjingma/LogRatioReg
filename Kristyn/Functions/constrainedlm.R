@@ -13,7 +13,7 @@ standardize <- function(X, Y, center = FALSE, scale = FALSE){
   
   # Center and scale X
   Xmeans = colMeans(X)
-  Xcen = X - matrix(Xmeans, n, p, byrow=T)
+  Xcen = X - matrix(Xmeans, n, p, byrow = T)
   normsX2 = colSums(Xcen^2) / n
   weights = 1 / sqrt(normsX2)
   if(center & scale){
@@ -38,8 +38,12 @@ backStandardize <- function(stdXY, betahat, scale = FALSE){
     wts = stdXY$weights[which.covariates]
     betahat = diag(wts) %*% betahat.tilde
   }
-  betahat0 = as.numeric(stdXY$Ymean - crossprod(stdXY$Xmeans[which.covariates], 
-                                                betahat))
+  if(is.null(which.covariates)){
+    betahat0 = stdXY$Ymean - crossprod(stdXY$Xmeans, betahat)
+  } else{
+    betahat0 = stdXY$Ymean - crossprod(stdXY$Xmeans[which.covariates], betahat)
+  }
+  betahat0 = as.numeric(betahat0)
   return(list(
     betahat0 = betahat0, 
     betahat = betahat))

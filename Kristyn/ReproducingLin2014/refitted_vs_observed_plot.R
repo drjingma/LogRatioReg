@@ -184,8 +184,7 @@ all.equal(as.numeric(lsei(A = Xmat2, B = y)$X),
           as.numeric(coefficients(lm(y ~ Xmat))), 
           tol = 1e-5)
 lsei.fit = lsei(A = Xmat2, B = y, E = t(Q2), F = 0)
-predict(lsei.fit)
-
+lsei.fit$X
 betabar.bstd.orig
 
 ################################################################################

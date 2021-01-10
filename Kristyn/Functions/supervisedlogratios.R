@@ -5,29 +5,32 @@
 
 # Supervised Log Ratios Regression
 
-# do hierarchical clustering with specified linkage for data X and y
-getSupervisedTree = function(X, y, linkage, allow.noise = FALSE){
+# do hierarchical clustering with specified linkage for compositional data X and y
+getSupervisedTree = function(y, X, linkage, allow.noise = FALSE, noise){
   # browser()
   n = dim(X)[1]
   p = dim(X)[2]
   if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
   
   # calculate correlation of each pair of log-ratios with response y
-  cormat = matrix(NA, p, p)
+  cormat = matrix(1, p, p) # diagonal == 1
   y_demeaned = y - mean(y)
-  for(j in 1:p){
-    for(k in 1:p){
+  for (j in 1:(p - 1)){
+    for (k in (j + 1):p){
       Zjk = log(X[, j]) - log(X[, k])
-      # diagonal = 1
-      if(j == k){
-        cormat[j, k] = 1
-      } else{
-        # off-diagonal = cor(Zjk, y)
         Zjk_demeaned = Zjk - mean(Zjk)
-        cormat[j, k] = cor(Zjk_demeaned, y_demeaned)
-      }
+        if(all(Zjk == 0)){ # add noise (hopefully only necessary if bootstrap!)
+          if(allow.noise) Zjk = rmvnorm(n, rep(0, n), noise * diag(n))
+        } else{
+          val = abs(cor(Zjk_demeaned, y_demeaned))
+        }
+        cormat[j, k] = val
+        cormat[k, j] = val
     }
   }
+  # find out which columns give na
+  # for(i in 1:p) if(!all(!is.na(cormat[, i]))) print(paste0(i, ":", which(is.na(cormat[, i]))))
+  # 
   # give the rows and columns the names of taxa in X, 
   #   so that sbp.fromHclust works later
   rownames(cormat) = colnames(X)
@@ -43,45 +46,178 @@ getSupervisedTree = function(X, y, linkage, allow.noise = FALSE){
 }
 
 # using a hierarchical tree, compute the balances for X
-computeBalances = function(btree_slr, X){
+computeBalances = function(X, btree){
   # compute balances from hclust object using balance pkg:
   # 1. build SBP (serial binary partition) matrix from hclust object
-  sbp_slr = sbp.fromHclust(btree_slr)
+  sbp = sbp.fromHclust(btree)
   # 2. calculate balances from SBP matrix
-  balances_slr = balance.fromSBP(X, sbp_slr)
-  return(balances_slr)
+  balances = balance.fromSBP(X, sbp)
+  return(balances)
 }
 
-fitGlmnet = function(X, y, lambda, nlambda = 100, nfolds = 10){
-  # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
-  cv_exact = cv.glmnet(x = X, y = y, lambda = lambda, nfolds = nfolds)
-  # get a new lambda sequence (why?)
-  lambda = log(cv_exact$lambda)
-  lambda_new = exp(seq(max(lambda), min(lambda) + 2, length.out = nlambda))
-  # fit cv.glmnet to choose lambda based on cross-validation
-  cv_exact2 = cv.glmnet(x = X, y = y, lambda = lambda_new, nfolds = nfolds)
-  # fit glmnet to the chosen lambda
-  refit_exact = glmnet(x = X,y = y, family = 'gaussian', 
-                       lambda = cv_exact2$lambda.min)
-  return(list(cv.glmnet = cv_exact2, 
-              glmnet = refit_exact, 
-              beta = refit_exact$beta, 
-              lambda = refit_exact$lambda))
-}
-
-# fit SLR given data (X, y), linkage, and (optional) lambda
-# this version is the clean version
-fitSLRLasso = function(X, y, linkage, lambda = NULL, nlambda, nfolds){
-  btree = getSupervisedTree(X, y, linkage)
-  Xb = computeBalances(btree, X)
+fitSLR = function(
+  y, X, linkage = "complete", lambda = NULL, nlam = 20, 
+  get_lambda = NULL, allow.noise = FALSE, noise = 1e-12
+){
+  n <- nrow(X)
+  p <- ncol(X)
   
-  # lasso fit
-  glm.temp = fitGlmnet(Xb, y, lambda, nfolds)
+  # get lambda sequence, if not already given
+  if(!is.null(lambda)){
+    get_lambda = NULL
+  } else{
+    if(is.null(get_lambda)) get_lambda == 0
+  }
+  if(!is.null(get_lambda)){
+    if(get_lambda == "sup-balances" | get_lambda == 0){ # like in sup-balances.R
+      # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
+      cv_exact = cv.glmnet(x = X, y = y, lambda = lambda, nlambda = nlam)
+      # get a new lambda sequence (why?)
+      lambda = log(cv_exact$lambda)
+      lambda = exp(seq(max(lambda), min(lambda) + 2, length.out = nlam))
+    } else if(get_lambda == "ConstrLasso" | get_lambda == 1){ # like ConstrLasso()
+      # get sequence of tuning parameter lambda
+      if (is.null(lambda)){
+        maxlam <- 2*max(abs(crossprod(X, y) / n))
+        lambda <- exp(seq(log(maxlam), log(1e-4), length.out=nlam))
+      }
+    } else if(get_lambda == "glmnet" | get_lambda == 2){ # like glmnet
+      # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
+      cv_exact = cv.glmnet(x = X, y = y, lambda = lambda, nfolds = nfolds)
+      lambda = cv_exact$lambda
+    }
+  }
+  nlam = length(lambda)
+  
+  # compute balances
+  btree = getSupervisedTree(y, X, linkage, allow.noise, noise)
+  Xb = computeBalances(X, btree)
+  
+  # fit lasso (using glmnet)
+  cv_exact = glmnet(x = Xb, y = y, lambda = lambda)
   
   return(list(
-    glmnet = glm.temp$glmnet, 
-    btree = btree,
-    betahat = as.vector(glm.temp$beta), 
-    lambda = glm.temp$lamdba
+    int = cv_exact$a0, 
+    bet = cv_exact$beta, 
+    lambda = cv_exact$lambda,
+    glmnet = cv_exact, 
+    btree = btree, 
+    balances = Xb
+    ))
+}
+
+cvSLR = function(
+  y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
+  get_lambda = NULL, allow.noise = FALSE, noise = 1e-12
+){
+  n <- nrow(X)
+  p <- ncol(X)
+  
+  # Fit to the original data
+  slr = fitSLR(y, X, linkage, lambda, nlam, get_lambda, allow.noise, noise)
+  bet = slr$bet
+  int = slr$int
+  lambda = slr$lambda
+  nlam = length(lambda)
+  btree = slr$btree
+  
+  # Split the data into K folds
+  shuffle = sample(1:n)
+  idfold = (shuffle %% nfolds) + 1 # IDs for which fold each obs goes into
+  n_fold = as.vector(table(idfold)) # number of things in each fold
+  
+  cvm = rep(NA, nlam) # want to have CV(lambda)
+  cvm_sqerror = matrix(rep(NA, nfolds * nlam), nfolds, nlam) # calculate squared error for each fold, needed for CV(lambda) calculation
+  cvse = rep(NA, nlam) # want to have SE_CV(lambda)
+  cvse_errorsd =  matrix(rep(NA, nfolds * nlam), nfolds, nlam) # calculate sd of error for each fold, needed for SE_CV(lambda) calculation
+  # Calculate Lasso for each fold removed
+  for (j in 1:nfolds){
+    # Training data
+    Xtrain = X[idfold != j, ]
+    Ytrain = y[idfold != j]
+    # Test data
+    Xtest = X[idfold == j, ]
+    Ytest = y[idfold == j]
+    
+    # Calculate LASSO on that fold using fitLASSO
+    slr_j = fitSLR(Ytrain, Xtrain, linkage, lambda, nlam, get_lambda, allow.noise, noise)
+    # Any additional calculations that are needed for calculating CV and SE_CV(lambda)
+    for(m in 1:n_lambda){
+      #########################################################################
+      # do the dimensions match up though? do i need to transform from sparse matrix first?
+      Ypred = slr_j$int[m] + computeBalances(Xtest, btree) %*% slr_j$bet[ , m]
+      #########################################################################
+      cvm_sqerror[j, m] = sum(crossprod(Ytest - Ypred))
+      cvse_errorsd[j, m] = cvm_sqerror[j, m] / n_fold[j]
+    }
+  }
+  
+  # Calculate CV(lambda) and SE_CV(lambda) for each value of lambda
+  cvse = sqrt(apply(cvse_errorsd, 2, var)) / sqrt(nfolds)
+  cvm = colMeans(cvm_sqerror)
+  
+  # Find lambda_min = argmin{CV(lambda)}
+  lambda_min_idx = which.min(cvm)
+  lambda_min = lambda[lambda_min_idx]
+  
+  # Find lambda_1se = maximal lambda s.t. CV(lambda) <= CV(lambda_min) + CV_SE(lambda_min)
+  bound = cvm[lambda_min_idx] + cvse[lambda_min_idx]
+  lambda_1se_idx = which(cvm <= bound)
+  lambda_1se = lambda[min(lambda_1se_idx)]
+  
+  return(list(
+    lambda = lambda, 
+    bet = bet, 
+    int = int, 
+    lambda_min = lambda_min, 
+    lambda_1se = lambda_1se, 
+    cvm = cvm, 
+    cvm_idx = lambda_min_idx,
+    cvse = cvse,
+    cvse_idx = lambda_1se_idx
   ))
 }
+
+# 
+# SLRtoLR = function(
+#   coefficients
+# ){
+#   
+# }
+
+
+
+# ###################################### old #####################################
+# fitGlmnet = function(X, y, lambda, nlambda = 100, nfolds = 10){
+#   # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
+#   cv_exact = cv.glmnet(x = X, y = y, lambda = lambda, nfolds = nfolds)
+#   # get a new lambda sequence (why?)
+#   lambda = log(cv_exact$lambda)
+#   lambda_new = exp(seq(max(lambda), min(lambda) + 2, length.out = nlambda))
+#   # fit cv.glmnet to choose lambda based on cross-validation
+#   cv_exact2 = cv.glmnet(x = X, y = y, lambda = lambda_new, nfolds = nfolds)
+#   # fit glmnet to the chosen lambda
+#   refit_exact = glmnet(x = X,y = y, family = 'gaussian', 
+#                        lambda = cv_exact2$lambda.min)
+#   return(list(cv.glmnet = cv_exact2, 
+#               glmnet = refit_exact, 
+#               beta = refit_exact$beta, 
+#               lambda = refit_exact$lambda))
+# }
+# 
+# # fit SLR given data (X, y), linkage, and (optional) lambda
+# # this version is the clean version
+# fitSLRLasso_old  = function(X, y, linkage, lambda = NULL, nlambda, nfolds){
+#   btree = getSupervisedTree(y, X, linkage)
+#   Xb = computeBalances(btree, X)
+#   
+#   # lasso fit
+#   glm.temp = fitGlmnet(Xb, y, lambda, nfolds)
+#   
+#   return(list(
+#     glmnet = glm.temp$glmnet, 
+#     btree = btree,
+#     betahat = as.vector(glm.temp$beta), 
+#     lambda = glm.temp$lamdba
+#   ))
+# }

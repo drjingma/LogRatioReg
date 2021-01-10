@@ -1,16 +1,11 @@
-# a parallelized version of ../bootstrap_simulations_112320/lin2014_bootstrap.R
+# Method: Compositional Lasso
+# Purpose: Compute selection probabilities via bootstrap
+# Date: 12/2020
+# Notes: This code is parallelized.
 
-# workdir = "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"
-# setwd(workdir)
 getwd()
 
 # libraries
-library(mvtnorm)
-library(balance)
-library(selbal)
-library(microbenchmark)
-library(ggplot2)
-library(logratiolasso) # bates & tibshirani 2019
 library(limSolve) # for constrained lm
 
 # set up parallelization
@@ -21,41 +16,20 @@ nworkers = detectCores()
 plan(multisession, workers = nworkers)
 
 library(doRNG)
-set.seed(123)
-
-library(progressr)
+rng.seed = 123 # 123, 345
+registerDoRNG(rng.seed)
 
 # Dr. Ma sources
 source("RCode/func_libs.R")
-source("COAT-master/coat.R")
-
-# Kristyn sources
-functions_path = "Kristyn/Functions/"
-source(paste0(functions_path, "supervisedlogratios.R"))
-source(paste0(functions_path, "coat.R"))
-source(paste0(functions_path, "principlebalances.R"))
-source(paste0(functions_path, "selbal.R"))
-source(paste0(functions_path, "constrainedlm.R"))
-
-# functions
-# manual lm
-lm2 <- function(X, Y){
-  betahat = coefficients(lm(Y ~ -1 + X))
-  names(betahat) = colnames(X)
-  betahat = na.omit(betahat)
-  return(betahat)
-}
 
 # settings
-std.center = TRUE
-std.scale = FALSE
 tol = 1e-4
 
 # Cross-validation
 cv.n_lambda = 100
+cv.K = 10
 
 # Bootstrap
-bs.seed = 1997
 bs.n = 100
 
 # data
@@ -78,7 +52,6 @@ num.genera = dim(X)[2]
 
 # bs.finalfits = list()
 
-registerDoRNG(bs.seed)
 bs.selected_variables = foreach(
   b = 1:bs.n, 
   .combine = cbind, 
@@ -92,14 +65,13 @@ bs.selected_variables = foreach(
   log.X.prop.bs = log.X.prop[bs.resample, ]
   y.bs = y[bs.resample]
   
-  # refitted CV:
+  # refitted CV
   # Split the data into 10 folds
-  cv.K = 10
   shuffle = sample(1:n)
   idfold = (shuffle %% cv.K) + 1
   n_fold = as.vector(table(idfold))
   
-  # Do cross-validation:
+  # Do cross-validation
   # calculate squared error (prediction error?) for each fold, 
   #   needed for CV(lambda) calculation
   cvm = rep(NA, cv.n_lambda) # want to have CV(lambda)
@@ -175,11 +147,9 @@ bs.results = list(
 )
 
 saveRDS(bs.results,
-        file = paste0("Kristyn/ReproducingLin2014",
-                      "/bootstrap_simulations_121420",
-                      "/bootstraps", 
-                      "_121420",
+        file = paste0("Kristyn/Experiments/output",
+                      "/complasso_selection", 
+                      "_seed", rng.seed,
                       ".rds"))
 
 sort(bs.selection_percentages)
-# no problems! yay.

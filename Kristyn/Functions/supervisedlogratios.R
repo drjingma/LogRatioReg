@@ -76,7 +76,7 @@ fitSLR = function(
         # get a new lambda sequence (why?)
         lambda = log(cv_exact$lambda)
         lambda = exp(seq(max(lambda), min(lambda) + 2, length.out = nlam))
-      } else if(get_lambda == "ConstrLasso" | get_lambda = "complasso" | get_lambda == 1){ # like ConstrLasso()
+      } else if(get_lambda == "ConstrLasso" | get_lambda == "complasso" | get_lambda == 1){ # like ConstrLasso()
         # get sequence of tuning parameter lambda
         maxlam <- 2*max(abs(crossprod(Xb, y) / n))
         lambda <- exp(seq(log(maxlam), log(1e-4), length.out = nlam))

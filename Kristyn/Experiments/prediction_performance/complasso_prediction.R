@@ -30,7 +30,7 @@ tol = 1e-4
 
 # Cross-validation
 cv.n_lambda = 100
-cv.K = 10
+cv.K = 5
 
 # Repetitions
 rep.n = 100
@@ -104,6 +104,6 @@ print(paste0(
 saveRDS(pred.err,
         file = paste0("Kristyn/Experiments/output",
                       "/complasso_prediction", 
-                      "_refit", refit,
+                      "_K", cv.K, 
                       "_seed", rng.seed,
                       ".rds"))

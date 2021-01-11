@@ -30,7 +30,7 @@ get_lambda = "glmnet"
 
 # Cross-validation
 cv.n_lambda = 100
-cv.K = 10
+cv.K = 5
 
 # Repetitions
 rep.n = 100
@@ -59,6 +59,7 @@ pred.err = foreach(
   .combine = cbind#, .noexport = c("ConstrLassoC0", "ConstrLaso", "cv.func")
 ) %dopar% {
   source("RCode/func_libs.R")
+  source(paste0(functions_path, "supervisedlogratios.R"))
   library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
   library(limSolve) # for constrained lm, lsei()
   library(stats) # for hclust()
@@ -103,6 +104,6 @@ print(paste0(
 saveRDS(pred.err,
         file = paste0("Kristyn/Experiments/output",
                       "/slr_prediction", 
-                      "_getlambda", get_lambda,
+                      "_K", cv.K, 
                       "_seed", rng.seed,
                       ".rds"))

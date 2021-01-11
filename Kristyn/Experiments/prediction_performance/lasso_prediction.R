@@ -1,15 +1,8 @@
-# ``To compare the prediction performance of the two methods, we randomly divided the data into a
-# training set of 70 subjects and a test set of 28 subjects, and used the fitted model chosen by cross-
-#   validation based on the training set to evaluate the prediction error on the test set. The prediction
-# error averaged over 100 replicates was 30·30 for the proposed method and 30·55 for lasso (ii),
-# with standard errors of 0·97 and 1·04, respectively, suggesting that the prediction performance
-# of the proposed method is similar to or better than that of lasso (ii).''
-#  -- Lin et al 2014
-
 getwd()
 
 # libraries
 library(limSolve) # for constrained lm
+library(glmnet)
 
 # set up parallelization
 library(doFuture)
@@ -21,9 +14,6 @@ plan(multisession, workers = nworkers)
 library(doRNG)
 rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
-
-# Dr. Ma sources
-source("RCode/func_libs.R")
 
 # settings
 tol = 1e-4
@@ -72,19 +62,15 @@ pred.err = foreach(
   # Split the data into 10 folds
   
   # Fit Lasso on training set
-  cv.fits = cv.func(
-    method="ConstrLasso", y = Ytrain, x = Xtrain, 
-    Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
-    nfolds = cv.K, tol = tol)
-  lambdamin.idx = which.min(cv.fits$cvm)
-  betabar = cv.fits$bet[, lambdamin.idx]
-  names(betabar) = colnames(betabar)
+  cv.fits = cv.glmnet(x = log.X.prop, y = y, nlambda = cv.n_lambda, nfolds = cv.K)
+  cv.exact = glmnet(x = log.X.prop, y = y, lambda = cv.fits$lambda.min)
+  betahat = as.matrix(cv.exact$beta)
+  names(betahat) = colnames(betahat)
   # get fitted model (no refitting)
-  intercept = cv.fits$int[lambdamin.idx]
+  intercept = cv.exact$a0
   predictCLM = function(X){
-    intercept + X %*% betabar
+    intercept + X %*% betahat
   }
-  print(paste("sum of betas = ", sum(betabar)))
   # calculate squared error (prediction error?)
   Ypred = predictCLM(Xtest)
   (Ytest - Ypred)^2
@@ -103,7 +89,6 @@ print(paste0(
 
 saveRDS(pred.err,
         file = paste0("Kristyn/Experiments/output",
-                      "/complasso_prediction", 
-                      "_refit", refit,
+                      "/lasso_prediction", 
                       "_seed", rng.seed,
                       ".rds"))

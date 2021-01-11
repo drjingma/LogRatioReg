@@ -9,10 +9,7 @@
 getwd()
 
 # libraries
-library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
-library(limSolve) # for constrained lm, lsei()
-library(stats) # for hclust()
-library(balance) # for sbp.fromHclust()
+library(limSolve) # for constrained lm
 
 # set up parallelization
 library(doFuture)
@@ -27,10 +24,6 @@ registerDoRNG(rng.seed)
 
 # Dr. Ma sources
 source("RCode/func_libs.R")
-
-# Kristyn sources
-functions_path = "Kristyn/Functions/"
-source(paste0(functions_path, "supervisedlogratios.R"))
 
 # settings
 refit = FALSE
@@ -60,15 +53,14 @@ num.genera = dim(X)[2]
 # Experiments
 ################################################################################
 
+# They generate 100 bootstrap samples and use the same CV procedure to select 
+#   the genera (for stable selection results)
 pred.err = foreach(
   b = 1:rep.n, 
   .combine = cbind#, .noexport = c("ConstrLassoC0", "ConstrLaso", "cv.func")
 ) %dopar% {
   source("RCode/func_libs.R")
-  library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
-  library(limSolve) # for constrained lm, lsei()
-  library(stats) # for hclust()
-  library(balance) # for sbp.fromHclust()
+  library(limSolve)
   
   # split into train and test sets
   train.idx = sample(1:n, n.train)
@@ -81,10 +73,7 @@ pred.err = foreach(
   # Split the data into 10 folds
   
   # Fit Lasso on training set
-  cv.fits = cv.func(
-    method="ConstrLasso", y = Ytrain, x = Xtrain, 
-    Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
-    nfolds = cv.K, tol = tol)
+  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K)
   lambdamin.idx = which.min(cv.fits$cvm)
   betabar = cv.fits$bet[, lambdamin.idx]
   names(betabar) = colnames(betabar)
@@ -131,6 +120,6 @@ print(paste0("standard error: ", (sd(mean.pred.err)) / rep.n))
 saveRDS(pred.err,
         file = paste0("Kristyn/Experiments/output",
                       "/slr_prediction", 
-                      "refit", refit,
+                      "_refit", refit,
                       "_seed", rng.seed,
                       ".rds"))

@@ -252,9 +252,9 @@ cvLASSO = function(
       lambda_min = lambda_min, 
       lambda_1se = lambda_1se, 
       cvm = cvm, 
-      cvm_idx = lambda_min_index,
+      cvm_idx = lambda_min_idx,
       cvse = cvse,
-      cvse_idx = lambda_1se_index
+      cvse_idx = lambda_1se_idx
       ))
 }
 

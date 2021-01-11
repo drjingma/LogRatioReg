@@ -1,7 +1,9 @@
-# Method: Compositional Lasso
+# Method: Supervised Log-Ratios
 # Purpose: Compute selection probabilities via bootstrap
 # Date: 12/2020
-# Notes: This code is parallelized.
+# Notes: This code is parallelized. It refits the coefficients on the balances
+#        using a linear model (no constraint, since over balances instead of 
+#        compositions)
 
 getwd()
 
@@ -57,8 +59,6 @@ num.genera = dim(X)[2]
 # They generate 100 bootstrap samples and use the same CV procedure to select 
 #   the genera (for stable selection results)
 
-# bs.finalfits = list()
-
 bs.selected_variables = foreach(
   b = 1:bs.n, 
   .combine = cbind, 
@@ -94,18 +94,14 @@ bs.selected_variables = foreach(
     # Test data
     Xtest = X.prop.bs[idfold == j, ]
     Ytest = y.bs[idfold == j]
-    
-    # Fit LASSO on that fold using fitLASSOcompositional
-    # Lasso_j = ConstrLasso(
-    #   Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
-    #   nlam = cv.n_lambda, tol = tol)
-    Lasso_j = fitSLR(Ytrain, Xtrain, nlam = cv.n_lambda, allow.noise = TRUE)
+
+    # Fit SLR (with noise, because bootstrap leads to replicated observations)
+    slr_j = fitSLR(Ytrain, Xtrain, nlam = cv.n_lambda)
     # transform the coefficients for our log-ratios model (slr) on balances to 
     #   coefficients for the linear log-contrasts model on log-contrasts
-    betas = as.matrix(Lasso_j$bet)
-    View(betas)
-    ###################################
-    non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
+    slr_betas = as.matrix(slr_j$bet)
+    btree = slr_j$btree
+    non0.betas = slr_betas != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
       selected_variables = non0.betas[, m]
       # get refitted coefficients, after model selection and w/o penalization
@@ -114,16 +110,13 @@ bs.selected_variables = foreach(
         predictCLM = function(X) coefficients(refit)
       } else{ # otherwise, fit on selected variables
         # fit to the subsetted data
-        Xtrain.sub = Xtrain[, selected_variables, drop = FALSE]
-        Xtrain.sub2 = cbind(1, Xtrain.sub)
-        Q = as.matrix(rep(1, sum(selected_variables)))
-        Q2 = rbind(0, Q)
-        colnames(Xtrain.sub2)[1] = "Intercept"
-        rownames(Q2) = colnames(Xtrain.sub2)
-        lsei.fit = lsei(A = Xtrain.sub2, B = Ytrain, E = t(Q2), F = 0)
+        Xbtrain.sub = computeBalances(Xtrain, btree)[, selected_variables, drop = FALSE]
+        lm.fit = lm(Ytrain ~ Xbtrain.sub)
+        lm.coeffs = coefficients(lm.fit)
         predictCLM = function(X){
-          lsei.fit$X[1] +
-            X[, selected_variables, drop = FALSE] %*% lsei.fit$X[-1]
+          lm.coeffs[1] + 
+            computeBalances(X, btree)[, selected_variables, drop = FALSE] %*% 
+            lm.coeffs[-1]
         }
       }
       # calculate squared error (prediction error?)
@@ -137,18 +130,14 @@ bs.selected_variables = foreach(
   
   # Find lambda_min = argmin{CV(lambda)}
   lambda_min_index = which.min(cvm)
-  lambda_min = Lasso_j$lambda[lambda_min_index]
+  lambda_min = slr_j$lambda[lambda_min_index]
   
   # final fit
-  Lasso_select.bs = ConstrLasso(
-    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
-    lambda = lambda_min, nlam = 1, tol=tol)
-  XYdata = data.frame(log.X.prop.bs, y = y.bs)
-  non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
-  selected_variables = non0.betas
+  slr_select.bs = fitSLR(y.bs, X.prop.bs, lambda = lambda_min, nlam = 1)
+  XYdata = data.frame(X.prop.bs, y = y.bs)
+  selected_variables = LRtoLC(as.matrix(slr_select.bs$bet), slr_select.bs$btree) != 0 # diff lambda = diff col
   # record which variables were selected
   selected_variables
-  
 }
 rownames(bs.selected_variables) = colnames(X)
 
@@ -157,7 +146,7 @@ bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN =
                                    function(x) sum(x, na.rm = TRUE))
 names(bs.selection_percentages) = rownames(bs.selected_variables)
 bs.results = list(
-  seed = bs.seed,  
+  seed = rng.seed,  
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
@@ -165,6 +154,7 @@ bs.results = list(
 saveRDS(bs.results,
         file = paste0("Kristyn/Experiments/output",
                       "/slr_selection", 
+                      "_refitLRs",
                       "_seed", rng.seed,
                       ".rds"))
 

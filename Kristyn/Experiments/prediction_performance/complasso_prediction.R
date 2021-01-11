@@ -64,9 +64,9 @@ pred.err = foreach(
   
   # split into train and test sets
   train.idx = sample(1:n, n.train)
-  Xtrain = X.prop[train.idx, ]
+  Xtrain = log.X.prop[train.idx, ]
   Ytrain = y[train.idx]
-  Xtest = X.prop[-train.idx, ]
+  Xtest = log.X.prop[-train.idx, ]
   Ytest = y[-train.idx]
   
   # refitted CV
@@ -123,6 +123,6 @@ print(paste0("standard error: ", (sd(mean.pred.err)) / rep.n))
 saveRDS(pred.err,
         file = paste0("Kristyn/Experiments/output",
                       "/complasso_prediction", 
-                      "refit", refit,
+                      "_refit", refit,
                       "_seed", rng.seed,
                       ".rds"))

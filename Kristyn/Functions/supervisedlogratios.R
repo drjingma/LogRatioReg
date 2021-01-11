@@ -18,14 +18,14 @@ getSupervisedTree = function(y, X, linkage, allow.noise = FALSE, noise){
   for (j in 1:(p - 1)){
     for (k in (j + 1):p){
       Zjk = log(X[, j]) - log(X[, k])
-        Zjk_demeaned = Zjk - mean(Zjk)
-        if(all(Zjk == 0)){ # add noise (hopefully only necessary if bootstrap!)
-          if(allow.noise) Zjk = rmvnorm(n, rep(0, n), noise * diag(n))
-        } else{
-          val = abs(cor(Zjk_demeaned, y_demeaned))
-        }
-        cormat[j, k] = val
-        cormat[k, j] = val
+      Zjk_demeaned = Zjk - mean(Zjk)
+      if(all(Zjk == 0)){ # add noise (hopefully only necessary if bootstrap!)
+        if(allow.noise) Zjk = rmvnorm(n, rep(0, n), noise * diag(n))
+      } else{
+        val = abs(cor(Zjk_demeaned, y_demeaned))
+      }
+      cormat[j, k] = val
+      cormat[k, j] = val
     }
   }
   # find out which columns give na
@@ -49,7 +49,7 @@ getSupervisedTree = function(y, X, linkage, allow.noise = FALSE, noise){
 computeBalances = function(X, btree){
   # compute balances from hclust object using balance pkg:
   # 1. build SBP (serial binary partition) matrix from hclust object
-  sbp = sbp.fromHclust(btree)
+  sbp = sbp.fromHclust(btree) # U = basis vectors
   # 2. calculate balances from SBP matrix
   balances = balance.fromSBP(X, sbp)
   return(balances)
@@ -66,7 +66,7 @@ fitSLR = function(
   if(!is.null(lambda)){
     get_lambda = NULL
   } else{
-    if(is.null(get_lambda)) get_lambda == 0
+    if(is.null(get_lambda)) get_lambda = 0
   }
   if(!is.null(get_lambda)){
     if(get_lambda == "sup-balances" | get_lambda == 0){ # like in sup-balances.R
@@ -79,7 +79,7 @@ fitSLR = function(
       # get sequence of tuning parameter lambda
       if (is.null(lambda)){
         maxlam <- 2*max(abs(crossprod(X, y) / n))
-        lambda <- exp(seq(log(maxlam), log(1e-4), length.out=nlam))
+        lambda <- exp(seq(log(maxlam), log(1e-4), length.out = nlam))
       }
     } else if(get_lambda == "glmnet" | get_lambda == 2){ # like glmnet
       # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
@@ -101,9 +101,8 @@ fitSLR = function(
     bet = cv_exact$beta, 
     lambda = cv_exact$lambda,
     glmnet = cv_exact, 
-    btree = btree, 
-    balances = Xb
-    ))
+    btree = btree
+  ))
 }
 
 cvSLR = function(
@@ -166,9 +165,10 @@ cvSLR = function(
   lambda_1se = lambda[min(lambda_1se_idx)]
   
   return(list(
-    lambda = lambda, 
-    bet = bet, 
     int = int, 
+    bet = bet, 
+    lambda = lambda, 
+    btree = btree,
     lambda_min = lambda_min, 
     lambda_1se = lambda_1se, 
     cvm = cvm, 
@@ -179,11 +179,13 @@ cvSLR = function(
 }
 
 # 
-# SLRtoLR = function(
-#   coefficients
-# ){
-#   
-# }
+LRtoLC = function(
+  LRcoefficients, btree
+){
+  U = sbp.fromHclust(btree) # matrix of basis vectors, p x (p - 1)
+  LCcoefficients = U %*% LRcoefficients
+  return(LCcoefficients)
+}
 
 
 

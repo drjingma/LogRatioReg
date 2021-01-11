@@ -1,12 +1,16 @@
-# Method: Compositional Lasso
+# Method: Supervised Log-Ratios
 # Purpose: Compute selection probabilities via bootstrap
 # Date: 12/2020
-# Notes: This code is parallelized.
+# Notes: This code is parallelized. It transforms to linear log-contrasts and 
+#        refits a constrained linear model.
 
 getwd()
 
 # libraries
-library(limSolve) # for constrained lm
+library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
+library(limSolve) # for constrained lm, lsei()
+library(stats) # for hclust()
+library(balance) # for sbp.fromHclust()
 
 # set up parallelization
 library(doFuture)
@@ -16,11 +20,15 @@ nworkers = detectCores()
 plan(multisession, workers = nworkers)
 
 library(doRNG)
-rng.seed = 123 # 123, 345
+rng.seed = 123
 registerDoRNG(rng.seed)
 
 # Dr. Ma sources
 source("RCode/func_libs.R")
+
+# Kristyn sources
+functions_path = "Kristyn/Functions/"
+source(paste0(functions_path, "supervisedlogratios.R"))
 
 # settings
 tol = 1e-4
@@ -50,23 +58,24 @@ num.genera = dim(X)[2]
 # They generate 100 bootstrap samples and use the same CV procedure to select 
 #   the genera (for stable selection results)
 
-# bs.finalfits = list()
-
 bs.selected_variables = foreach(
   b = 1:bs.n, 
   .combine = cbind, 
   .noexport = c("ConstrLassoC0")
 ) %dopar% {
   source("RCode/func_libs.R")
-  library(limSolve)
+  library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
+  library(limSolve) # for constrained lm, lsei()
+  library(stats) # for hclust()
+  library(balance) # for sbp.fromHclust()
   
   # resample the data
   bs.resample = sample(1:n, n, replace = TRUE)
-  log.X.prop.bs = log.X.prop[bs.resample, ]
+  X.prop.bs = X.prop[bs.resample, ]
   y.bs = y[bs.resample]
   
   # refitted CV
-  # Split the data into 10 folds
+  # Split the data into K folds
   shuffle = sample(1:n)
   idfold = (shuffle %% cv.K) + 1
   n_fold = as.vector(table(idfold))
@@ -79,17 +88,20 @@ bs.selected_variables = foreach(
   # Fit Lasso for each fold removed
   for (j in 1:cv.K){
     # Training data
-    Xtrain = log.X.prop.bs[idfold != j, ]
+    Xtrain = X.prop.bs[idfold != j, ]
     Ytrain = y.bs[idfold != j]
     # Test data
-    Xtest = log.X.prop.bs[idfold == j, ]
+    Xtest = X.prop.bs[idfold == j, ]
     Ytest = y.bs[idfold == j]
-    
-    # Fit LASSO on that fold using fitLASSOcompositional
-    Lasso_j = ConstrLasso(
-      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
-      nlam = cv.n_lambda, tol = tol)
-    non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
+
+    # Fit SLR (with noise, because bootstrap leads to replicated observations)
+    slr_j = fitSLR(Ytrain, Xtrain, nlam = cv.n_lambda)
+    # transform the coefficients for our log-ratios model (slr) on balances to 
+    #   coefficients for the linear log-contrasts model on log-contrasts
+    slr_betas = as.matrix(slr_j$bet)
+    btree = slr_j$btree
+    LCbetas = apply(slr_betas, 2, function(x) LRtoLC(x, btree))
+    non0.betas = LCbetas != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
       selected_variables = non0.betas[, m]
       # get refitted coefficients, after model selection and w/o penalization
@@ -121,18 +133,14 @@ bs.selected_variables = foreach(
   
   # Find lambda_min = argmin{CV(lambda)}
   lambda_min_index = which.min(cvm)
-  lambda_min = Lasso_j$lambda[lambda_min_index]
+  lambda_min = slr_j$lambda[lambda_min_index]
   
   # final fit
-  Lasso_select.bs = ConstrLasso(
-    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
-    lambda = lambda_min, nlam = 1, tol=tol)
-  XYdata = data.frame(log.X.prop.bs, y = y.bs)
-  non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
-  selected_variables = non0.betas
+  slr_select.bs = fitSLR(y.bs, X.prop.bs, lambda = lambda_min, nlam = 1)
+  XYdata = data.frame(X.prop.bs, y = y.bs)
+  selected_variables = LRtoLC(as.matrix(slr_select.bs$bet), slr_select.bs$btree) != 0 # diff lambda = diff col
   # record which variables were selected
   selected_variables
-  
 }
 rownames(bs.selected_variables) = colnames(X)
 
@@ -141,14 +149,15 @@ bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN =
                                    function(x) sum(x, na.rm = TRUE))
 names(bs.selection_percentages) = rownames(bs.selected_variables)
 bs.results = list(
-  seed = bs.seed,  
+  seed = rng.seed,  
   selected_variables = bs.selected_variables, 
   selection_percentages = bs.selection_percentages
 )
 
 saveRDS(bs.results,
         file = paste0("Kristyn/Experiments/output",
-                      "/complasso_selection", 
+                      "/slr_selection", 
+                      "_refitLCs",
                       "_seed", rng.seed,
                       ".rds"))
 

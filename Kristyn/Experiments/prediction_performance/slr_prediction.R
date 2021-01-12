@@ -26,7 +26,6 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # settings
 tol = 1e-4
-get_lambda = "glmnet"
 
 # Cross-validation
 cv.n_lambda = 100
@@ -76,8 +75,7 @@ pred.err = foreach(
   # Split the data into 10 folds
   
   # Fit Lasso on training set
-  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K, 
-                  get_lambda = get_lambda)
+  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K)
   lambdamin.idx = which.min(cv.fits$cvm)
   betahat = as.matrix(cv.fits$bet[, lambdamin.idx])
   names(betahat) = colnames(betahat)

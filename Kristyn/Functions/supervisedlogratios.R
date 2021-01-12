@@ -67,7 +67,7 @@ fitSLR = function(
   Xb = computeBalances(X, btree)
   
   # get lambda sequence, if not already given
-  if(is.null(lambda) & is.null(get_lambda)) get_lambda = "glmnet"
+  if(is.null(lambda) & is.null(get_lambda)) get_lambda = "original"
   if(is.null(lambda)){ # get lambda
     if(!is.null(get_lambda)){
       if(get_lambda == "sup-balances" | get_lambda == "original" | get_lambda == 0){ # like in sup-balances.R
@@ -88,11 +88,15 @@ fitSLR = function(
   
   # fit lasso (using glmnet)
   if(get_lambda == "glmnet" | get_lambda == 2){ # like glmnet
-    cv_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam)
+    if(is.null(lambda)){
+      cv_exact = glmnet(x = Xb, y = y, nlambda = nlam)
+      lambda = seq(max(cv_exact$lambda), min(cv_exact$lambda), length.out = nlam)
+    }
+    cv_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = length(lambda))
   } else{
-    cv_exact = glmnet(x = Xb, y = y, lambda = lambda)
+    cv_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = length(lambda))
   }
-  
+  if(nlam != length(lambda)) warning("fitSLR : nlam != length(lambda)")
   return(list(
     int = cv_exact$a0, 
     bet = cv_exact$beta, 

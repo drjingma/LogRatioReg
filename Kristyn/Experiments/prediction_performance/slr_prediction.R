@@ -26,6 +26,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # settings
 tol = 1e-4
+get_lambda = "original"
 
 # Cross-validation
 cv.n_lambda = 100
@@ -75,7 +76,7 @@ pred.err = foreach(
   # Split the data into 10 folds
   
   # Fit Lasso on training set
-  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K)
+  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K, get_lambda = get_lambda)
   lambdamin.idx = which.min(cv.fits$cvm)
   betahat = as.matrix(cv.fits$bet[, lambdamin.idx])
   names(betahat) = colnames(betahat)
@@ -102,6 +103,7 @@ print(paste0(
 saveRDS(pred.err,
         file = paste0("Kristyn/Experiments/output",
                       "/slr_prediction", 
+                      "_", get_lambda, 
                       "_K", cv.K, 
                       "_seed", rng.seed,
                       ".rds"))

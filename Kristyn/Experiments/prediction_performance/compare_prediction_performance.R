@@ -2,6 +2,7 @@ output_home = "Kristyn/Experiments/output/"
 rng.seed = 123
 rep.n = 100
 cv.K = 5
+get_lambda = "original"
 ################################################################################
 # Compositional Lasso #
 ################################################################################
@@ -30,7 +31,8 @@ print(paste0(
 ################################################################################
 slr = readRDS(paste0(
   output_home, 
-  "slr_prediction", 
+  "/slr_prediction", 
+  "_", get_lambda, 
   "_K", cv.K, 
   "_seed", rng.seed,
   ".rds"

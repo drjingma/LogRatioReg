@@ -34,11 +34,11 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 tol = 1e-4
 
 # Cross-validation
-cv.n_lambda = 500
+cv.n_lambda = 100
 cv.K = 10
 
 # Bootstrap
-bs.n = 100
+bs.n = 500
 
 # data
 # 98 samples, 87 genera

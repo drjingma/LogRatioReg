@@ -35,7 +35,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 tol = 1e-4
 
 # Cross-validation
-cv.n_lambda = 100
+cv.n_lambda = 500
 cv.K = 10
 
 # Bootstrap
@@ -143,7 +143,7 @@ rownames(bs.selected_variables) = colnames(X)
 
 bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
 bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN = 
-                                   function(x) sum(x, na.rm = TRUE))
+                                   function(x) sum(x, na.rm = TRUE) / bs.n)
 names(bs.selection_percentages) = rownames(bs.selected_variables)
 bs.results = list(
   seed = rng.seed,  
@@ -155,6 +155,7 @@ saveRDS(bs.results,
         file = paste0("Kristyn/Experiments/output",
                       "/slr_selection", 
                       "_refitLRs",
+                      "_B", bs.n, 
                       "_seed", rng.seed,
                       ".rds"))
 

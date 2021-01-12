@@ -30,7 +30,7 @@ cv.n_lambda = 100
 cv.K = 10
 
 # Bootstrap
-bs.n = 100
+bs.n = 500
 
 # data
 # 98 samples, 87 genera
@@ -138,7 +138,7 @@ rownames(bs.selected_variables) = colnames(X)
 
 bs.selected_variables_numeric = apply(bs.selected_variables, 2, as.numeric)
 bs.selection_percentages = apply(bs.selected_variables_numeric, 1, FUN = 
-                                   function(x) sum(x, na.rm = TRUE))
+                                   function(x) sum(x, na.rm = TRUE) / bs.n)
 names(bs.selection_percentages) = rownames(bs.selected_variables)
 bs.results = list(
   seed = rng.seed,  
@@ -150,6 +150,7 @@ saveRDS(bs.results,
         file = paste0("Kristyn/Experiments/output",
                       "/complasso_selection", 
                       "_refit",
+                      "_B", bs.n, 
                       "_seed", rng.seed,
                       ".rds"))
 

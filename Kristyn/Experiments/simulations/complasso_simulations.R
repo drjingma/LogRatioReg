@@ -7,152 +7,137 @@ getwd()
 
 # libraries
 library(limSolve) # for constrained lm
+library(mvtnorm)
 
 # set up parallelization
+library(foreach)
+library(future)
 library(doFuture)
 library(parallel)
 registerDoFuture()
 nworkers = detectCores()
 plan(multisession, workers = nworkers)
 
+library(rngtools)
 library(doRNG)
 rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
 
 # Dr. Ma sources
+library(Matrix)
+library(glmnet)
+library(compositions)
+library(stats)
 source("RCode/func_libs.R")
 
 # Method Settings
 tol = 1e-4
 
-# Cross-validation settings
-cv.n_lambda = 100
-cv.K = 10
+# GIC settings
+nlam = 200
 
 # Simulation settings
-numSims = 500
+numSims = 100
 n = 100
 p = 200
 rho = 0.2
 beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
-sigma_epsilon = 0.5
+non0.beta = (beta != 0)
+sigma_eps = 0.5
 seed = 1
 muW = c(
   rep(log(p), 5), 
   rep(0, p - 5)
 )
 SigmaW = matrix(0, p, p)
-for(j in 1:p){
-  for(k in j:p){
-    SigmaW[j, k] = rho^(k - j)
+for(i in 1:p){
+  for(j in 1:p){
+    SigmaW[i, j] = rho^abs(i - j)
   }
 }
-SigmaW = SigmaW + t(SigmaW) - diag(diag(SigmaW))
 
 ################################################################################
 # Simulations #
 ################################################################################
 
-bs.selected_variables = foreach(
+# set.seed(1)
+evals = foreach(
   b = 1:numSims, 
   .combine = cbind, 
   .noexport = c("ConstrLassoC0")
 ) %dopar% {
-  source("RCode/func_libs.R")
   library(limSolve)
+  library(mvtnorm)
+  library(Matrix)
+  library(glmnet)
+  library(compositions)
+  library(stats)
+  source("RCode/func_libs.R")
   
   # simulate data
-  # simulate covariates (compositional data)
-  V = rmvnorm(n = 1, mean = muW, sigma = SigmaW) # after all that, n = numSims
-  W = exp(V) # counts
-  rowsumsW = apply(W, 1, sum)
-  X = W / rowsumsW # compositions
-  epsilon = rnorm(n, 0, sigma_epsilon) # noise
+  # generate W
+  W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
+  # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
+  V = exp(W)
+  rowsumsV = apply(V, 1, sum)
+  X = V / rowsumsV
+  epsilon = rnorm(n, 0, sigma_eps)
   Z = log(X)
-  Y = Z %*% beta + epsilon # response
+  # generate Y
+  Y = Z %*% matrix(beta) + epsilon
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  # refitted CV
-  # Split the data into 10 folds
-  shuffle = sample(1:n)
-  idfold = (shuffle %% cv.K) + 1
-  n_fold = as.vector(table(idfold))
-  
-  # Do cross-validation
-  # calculate squared error (prediction error?) for each fold, 
-  #   needed for CV(lambda) calculation
-  cvm = rep(NA, cv.n_lambda) # want to have CV(lambda)
-  cvm_sqerror = matrix(NA, cv.K, cv.n_lambda)
-  # Fit Lasso for each fold removed
-  for (j in 1:cv.K){
-    # Training data
-    Xtrain = log.X.prop.bs[idfold != j, ]
-    Ytrain = y.bs[idfold != j]
-    # Test data
-    Xtest = log.X.prop.bs[idfold == j, ]
-    Ytest = y.bs[idfold == j]
-    
-    # Fit LASSO on that fold using fitLASSOcompositional
-    Lasso_j = ConstrLasso(
-      Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
-      nlam = cv.n_lambda, tol = tol)
-    non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
-    for(m in 1:cv.n_lambda){
-      selected_variables = non0.betas[, m]
-      # get refitted coefficients, after model selection and w/o penalization
-      if(all(!selected_variables)){ # if none selected
-        refit = lm(Ytrain ~ 1)
-        predictCLM = function(X) coefficients(refit)
-      } else{ # otherwise, fit on selected variables
-        # fit to the subsetted data
-        Xtrain.sub = Xtrain[, selected_variables, drop = FALSE]
-        Xtrain.sub2 = cbind(1, Xtrain.sub)
-        Q = as.matrix(rep(1, sum(selected_variables)))
-        Q2 = rbind(0, Q)
-        colnames(Xtrain.sub2)[1] = "Intercept"
-        rownames(Q2) = colnames(Xtrain.sub2)
-        lsei.fit = lsei(A = Xtrain.sub2, B = Ytrain, E = t(Q2), F = 0)
-        predictCLM = function(X){
-          lsei.fit$X[1] +
-            X[, selected_variables, drop = FALSE] %*% lsei.fit$X[-1]
-        }
-      }
-      # calculate squared error (prediction error?)
-      Ypred = predictCLM(Xtest)
-      cvm_sqerror[j, m] = sum(crossprod(Ytest - Ypred))
-    }
+  # apply compositional lasso, using GIC to select lambda
+  complasso = ConstrLasso(
+    Y, Z, Cmat = matrix(1, p, 1), 
+    nlam = nlam, tol = tol)
+  non0.betahats = (complasso$bet != 0) # diff lambda = diff col
+  non0ct = apply(non0.betahats, 2, sum) # count of non-zero betas for each lambda
+  which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n)) # lambda lower bound criteria
+  lambda = complasso$lambda[which0ct.leq3sqrtn]
+  nlam = length(lambda)
+  non0.betahats = non0.betahats[, which0ct.leq3sqrtn]
+  non0ct = non0ct[which0ct.leq3sqrtn]
+  betahats = complasso$bet[, which0ct.leq3sqrtn]
+  a0s = complasso$int[which0ct.leq3sqrtn]
+  GIC = rep(NA, nlam)
+  PE = rep(NA, nlam)
+  for(m in 1:nlam){
+    a0.tmp = a0s[m]
+    betahat.tmp = betahats[, m]
+    sigmasq.hat = crossprod(Y - a0.tmp - Z %*% betahat.tmp) / n
+    PE[m] = sigmasq.hat
+    pvn = p
+    s.lam = sum(non0.betahats[, m])
+    GIC[m] = log(sigmasq.hat) + (s.lam - 1) * log(log(n)) * log(pvn) / n
   }
+  lam.min.idx = which.min(GIC)
+  lam.min = complasso$lambda[lam.min.idx]
+  a0 = complasso$int[lam.min.idx]
+  betahat = complasso$bet[, lam.min.idx]
+  non0.betahat = non0.betahats[, lam.min.idx]
   
-  # Calculate CV(lambda) for each value of lambda
-  cvm = colMeans(cvm_sqerror)
+  # begin plots
+  plot(lambda, GIC, type = "l")
+  points(x = lam.min, GIC[lam.min.idx])
+  text(x = lam.min, y = GIC[lam.min.idx], pos = 4,
+       labels = paste0("(", round(lam.min, 3), ",", round(GIC[lam.min.idx], 3), ")"))
+  # data.frame(lam = lambda, gic = GIC, non0s = non0ct)
+  plot(lambda, non0ct, type = "l")
+  # end plots
   
-  # Find lambda_min = argmin{CV(lambda)}
-  lambda_min_index = which.min(cvm)
-  lambda_min = Lasso_j$lambda[lambda_min_index]
-  
-  # final fit
-  Lasso_select.bs = ConstrLasso(
-    y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
-    lambda = lambda_min, nlam = 1, tol=tol)
-  XYdata = data.frame(log.X.prop.bs, y = y.bs)
-  non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
-  selected_variables = non0.betas
-  # record which variables were selected
-  selected_variables
-  
+  # evaluate model
+  # prediction error
+  PE = PE[lam.min.idx]
+  # estimation accuracy
+  EA1 = sum(abs(betahat - beta))
+  EA2 = crossprod(betahat - beta)
+  EAInfty = max(abs(betahat - beta))
+  # FP
+  FP = sum((non0.beta != non0.betahat) & non0.betahat)
+  # FN
+  FN = sum((non0.beta != non0.betahat) & non0.beta)
+  # return
+  c(PE, EA1, EA2, EAInfty, FP, FN)
 }
 rownames(bs.selected_variables) = colnames(X)
 

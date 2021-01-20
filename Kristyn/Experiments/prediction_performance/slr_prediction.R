@@ -7,17 +7,24 @@ library(stats) # for hclust()
 library(balance) # for sbp.fromHclust()
 
 # set up parallelization
+library(foreach)
+library(future)
 library(doFuture)
 library(parallel)
 registerDoFuture()
 nworkers = detectCores()
 plan(multisession, workers = nworkers)
 
+library(rngtools)
 library(doRNG)
-rng.seed = 123
+rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
 
 # Dr. Ma sources
+library(Matrix)
+library(glmnet)
+library(compositions)
+library(stats)
 source("RCode/func_libs.R")
 
 # Kristyn sources
@@ -29,8 +36,8 @@ tol = 1e-4
 get_lambda = "original"
 
 # Cross-validation
-cv.n_lambda = 100
-cv.K = 5
+cv.n_lambda = 200
+cv.K = 3
 
 # Repetitions
 rep.n = 100
@@ -76,7 +83,8 @@ pred.err = foreach(
   # Split the data into 10 folds
   
   # Fit Lasso on training set
-  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K, get_lambda = get_lambda)
+  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K, 
+                  get_lambda = get_lambda)
   lambdamin.idx = which.min(cv.fits$cvm)
   betahat = as.matrix(cv.fits$bet[, lambdamin.idx])
   names(betahat) = colnames(betahat)

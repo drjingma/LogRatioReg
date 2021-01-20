@@ -1,7 +1,7 @@
 output_home = "Kristyn/Experiments/output/"
 rng.seed = 123
 rep.n = 100
-cv.K = 5
+cv.K = 3
 get_lambda = "original"
 ################################################################################
 # Compositional Lasso #

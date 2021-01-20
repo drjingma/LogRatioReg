@@ -14,17 +14,24 @@ library(stats) # for hclust()
 library(balance) # for sbp.fromHclust()
 
 # set up parallelization
+library(foreach)
+library(future)
 library(doFuture)
 library(parallel)
 registerDoFuture()
 nworkers = detectCores()
 plan(multisession, workers = nworkers)
 
+library(rngtools)
 library(doRNG)
-rng.seed = 123
+rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
 
 # Dr. Ma sources
+library(Matrix)
+library(glmnet)
+library(compositions)
+library(stats)
 source("RCode/func_libs.R")
 
 # Kristyn sources
@@ -35,7 +42,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 tol = 1e-4
 
 # Cross-validation
-cv.n_lambda = 100
+cv.n_lambda = 200
 cv.K = 10
 
 # Bootstrap

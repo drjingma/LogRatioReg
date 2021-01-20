@@ -40,7 +40,7 @@ cv.n_lambda = 200
 cv.K = 3
 
 # Repetitions
-rep.n = 100
+numReps = 100
 n.train = 70
 n.test = 28
 
@@ -62,7 +62,7 @@ num.genera = dim(X)[2]
 # They generate 100 bootstrap samples and use the same CV procedure to select 
 #   the genera (for stable selection results)
 pred.err = foreach(
-  b = 1:rep.n, 
+  b = 1:numReps, 
   .combine = cbind#, .noexport = c("ConstrLassoC0", "ConstrLaso", "cv.func")
 ) %dopar% {
   source("RCode/func_libs.R")
@@ -71,6 +71,8 @@ pred.err = foreach(
   library(limSolve) # for constrained lm, lsei()
   library(stats) # for hclust()
   library(balance) # for sbp.fromHclust()
+  
+  
   
   # split into train and test sets
   train.idx = sample(1:n, n.train)
@@ -100,12 +102,12 @@ dim(pred.err)
 mse = colMeans(pred.err)
 print(paste0("mean prediction error: ", mean(mse)))
 print(paste0("standard deviation: ", (sd(mse))))
-print(paste0("standard error: ", (sd(mse)) / sqrt(rep.n)))
+print(paste0("standard error: ", (sd(mse)) / sqrt(numReps)))
 print(paste0(
   "95% CI: (", 
-  mean(mse) - 2 * (sd(mse)) / sqrt(rep.n), 
+  mean(mse) - 2 * (sd(mse)) / sqrt(numReps), 
   ", ",
-  mean(mse) + 2 * (sd(mse)) / sqrt(rep.n), ")"
+  mean(mse) + 2 * (sd(mse)) / sqrt(numReps), ")"
 ))
 
 saveRDS(pred.err,

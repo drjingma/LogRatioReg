@@ -21,7 +21,7 @@ getSupervisedTree = function(y, X, linkage, allow.noise = FALSE, noise){
       Zjk_demeaned = Zjk - mean(Zjk)
       if(all(Zjk == 0)){ # add noise (hopefully only necessary if bootstrap!)
         if(allow.noise) Zjk = Zjk + rmvnorm(n, rep(0, n), noise * diag(n))
-        # don't do anything -- it's already initialized to 1
+        # do not do anything, except maybe warn
       } else{
         val = abs(cor(Zjk_demeaned, y_demeaned))
       }

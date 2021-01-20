@@ -37,7 +37,7 @@ get_lambda = "original"
 
 # Cross-validation
 cv.n_lambda = 200
-cv.K = 3
+cv.K = 5
 
 # Repetitions
 numReps = 100

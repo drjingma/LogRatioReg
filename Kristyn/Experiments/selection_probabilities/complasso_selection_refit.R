@@ -63,7 +63,7 @@ bs.selected_variables = foreach(
   b = 1:bs.n, 
   .combine = cbind, 
   .noexport = c("ConstrLassoC0")
-) %dopar% {
+) %dorng% {
   source("RCode/func_libs.R")
   library(limSolve)
   

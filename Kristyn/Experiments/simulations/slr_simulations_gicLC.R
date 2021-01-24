@@ -8,6 +8,8 @@ getwd()
 # libraries
 library(limSolve) # for constrained lm
 library(mvtnorm)
+library(stats) # for hclust()
+library(balance) # for sbp.fromHclust()
 
 # set up parallelization
 library(foreach)
@@ -30,14 +32,17 @@ library(compositions)
 library(stats)
 source("RCode/func_libs.R")
 
+# Kristyn sources
+functions_path = "Kristyn/Functions/"
+source(paste0(functions_path, "supervisedlogratios.R"))
+
 # Method Settings
-tol = 1e-4
 nlam = 200
 
 # Simulation settings
 numSims = 100
 n = 100
-p = 1000
+p = 200
 rho = 0.2 # 0.2, 0.5
 # beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
@@ -62,8 +67,7 @@ for(i in 1:p){
 # set.seed(16) # leads to FN = 1
 evals = foreach(
   b = 1:numSims, 
-  .combine = cbind, 
-  .noexport = c("ConstrLassoC0")
+  .combine = cbind
 ) %dorng% {
   library(limSolve)
   library(mvtnorm)
@@ -71,7 +75,10 @@ evals = foreach(
   library(glmnet)
   library(compositions)
   library(stats)
+  library(balance) # for sbp.fromHclust()
+  
   source("RCode/func_libs.R")
+  source(paste0(functions_path, "supervisedlogratios.R"))
   
   nlam = 200
   
@@ -88,37 +95,48 @@ evals = foreach(
   Y = Z %*% matrix(beta) + epsilon
   
   # apply compositional lasso, using GIC to select lambda
-  complasso0 = ConstrLasso(Y, Z, Cmat = matrix(1, p, 1), nlam = nlam, tol = tol)
-  non0.betahats = (complasso0$bet != 0) # diff lambda = diff col
+  slr0 = fitSLR(Y, X, nlam = nlam)
+  # transformed
+  betahats0.tr = apply(slr0$bet, 2, function(x) LRtoLC(x, slr0$btree))
+  non0.betahats = (betahats0.tr != 0) # diff lambda = diff col
   non0ct = apply(non0.betahats, 2, sum) # count of non-zero betas for each lambda
   which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n)) # lambda lower bound criteria
-  lambda = seq(complasso0$lambda[1], 
-               complasso0$lambda[max(which0ct.leq3sqrtn)], 
+  lambda = seq(slr0$lambda[1],
+               slr0$lambda[max(which0ct.leq3sqrtn)],
                length.out = nlam)
   nlam = length(lambda)
-  complasso = ConstrLasso(Y, Z, Cmat = matrix(1, p, 1), lambda = lambda, 
-                          nlam = nlam, tol = tol)
-  non0.betahats = (complasso$bet != 0)
+  slr = fitSLR(Y, X, lambda = lambda, nlam = nlam)
+  betahats.tr = apply(slr$bet, 2, function(x) LRtoLC(x, slr$btree))
+  non0.betahats = (betahats.tr != 0)
   non0ct = apply(non0.betahats, 2, sum)
-  # which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n))
-  a0s = complasso$int
-  betahats = complasso$bet
+  
+  a0s = slr$int
+  betahats = slr$bet
+  btree = slr$btree
   GIC = rep(NA, nlam)
   pvn = max(p, n)
   for(m in 1:nlam){
     a0.tmp = a0s[m]
     betahat.tmp = betahats[, m]
-    sigmasq.hat = crossprod(Y - a0.tmp - Z %*% betahat.tmp) / n
+    predictSLR.tmp = function(X){
+      a0.tmp + computeBalances(X, btree) %*% betahat.tmp
+    }
+    Y.pred = predictSLR.tmp(X)
+    sigmasq.hat = crossprod(Y - Y.pred) / n
     s.lam = sum(non0.betahats[, m])
     GIC[m] = log(sigmasq.hat) + (s.lam - 1) * log(log(n)) * log(pvn) / n
   }
   lam.min.idx = which.min(GIC)
-  lam.min = complasso$lambda[lam.min.idx]
-  a0 = complasso$int[lam.min.idx]
-  betahat = complasso$bet[, lam.min.idx]
+  lam.min = slr$lambda[lam.min.idx]
+  a0 = slr$int[lam.min.idx]
+  betahat = slr$bet[, lam.min.idx]
   non0.betahat = non0.betahats[, lam.min.idx]
   
-  # plot(complasso$lambda, GIC, type = "l")
+  # plot(slr$lambda, GIC, type = "l")
+  # points(lam.min, min(GIC))
+  # text(lam.min, min(GIC),
+  #      paste0("(", round(lam.min, 3), ", ", round(min(GIC), 3), ")", sep = ""),
+  #      pos = 4)
   
   # evaluate model
   # prediction error
@@ -133,11 +151,19 @@ evals = foreach(
   Z.test = log(X.test)
   # generate Y
   Y.test = Z.test %*% matrix(beta) + epsilon.test
-  PE = crossprod(Y.test - a0 - Z.test %*% betahat) / n
+  # get fitted model
+  predictSLR = function(X){
+    a0 + computeBalances(X, btree) %*% betahat
+  }
+  Y.pred = predictSLR(X.test)
+  PE = crossprod(Y.test - Y.pred) / n
   # estimation accuracy
-  EA1 = sum(abs(betahat - beta))
-  EA2 = crossprod(betahat - beta)
-  EAInfty = max(abs(betahat - beta))
+  # transform betahat to log-contrast space
+  betahat.tr = LRtoLC(betahat, btree)
+  EA1 = sum(abs(betahat.tr - beta))
+  EA2 = crossprod(betahat.tr - beta)
+  EAInfty = max(abs(betahat.tr - beta))
+  non0.betahat = (betahat.tr != 0)
   # FP
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
   # FN
@@ -148,7 +174,7 @@ evals = foreach(
 rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
 saveRDS(evals,
         file = paste0("Kristyn/Experiments/output",
-                      "/complasso_simulations", 
+                      "/slr_gicLC_simulations", 
                       "_dim", n, "x", p, 
                       "_rho", rho, 
                       "_seed", rng.seed,
@@ -160,7 +186,7 @@ evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
 saveRDS(evals.df,
         file = paste0("Kristyn/Experiments/output",
-                      "/complasso_simulations_summary", 
+                      "/slr_gicLC_simulations_summary", 
                       "_dim", n, "x", p, 
                       "_rho", rho, 
                       "_seed", rng.seed,

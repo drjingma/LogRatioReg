@@ -48,6 +48,8 @@ getSupervisedTree = function(y, X, linkage, allow.noise = FALSE, noise){
 
 # using a hierarchical tree, compute the balances for X
 computeBalances = function(X, btree){
+  # checks
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
   # compute balances from hclust object using balance pkg:
   # 1. build SBP (serial binary partition) matrix from hclust object
   sbp = sbp.fromHclust(btree) # U = basis vectors
@@ -60,6 +62,25 @@ fitSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
   get_lambda = NULL, allow.noise = FALSE, noise = 1e-12
 ){
+  # checks
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  # if allow.noise, make sure noise is given
+  if(allow.noise & is.null(noise)){
+    noise = 1e-12
+    # warning("fitSLR: allow.noise == TRUE, but noise is NULL. 
+    #         Default is 1e-12.")
+  }
+  # check if lambda is given, assign get_lambda accordingly
+  if(!is.null(lambda)){ # lambda is given
+    get_lambda = "given"
+  } else{ # lambda is NOT given
+    if(is.null(get_lambda)){
+      get_lambda = "original"
+      # warning("fitSLR: lambda is not given, and get_lambda is NULL. 
+      #         Default is original.")
+    }
+  }
+  
   n <- nrow(X)
   p <- ncol(X)
   
@@ -68,31 +89,32 @@ fitSLR = function(
   Xb = computeBalances(X, btree)
   
   # get lambda sequence, if not already given
-  if(!is.null(lambda)){ # lambda is given
-    get_lambda = "given"
-  } else{ # lambda is NOT given
-    if(is.null(get_lambda)) get_lambda = "original"
-  }
   if(is.null(lambda)){ # get lambda
-    if(!is.null(get_lambda)){
-      if(get_lambda == "sup-balances" | get_lambda == "original" | get_lambda == 0){ # like in sup-balances.R
+    if(!is.null(get_lambda)){ ### is this if statement necessary? #################################
+      if(get_lambda == "sup-balances" | 
+         get_lambda == "original" | 
+         get_lambda == 0){ # like in sup-balances.R
         # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
         cv_exact = cv.glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam)
         # get a new lambda sequence (why?)
         lambda = log(cv_exact$lambda)
         lambda = exp(seq(max(lambda), min(lambda) + 2, length.out = nlam))
-      } else if(get_lambda == "ConstrLasso" | get_lambda == "complasso" | get_lambda == 1){ # like ConstrLasso()
+      } else if(get_lambda == "ConstrLasso" | 
+                get_lambda == "complasso" | 
+                get_lambda == 1){ # like ConstrLasso()
         # get sequence of tuning parameter lambda
         maxlam <- 2*max(abs(crossprod(Xb, y) / n))
         lambda <- exp(seq(log(maxlam), log(1e-4), length.out = nlam))
-      } else if(get_lambda == "glmnet" | get_lambda == 2){ # like glmnet
+      } else if(get_lambda == "glmnet" | 
+                get_lambda == 2){ # like glmnet
         lambda = NULL # lambda stays NULL
       }
     }
   }
   
   # fit lasso (using glmnet)
-  if(get_lambda == "glmnet" | get_lambda == 2){ # like glmnet
+  if(get_lambda == "glmnet" | 
+     get_lambda == 2){ # like glmnet
     cv_exact = glmnet(x = Xb, y = y, nlambda = nlam)
     lambda = seq(max(cv_exact$lambda), min(cv_exact$lambda), length.out = nlam)
   } else{

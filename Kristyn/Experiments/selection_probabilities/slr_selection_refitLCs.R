@@ -67,9 +67,8 @@ num.genera = dim(X)[2]
 
 bs.selected_variables = foreach(
   b = 1:bs.n, 
-  .combine = cbind, 
-  .noexport = c("ConstrLassoC0")
-) %dopar% {
+  .combine = cbind
+) %dorng% {
   source("RCode/func_libs.R")
   library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
   library(limSolve) # for constrained lm, lsei()

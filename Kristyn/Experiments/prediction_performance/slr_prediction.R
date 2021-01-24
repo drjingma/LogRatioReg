@@ -63,8 +63,8 @@ num.genera = dim(X)[2]
 #   the genera (for stable selection results)
 pred.err = foreach(
   b = 1:numReps, 
-  .combine = cbind#, .noexport = c("ConstrLassoC0", "ConstrLaso", "cv.func")
-) %dopar% {
+  .combine = cbind
+) %dorng% {
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
   library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()

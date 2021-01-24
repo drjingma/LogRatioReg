@@ -46,8 +46,8 @@ num.genera = dim(X)[2]
 #   the genera (for stable selection results)
 pred.err = foreach(
   b = 1:rep.n, 
-  .combine = cbind#, .noexport = c("ConstrLassoC0", "ConstrLaso", "cv.func")
-) %dopar% {
+  .combine = cbind
+) %dorng% {
   source("RCode/func_libs.R")
   library(limSolve)
   

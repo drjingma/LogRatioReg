@@ -4,6 +4,7 @@
 # Notes: 
 
 getwd()
+output_dir = "Kristyn/Experiments/complasso_simulations/output"
 
 # libraries
 library(limSolve) # for constrained lm
@@ -38,6 +39,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
 nlam = 200
+intercept = FALSE
 
 # Simulation settings
 numSims = 100
@@ -95,7 +97,7 @@ evals = foreach(
   Y = Z %*% matrix(beta) + epsilon
   
   # apply compositional lasso, using GIC to select lambda
-  slr0 = fitSLR(Y, X, nlam = nlam)
+  slr0 = fitSLR(Y, X, nlam = nlam, intercept = intercept)
   # transformed
   betahats0.tr = apply(slr0$bet, 2, function(x) LRtoLC(x, slr0$btree))
   non0.betahats = (betahats0.tr != 0) # diff lambda = diff col
@@ -105,7 +107,7 @@ evals = foreach(
                slr0$lambda[max(which0ct.leq3sqrtn)],
                length.out = nlam)
   nlam = length(lambda)
-  slr = fitSLR(Y, X, lambda = lambda, nlam = nlam)
+  slr = fitSLR(Y, X, lambda = lambda, nlam = nlam, intercept = intercept)
   betahats.tr = apply(slr$bet, 2, function(x) LRtoLC(x, slr$btree))
   non0.betahats = (betahats.tr != 0)
   non0ct = apply(non0.betahats, 2, sum)
@@ -190,10 +192,12 @@ eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
-saveRDS(evals.df,
-        file = paste0("Kristyn/Experiments/output",
-                      "/slr_gicLC_simulations_summary", 
-                      "_dim", n, "x", p, 
-                      "_rho", rho, 
-                      "_seed", rng.seed,
-                      ".rds"))
+saveRDS(
+  evals.df, 
+  file = paste0(output_dir,
+                "/slr_gicLC_simulations", 
+                "_dim", n, "x", p, 
+                "_rho", rho, 
+                "_int", intercept,
+                "_seed", rng.seed,
+                ".rds"))

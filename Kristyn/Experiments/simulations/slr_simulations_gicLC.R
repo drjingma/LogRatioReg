@@ -128,10 +128,11 @@ evals = foreach(
   }
   lam.min.idx = which.min(GIC)
   lam.min = slr$lambda[lam.min.idx]
-  a0 = slr$int[lam.min.idx]
-  betahat = slr$bet[, lam.min.idx]
+  a0 = a0s[lam.min.idx]
+  betahat = betahats[, lam.min.idx]
   non0.betahat = non0.betahats[, lam.min.idx]
   
+  # plot lambda vs. GIC
   # plot(slr$lambda, GIC, type = "l")
   # points(lam.min, min(GIC))
   # text(lam.min, min(GIC),
@@ -160,6 +161,11 @@ evals = foreach(
   # estimation accuracy
   # transform betahat to log-contrast space
   betahat.tr = LRtoLC(betahat, btree)
+  # check that pred y is equal to that using transformed log-contrasts model
+  # a0.tr = as.numeric(mean(Y) - colMeans(Z) %*% betahat.tr)
+  # Y.pred.tr = a0.tr + Z.test %*% betahat.tr
+  # all.equal(Y.pred, Y.pred.tr)
+  # calculate other evaluation metrics
   EA1 = sum(abs(betahat.tr - beta))
   EA2 = crossprod(betahat.tr - beta)
   EAInfty = max(abs(betahat.tr - beta))

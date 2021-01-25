@@ -49,12 +49,20 @@ getSupervisedTree = function(y, X, linkage, allow.noise = FALSE, noise){
 # using a hierarchical tree, compute the balances for X
 computeBalances = function(X, btree){
   # checks
+  if(class(X) != "matrix"){
+    if(class(X) == "numeric"){
+      X = matrix(X, ncol = length(X))
+    } else{
+      warning("computeBalances: X is neither of class matrix nor numeric.")
+    }
+  }
   if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
   # compute balances from hclust object using balance pkg:
   # 1. build SBP (serial binary partition) matrix from hclust object
-  sbp = sbp.fromHclust(btree) # U = basis vectors
+  U = sbp.fromHclust(btree) # U = basis vectors
   # 2. calculate balances from SBP matrix
-  balances = balance.fromSBP(X, sbp)
+  # balances = balance.fromSBP(X, sbp)
+  balances = log(X) %*% U
   return(balances)
 }
 

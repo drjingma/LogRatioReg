@@ -33,12 +33,13 @@ source("RCode/func_libs.R")
 # Method Settings
 tol = 1e-4
 nlam = 200
+intercept = TRUE
 
 # Simulation settings
 numSims = 100
 n = 50
 p = 30
-rho = 0.5 # 0.2, 0.5
+rho = 0.2 # 0.2, 0.5
 # beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
 non0.beta = (beta != 0)
@@ -88,7 +89,8 @@ evals = foreach(
   Y = Z %*% matrix(beta) + epsilon
   
   # apply compositional lasso, using GIC to select lambda
-  complasso0 = ConstrLasso(Y, Z, Cmat = matrix(1, p, 1), nlam = nlam, tol = tol)
+  complasso0 = ConstrLasso(Y, Z, Cmat = matrix(1, p, 1), 
+                           nlam = nlam, tol = tol, intercept = intercept)
   non0.betahats = (complasso0$bet != 0) # diff lambda = diff col
   non0ct = apply(non0.betahats, 2, sum) # count of non-zero betas for each lambda
   which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n)) # lambda lower bound criteria
@@ -97,7 +99,7 @@ evals = foreach(
                length.out = nlam)
   nlam = length(lambda)
   complasso = ConstrLasso(Y, Z, Cmat = matrix(1, p, 1), lambda = lambda, 
-                          nlam = nlam, tol = tol)
+                          nlam = nlam, tol = tol, intercept = intercept)
   non0.betahats = (complasso$bet != 0)
   non0ct = apply(non0.betahats, 2, sum)
   # which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n))
@@ -151,6 +153,7 @@ saveRDS(evals,
                       "/complasso_simulations", 
                       "_dim", n, "x", p, 
                       "_rho", rho, 
+                      # "int", intercept, 
                       "_seed", rng.seed,
                       ".rds"))
 eval.means = apply(evals, 1, mean)
@@ -163,5 +166,6 @@ saveRDS(evals.df,
                       "/complasso_simulations_summary", 
                       "_dim", n, "x", p, 
                       "_rho", rho, 
+                      # "int", intercept, 
                       "_seed", rng.seed,
                       ".rds"))

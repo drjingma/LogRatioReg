@@ -126,8 +126,8 @@ evals = foreach(
   }
   lam.min.idx = which.min(GIC)
   lam.min = slr$lambda[lam.min.idx]
-  a0 = slr$int[lam.min.idx]
-  betahat = slr$bet[, lam.min.idx]
+  a0 = a0s[lam.min.idx]
+  betahat = betahats[, lam.min.idx]
   non0.betahat = non0.betahats[, lam.min.idx]
   
   # plot(slr$lambda, GIC, type = "l")

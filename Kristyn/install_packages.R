@@ -9,11 +9,19 @@ packages <- c(
   "balance",
   "selbal",
   "propr",
+  "Matrix", 
+  "glmnet", 
+  "compositions", 
+  "stats", 
+  "limSolve", 
   "microbenchmark",
   "ggplot2",
   "logratiolasso",
   "foreach",
+  "future", 
+  "parallel", 
   "doFuture",
+  "rngtools",
   "doRNG"
 )
 

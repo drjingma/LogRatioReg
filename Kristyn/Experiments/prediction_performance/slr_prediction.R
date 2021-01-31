@@ -1,4 +1,5 @@
 getwd()
+output_dir = "Kristyn/Experiments/prediction_performance/output"
 
 # libraries
 library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
@@ -33,11 +34,10 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # settings
 tol = 1e-4
-get_lambda = "original"
 
 # Cross-validation
 cv.n_lambda = 200
-cv.K = 3
+cv.K = 5
 
 # Repetitions
 numReps = 100
@@ -45,12 +45,7 @@ n.train = 70
 n.test = 28
 
 # data
-# 98 samples, 87 genera
-# replace zero counts with 0.5 (maximum rounding error)
 load(paste0("Data/", "BMI.rda"))
-# dim(raw_data) # 98 x 89
-# dim(X) # 98 x 87
-# dim(X.prop) # 98 x 87
 log.X.prop = log(X.prop)
 n = dim(X)[1]
 num.genera = dim(X)[2]
@@ -72,8 +67,6 @@ pred.err = foreach(
   library(stats) # for hclust()
   library(balance) # for sbp.fromHclust()
   
-  
-  
   # split into train and test sets
   train.idx = sample(1:n, n.train)
   Xtrain = X.prop[train.idx, ]
@@ -85,35 +78,30 @@ pred.err = foreach(
   # Split the data into 10 folds
   
   # Fit Lasso on training set
-  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K, 
-                  get_lambda = get_lambda)
+  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K)
   lambdamin.idx = which.min(cv.fits$cvm)
+  betahat0 = as.numeric(cv.fits$int[lambdamin.idx])
   betahat = as.matrix(cv.fits$bet[, lambdamin.idx])
-  names(betahat) = colnames(betahat)
   # get fitted model
-  predictCLM = function(X){
-    cv.fits$int[lambdamin.idx] + computeBalances(X, cv.fits$btree) %*% betahat
+  predictSLR = function(X){
+    betahat0 + computeBalances(X, cv.fits$btree) %*% betahat
   }
-  # calculate squared error (prediction error?)
-  Ypred = predictCLM(Xtest)
+  # calculate prediction error
+  Ypred = predictSLR(Xtest)
   (Ytest - Ypred)^2
 }
 dim(pred.err)
 mse = colMeans(pred.err)
-print(paste0("mean prediction error: ", mean(mse)))
-print(paste0("standard deviation: ", (sd(mse))))
-print(paste0("standard error: ", (sd(mse)) / sqrt(numReps)))
-print(paste0(
-  "95% CI: (", 
-  mean(mse) - 2 * (sd(mse)) / sqrt(numReps), 
-  ", ",
-  mean(mse) + 2 * (sd(mse)) / sqrt(numReps), ")"
-))
+mse.mean = mean(mse)
+mse.sd = sd(mse)
+mse.se = mse.sd / sqrt(numReps)
+data.frame(mean = mse.mean, sd = mse.sd, se = mse.se, 
+           lower = mse.mean - 2 * mse.se, upper = mse.mean + 2 * mse.se)
 
-saveRDS(pred.err,
-        file = paste0("Kristyn/Experiments/output",
-                      "/slr_prediction", 
-                      "_", get_lambda, 
-                      "_K", cv.K, 
-                      "_seed", rng.seed,
-                      ".rds"))
+saveRDS(
+  pred.err, 
+  file = paste0(output_dir,
+                "/slr_prediction", 
+                "_K", cv.K, 
+                "_seed", rng.seed,
+                ".rds"))

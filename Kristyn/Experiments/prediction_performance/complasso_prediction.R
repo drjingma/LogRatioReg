@@ -5,8 +5,8 @@
 # with standard errors of 0·97 and 1·04, respectively, suggesting that the prediction performance
 # of the proposed method is similar to or better than that of lasso (ii).''
 #  -- Lin et al 2014
-
 getwd()
+output_dir = "Kristyn/Experiments/prediction_performance/output"
 
 # libraries
 library(limSolve) # for constrained lm
@@ -91,26 +91,22 @@ pred.err = foreach(
   predictCLM = function(X){
     intercept + X %*% betabar
   }
-  print(paste("sum of betas = ", sum(betabar)))
-  # calculate squared error (prediction error?)
+  # calculate squared error 
   Ypred = predictCLM(Xtest)
   (Ytest - Ypred)^2
 }
 dim(pred.err)
 mse = colMeans(pred.err)
-print(paste0("mean prediction error: ", mean(mse)))
-print(paste0("standard deviation: ", (sd(mse))))
-print(paste0("standard error: ", (sd(mse)) / sqrt(rep.n)))
-print(paste0(
-  "95% CI: (", 
-  mean(mse) - 2 * (sd(mse)) / sqrt(rep.n), 
-  ", ",
-  mean(mse) + 2 * (sd(mse)) / sqrt(rep.n), ")"
-))
+mse.mean = mean(mse)
+mse.sd = sd(mse)
+mse.se = mse.sd / sqrt(numReps)
+data.frame(mean = mse.mean, sd = mse.sd, se = mse.se, 
+           lower = mse.mean - 2 * mse.se, upper = mse.mean + 2 * mse.se)
 
-saveRDS(pred.err,
-        file = paste0("Kristyn/Experiments/output",
-                      "/complasso_prediction", 
-                      "_K", cv.K, 
-                      "_seed", rng.seed,
-                      ".rds"))
+saveRDS(
+  pred.err, 
+  file = paste0(output_dir,
+                "/complasso_prediction", 
+                "_K", cv.K, 
+                "_seed", rng.seed,
+                ".rds"))

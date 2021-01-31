@@ -6,7 +6,8 @@
 # Supervised Log Ratios Regression
 
 # do hierarchical clustering with specified linkage for compositional data X and y
-getSupervisedTree = function(y, X, linkage, allow.noise = FALSE, noise){
+getSupervisedTree = function(
+  y, X, linkage = "complete", allow.noise = FALSE, noise = 1e-12){
   # browser()
   n = dim(X)[1]
   p = dim(X)[2]
@@ -67,86 +68,78 @@ computeBalances = function(X, btree){
 }
 
 fitSLR = function(
-  y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
-  get_lambda = NULL, allow.noise = FALSE, noise = 1e-12
+  y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE,
+  allow.noise = FALSE, noise = 1e-12
 ){
   # checks
+  if(length(y) != nrow(X)) stop("fitSLR : dimensions of y and X don't match")
   if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
-  # if allow.noise, make sure noise is given
-  if(allow.noise & is.null(noise)){
-    noise = 1e-12
-    # warning("fitSLR: allow.noise == TRUE, but noise is NULL. 
-    #         Default is 1e-12.")
-  }
   # check if lambda is given, assign get_lambda accordingly
   if(!is.null(lambda)){ # lambda is given
-    get_lambda = "given"
-  } else{ # lambda is NOT given
-    if(is.null(get_lambda)){
-      get_lambda = "original"
-      # warning("fitSLR: lambda is not given, and get_lambda is NULL. 
-      #         Default is original.")
-    }
+    nlam = length(lambda)
   }
-  
-  n <- nrow(X)
-  p <- ncol(X)
   
   # compute balances
   btree = getSupervisedTree(y, X, linkage, allow.noise, noise)
   Xb = computeBalances(X, btree)
   
-  # get lambda sequence, if not already given
-  if(is.null(lambda)){ # get lambda
-    if(!is.null(get_lambda)){ ### is this if statement necessary? #################################
-      if(get_lambda == "sup-balances" | 
-         get_lambda == "original" | 
-         get_lambda == 0){ # like in sup-balances.R
-        # apply to user-defined lambda sequence, if given. if not, let glmnet provide.
-        cv_exact = cv.glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam)
-        # get a new lambda sequence (why?)
-        lambda = log(cv_exact$lambda)
-        lambda = exp(seq(max(lambda), min(lambda) + 2, length.out = nlam))
-      } else if(get_lambda == "ConstrLasso" | 
-                get_lambda == "complasso" | 
-                get_lambda == 1){ # like ConstrLasso()
-        # get sequence of tuning parameter lambda
-        maxlam <- 2*max(abs(crossprod(Xb, y) / n))
-        lambda <- exp(seq(log(maxlam), log(1e-4), length.out = nlam))
-      } else if(get_lambda == "glmnet" | 
-                get_lambda == 2){ # like glmnet
-        lambda = NULL # lambda stays NULL
-      }
-    }
+  # run glmnet
+  glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+                      intercept = intercept)
+  # check lambda length
+  if(nlam != length(glmnet.fit$lambda)){
+    lambda <- log(glmnet.fit$lambda)
+    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new)
   }
-  
-  # fit lasso (using glmnet)
-  if(get_lambda == "glmnet" | 
-     get_lambda == 2){ # like glmnet
-    cv_exact = glmnet(x = Xb, y = y, nlambda = nlam)
-    lambda = seq(max(cv_exact$lambda), min(cv_exact$lambda), length.out = nlam)
-  } else{
-    cv_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = length(lambda))
-  }
-  if(nlam != length(lambda)) warning("fitSLR : nlam != length(lambda)")
   return(list(
-    int = cv_exact$a0, 
-    bet = cv_exact$beta, 
-    lambda = cv_exact$lambda,
-    glmnet = cv_exact, 
+    int = glmnet.fit$a0, 
+    bet = glmnet.fit$beta, 
+    lambda = glmnet.fit$lambda,
+    glmnet = glmnet.fit, 
     btree = btree
+  ))
+}
+
+cvSLR2 = function(
+  y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
+  foldid = NULL, intercept = TRUE, allow.noise = FALSE, noise = 1e-12
+){
+  
+  # compute balances
+  btree = getSupervisedTree(y, X, linkage, allow.noise, noise)
+  Xb = computeBalances(X, btree)
+  
+  # call cv.glmnet
+  cv_exact = cv.glmnet(
+    x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+    foldid = foldid, intercept = intercept, type.measure = c("mse"))
+  return(list(
+    # int = glmnet.fit$a0,
+    # bet = glmnet.fit$beta,
+    # lambda = lambda,
+    # glmnet = glmnet.fit,
+    # cv.glmnet = cv_exact
+    int = cv_exact$glmnet.fit$a0,
+    bet = cv_exact$glmnet.fit$beta,
+    lambda = cv_exact$lambda,
+    cv.glmnet = cv_exact,
+    glmnet = cv_exact$glmnet.fit,
+    btree = btree,
+    cvm = cv_exact$cvm
   ))
 }
 
 cvSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
-  get_lambda = NULL, allow.noise = FALSE, noise = 1e-12
+  intercept = TRUE, allow.noise = FALSE, noise = 1e-12
 ){
   n <- nrow(X)
   p <- ncol(X)
   
   # Fit to the original data
-  slr = fitSLR(y, X, linkage, lambda, nlam, get_lambda, allow.noise, noise)
+  slr = fitSLR(y = y, X = X, linkage = linkage, lambda = lambda, nlam = nlam, 
+               intercept = intercept, allow.noise = allow.noise, noise = noise)
   bet = slr$bet
   int = slr$int
   lambda = slr$lambda
@@ -158,9 +151,7 @@ cvSLR = function(
   idfold = (shuffle %% nfolds) + 1 # IDs for which fold each obs goes into
   n_fold = as.vector(table(idfold)) # number of things in each fold
   
-  cvm = rep(NA, nlam) # want to have CV(lambda)
   cvm_sqerror = matrix(rep(NA, nfolds * nlam), nfolds, nlam) # calculate squared error for each fold, needed for CV(lambda) calculation
-  cvse = rep(NA, nlam) # want to have SE_CV(lambda)
   cvse_errorsd =  matrix(rep(NA, nfolds * nlam), nfolds, nlam) # calculate sd of error for each fold, needed for SE_CV(lambda) calculation
   # Calculate Lasso for each fold removed
   for (j in 1:nfolds){
@@ -172,12 +163,14 @@ cvSLR = function(
     Ytest = y[idfold == j]
     
     # Calculate LASSO on that fold using fitLASSO
-    slr_j = fitSLR(Ytrain, Xtrain, linkage, lambda, nlam, nfolds, get_lambda, allow.noise, noise)
+    slr_j = fitSLR(y = Ytrain, X = Xtrain, linkage = linkage, lambda = lambda, 
+                   nlam = nlam, intercept = intercept, 
+                   allow.noise = allow.noise, noise = noise)
     # Any additional calculations that are needed for calculating CV and SE_CV(lambda)
     for(m in 1:nlam){
       Ypred = slr_j$int[m] + 
         computeBalances(Xtest, btree) %*% as.matrix(slr_j$bet[ , m])
-      cvm_sqerror[j, m] = sum(crossprod(Ytest - Ypred))
+      cvm_sqerror[j, m] = sum(crossprod(Ytest - Ypred)) / length(Ytest)
       cvse_errorsd[j, m] = cvm_sqerror[j, m] / n_fold[j]
     }
   }
@@ -205,7 +198,8 @@ cvSLR = function(
     cvm = cvm, 
     cvm_idx = lambda_min_idx,
     cvse = cvse,
-    cvse_idx = lambda_1se_idx
+    cvse_idx = lambda_1se_idx, 
+    foldid = idfold
   ))
 }
 

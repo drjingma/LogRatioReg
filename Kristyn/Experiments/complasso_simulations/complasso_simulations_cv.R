@@ -34,7 +34,7 @@ source("RCode/func_libs.R")
 # Method Settings
 tol = 1e-4
 nlam = 200
-intercept = TRUE
+intercept = FALSE
 K = 5
 
 # Simulation settings

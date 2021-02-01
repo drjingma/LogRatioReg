@@ -21,6 +21,7 @@ library(microbenchmark)
 # OutFolder <- "../Output/"
 source("RCode/func_libs.R")
 source("COAT-master/coat.R")
+source("Kristyn/Functions/supervisedlogratios.R")
 
 set.seed(12)
 n <- 50
@@ -67,9 +68,27 @@ colnames(err) <- c('pred')
 ## Benchmark the computational time of various methods.
 mbm <- microbenchmark(
   "supervisedKristyn" = {
-    btree = getSupervisedTree(WC[1:n, ], y, linkage)
-    Xb = computeBalances(btree, WC)
+    btree = getSupervisedTree(y = y, X = WC[1:n, ], linkage = linkage)
+    # Xb = computeBalances(WC, btree)
+    U = sbp.fromHclust(btree)
+    Xb = balance.fromSBP(WC, U)
     fit_supervisedKristyn <- run.glmnet(x=Xb[1:n,],y,xt=Xb[-(1:n),],y_test)
+  },
+  "supervisedKristyn2" = {
+    fit_supKristyn2 = cvSLR(y = y, X = WC[1:n, ], linkage = linkage)
+    lambdamin.idx = which.min(fit_supKristyn2$cvm)
+    a0 = fit_supKristyn2$int[lambdamin.idx]
+    bet  = fit_supKristyn2$bet[, lambdamin.idx]
+    Xb_test = computeBalances(WC[-(1:n), ], fit_supKristyn2$btree)
+    fit_supKristyn2$mse.pred <- mean((y_test - a0 - Xb_test %*% bet)^2)
+  },
+  "supervisedKristyn3" = {
+    fit_supKristyn3 = cvSLR2(y = y, X = WC[1:n, ], linkage = linkage)
+    lambdamin.idx = which.min(fit_supKristyn3$cvm)
+    a0 = fit_supKristyn3$int[lambdamin.idx]
+    bet  = fit_supKristyn3$bet[, lambdamin.idx]
+    Xb_test = computeBalances(WC[-(1:n), ], fit_supKristyn3$btree)
+    fit_supKristyn3$mse.pred <- mean((y_test - a0 - Xb_test %*% bet)^2)
   },
   "supervised" = { 
     S <- matrix(0,p,p)
@@ -90,11 +109,15 @@ mbm <- microbenchmark(
     ba_supervised <- balance.fromSBP(WC,sbp_supervised)
     fit_supervised <- run.glmnet(x=ba_supervised[1:n,],y,xt=ba_supervised[-(1:n),],y_test)
   },
-  # "classo" = {
-    # z <- log(WC[1:n,])
-    # z_test <- log(WC[-(1:n),])
-  #   fit_classo <- cv.func('ConstrLasso',y=y,x=z,C=matrix(1,p,1), nlam = 100, nfolds=10)
-  # },
+  "classo" = {
+  z <- log(WC[1:n,])
+  z_test <- log(WC[-(1:n),])
+  fit_classo <- cv.func('ConstrLasso',y=y,x=z,C=matrix(1,p,1), nlam = 100, nfolds=10)
+  lambdamin.idx = which.min(fit_classo$cvm)
+  a0 = fit_classo$int[lambdamin.idx]
+  bet  = fit_classo$bet[, lambdamin.idx]
+  fit_classo$mse.pred <- mean((y_test - a0 - z_test %*% bet)^2)
+  },
   'coat' = {
     d_coat <- 1-coat(WC[1:n,])$corr
     rownames(d_coat) <- colnames(d_coat) <- colnames(W)
@@ -135,9 +158,21 @@ mbm <- microbenchmark(
 # # err[6,1] <- fit_selbal$mse.pred
 #
 
-compare.mse = c(fit_supervised$mse.pred, fit_supervisedKristyn$mse.pred, fit_pba$mse.pred)
-names(compare.mse) = c("slr", "slr-kristyn", "pba")
+compare.mse = c(fit_supervised$mse.pred, fit_supervisedKristyn$mse.pred, 
+                fit_supKristyn2$mse.pred, fit_supKristyn3$mse.pred, 
+                fit_classo$mse.pred)
+names(compare.mse) = c("slr", "slr-kristyn", "slr-kristyn2", "slr-kristyn3", 
+                       "classo")
 print(compare.mse)
+
+compare.beta = data.frame(
+  "slr" = as.numeric(fit_supervised$beta.min), 
+  "slr-kristyn" = as.numeric(fit_supervisedKristyn$beta.min), 
+  "slr-kristyn2" = as.numeric(fit_supKristyn2$bet[which.min(fit_supKristyn2$cvm)]), 
+  "slr-kristyn3" = as.numeric(fit_supKristyn2$bet[which.min(fit_supKristyn2$cvm)]), 
+  "classo" = as.numeric(fit_classo$bet[which.min(fit_classo$cvm)]))
+compare.beta.num0s = apply(compare.beta, 2, FUN = function(x) sum(x == 0))
+compare.beta.num0s
 
 
 

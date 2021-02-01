@@ -39,7 +39,7 @@ getSupervisedTree = function(
   rownames(cormat) = colnames(X)
   
   # get dissimilarity matrix
-  Gammamat = 1 - abs(cormat)
+  Gammamat = 1 - cormat
   
   # get tree from hierarchical clustering
   btree_slr = hclust(as.dist(Gammamat), method = linkage)
@@ -101,7 +101,7 @@ fitSLR = function(
   ))
 }
 
-cvSLR2 = function(
+cvSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
   foldid = NULL, intercept = TRUE, allow.noise = FALSE, noise = 1e-12
 ){
@@ -130,7 +130,7 @@ cvSLR2 = function(
   ))
 }
 
-cvSLR = function(
+cvSLR.old = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
   intercept = TRUE, allow.noise = FALSE, noise = 1e-12
 ){

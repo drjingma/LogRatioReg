@@ -94,15 +94,12 @@ evals = foreach(
   complasso = cv.func(
     method="ConstrLasso", y = Y, x = Z, Cmat = matrix(1, p, 1), nlam = nlam, 
     nfolds = K, tol = tol, intercept = intercept)
-  non0.betahats = (complasso$bet != 0) # diff lambda = diff col
-  non0ct = apply(non0.betahats, 2, sum) # count of non-zero betas for each lambda
   
   # choose lambda
   lam.min.idx = which.min(complasso$cvm)
   lam.min = complasso$lambda[lam.min.idx]
   a0 = complasso$int[lam.min.idx]
   betahat = complasso$bet[, lam.min.idx]
-  non0.betahat = non0.betahats[, lam.min.idx]
   
   # plot(complasso$lambda, complasso$cvm, type = "l")
   
@@ -125,6 +122,7 @@ evals = foreach(
   EA2 = crossprod(betahat - beta)
   EAInfty = max(abs(betahat - beta))
   # FP
+  non0.betahat = (betahat != 0)
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
   # FN
   FN = sum((non0.beta != non0.betahat) & non0.beta)

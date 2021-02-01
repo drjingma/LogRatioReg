@@ -39,7 +39,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
 nlam = 200
-intercept = FALSE
+intercept = TRUE
 K = 5
 
 # Simulation settings
@@ -101,15 +101,11 @@ evals = foreach(
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept)
   # transformed
   btree = slr$btree
-  betahats.tr = apply(slr$bet, 2, function(x) LRtoLC(x, btree))
-  non0.betahats = (betahats.tr != 0) # diff lambda = diff col
-  non0ct = apply(non0.betahats, 2, sum) # count of non-zero betas for each lambda
   
   lam.min.idx = which.min(slr$cvm)
   lam.min = slr$lambda[lam.min.idx]
   a0 = slr$int[lam.min.idx]
   betahat = slr$bet[, lam.min.idx]
-  non0.betahat = non0.betahats[, lam.min.idx]
   
   # # plot lambda vs. GIC
   # plot(slr$lambda, slr$cvm, type = "l")
@@ -140,16 +136,11 @@ evals = foreach(
   # estimation accuracy
   # transform betahat to log-contrast space
   betahat.tr = LRtoLC(betahat, btree)
-  # check that pred y is equal to that using transformed log-contrasts model
-  # a0.tr = as.numeric(mean(Y) - colMeans(Z) %*% betahat.tr)
-  # Y.pred.tr = a0.tr + Z.test %*% betahat.tr
-  # all.equal(Y.pred, Y.pred.tr)
-  # calculate other evaluation metrics
   EA1 = sum(abs(betahat.tr - beta))
   EA2 = crossprod(betahat.tr - beta)
   EAInfty = max(abs(betahat.tr - beta))
-  non0.betahat = (betahat.tr != 0)
   # FP
+  non0.betahat = (betahat.tr != 0)
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
   # FN
   FN = sum((non0.beta != non0.betahat) & non0.beta)

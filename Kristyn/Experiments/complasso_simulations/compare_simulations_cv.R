@@ -3,7 +3,7 @@ rng.seed = 123
 n = 50
 p = 30
 rho = 0.2 # 0.2, 0.5
-intercept = TRUE
+intercept = FALSE
 
 ################################################################################
 # Compositional Lasso #

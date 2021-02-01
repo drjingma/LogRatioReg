@@ -39,7 +39,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
 nlam = 200
-intercept = TRUE
+intercept = FALSE
 K = 5
 
 # Simulation settings

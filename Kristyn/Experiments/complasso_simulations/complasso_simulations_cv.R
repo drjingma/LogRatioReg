@@ -34,13 +34,13 @@ source("RCode/func_libs.R")
 # Method Settings
 tol = 1e-4
 nlam = 200
-intercept = FALSE
+intercept = TRUE
 K = 5
 
 # Simulation settings
 numSims = 100
-n = 100
-p = 200
+n = 50
+p = 30
 rho = 0.2 # 0.2, 0.5
 # beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))

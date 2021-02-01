@@ -39,12 +39,12 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
 nlam = 200
-intercept = FALSE
+intercept = TRUE
 
 # Simulation settings
 numSims = 100
-n = 100
-p = 200
+n = 50
+p = 30
 rho = 0.2 # 0.2, 0.5
 # beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
@@ -180,13 +180,6 @@ evals = foreach(
   c(PE, EA1, EA2, EAInfty, FP, FN)
 }
 rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
-saveRDS(evals,
-        file = paste0("Kristyn/Experiments/output",
-                      "/slr_gicLC_simulations", 
-                      "_dim", n, "x", p, 
-                      "_rho", rho, 
-                      "_seed", rng.seed,
-                      ".rds"))
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)

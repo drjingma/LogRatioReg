@@ -34,7 +34,8 @@ source("RCode/func_libs.R")
 # Method Settings
 tol = 1e-4
 nlam = 200
-intercept = FALSE
+intercept = TRUE
+K = 5
 
 # Simulation settings
 numSims = 100
@@ -89,39 +90,21 @@ evals = foreach(
   # generate Y
   Y = Z %*% matrix(beta) + epsilon
   
-  # apply compositional lasso, using GIC to select lambda
-  complasso0 = ConstrLasso(Y, Z, Cmat = matrix(1, p, 1), 
-                           nlam = nlam, tol = tol, intercept = intercept)
-  non0.betahats = (complasso0$bet != 0) # diff lambda = diff col
+  # apply compositional lasso, using CV to select lambda
+  complasso = cv.func(
+    method="ConstrLasso", y = Y, x = Z, Cmat = matrix(1, p, 1), nlam = nlam, 
+    nfolds = K, tol = tol, intercept = intercept)
+  non0.betahats = (complasso$bet != 0) # diff lambda = diff col
   non0ct = apply(non0.betahats, 2, sum) # count of non-zero betas for each lambda
-  which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n)) # lambda lower bound criteria
-  lambda = seq(complasso0$lambda[1], 
-               complasso0$lambda[max(which0ct.leq3sqrtn)], 
-               length.out = nlam)
-  nlam = length(lambda)
-  complasso = ConstrLasso(Y, Z, Cmat = matrix(1, p, 1), lambda = lambda, 
-                          nlam = nlam, tol = tol, intercept = intercept)
-  non0.betahats = (complasso$bet != 0)
-  non0ct = apply(non0.betahats, 2, sum)
-  # which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n))
-  a0s = complasso$int
-  betahats = complasso$bet
-  GIC = rep(NA, nlam)
-  pvn = max(p, n)
-  for(m in 1:nlam){
-    a0.tmp = a0s[m]
-    betahat.tmp = betahats[, m]
-    sigmasq.hat = crossprod(Y - a0.tmp - Z %*% betahat.tmp) / n
-    s.lam = sum(non0.betahats[, m])
-    GIC[m] = log(sigmasq.hat) + (s.lam - 1) * log(log(n)) * log(pvn) / n
-  }
-  lam.min.idx = which.min(GIC)
+  
+  # choose lambda
+  lam.min.idx = which.min(complasso$cvm)
   lam.min = complasso$lambda[lam.min.idx]
   a0 = complasso$int[lam.min.idx]
   betahat = complasso$bet[, lam.min.idx]
   non0.betahat = non0.betahats[, lam.min.idx]
   
-  # plot(complasso$lambda, GIC, type = "l")
+  # plot(complasso$lambda, complasso$cvm, type = "l")
   
   # evaluate model
   # prediction error
@@ -157,7 +140,7 @@ evals.df
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
-                "/complasso_gic_simulations", 
+                "/complasso_cv_simulations", 
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,

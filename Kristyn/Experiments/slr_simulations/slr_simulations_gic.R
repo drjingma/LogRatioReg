@@ -1,4 +1,4 @@
-# attempt at logratio simulations, for the supervised logratios method
+# attempt at log-ratio simulations, for the supervised log-ratios method
 
 
 getwd()
@@ -37,7 +37,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
 nlam = 200
-intercept = TRUE
+intercept = FALSE
 
 # Simulation settings
 numSims = 100
@@ -152,24 +152,25 @@ evals = foreach(
   LR.test = log(X.test[, idx.pairs[1, ]]) - log(X.test[, idx.pairs[2, ]])
   # generate Y
   Y.test = LR.test %*% matrix(beta) + epsilon.test
-  btree = getSupervisedTree(y = epsilon.test, X = X.test)
+  # btree = getSupervisedTree(y = epsilon.test, X = X.test)
   # get fitted model
   predictSLR = function(X){
     a0 + computeBalances(X, btree) %*% betahat
   }
   Y.pred = predictSLR(X.test)
   PE = crossprod(Y.test - Y.pred) / n
-  # estimation accuracy
-  EA1 = sum(abs(betahat - beta))
-  EA2 = crossprod(betahat - beta)
-  EAInfty = max(abs(betahat - beta))
-  non0.betahat = (betahat != 0)
-  # FP
-  FP = sum((non0.beta != non0.betahat) & non0.betahat)
-  # FN
-  FN = sum((non0.beta != non0.betahat) & non0.beta)
+  # # estimation accuracy
+  # EA1 = sum(abs(betahat - beta))
+  # EA2 = crossprod(betahat - beta)
+  # EAInfty = max(abs(betahat - beta))
+  # non0.betahat = (betahat != 0)
+  # # FP
+  # FP = sum((non0.beta != non0.betahat) & non0.betahat)
+  # # FN
+  # FN = sum((non0.beta != non0.betahat) & non0.beta)
   # return
-  c(PE, EA1, EA2, EAInfty, FP, FN)
+  # c(PE, EA1, EA2, EAInfty, FP, FN)
+  c(PE, NA, NA, NA, NA, NA)
 }
 rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
 # saveRDS(evals,
@@ -184,13 +185,22 @@ eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
+# # when intercept = TRUE
 # mean           sd           se
-# PE       6.428060  4.021789915 0.4021789915
-# EA1     23.247353  4.890119040 0.4890119040
-# EA2     13.816049  3.413152010 0.3413152010
-# EAInfty  1.000471  0.006217369 0.0006217369
-# FP      78.850000 53.006836799 5.3006836799
-# FN       2.800000  0.512470743 0.0512470743
+# PE       0.4931312  0.267483320 0.0267483320
+# EA1     23.2473529  4.890119040 0.4890119040
+# EA2     13.8160485  3.413152010 0.3413152010
+# EAInfty  1.0004713  0.006217369 0.0006217369
+# FP      78.8500000 53.006836799 5.3006836799
+# FN       2.8000000  0.512470743 0.0512470743
+# # when intercept = FALSE
+# mean           sd           se
+# PE       0.4956392  0.280741140 0.0280741140
+# EA1     23.3293438  5.213476274 0.5213476274
+# EA2     13.8405931  3.604281011 0.3604281011
+# EAInfty  1.0002754  0.004616373 0.0004616373
+# FP      89.6300000 53.761849528 5.3761849528
+# FN       2.6300000  0.580055727 0.0580055727
 saveRDS(
   evals.df, 
   file = paste0(output_dir,

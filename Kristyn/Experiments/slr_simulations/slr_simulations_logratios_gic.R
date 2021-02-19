@@ -1,5 +1,5 @@
 # attempt at log-ratio simulations, for the supervised log-ratios method
-
+# didn't work
 
 getwd()
 output_dir = "Kristyn/Experiments/slr_simulations/output"

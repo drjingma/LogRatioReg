@@ -1,13 +1,9 @@
-# Method: Simulation study for compositional Lasso
-# Purpose: Simulate data, fit compositional Lasso to the data
-# Date: 1/2021
-# Notes: 
+# attempt at balance tree simulations, for the supervised log-ratios method
 
 getwd()
-output_dir = "Kristyn/Experiments/complasso_simulations/output"
+output_dir = "Kristyn/Experiments/slr_simulations/output"
 
 # libraries
-library(limSolve) # for constrained lm
 library(mvtnorm)
 library(stats) # for hclust()
 library(balance) # for sbp.fromHclust()
@@ -38,8 +34,9 @@ functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
+tol = 1e-4
 nlam = 200
-intercept = TRUE
+intercept = FALSE
 K = 5
 
 # Simulation settings
@@ -47,8 +44,7 @@ numSims = 100
 n = 50
 p = 30
 rho = 0.2 # 0.2, 0.5
-# beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
-beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 1 - 8))
 non0.beta = (beta != 0)
 sigma_eps = 0.5
 seed = 1
@@ -93,26 +89,23 @@ evals = foreach(
   rowsumsV = apply(V, 1, sum)
   X = V / rowsumsV
   epsilon = rnorm(n, 0, sigma_eps)
-  Z = log(X)
+  U = sbp.fromRandom(log(X))
+  Xb = log(X) %*% U
   # generate Y
-  Y = Z %*% matrix(beta) + epsilon
+  Y = Xb %*% matrix(beta) + epsilon
   
-  # apply supervised log-ratios method, using CV to select lambda
-  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept)
-  # transformed
-  btree = slr$btree
+  # apply compositional lasso, using CV to select lambda
+  complasso = cv.func(
+    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
+    nfolds = K, tol = tol, intercept = intercept)
   
-  lam.min.idx = which.min(slr$cvm)
-  lam.min = slr$lambda[lam.min.idx]
-  a0 = slr$int[lam.min.idx]
-  betahat = slr$bet[, lam.min.idx]
+  # choose lambda
+  lam.min.idx = which.min(complasso$cvm)
+  lam.min = complasso$lambda[lam.min.idx]
+  a0 = complasso$int[lam.min.idx]
+  betahat = complasso$bet[, lam.min.idx]
   
-  # # plot lambda vs. GIC
-  # plot(slr$lambda, slr$cvm, type = "l")
-  # points(lam.min, min(slr$cvm))
-  # text(lam.min, min(slr$cvm),
-  #      paste0("(", round(lam.min, 3), ", ", 
-  #             round(min(slr$cvm), 3), ")", sep = ""), pos = 4)
+  # plot(complasso$lambda, complasso$cvm, type = "l")
   
   # evaluate model
   # prediction error
@@ -124,39 +117,55 @@ evals = foreach(
   rowsumsV.test = apply(V.test, 1, sum)
   X.test = V.test / rowsumsV.test
   epsilon.test = rnorm(n, 0, sigma_eps)
-  Z.test = log(X.test)
+  U.test = sbp.fromRandom(log(X.test))
+  Xb.test = log(X.test) %*% U.test
   # generate Y
-  Y.test = Z.test %*% matrix(beta) + epsilon.test
-  # get fitted model
-  predictSLR = function(X){
-    a0 + computeBalances(X, btree) %*% betahat
-  }
-  Y.pred = predictSLR(X.test)
+  Y.test = Xb.test %*% matrix(beta) + epsilon.test
+  # get prediction error
+  Y.pred = a0 + log(X.test) %*% betahat
   PE = crossprod(Y.test - Y.pred) / n
-  # estimation accuracy
-  # transform betahat to log-contrast space
-  betahat.tr = LRtoLC(betahat, btree)
-  EA1 = sum(abs(betahat.tr - beta))
-  EA2 = crossprod(betahat.tr - beta)
-  EAInfty = max(abs(betahat.tr - beta))
-  # FP
-  non0.betahat = (betahat.tr != 0)
-  FP = sum((non0.beta != non0.betahat) & non0.betahat)
-  # FN
-  FN = sum((non0.beta != non0.betahat) & non0.beta)
-  # return
-  c(PE, EA1, EA2, EAInfty, FP, FN)
+  # # estimation accuracy
+  # betahat.tr = LCtoLR(???) #####################################################
+  # EA1 = sum(abs(betahat.tr - beta))
+  # EA2 = crossprod(betahat.tr - beta)
+  # EAInfty = max(abs(betahat.tr - beta))
+  # non0.betahat = (betahat.tr != 0)
+  # # # FP
+  # FP = sum((non0.beta != non0.betahat) & non0.betahat)
+  # # # FN
+  # FN = sum((non0.beta != non0.betahat) & non0.beta)
+  # # return
+  # c(PE, EA1, EA2, EAInfty, FP, FN)
+  c(PE, NA, NA, NA, NA, NA)
 }
 rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
+
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
+# # when intercept = TRUE
+# mean           sd           se
+# PE      9774.894517 1.797985e+04 1.797985e+03
+# EA1       24.352753 4.235556e+00 4.235556e-01
+# EA2       41.804803 1.417365e+01 1.417365e+00
+# EAInfty    3.050527 8.050459e-01 8.050459e-02
+# FP        18.780000 4.303111e+00 4.303111e-01
+# FN         1.340000 1.319780e+00 1.319780e-01
+# # when intercept = FALSE
+# mean           sd           se
+# PE      9726.672253 1.788641e+04 1.788641e+03
+# EA1       19.411885 6.414873e+00 6.414873e-01
+# EA2       30.614037 1.501114e+01 1.501114e+00
+# EAInfty    2.654308 7.686347e-01 7.686347e-02
+# FP        14.570000 6.396424e+00 6.396424e-01
+# FN         2.270000 1.600852e+00 1.600852e-01
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
                 "/slr_cv_simulations", 
+                # "_", d.method, 
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,

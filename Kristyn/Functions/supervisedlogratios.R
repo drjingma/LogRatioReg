@@ -62,7 +62,7 @@ computeBalances = function(X, btree){
   # 1. build SBP (serial binary partition) matrix from hclust object
   U = sbp.fromHclust(btree) # U = basis vectors
   # 2. calculate balances from SBP matrix
-  # balances = balance.fromSBP(X, sbp)
+  # balances = balance.fromSBP(X, U)
   balances = log(X) %*% U
   return(balances)
 }

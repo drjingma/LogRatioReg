@@ -40,13 +40,12 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # settings
 tol = 1e-4
-
-# Cross-validation
 cv.n_lambda = 200
 cv.K = 10
+intercept = TRUE
 
 # Bootstrap
-bs.n = 500
+bs.n = 100
 
 # data
 # 98 samples, 87 genera
@@ -102,7 +101,7 @@ bs.selected_variables = foreach(
     Ytest = y.bs[idfold == j]
 
     # Fit SLR (with noise, because bootstrap leads to replicated observations)
-    slr_j = fitSLR(Ytrain, Xtrain, nlam = cv.n_lambda)
+    slr_j = fitSLR(Ytrain, Xtrain, nlam = cv.n_lambda, intercept = intercept)
     # transform the coefficients for our log-ratios model (slr) on balances to 
     #   coefficients for the linear log-contrasts model on log-contrasts
     slr_betas = as.matrix(slr_j$bet)
@@ -139,7 +138,8 @@ bs.selected_variables = foreach(
   lambda_min = slr_j$lambda[lambda_min_index]
   
   # final fit
-  slr_select.bs = fitSLR(y.bs, X.prop.bs, lambda = lambda_min, nlam = 1)
+  slr_select.bs = fitSLR(y.bs, X.prop.bs, lambda = lambda_min, nlam = 1, 
+                         intercept = intercept)
   XYdata = data.frame(X.prop.bs, y = y.bs)
   selected_variables = LRtoLC(as.matrix(slr_select.bs$bet), slr_select.bs$btree) != 0 # diff lambda = diff col
   # record which variables were selected
@@ -161,6 +161,7 @@ saveRDS(bs.results,
         file = paste0("Kristyn/Experiments/output",
                       "/slr_selection", 
                       "_refitLRs",
+                      "_int", intercept, 
                       "_B", bs.n, 
                       "_seed", rng.seed,
                       ".rds"))

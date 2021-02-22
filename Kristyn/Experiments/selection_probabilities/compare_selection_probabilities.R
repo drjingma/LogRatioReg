@@ -1,4 +1,4 @@
-output_home = "Kristyn/Experiments/output/"
+output_home = "Kristyn/Experiments/selection_probabilities/output/"
 ################################################################################
 # Compositional Lasso #
 ################################################################################

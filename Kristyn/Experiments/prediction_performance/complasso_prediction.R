@@ -34,10 +34,9 @@ source("RCode/func_libs.R")
 
 # settings
 tol = 1e-4
-
-# Cross-validation
 cv.n_lambda = 200
 cv.K = 5
+intercept = TRUE # change in the loop, bc for some reason doesn't recognize
 
 # Repetitions
 rep.n = 100
@@ -66,7 +65,10 @@ pred.err = foreach(
   .combine = cbind
 ) %dorng% {
   source("RCode/func_libs.R")
-  library(limSolve)
+  
+  ############################################################################## !!!
+  intercept = TRUE
+  ############################################################################## !!!
   
   # split into train and test sets
   train.idx = sample(1:n, n.train)
@@ -82,7 +84,7 @@ pred.err = foreach(
   cv.fits = cv.func(
     method="ConstrLasso", y = Ytrain, x = Xtrain, 
     Cmat = matrix(1, dim(Xtrain)[2], 1), nlam = cv.n_lambda, 
-    nfolds = cv.K, tol = tol)
+    nfolds = cv.K, tol = tol, intercept = intercept)
   lambdamin.idx = which.min(cv.fits$cvm)
   betabar = cv.fits$bet[, lambdamin.idx]
   names(betabar) = colnames(betabar)
@@ -99,14 +101,21 @@ dim(pred.err)
 mse = colMeans(pred.err)
 mse.mean = mean(mse)
 mse.sd = sd(mse)
-mse.se = mse.sd / sqrt(numReps)
+mse.se = mse.sd / sqrt(rep.n)
 data.frame(mean = mse.mean, sd = mse.sd, se = mse.se, 
            lower = mse.mean - 2 * mse.se, upper = mse.mean + 2 * mse.se)
-
+### K = 5
+# intercept = TRUE
+# mean       sd        se    lower    upper
+# 1 28.61882 9.073215 0.9073215 26.80418 30.43347
+# intercept = FALSE
+# mean       sd       se    lower    upper
+# 1 32.97966 11.62724 1.162724 30.65421 35.30511
 saveRDS(
   pred.err, 
   file = paste0(output_dir,
                 "/complasso_prediction", 
+                "_int", intercept,
                 "_K", cv.K, 
                 "_seed", rng.seed,
                 ".rds"))

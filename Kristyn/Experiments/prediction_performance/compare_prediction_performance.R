@@ -1,8 +1,9 @@
-output_home = "Kristyn/Experiments/output/"
+output_home = "Kristyn/Experiments/prediction_performance/output/"
 rng.seed = 123
-rep.n = 100
-cv.K = 3
-get_lambda = "original"
+cv.K = 5
+intercept = FALSE
+# for some reason, results for slr when intercept = TRUE are very bad, 
+#   whereas when intercept = FALSE not that different compared to complasso
 ################################################################################
 # Compositional Lasso #
 ################################################################################
@@ -10,21 +11,20 @@ get_lambda = "original"
 complasso = readRDS(paste0(
   output_home, 
   "complasso_prediction", 
+  "_int", intercept,
   "_K", cv.K, 
   "_seed", rng.seed,
   ".rds"
 ))
-dim(complasso)
 complasso.mse = colMeans(complasso)
-print(paste0("mean prediction error: ", mean(complasso.mse)))
-print(paste0("standard deviation: ", (sd(complasso.mse))))
-print(paste0("standard error: ", (sd(complasso.mse)) / sqrt(rep.n)))
-print(paste0(
-  "95% CI: (", 
-  mean(complasso.mse) - 2 * (sd(complasso.mse)) / sqrt(rep.n), 
-  ", ",
-  mean(complasso.mse) + 2 * (sd(complasso.mse)) / sqrt(rep.n), ")"
-  ))
+complasso.mse.mean = mean(complasso.mse)
+complasso.mse.sd = sd(complasso.mse)
+complasso.mse.se = complasso.mse.sd / sqrt(ncol(complasso))
+complasso.summary = data.frame(
+  mean = complasso.mse.mean, sd = complasso.mse.sd, 
+  se = complasso.mse.se, 
+  lower = complasso.mse.mean - 2 * complasso.mse.se, 
+  upper = complasso.mse.mean + 2 * complasso.mse.se)
 
 ################################################################################
 # Supervised Log Ratios #
@@ -32,19 +32,23 @@ print(paste0(
 slr = readRDS(paste0(
   output_home, 
   "/slr_prediction", 
-  "_", get_lambda, 
+  "_int", intercept,
   "_K", cv.K, 
   "_seed", rng.seed,
   ".rds"
 ))
-dim(slr)
 slr.mse = colMeans(slr)
-print(paste0("mean prediction error: ", mean(slr.mse)))
-print(paste0("standard deviation: ", (sd(slr.mse))))
-print(paste0("standard error: ", (sd(slr.mse)) / sqrt(rep.n)))
-print(paste0(
-  "95% CI: (", 
-  mean(slr.mse) - 2 * (sd(slr.mse)) / sqrt(rep.n), 
-  ", ",
-  mean(slr.mse) + 2 * (sd(slr.mse)) / sqrt(rep.n), ")"
-))
+slr.mse.mean = mean(slr.mse)
+slr.mse.sd = sd(slr.mse)
+slr.mse.se = slr.mse.sd / sqrt(ncol(slr))
+slr.summary = data.frame(
+  mean = slr.mse.mean, sd = slr.mse.sd, 
+  se = slr.mse.se, 
+  lower = slr.mse.mean - 2 * slr.mse.se, 
+  upper = slr.mse.mean + 2 * slr.mse.se)
+
+################################################################################
+# Compare #
+################################################################################
+complasso.summary
+slr.summary

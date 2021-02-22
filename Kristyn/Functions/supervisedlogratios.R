@@ -20,7 +20,7 @@ getSupervisedTree = function(
     for (k in (j + 1):p){
       Zjk = log(X[, j]) - log(X[, k])
       Zjk_demeaned = Zjk - mean(Zjk)
-      if(all(Zjk == 0)){ # add noise (hopefully only necessary if bootstrap!)
+      if(all(Zjk == 0)){ # add noise (hopefully never necessary! hopefully never in this situation)
         if(allow.noise) Zjk = Zjk + rmvnorm(n, rep(0, n), noise * diag(n))
         # do not do anything, except maybe warn
       } else{
@@ -115,11 +115,6 @@ cvSLR = function(
     x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
     foldid = foldid, intercept = intercept, type.measure = c("mse"))
   return(list(
-    # int = glmnet.fit$a0,
-    # bet = glmnet.fit$beta,
-    # lambda = lambda,
-    # glmnet = glmnet.fit,
-    # cv.glmnet = cv_exact
     int = cv_exact$glmnet.fit$a0,
     bet = cv_exact$glmnet.fit$beta,
     lambda = cv_exact$lambda,

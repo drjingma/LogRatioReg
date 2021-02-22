@@ -34,10 +34,9 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # settings
 tol = 1e-4
-
-# Cross-validation
 cv.n_lambda = 200
 cv.K = 5
+intercept = TRUE
 
 # Repetitions
 numReps = 100
@@ -63,7 +62,6 @@ pred.err = foreach(
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
   library(mvtnorm) # for rmvnorm if allow.noise in fitSLR()
-  library(limSolve) # for constrained lm, lsei()
   library(stats) # for hclust()
   library(balance) # for sbp.fromHclust()
   
@@ -78,7 +76,8 @@ pred.err = foreach(
   # Split the data into 10 folds
   
   # Fit Lasso on training set
-  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K)
+  cv.fits = cvSLR(y = Ytrain, X = Xtrain, nlam = cv.n_lambda, nfolds = cv.K, 
+                  intercept = intercept)
   lambdamin.idx = which.min(cv.fits$cvm)
   betahat0 = as.numeric(cv.fits$int[lambdamin.idx])
   betahat = as.matrix(cv.fits$bet[, lambdamin.idx])
@@ -97,11 +96,17 @@ mse.sd = sd(mse)
 mse.se = mse.sd / sqrt(numReps)
 data.frame(mean = mse.mean, sd = mse.sd, se = mse.se, 
            lower = mse.mean - 2 * mse.se, upper = mse.mean + 2 * mse.se)
-
+### K = 5
+# intercept = TRUE
+# mean       sd       se    lower    upper
+# 1 39.80968 32.34372 3.234372 33.34093 46.27842
+# intercept = FALSE
+# 1 31.41447 11.82889 1.182889 29.04869 33.78024
 saveRDS(
   pred.err, 
   file = paste0(output_dir,
                 "/slr_prediction", 
+                "_int", intercept,
                 "_K", cv.K, 
                 "_seed", rng.seed,
                 ".rds"))

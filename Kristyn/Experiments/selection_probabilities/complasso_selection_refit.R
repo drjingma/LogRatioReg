@@ -31,13 +31,12 @@ source("RCode/func_libs.R")
 
 # settings
 tol = 1e-4
-
-# Cross-validation
 cv.n_lambda = 200
 cv.K = 10
+intercept = TRUE
 
 # Bootstrap
-bs.n = 500
+bs.n = 100
 
 # data
 # 98 samples, 87 genera
@@ -61,8 +60,7 @@ num.genera = dim(X)[2]
 
 bs.selected_variables = foreach(
   b = 1:bs.n, 
-  .combine = cbind, 
-  .noexport = c("ConstrLassoC0")
+  .combine = cbind
 ) %dorng% {
   source("RCode/func_libs.R")
   library(limSolve)
@@ -95,7 +93,7 @@ bs.selected_variables = foreach(
     # Fit LASSO on that fold using fitLASSOcompositional
     Lasso_j = ConstrLasso(
       Ytrain, Xtrain, Cmat = matrix(1, dim(Xtrain)[2], 1), 
-      nlam = cv.n_lambda, tol = tol)
+      nlam = cv.n_lambda, tol = tol, intercept = intercept)
     non0.betas = Lasso_j$bet != 0 # diff lambda = diff col
     for(m in 1:cv.n_lambda){
       selected_variables = non0.betas[, m]
@@ -133,7 +131,7 @@ bs.selected_variables = foreach(
   # final fit
   Lasso_select.bs = ConstrLasso(
     y.bs, log.X.prop.bs, Cmat = matrix(1, dim(log.X.prop)[2], 1), 
-    lambda = lambda_min, nlam = 1, tol=tol)
+    lambda = lambda_min, nlam = 1, tol=tol, intercept = intercept)
   XYdata = data.frame(log.X.prop.bs, y = y.bs)
   non0.betas = Lasso_select.bs$bet != 0 # diff lambda = diff col
   selected_variables = non0.betas
@@ -157,6 +155,7 @@ saveRDS(bs.results,
         file = paste0("Kristyn/Experiments/output",
                       "/complasso_selection", 
                       "_refit",
+                      "_int", intercept, 
                       "_B", bs.n, 
                       "_seed", rng.seed,
                       ".rds"))

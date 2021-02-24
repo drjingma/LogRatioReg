@@ -41,10 +41,10 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 tol = 1e-4
 cv.n_lambda = 200
 cv.K = 10
-intercept = TRUE
+intercept = FALSE
 
 # Bootstrap
-bs.n = 100
+bs.n = 500
 
 # data
 # 98 samples, 87 genera
@@ -161,7 +161,7 @@ bs.results = list(
 )
 
 saveRDS(bs.results,
-        file = paste0("Kristyn/Experiments/output",
+        file = paste0("Kristyn/Experiments/selection_probabilities/output",
                       "/slr_selection", 
                       "_refitLCs",
                       "_int", intercept, 

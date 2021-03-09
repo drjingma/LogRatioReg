@@ -40,8 +40,8 @@ K = 5
 
 # Simulation settings
 numSims = 100
-n = 50
-p = 30
+n = 100
+p = 200
 rho = 0.2 # 0.2, 0.5
 generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
 sigma_eps = 0.5
@@ -138,7 +138,6 @@ evals = foreach(
   EAInfty = max(abs(betahat - beta))
   non0.beta = (beta != 0)
   non0s = sum(non0.beta)
-  print(paste0("number of non-zero elements of beta: ", non0s, " out of ", p))
   non0.betahat = (betahat != 0)
   # # FP
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
@@ -154,22 +153,6 @@ eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
-# # when intercept = TRUE, generate.theta = 1
-# mean          sd          se
-# PE       0.31496494  0.09164212 0.009164212
-# EA1      0.59887596  0.43609169 0.043609169
-# EA2      0.07436537  0.07264030 0.007264030
-# EAInfty  0.15682232  0.07494411 0.007494411
-# FP      10.59000000 10.28787165 1.028787165
-# FN       0.00000000  0.00000000 0.000000000
-# # when intercept = TRUE, generate.theta = 2
-# mean         sd         se
-# PE      13.770938 11.7608132 1.17608132
-# EA1     34.813792  5.0121014 0.50121014
-# EA2     62.003835 17.6985894 1.76985894
-# EAInfty  3.256607  0.6599112 0.06599112
-# FP       0.000000  0.0000000 0.00000000
-# FN       0.160000  0.8005049 0.08005049
 saveRDS(
   evals.df, 
   file = paste0(output_dir,

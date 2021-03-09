@@ -41,8 +41,8 @@ K = 5
 
 # Simulation settings
 numSims = 100
-n = 50
-p = 30
+n = 100
+p = 200
 rho = 0.2 # 0.2, 0.5
 generate.theta = 1 # 1 = sparse beta, 2 = not-sparse beta
 sigma_eps = 0.5
@@ -154,7 +154,7 @@ evals.df
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
-                "/slr_cv_simulations", 
+                "/complasso_cv_simulations", 
                  "_PBA", 
                 "_theta", generate.theta,
                 "_dim", n, "x", p, 

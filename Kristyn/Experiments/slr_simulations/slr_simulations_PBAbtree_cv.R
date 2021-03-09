@@ -1,11 +1,9 @@
 # attempt at balance tree simulations, for the supervised log-ratios method
 
-
 getwd()
 output_dir = "Kristyn/Experiments/slr_simulations/output"
 
 # libraries
-library(limSolve) # for constrained lm
 library(mvtnorm)
 library(stats) # for hclust()
 library(balance) # for sbp.fromHclust()
@@ -37,20 +35,15 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
 nlam = 200
-intercept = FALSE
-
-# btree settings
-d.method = "euclidean" # maximum, manhattan, canberra, binary, minkowski (p)
-d = function(X) dist(t(log(X)), method = d.method)
-linkage = "complete"
+intercept = TRUE
+K = 5
 
 # Simulation settings
 numSims = 100
 n = 50
 p = 30
 rho = 0.2 # 0.2, 0.5
-beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 1 - 8))
-non0.beta = (beta != 0)
+generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
 sigma_eps = 0.5
 seed = 1
 muW = c(
@@ -93,54 +86,32 @@ evals = foreach(
   V = exp(W)
   rowsumsV = apply(V, 1, sum)
   X = V / rowsumsV
+  U = sbp.fromPBA(X) # transformation matrix, U
   epsilon = rnorm(n, 0, sigma_eps)
-  X.btree = hclust(d(X), method = linkage)
-  Xb = computeBalances(X, X.btree)
-  # generate Y
-  Y = Xb %*% matrix(beta) + epsilon
-  
-  # apply supervised log-ratios, using GIC to select lambda
-  slr0 = fitSLR(Y, X, lambda = NULL, nlam = nlam, intercept = intercept)
-  # non-transformed
-  non0.betahats = (slr0$bet != 0) # diff lambda = diff col
-  non0ct = apply(non0.betahats, 2, sum) # count of non-zero betas for each lambda
-  which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n)) # lambda lower bound criteria
-  lambda = seq(slr0$lambda[1], 
-               slr0$lambda[max(which0ct.leq3sqrtn)], 
-               length.out = nlam)
-  nlam = length(lambda)
-  slr = fitSLR(Y, X, lambda = lambda, nlam = nlam, intercept = intercept)
-  non0.betahats = (slr$bet != 0)
-  non0ct = apply(non0.betahats, 2, sum)
-  # which0ct.leq3sqrtn = which(non0ct <= 3 * sqrt(n))
-  a0s = slr$int
-  betahats = slr$bet
-  btree = slr$btree
-  GIC = rep(NA, nlam)
-  pvn = max(p - 1, n) # we do p - 1 instead of p, bc over balances \in R^{p-1}
-  for(m in 1:nlam){
-    a0.tmp = a0s[m]
-    betahat.tmp = betahats[, m]
-    predictSLR.tmp = function(X){
-      a0.tmp + computeBalances(X, btree) %*% betahat.tmp
-    }
-    Y.pred = predictSLR.tmp(X)
-    sigmasq.hat = crossprod(Y - Y.pred) / n
-    s.lam = sum(non0.betahats[, m])
-    GIC[m] = log(sigmasq.hat) + (s.lam - 1) * log(log(n)) * log(pvn) / n
+  Xb = log(X) %*% U # ilr(X)
+  # generate theta
+  if(generate.theta == 1){ # theta that gives sparse beta
+    theta = as.matrix(c(rep(0, p - 2), 1))
+  } else if(generate.theta == 2){ # theta that gives not-sparse beta
+    theta = as.matrix(c(1, rep(0, p - 2)))
+  } else{ # ?
+    stop("generate.theta isn't equal to 1 or 2")
   }
-  lam.min.idx = which.min(GIC)
+  beta = U %*% as.matrix(theta) # beta = U' theta
+  # generate Y
+  Y = Xb %*% theta + epsilon
+  
+  # apply supervised log-ratios, using CV to select lambda
+  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept)
+  # transformed
+  btree = slr$btree
+  
+  lam.min.idx = which.min(slr$cvm)
   lam.min = slr$lambda[lam.min.idx]
-  a0 = a0s[lam.min.idx]
-  betahat = betahats[, lam.min.idx]
-  non0.betahat = non0.betahats[, lam.min.idx]
-  
-  # plot(slr$lambda, GIC, type = "l")
-  # points(lam.min, min(GIC))
-  # text(lam.min, min(GIC),
-  #      paste0("(", round(lam.min, 3), ", ", round(min(GIC), 3), ")", sep = ""),
-  #      pos = 4)
-  
+  a0 = slr$int[lam.min.idx]
+  thetahat = slr$bet[, lam.min.idx]
+  betahat = U %*% thetahat
+    
   # evaluate model
   # prediction error
   # simulate independent test set of size n
@@ -150,14 +121,14 @@ evals = foreach(
   V.test = exp(W.test)
   rowsumsV.test = apply(V.test, 1, sum)
   X.test = V.test / rowsumsV.test
+  U.test = sbp.fromPBA(X.test) # transformation matrix, U
   epsilon.test = rnorm(n, 0, sigma_eps)
-  X.btree.test = hclust(d(X.test), method = linkage)
-  Xb.test = computeBalances(X.test, X.btree.test)
+  Xb.test = log(X.test) %*% U # ilr(X)
   # generate Y
-  Y.test = Xb.test %*% matrix(beta) + epsilon.test
+  Y.test = Xb.test %*% theta + epsilon.test
   # get fitted model
   predictSLR = function(X){
-    a0 + computeBalances(X, btree) %*% betahat
+    a0 + computeBalances(X, btree) %*% thetahat
   }
   Y.pred = predictSLR(X.test)
   PE = crossprod(Y.test - Y.pred) / n
@@ -165,6 +136,9 @@ evals = foreach(
   EA1 = sum(abs(betahat - beta))
   EA2 = crossprod(betahat - beta)
   EAInfty = max(abs(betahat - beta))
+  non0.beta = (beta != 0)
+  non0s = sum(non0.beta)
+  print(paste0("number of non-zero elements of beta: ", non0s, " out of ", p))
   non0.betahat = (betahat != 0)
   # # FP
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
@@ -174,32 +148,34 @@ evals = foreach(
   c(PE, EA1, EA2, EAInfty, FP, FN)
 }
 rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
+
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
-# # when intercept = TRUE
-# mean           sd           se
-# PE      7470.019661 15011.158260 1501.1158260
-# EA1       20.326650     3.571245    0.3571245
-# EA2       34.242169    11.801416    1.1801416
-# EAInfty    2.895096     0.731481    0.0731481
-# FP        13.310000     4.116228    0.4116228
-# FN         3.290000     1.465392    0.1465392
-# # when intercept = FALSE
-# mean           sd           se
-# PE      7432.083350 1.485805e+04 1.485805e+03
-# EA1       16.615190 6.368616e+00 6.368616e-01
-# EA2       25.797513 1.308299e+01 1.308299e+00
-# EAInfty    2.553198 8.626538e-01 8.626538e-02
-# FP        11.260000 7.064808e+00 7.064808e-01
-# FN         3.020000 1.483784e+00 1.483784e-01
+# # when intercept = TRUE, generate.theta = 1
+# mean          sd          se
+# PE       0.31496494  0.09164212 0.009164212
+# EA1      0.59887596  0.43609169 0.043609169
+# EA2      0.07436537  0.07264030 0.007264030
+# EAInfty  0.15682232  0.07494411 0.007494411
+# FP      10.59000000 10.28787165 1.028787165
+# FN       0.00000000  0.00000000 0.000000000
+# # when intercept = TRUE, generate.theta = 2
+# mean         sd         se
+# PE      13.770938 11.7608132 1.17608132
+# EA1     34.813792  5.0121014 0.50121014
+# EA2     62.003835 17.6985894 1.76985894
+# EAInfty  3.256607  0.6599112 0.06599112
+# FP       0.000000  0.0000000 0.00000000
+# FN       0.160000  0.8005049 0.08005049
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
-                "/slr_gic_simulations", 
-                "_", d.method, 
+                "/slr_cv_simulations", 
+                 "_PBA", 
+                "_theta", generate.theta,
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,

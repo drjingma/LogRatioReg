@@ -40,10 +40,10 @@ K = 5
 
 # Simulation settings
 numSims = 100
-n = 50
-p = 30
+n = 100
+p = 200
 rho = 0.2 # 0.2, 0.5
-generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
+generate.theta = 1 # 1 = sparse beta, 2 = not-sparse beta
 sigma_eps = 0.5
 seed = 1
 muW = c(
@@ -103,17 +103,22 @@ evals = foreach(
   
   # apply supervised log-ratios, using CV to select lambda
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept)
-  # transformed
   btree = slr$btree
   
+  # choose lambda
   lam.min.idx = which.min(slr$cvm)
   lam.min = slr$lambda[lam.min.idx]
   a0 = slr$int[lam.min.idx]
   thetahat = slr$bet[, lam.min.idx]
   betahat = U %*% thetahat
     
-  # evaluate model
-  # prediction error
+  # evaluate model #
+  # 1. prediction error #
+  # 1a. on training set #
+  # get prediction error on training set
+  Yhat.train = a0 + computeBalances(X, btree) %*% thetahat
+  PE.train = crossprod(Y - Yhat.train) / n
+  # 1b. on test set #
   # simulate independent test set of size n
   # generate W
   W.test = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
@@ -126,27 +131,31 @@ evals = foreach(
   Xb.test = log(X.test) %*% U # ilr(X)
   # generate Y
   Y.test = Xb.test %*% theta + epsilon.test
-  # get fitted model
-  predictSLR = function(X){
-    a0 + computeBalances(X, btree) %*% thetahat
-  }
-  Y.pred = predictSLR(X.test)
-  PE = crossprod(Y.test - Y.pred) / n
-  # # estimation accuracy
+  # get prediction error on test set
+  Yhat.test = a0 + computeBalances(X.test, btree) %*% thetahat
+  PE.test = crossprod(Y.test - Yhat.test) / n
+  # 2. estimation accuracy #
+  # 2a. estimation of beta #
   EA1 = sum(abs(betahat - beta))
   EA2 = crossprod(betahat - beta)
   EAInfty = max(abs(betahat - beta))
+  # 2b. estimation of theta
+  # ...
+  # 3. selection accuracy #
+  # 3a. selection of beta #
   non0.beta = (beta != 0)
   non0s = sum(non0.beta)
   non0.betahat = (betahat != 0)
-  # # FP
+  # FP
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
-  # # FN
+  # FN
   FN = sum((non0.beta != non0.betahat) & non0.beta)
+  # 3b. selection of theta
+  # ...
   # return
-  c(PE, EA1, EA2, EAInfty, FP, FN)
+  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN)
 }
-rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN")
 
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)

@@ -44,7 +44,7 @@ numSims = 100
 n = 50
 p = 30
 rho = 0.2 # 0.2, 0.5
-generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
+generate.theta = 1 # 1 = sparse beta, 2 = not-sparse beta
 sigma_eps = 0.5
 seed = 1
 muW = c(
@@ -62,7 +62,7 @@ for(i in 1:p){
 # Simulations #
 ################################################################################
 
-# set.seed(16) # leads to FN = 1
+# set.seed(1)
 evals = foreach(
   b = 1:numSims, 
   .combine = cbind
@@ -150,12 +150,14 @@ evals = foreach(
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
   # FN
   FN = sum((non0.beta != non0.betahat) & non0.beta)
+  # TPR
+  TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   # 3b. selection of theta
   # not possible, because thetahat cannot be calculated from betahat ###########
   # return
-  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN)
+  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR)
 }
-rownames(evals) = c("PE.tr", "PE.te", "EA1", "EA2", "EAInfty", "FP", "FN")
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR")
 
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)

@@ -106,10 +106,10 @@ The following object is masked from ‘package:base’:
 > 
 > # Simulation settings
 > numSims = 100
-> n = 100
-> p = 200
-> rho = 0.2 # 0.2, 0.5
-> generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
+> n = 50
+> p = 30
+> rho = 0.5 # 0.2, 0.5
+> generate.theta = 1 # 1 = sparse beta, 2 = not-sparse beta
 > sigma_eps = 0.5
 > seed = 1
 > muW = c(
@@ -2185,15 +2185,15 @@ The following object is masked from ‘package:base’:
 > eval.ses = eval.sds / sqrt(numSims)
 > evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 > evals.df
-             mean          sd          se
-PEtr     29.01594  70.5614510  7.05614510
-PEte    669.80668 462.0703471 46.20703471
-EA1     251.42266  63.4978186  6.34978186
-EA2     877.36658 679.4127763 67.94127763
-EAInfty  11.84851   6.7066863  0.67066863
-FP        0.00000   0.0000000  0.00000000
-FN       77.90000  35.4755571  3.54755571
-TPR       0.61050   0.1773778  0.01773778
+             mean         sd          se
+PEtr    0.1977787 0.06319319 0.006319319
+PEte    0.2656054 0.08962488 0.008962488
+EA1     0.9317792 0.43387319 0.043387319
+EA2     0.1691311 0.12496139 0.012496139
+EAInfty 0.2612280 0.10629762 0.010629762
+FP      9.5700000 4.53773182 0.453773182
+FN      0.0000000 0.00000000 0.000000000
+TPR     1.0000000 0.00000000 0.000000000
 > saveRDS(
 +   evals.df, 
 +   file = paste0(output_dir,
@@ -2207,5 +2207,5 @@ TPR       0.61050   0.1773778  0.01773778
 +                 ".rds"))
 > 
 > proc.time()
-    user   system  elapsed 
-  21.880    2.139 2399.120 
+   user  system elapsed 
+  8.084   1.799 122.876 

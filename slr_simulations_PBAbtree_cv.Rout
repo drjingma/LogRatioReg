@@ -105,10 +105,10 @@ The following object is masked from ‘package:base’:
 > 
 > # Simulation settings
 > numSims = 100
-> n = 100
-> p = 200
-> rho = 0.2 # 0.2, 0.5
-> generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
+> n = 50
+> p = 30
+> rho = 0.5 # 0.2, 0.5
+> generate.theta = 1 # 1 = sparse beta, 2 = not-sparse beta
 > sigma_eps = 0.5
 > seed = 1
 > muW = c(
@@ -1238,15 +1238,15 @@ There were 50 or more warnings (use warnings() to see the first 50)
 > eval.ses = eval.sds / sqrt(numSims)
 > evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 > evals.df
-              mean         sd         se
-PEtr     24.233107 45.7103678 4.57103678
-PEte    246.479474 93.0000667 9.30000667
-EA1     230.001220 30.3563420 3.03563420
-EA2     417.099822 92.4831406 9.24831406
-EAInfty   4.914171  0.8753055 0.08753055
-FP        0.000000  0.0000000 0.00000000
-FN        4.790000 12.2080409 1.22080409
-TPR       0.976050  0.0610402 0.00610402
+             mean         sd          se
+PEtr    0.2235491 0.05899629 0.005899629
+PEte    0.3050319 0.07426191 0.007426191
+EA1     0.6253309 0.40493538 0.040493538
+EA2     0.1002778 0.09241813 0.009241813
+EAInfty 0.1875593 0.08782367 0.008782367
+FP      8.6400000 8.87570740 0.887570740
+FN      0.0000000 0.00000000 0.000000000
+TPR     1.0000000 0.00000000 0.000000000
 > saveRDS(
 +   evals.df, 
 +   file = paste0(output_dir,
@@ -1261,4 +1261,4 @@ TPR       0.976050  0.0610402 0.00610402
 > 
 > proc.time()
    user  system elapsed 
-  8.080   1.718 140.954 
+  8.350   1.779 112.059 

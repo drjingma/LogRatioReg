@@ -105,8 +105,8 @@ The following object is masked from ‘package:base’:
 > 
 > # Simulation settings
 > numSims = 100
-> n = 50
-> p = 30
+> n = 100
+> p = 200
 > rho = 0.2 # 0.2, 0.5
 > generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
 > sigma_eps = 0.5
@@ -126,7 +126,7 @@ The following object is masked from ‘package:base’:
 > # Simulations #
 > ################################################################################
 > 
-> # set.seed(16) # leads to FN = 1
+> # set.seed(1)
 > evals = foreach(
 +   b = 1:numSims, 
 +   .combine = cbind
@@ -215,10 +215,12 @@ The following object is masked from ‘package:base’:
 +   FP = sum((non0.beta != non0.betahat) & non0.betahat)
 +   # FN
 +   FN = sum((non0.beta != non0.betahat) & non0.beta)
++   # TPR
++   TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
 +   # 3b. selection of theta
 +   # ...
 +   # return
-+   c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN)
++   c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR)
 + }
 gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
@@ -1229,21 +1231,22 @@ The following object is masked from ‘package:base’:
     startsWith
 
 There were 50 or more warnings (use warnings() to see the first 50)
-> rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN")
+> rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR")
 > 
 > eval.means = apply(evals, 1, mean)
 > eval.sds = apply(evals, 1, sd)
 > eval.ses = eval.sds / sqrt(numSims)
 > evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 > evals.df
-             mean         sd         se
-PEtr     3.876098  4.1043401 0.41043401
-PEte    13.770938 11.7608132 1.17608132
-EA1     34.813792  5.0121014 0.50121014
-EA2     62.003835 17.6985894 1.76985894
-EAInfty  3.256607  0.6599112 0.06599112
-FP       0.000000  0.0000000 0.00000000
-FN       0.160000  0.8005049 0.08005049
+              mean         sd         se
+PEtr     24.233107 45.7103678 4.57103678
+PEte    246.479474 93.0000667 9.30000667
+EA1     230.001220 30.3563420 3.03563420
+EA2     417.099822 92.4831406 9.24831406
+EAInfty   4.914171  0.8753055 0.08753055
+FP        0.000000  0.0000000 0.00000000
+FN        4.790000 12.2080409 1.22080409
+TPR       0.976050  0.0610402 0.00610402
 > saveRDS(
 +   evals.df, 
 +   file = paste0(output_dir,
@@ -1258,4 +1261,4 @@ FN       0.160000  0.8005049 0.08005049
 > 
 > proc.time()
    user  system elapsed 
-  8.091   1.859 113.691 
+  8.080   1.718 140.954 

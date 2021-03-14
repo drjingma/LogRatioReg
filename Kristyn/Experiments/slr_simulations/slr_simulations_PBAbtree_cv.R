@@ -137,7 +137,7 @@ evals = foreach(
   # 2. estimation accuracy #
   # 2a. estimation of beta #
   EA1 = sum(abs(betahat - beta))
-  EA2 = crossprod(betahat - beta)
+  EA2 = sqrt(crossprod(betahat - beta))
   EAInfty = max(abs(betahat - beta))
   # 2b. estimation of theta
   # ...

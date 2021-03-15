@@ -79,7 +79,7 @@ evals = foreach(
   
   nlam = 200
   
-  # simulate data
+  # simulate data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)

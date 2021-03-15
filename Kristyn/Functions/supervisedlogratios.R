@@ -4,9 +4,45 @@
 ################################################################################
 
 # Supervised Log Ratios Regression
-
 # do hierarchical clustering with specified linkage for compositional data X and y
 getSupervisedTree = function(
+  y, X, linkage = "complete", allow.noise = FALSE, noise = 1e-12){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
+  
+  # calculate correlation of each pair of log-ratios with response y
+  cormat = matrix(1, p, p) # diagonal == 1
+  y_demeaned = y - mean(y)
+  for (j in 1:(p - 1)){
+    for (k in (j + 1):p){
+      Zjk = log(X[, j]) - log(X[, k])
+      Zjk_demeaned = Zjk - mean(Zjk)
+      # if(all(Zjk == 0)){
+      #   # do not do anything, except maybe warn
+      # } else{
+      #   val = abs(cor(Zjk_demeaned, y_demeaned))
+      # }
+      val = abs(cor(Zjk_demeaned, y_demeaned))
+      cormat[j, k] = val
+      cormat[k, j] = val
+    }
+  }
+  # give the rows and columns the names of taxa in X, for sbp.fromHclust()
+  rownames(cormat) = colnames(X)
+  rownames(cormat) = colnames(X)
+  
+  # get dissimilarity matrix
+  Gammamat = 1 - cormat
+  
+  # get tree from hierarchical clustering
+  btree_slr = hclust(as.dist(Gammamat), method = linkage)
+  
+  return(btree_slr)
+}
+
+# do hierarchical clustering with specified linkage for compositional data X and y
+getSupervisedTree.old = function(
   y, X, linkage = "complete", allow.noise = FALSE, noise = 1e-12){
   # browser()
   n = dim(X)[1]

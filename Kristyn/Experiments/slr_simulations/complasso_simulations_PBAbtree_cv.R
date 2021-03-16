@@ -41,9 +41,9 @@ K = 5
 
 # Simulation settings
 numSims = 100
-n = 50
-p = 30
-rho = 0.5 # 0.2, 0.5
+n = 100
+p = 200
+rho = 0.2 # 0.2, 0.5
 generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
 sigma_eps = 0.5
 seed = 1

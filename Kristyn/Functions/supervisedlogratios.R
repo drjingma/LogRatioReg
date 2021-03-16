@@ -6,7 +6,9 @@
 # Supervised Log Ratios Regression
 # do hierarchical clustering with specified linkage for compositional data X and y
 getSupervisedTree = function(
-  y, X, linkage = "complete", allow.noise = FALSE, noise = 1e-12){
+  y, X, linkage = "complete", 
+  allow.noise = FALSE, noise = 1e-12
+){
   n = dim(X)[1]
   p = dim(X)[2]
   if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
@@ -18,11 +20,6 @@ getSupervisedTree = function(
     for (k in (j + 1):p){
       Zjk = log(X[, j]) - log(X[, k])
       Zjk_demeaned = Zjk - mean(Zjk)
-      # if(all(Zjk == 0)){
-      #   # do not do anything, except maybe warn
-      # } else{
-      #   val = abs(cor(Zjk_demeaned, y_demeaned))
-      # }
       val = abs(cor(Zjk_demeaned, y_demeaned))
       cormat[j, k] = val
       cormat[k, j] = val
@@ -41,9 +38,11 @@ getSupervisedTree = function(
   return(btree_slr)
 }
 
-# do hierarchical clustering with specified linkage for compositional data X and y
+# old version, with noise arguments
 getSupervisedTree.old = function(
-  y, X, linkage = "complete", allow.noise = FALSE, noise = 1e-12){
+  y, X, linkage = "complete", 
+  allow.noise = FALSE, noise = 1e-12
+){
   # browser()
   n = dim(X)[1]
   p = dim(X)[2]
@@ -139,7 +138,8 @@ fitSLR = function(
 
 cvSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
-  foldid = NULL, intercept = TRUE, allow.noise = FALSE, noise = 1e-12
+  foldid = NULL, intercept = TRUE, 
+  allow.noise = FALSE, noise = 1e-12
 ){
   
   # compute balances

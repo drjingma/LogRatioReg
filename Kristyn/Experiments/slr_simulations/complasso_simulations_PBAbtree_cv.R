@@ -44,7 +44,7 @@ numSims = 100
 n = 50
 p = 30
 rho = 0.5 # 0.2, 0.5
-generate.theta = 1 # 1 = sparse beta, 2 = not-sparse beta
+generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
 sigma_eps = 0.5
 seed = 1
 muW = c(
@@ -164,10 +164,22 @@ eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
+
+saveRDS(
+  evals, 
+  file = paste0(output_dir,
+                "/complasso_cv_sims", 
+                "_PBA", 
+                "_theta", generate.theta,
+                "_dim", n, "x", p, 
+                "_rho", rho, 
+                "_int", intercept,
+                "_seed", rng.seed,
+                ".rds"))
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
-                "/complasso_cv_simulations", 
+                "/complasso_cv_summaries", 
                  "_PBA", 
                 "_theta", generate.theta,
                 "_dim", n, "x", p, 

@@ -12,7 +12,7 @@ intercept = TRUE
 
 complasso = readRDS(paste0(
   output_dir,
-  "/complasso_cv_simulations", 
+  "/complasso_cv_summaries", 
   "_PBA", 
   "_theta", generate.theta,
   "_dim", n, "x", p, 
@@ -27,7 +27,7 @@ print(complasso[, c("mean", "se")])
 ################################################################################
 slr.lr = readRDS(paste0(
   output_dir,
-  "/slr_cv_simulations", 
+  "/slr_cv_summaries", 
   "_PBA", 
   "_theta", generate.theta,
   "_dim", n, "x", p, 

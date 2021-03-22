@@ -80,14 +80,15 @@ evals = foreach(
   
   nlam = 200
   
-  # simulate data
+  # simulate training data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
   V = exp(W)
   rowsumsV = apply(V, 1, sum)
   X = V / rowsumsV
-  U = sbp.fromPBA(X) # transformation matrix, U
+  sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
+  U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
   Xb = log(X) %*% U # ilr(X)
   # generate theta
@@ -98,14 +99,29 @@ evals = foreach(
   } else{ # ?
     stop("generate.theta isn't equal to 1 or 2")
   }
-  beta = U %*% as.matrix(theta) # beta = U' theta
+  beta = getBeta(theta, sbp = sbp)
   # generate Y
   Y = Xb %*% theta + epsilon
   
+  # simulate test data #
+  # simulate independent test set of size n
+  # generate W
+  W.test = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
+  # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
+  V.test = exp(W.test)
+  rowsumsV.test = apply(V.test, 1, sum)
+  X.test = V.test / rowsumsV.test
+  sbp.test = sbp.fromPBA(X.test) # contrasts matrix, a.k.a. sbp matrix
+  U.test = getU(sbp = sbp.test) # U
+  epsilon.test = rnorm(n, 0, sigma_eps)
+  Xb.test = log(X.test) %*% U.test # ilr(X)
+  # generate Y
+  Y.test = Xb.test %*% theta + epsilon.test
+  
   # apply compositional lasso, using CV to select lambda
   complasso = cv.func(
-    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
-    nfolds = K, tol = tol, intercept = intercept)
+    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
+    nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
   
   # choose lambda
   lam.min.idx = which.min(complasso$cvm)
@@ -120,18 +136,6 @@ evals = foreach(
   Yhat.train = a0 + log(X) %*% betahat
   PE.train = crossprod(Y - Yhat.train) / n
   # 1b. on test set #
-  # simulate independent test set of size n
-  # generate W
-  W.test = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
-  # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
-  V.test = exp(W.test)
-  rowsumsV.test = apply(V.test, 1, sum)
-  X.test = V.test / rowsumsV.test
-  U.test = sbp.fromPBA(X.test) # transformation matrix, U
-  epsilon.test = rnorm(n, 0, sigma_eps)
-  Xb.test = log(X.test) %*% U # ilr(X)
-  # generate Y
-  Y.test = Xb.test %*% theta + epsilon.test
   # get prediction error on test set
   Yhat.test = a0 + log(X.test) %*% betahat
   PE.test = crossprod(Y.test - Yhat.test) / n

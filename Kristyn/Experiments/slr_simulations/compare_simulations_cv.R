@@ -6,7 +6,7 @@ rng.seed = 123
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-generate.theta = 2
+generate.theta = 1
 intercept = TRUE
 
 ################################################################################
@@ -34,10 +34,6 @@ complasso.summaries = readRDS(paste0(
   ".rds"))
 print(complasso.summaries[, c("mean", "se")])
 
-cl.sims.gg = melt(data.frame(t(complasso.sims)))
-ggplot(cl.sims.gg) + 
-  geom_boxplot(aes(x = variable, y = value))
-
 ################################################################################
 # Supervised Log Ratios #
 ################################################################################
@@ -63,6 +59,14 @@ slr.summaries = readRDS(paste0(
   ".rds"))
 print(slr.summaries[, c("mean", "se")])
 
+cl.sims.gg = melt(data.frame(t(complasso.sims)))
+cl.sims.gg$type = "CompLasso"
 slr.sims.gg = melt(data.frame(t(slr.sims)))
-ggplot(slr.sims.gg) + 
-  geom_boxplot(aes(x = variable, y = value))
+slr.sims.gg$type = "SLR"
+data.gg = rbind(cl.sims.gg, slr.sims.gg)
+ggplot(data.gg, aes(x = type, y = value)) + 
+  facet_wrap(vars(variable), scales = "free_y") + geom_boxplot() + 
+  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, color = "red") +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank())

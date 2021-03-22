@@ -38,14 +38,15 @@ tol = 1e-4
 nlam = 200
 intercept = TRUE
 K = 5
+rho.type = "square"
 
 # Simulation settings
 numSims = 100
 n = 100
-p = 200
+p = 1000
 rho = 0.2 # 0.2, 0.5
-generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
-sigma_eps = 0.5
+generate.theta = 1 # 1 = sparse beta, 2 = not-sparse beta
+sigma_eps = 0.2
 seed = 1
 muW = c(
   rep(log(p), 5), 
@@ -64,14 +65,15 @@ for(i in 1:p){
 
 set.seed(1)
 
-# simulate data
+# simulate training data #
 # generate W
 W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
 # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
 V = exp(W)
 rowsumsV = apply(V, 1, sum)
 X = V / rowsumsV
-U = sbp.fromPBA(X) # transformation matrix, U
+sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
+U = getU(sbp = sbp) # U
 epsilon = rnorm(n, 0, sigma_eps)
 Xb = log(X) %*% U # ilr(X)
 # generate theta
@@ -82,7 +84,7 @@ if(generate.theta == 1){ # theta that gives sparse beta
 } else{ # ?
   stop("generate.theta isn't equal to 1 or 2")
 }
-beta = U %*% as.matrix(theta) # beta = U' theta
+beta = getBeta(theta, sbp = sbp)
 # generate Y
 Y = Xb %*% theta + epsilon
 
@@ -90,6 +92,19 @@ Y = Xb %*% theta + epsilon
 complasso = cv.func(
   method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
   nfolds = K, tol = tol, intercept = intercept)
+################################################################################
+saveRDS(
+  complasso, 
+  file = paste0(output_dir,
+                "/complasso_1sim", 
+                "_PBA", 
+                "_theta", generate.theta,
+                "_dim", n, "x", p, 
+                "_rho", rho, 
+                "_int", intercept,
+                "_seed", rng.seed,
+                ".rds"))
+################################################################################
 # calculate TPR for compositional lasso
 TPR.cl = rep(NA, nlam)
 S.hat.cl = rep(NA, nlam)
@@ -102,11 +117,26 @@ for(l in 1:nlam){
   TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   S.hat.cl[l] = sum(non0.betahat)
 }
-plot(x = complasso$lambda, y = TPR.cl, type = "l")
-plot(x = S.hat.cl, y = TPR.cl, type = "l")
+# plot(x = complasso$lambda, y = TPR.cl, type = "l")
+# plot(x = S.hat.cl, y = TPR.cl, type = "l")
 
 # apply supervised log-ratios
-slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept)
+slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
+            rho.type = rho.type)
+################################################################################
+saveRDS(
+  slr, 
+  file = paste0(output_dir,
+                "/slr_1sim", 
+                "_PBA", 
+                "_theta", generate.theta,
+                "_dim", n, "x", p, 
+                "_rho", rho, 
+                "_int", intercept,
+                "_seed", rng.seed,
+                ".rds"))
+################################################################################
+btree.slr = slr$btree
 # calculate TPR for supervised log-ratios
 nlam.slr = length(slr$lambda)
 TPR.slr = rep(NA, nlam.slr)
@@ -114,29 +144,30 @@ S.hat.slr = rep(NA, nlam.slr)
 for(l in 1:nlam.slr){
   a0 = slr$int[l]
   thetahat = slr$bet[, l]
-  betahat = U %*% thetahat
+  betahat = getBeta(thetahat, btree.slr)
   # TPR
   non0.beta = (beta != 0)
   non0.betahat = (betahat != 0)
   TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   S.hat.slr[l] = sum(non0.betahat)
 }
-plot(x = slr$lambda, y = TPR.slr, type = "l")
-plot(x = S.hat.slr, y = TPR.slr, type = "l")
+# plot(x = slr$lambda, y = TPR.slr, type = "l")
+# plot(x = S.hat.slr, y = TPR.slr, type = "l")
 
-library(ggplot2)
-slr.gg = data.frame(
-  lambda = slr$lambda, 
-  S.hat = S.hat.slr, 
-  TPR = TPR.slr, 
-  ID = "SLR")
-cl.gg = data.frame(
-  lambda = complasso$lambda, 
-  S.hat = S.hat.cl, 
-  TPR = TPR.cl, 
-  ID = "CompLasso")
-data.gg = rbind(slr.gg, cl.gg)
-ggplot(data.gg, aes(x = lambda, y = TPR)) + 
-  geom_path(aes(color = ID))
-ggplot(data.gg, aes(x = S.hat, y = TPR)) + 
-  geom_path(aes(color = ID))
+# library(ggplot2)
+# slr.gg = data.frame(
+#   lambda = slr$lambda, 
+#   S.hat = S.hat.slr, 
+#   TPR = TPR.slr, 
+#   ID = "SLR")
+# slr.gg = slr.gg[order(slr.gg$S.hat), ]
+# cl.gg = data.frame(
+#   lambda = complasso$lambda, 
+#   S.hat = S.hat.cl, 
+#   TPR = TPR.cl, 
+#   ID = "CompLasso")
+# cl.gg = cl.gg[order(cl.gg$S.hat), ]
+# data.gg = rbind(slr.gg, cl.gg)
+# ggplot(data.gg, aes(x = S.hat, y = TPR)) + 
+#   geom_path(aes(color = ID, linetype = ID), size = 1) + 
+#   theme_bw()

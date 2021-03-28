@@ -47,7 +47,7 @@ rho = 0.2 # 0.2, 0.5
 # should these indices.theta & values.theta go inside loop? ####################
 # they are (potentially) random, after all.
 # indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
-indices.theta = p - 1
+indices.theta = 1
 values.theta = NULL
 sigma_eps = 0.5
 seed = 1

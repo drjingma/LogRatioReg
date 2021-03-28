@@ -44,7 +44,11 @@ numSims = 100
 n = 50
 p = 30
 rho = 0.2 # 0.2, 0.5
-generate.theta = 2 # 1 = sparse beta, 2 = not-sparse beta
+# should these indices.theta & values.theta go inside loop? ####################
+# they are (potentially) random, after all.
+# indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
+indices.theta = p - 1
+values.theta = NULL
 sigma_eps = 0.5
 seed = 1
 muW = c(
@@ -91,14 +95,18 @@ evals = foreach(
   U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
   Xb = log(X) %*% U # ilr(X)
-  # generate theta
-  if(generate.theta == 1){ # theta that gives sparse beta
-    theta = as.matrix(c(rep(0, p - 2), 1))
-  } else if(generate.theta == 2){ # theta that gives not-sparse beta
-    theta = as.matrix(c(1, rep(0, p - 2)))
-  } else{ # ?
-    stop("generate.theta isn't equal to 1 or 2")
+  # get theta
+  theta = rep(0, p - 1)
+  if(is.null(values.theta)){
+    theta[indices.theta] = 1
+  } else{
+    if(length(indices.theta) == length(values.theta)){
+      stop("indices.theta does not have same length as values.theta")
+    }
+    theta[indices.theta] = values.theta
   }
+  theta = as.matrix(theta)
+  # get beta
   beta = getBeta(theta, sbp = sbp)
   # generate Y
   Y = Xb %*% theta + epsilon
@@ -144,8 +152,6 @@ evals = foreach(
   EA1 = sum(abs(betahat - beta))
   EA2 = sqrt(crossprod(betahat - beta))
   EAInfty = max(abs(betahat - beta))
-  # 2b. estimation of theta
-  # not possible, because thetahat cannot be calculated from betahat ###########
   # 3. selection accuracy #
   # 3a. selection of beta #
   non0.beta = (beta != 0)
@@ -156,12 +162,10 @@ evals = foreach(
   FN = sum((non0.beta != non0.betahat) & non0.beta)
   # TPR
   TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-  # 3b. selection of theta
-  # not possible, because thetahat cannot be calculated from betahat ###########
   # return
-  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR)
+  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, sum(non0.beta))
 }
-rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR")
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "betaSparsity")
 
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
@@ -174,7 +178,7 @@ saveRDS(
   file = paste0(output_dir,
                 "/complasso_cv_sims", 
                 "_PBA", 
-                "_theta", generate.theta,
+                "_theta_", paste(indices.theta, collapse = "_"),
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,
@@ -185,7 +189,7 @@ saveRDS(
   file = paste0(output_dir,
                 "/complasso_cv_summaries", 
                  "_PBA", 
-                "_theta", generate.theta,
+                "_theta_", paste(indices.theta, collapse = "_"),
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,

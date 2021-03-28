@@ -1,3 +1,11 @@
+# last updated: 03/21/2021
+# testing the transformation matrix U
+# using SBP instead of U
+# transform to linear log-contrasts model to see if yhat is still the same
+#   as that from the balance regression model
+# turns out, it doesn't matter which U is used, bc no properties of U 
+#   were invoked in the derivation of the linear log-contrast transformation
+
 getwd()
 
 # libraries

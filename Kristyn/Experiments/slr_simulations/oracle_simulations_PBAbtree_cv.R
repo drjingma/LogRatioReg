@@ -46,8 +46,7 @@ p = 30
 rho = 0.2 # 0.2, 0.5
 # should these indices.theta & values.theta go inside loop? ####################
 # they are (potentially) random, after all.
-# indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
-indices.theta = p - 1
+indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
 values.theta = NULL
 sigma_eps = 0.5
 seed = 1
@@ -126,17 +125,11 @@ evals = foreach(
   # generate Y
   Y.test = Xb.test %*% theta + epsilon.test
   
-  # apply supervised log-ratios, using CV to select lambda
-  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-              rho.type = rho.type)
-  
-  # choose lambda
-  lam.min.idx = which.min(slr$cvm)
-  lam.min = slr$lambda[lam.min.idx]
-  a0 = slr$int[lam.min.idx]
-  thetahat = slr$bet[, lam.min.idx]
-  Uhat = getU(btree = slr$btree)
-  betahat = Uhat %*% thetahat
+  # NO MODEL-FITTING -- THIS IS ORACLE CASE.
+  # but then, where do I get theta? ############################################
+  # for now, assume thetahat = theta
+  thetahat = theta
+  betahat = U %*% thetahat
     
   # evaluate model #
   # 1. prediction error #
@@ -178,7 +171,7 @@ evals.df
 saveRDS(
   evals, 
   file = paste0(output_dir,
-                "/slr_cv_sims", 
+                "/oracle_cv_sims", 
                 "_PBA", 
                 "_theta_", paste(indices.theta, collapse = "_"),
                 "_dim", n, "x", p, 
@@ -189,7 +182,7 @@ saveRDS(
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
-                "/slr_cv_summaries", 
+                "/oracle_cv_summaries", 
                  "_PBA", 
                 "_theta_", paste(indices.theta, collapse = "_"),
                 "_dim", n, "x", p, 

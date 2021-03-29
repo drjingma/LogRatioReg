@@ -42,12 +42,14 @@ K = 5
 rho.type = "square"
 
 # Simulation settings
-numSims = 100
+numSims = 1
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-indices.theta = c(25, 100, 150, 199) # some index between 1 and p - 1
+# indices.theta = c(25, 100, 150, 199) # some index between 1 and p - 1
+indices.theta = sample(1:(p - 1), 5, replace = FALSE)
 values.theta = NULL
+
 sigma_eps = 0.2
 seed = 1
 muW = c(
@@ -60,12 +62,6 @@ for(i in 1:p){
     SigmaW[i, j] = rho^abs(i - j)
   }
 }
-
-################################################################################
-# Simulations #
-################################################################################
-
-set.seed(1)
 
 # simulate training data #
 # generate W
@@ -96,22 +92,9 @@ Y = Xb %*% theta + epsilon
 
 # apply compositional lasso
 complasso = cv.func(
-  method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
-  nfolds = K, tol = tol, intercept = intercept)
-################################################################################
-# saveRDS(
-#   complasso, 
-#   file = paste0(output_dir,
-#                 "/complasso_1sim", 
-#                 "_PBA", 
-#                 "_theta", generate.theta,
-#                 "_dim", n, "x", p, 
-#                 "_rho", rho, 
-#                 "_int", intercept,
-#                 "_seed", rng.seed,
-#                 ".rds"))
-################################################################################
-# calculate TPR for compositional lasso
+  method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
+  nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
+
 TPR.cl = rep(NA, nlam)
 S.hat.cl = rep(NA, nlam)
 for(l in 1:nlam){
@@ -123,25 +106,30 @@ for(l in 1:nlam){
   TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   S.hat.cl[l] = sum(non0.betahat)
 }
-# plot(x = complasso$lambda, y = TPR.cl, type = "l")
-# plot(x = S.hat.cl, y = TPR.cl, type = "l")
+
+
+
 
 # apply supervised log-ratios
 slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
             rho.type = rho.type)
-################################################################################
-# saveRDS(
-#   slr, 
-#   file = paste0(output_dir,
-#                 "/slr_1sim", 
-#                 "_PBA", 
-#                 "_theta", generate.theta,
-#                 "_dim", n, "x", p, 
-#                 "_rho", rho, 
-#                 "_int", intercept,
-#                 "_seed", rng.seed,
-#                 ".rds"))
-################################################################################
+
+btree.slr = slr$btree
+# calculate TPR for supervised log-ratios
+nlam.slr = length(slr$lambda)
+TPR.slr = rep(NA, nlam.slr)
+S.hat.slr = rep(NA, nlam.slr)
+for(l in 1:nlam.slr){
+  a0 = slr$int[l]
+  thetahat = slr$bet[, l]
+  betahat = getBeta(thetahat, btree.slr)
+  # TPR
+  non0.beta = (beta != 0)
+  non0.betahat = (betahat != 0)
+  TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
+  S.hat.slr[l] = sum(non0.betahat)
+}
+
 btree.slr = slr$btree
 # calculate TPR for supervised log-ratios
 nlam.slr = length(slr$lambda)

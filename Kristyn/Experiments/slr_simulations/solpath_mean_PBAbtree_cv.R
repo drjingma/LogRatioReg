@@ -1,5 +1,6 @@
-# last updated: 03/24/2021
+# last updated: 03/30/2021
 # simulate a data set, fit Complasso and SLR, and plot the solution path
+# tried randomly selecting theta_j to be in active set, half of them negative
 
 getwd()
 output_dir = "Kristyn/Experiments/slr_simulations/output"
@@ -49,7 +50,10 @@ rho = 0.2 # 0.2, 0.5
 # indices.theta = c(25, 100, 150, 199) # some index between 1 and p - 1
 ## maybe try different magnitudes? different signs? ############################
 indices.theta = sample(1:(p - 1), 5, replace = FALSE)
-values.theta = NULL
+# values.theta = NULL
+half.negative = TRUE
+values.theta = rep(5, length(indices.theta))
+# half.negative = FALSE
 
 sigma_eps = 0.2
 seed = 1
@@ -85,6 +89,9 @@ sims = foreach(
   
   nlam = 200
   
+  # re-sample new theta?
+  indices.theta = sample(1:(p - 1), 5, replace = FALSE)
+  
   # simulate some data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
@@ -95,7 +102,7 @@ sims = foreach(
   sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
   U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
-  Xb = log(X) %*% U # ilr(X)
+  Xb = computeBalances(X, U = U) # ilr(X)
   # get theta
   theta = rep(0, p - 1)
   if(is.null(values.theta)){
@@ -106,9 +113,14 @@ sims = foreach(
     }
     theta[indices.theta] = values.theta
   }
+  if(half.negative){
+    indices.negative = sample(indices.theta, floor(length(indices.theta) / 2), 
+                              replace = FALSE)
+    theta[indices.negative] = -theta[indices.negative]
+  }
   theta = as.matrix(theta)
   # get beta
-  beta = getBeta(theta, sbp = sbp)
+  beta = getBeta(theta, U = U)
   # generate Y
   Y = Xb %*% theta + epsilon
   

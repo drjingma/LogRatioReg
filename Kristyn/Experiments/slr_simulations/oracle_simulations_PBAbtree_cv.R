@@ -46,10 +46,12 @@ p = 30
 rho = 0.2 # 0.2, 0.5
 # should these indices.theta & values.theta go inside loop? ####################
 # they are (potentially) random, after all.
-indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
+# indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
+indices.theta = 1
 values.theta = NULL
 sigma_eps = 0.5
 seed = 1
+
 muW = c(
   rep(log(p), 5), 
   rep(0, p - 5)
@@ -93,7 +95,7 @@ evals = foreach(
   sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
   U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
-  Xb = log(X) %*% U # ilr(X)
+  Xb = computeBalances(X, U = U) # ilr(X) # ilr(X)
   # get theta
   theta = rep(0, p - 1)
   if(is.null(values.theta)){
@@ -106,7 +108,7 @@ evals = foreach(
   }
   theta = as.matrix(theta)
   # get beta
-  beta = getBeta(theta, sbp = sbp)
+  beta = getBeta(theta, U = U)
   # generate Y
   Y = Xb %*% theta + epsilon
   
@@ -121,25 +123,33 @@ evals = foreach(
   sbp.test = sbp.fromPBA(X.test) # contrasts matrix, a.k.a. sbp matrix
   U.test = getU(sbp = sbp.test) # U
   epsilon.test = rnorm(n, 0, sigma_eps)
-  Xb.test = log(X.test) %*% U.test # ilr(X)
+  Xb.test = computeBalances(X.test, U = U.test) # ilr(X)
   # generate Y
   Y.test = Xb.test %*% theta + epsilon.test
   
   # NO MODEL-FITTING -- THIS IS ORACLE CASE.
   # but then, where do I get theta? ############################################
   # for now, assume thetahat = theta
-  thetahat = theta
-  betahat = U %*% thetahat
-    
+  # apply supervised log-ratios, using CV to select lambda
+  oracle = cvILR(y = Y, X = X, sbp = sbp, U = U, nlam = nlam, nfolds = K,
+              intercept = intercept)
+  # choose lambda
+  lam.min.idx = which.min(oracle$cvm)
+  lam.min = oracle$lambda[lam.min.idx]
+  a0 = oracle$int[lam.min.idx]
+  thetahat = oracle$bet[, lam.min.idx]
+  Uhat = U # since it's the oracle case ########################################
+  betahat = getBeta(thetahat, U = U)
+
   # evaluate model #
   # 1. prediction error #
   # 1a. on training set #
   # get prediction error on training set
-  Yhat.train = a0 + computeBalances(X, btree) %*% thetahat
+  Yhat.train = a0 + computeBalances(X, U = U) %*% thetahat
   PE.train = crossprod(Y - Yhat.train) / n
   # 1b. on test set #
   # get prediction error on test set
-  Yhat.test = a0 + computeBalances(X.test, btree) %*% thetahat
+  Yhat.test = a0 + computeBalances(X.test, U = U) %*% thetahat
   PE.test = crossprod(Y.test - Yhat.test) / n
   # 2. estimation accuracy #
   # 2a. estimation of beta #

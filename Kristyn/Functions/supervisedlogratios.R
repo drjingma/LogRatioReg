@@ -80,7 +80,7 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
 # }
 
 # using a hierarchical tree, compute the balances for X
-computeBalances = function(X, btree = NULL, sbp = NULL){
+computeBalances = function(X, btree = NULL, sbp = NULL, U = NULL){
   # checks
   if(class(X) != "matrix"){
     if(class(X) == "numeric"){
@@ -91,23 +91,22 @@ computeBalances = function(X, btree = NULL, sbp = NULL){
   }
   if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
   
-  # get SBP matrix of contrasts
-  if(is.null(btree) & is.null(sbp)) stop("getU: need one of btree or sbp arg.")
-  if(!is.null(btree)) sbp = sbp.fromHclust(btree) # un-normalized U
+  # get U
+  if(is.null(U)){
+    U = getU(btree, sbp)
+  }
   
-  # compute balances from hclust object using balance pkg:
-  # 1. build SBP (serial binary partition) matrix from hclust object
-  sbp = sbp.fromHclust(btree) # U = basis vectors
-  # 2. calculate balances from SBP matrix
-  U = getU(btree)
+  # calculate balances from U
   balances = log(X) %*% U
   return(balances)
 }
 
 getU = function(btree = NULL, sbp = NULL){
-  # get SBP matrix of contrasts
+  # get SBP matrix of contrasts (if not given)
   if(is.null(btree) & is.null(sbp)) stop("getU: need one of btree or sbp arg.")
-  if(!is.null(btree)) sbp = sbp.fromHclust(btree) # un-normalized U
+  if(is.null(sbp) & !is.null(btree)) sbp = sbp.fromHclust(btree)
+  
+  # normalize SBP matrix to get U
   r.vec = colSums(sbp == 1)
   s.vec = colSums(sbp == -1)
   U = sbp
@@ -116,7 +115,7 @@ getU = function(btree = NULL, sbp = NULL){
     # divide -1s by s
     U[(U[, i] == -1), i] = -1 / s.vec[i]
   }
-  # normalize by sqrt(rs / (r + s))
+  # multiply by sqrt(rs / (r + s))
   norm.const = sqrt((r.vec * s.vec) / (r.vec + s.vec))
   U = sweep(U, MARGIN = 2, STATS = norm.const, FUN = "*")
   # U2 = t(t(U) * norm.const) # equal to U
@@ -191,10 +190,81 @@ cvSLR = function(
   ))
 }
 
-getBeta = function(
-  theta, btree = NULL, sbp = NULL
+fitILR = function(
+  y = NULL, X, btree = NULL, sbp = NULL, U = NULL, lambda = NULL, nlam = 20, 
+  intercept = TRUE
 ){
-  U = getU(btree, sbp)
+  # checks
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  # check if lambda is given, assign get_lambda accordingly
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
+  
+  # compute balances
+  Xb = computeBalances(X, btree, sbp, U)
+  
+  # run glmnet
+  glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+                      intercept = intercept)
+  # check lambda length
+  if(nlam != length(glmnet.fit$lambda)){
+    lambda <- log(glmnet.fit$lambda)
+    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new)
+  }
+  return(list(
+    int = glmnet.fit$a0, 
+    bet = glmnet.fit$beta, 
+    lambda = glmnet.fit$lambda,
+    glmnet = glmnet.fit, 
+    btree = btree
+  ))
+}
+
+cvILR = function(
+  y = NULL, X, btree = NULL, sbp = NULL, U = NULL, lambda = NULL, nlam = 20, 
+  nfolds = 10, foldid = NULL, intercept = TRUE
+){
+  
+  # compute balances
+  Xb = computeBalances(X, btree, sbp, U)
+  
+  # run cv.glmnet
+  cv_exact = cv.glmnet(
+    x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+    foldid = foldid, intercept = intercept, type.measure = c("mse"))
+  
+  # check lambda length
+  if(nlam != length(cv_exact$lambda)){
+    lambda <- log(cv_exact$lambda)
+    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    cv_exact = cv.glmnet(
+      x = Xb, y = y, lambda = lambda_new, nfolds = nfolds, 
+      foldid = foldid, intercept = intercept, type.measure = c("mse"))
+  }
+  return(list(
+    int = cv_exact$glmnet.fit$a0,
+    bet = cv_exact$glmnet.fit$beta,
+    lambda = cv_exact$lambda,
+    cv.glmnet = cv_exact,
+    glmnet = cv_exact$glmnet.fit,
+    btree = btree,
+    cvm = cv_exact$cvm
+  ))
+}
+
+
+
+getBeta = function(
+  theta, btree = NULL, sbp = NULL, U = NULL
+){
+  # get U
+  if(is.null(U)){
+    U = getU(btree, sbp)
+  }
+  
+  # calculate beta
   beta = U %*% theta
   return(beta)
 }

@@ -33,11 +33,12 @@ source("RCode/func_libs.R")
 functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
 
+# Other methods
+library(selbal)
+
 # Method Settings
-nlam = 200
-intercept = TRUE
-K = 5
-rho.type = "square"
+opt.cri = "max"
+# ... not sure how to do CV with selbal
 
 # Simulation settings
 numSims = 100
@@ -79,11 +80,10 @@ evals = foreach(
   library(compositions)
   library(stats)
   library(balance) # for sbp.fromHclust()
+  library(selbal)
   
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
-  
-  nlam = 200
   
   # simulate training data #
   # generate W
@@ -127,17 +127,10 @@ evals = foreach(
   # generate Y
   Y.test = Xb.test %*% theta + epsilon.test
   
-  # apply supervised log-ratios, using CV to select lambda
-  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-              rho.type = rho.type)
-  btree = slr$btree
-  # choose lambda
-  lam.min.idx = which.min(slr$cvm)
-  lam.min = slr$lambda[lam.min.idx]
-  a0 = slr$int[lam.min.idx]
-  thetahat = slr$bet[, lam.min.idx]
-  Uhat = getU(btree = slr$btree)
-  betahat = getBeta(thetahat, U = Uhat)
+  # apply supervised log-ratios, using CV to select lambda=
+  rownames(X) = paste("Sample", 1:nrow(X), sep = "_")
+  colnames(X) = paste("V", 1:ncol(X), sep = "")
+  selbal.fit = selbal(x = X, y = Y, draw = TRUE)
     
   # evaluate model #
   # 1. prediction error #
@@ -168,7 +161,8 @@ evals = foreach(
   # return
   c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, sum(non0.beta))
 }
-rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "betaSparsity")
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", 
+                    "betaSparsity")
 
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)

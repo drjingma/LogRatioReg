@@ -51,6 +51,7 @@ indices.theta = 1
 values.theta = NULL
 sigma_eps = 0.5
 seed = 1
+
 muW = c(
   rep(log(p), 5), 
   rep(0, p - 5)
@@ -94,7 +95,7 @@ evals = foreach(
   sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
   U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
-  Xb = log(X) %*% U # ilr(X)
+  Xb = computeBalances(X, U = U) # ilr(X) # ilr(X)
   # get theta
   theta = rep(0, p - 1)
   if(is.null(values.theta)){
@@ -107,7 +108,7 @@ evals = foreach(
   }
   theta = as.matrix(theta)
   # get beta
-  beta = getBeta(theta, sbp = sbp)
+  beta = getBeta(theta, U = U)
   # generate Y
   Y = Xb %*% theta + epsilon
   
@@ -122,7 +123,7 @@ evals = foreach(
   sbp.test = sbp.fromPBA(X.test) # contrasts matrix, a.k.a. sbp matrix
   U.test = getU(sbp = sbp.test) # U
   epsilon.test = rnorm(n, 0, sigma_eps)
-  Xb.test = log(X.test) %*% U.test # ilr(X)
+  Xb.test = computeBalances(X.test, U = U.test) # ilr(X)
   # generate Y
   Y.test = Xb.test %*% theta + epsilon.test
   

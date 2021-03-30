@@ -41,8 +41,8 @@ rho.type = "square"
 
 # Simulation settings
 numSims = 100
-n = 50
-p = 30
+n = 100
+p = 200
 rho = 0.2 # 0.2, 0.5
 # should these indices.theta & values.theta go inside loop? ####################
 # they are (potentially) random, after all.

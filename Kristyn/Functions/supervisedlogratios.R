@@ -130,7 +130,7 @@ fitSLR = function(
   # checks
   if(length(y) != nrow(X)) stop("fitSLR : dimensions of y and X don't match")
   if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
-  # check if lambda is given, assign get_lambda accordingly
+  # check if lambda is given, assign nlam accordingly
   if(!is.null(lambda)){ # lambda is given
     nlam = length(lambda)
   }
@@ -161,6 +161,13 @@ cvSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
   foldid = NULL, intercept = TRUE, rho.type = "squared"
 ){
+  # checks
+  if(length(y) != nrow(X)) stop("fitSLR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  # check if lambda is given, assign nlam accordingly
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
   
   # compute balances
   btree = getSupervisedTree(y, X, linkage, rho.type)
@@ -179,6 +186,7 @@ cvSLR = function(
       x = Xb, y = y, lambda = lambda_new, nfolds = nfolds, 
       foldid = foldid, intercept = intercept, type.measure = c("mse"))
   }
+  
   return(list(
     int = cv_exact$glmnet.fit$a0,
     bet = cv_exact$glmnet.fit$beta,
@@ -195,8 +203,9 @@ fitILR = function(
   intercept = TRUE
 ){
   # checks
+  if(length(y) != nrow(X)) stop("fitILR : dimensions of y and X don't match")
   if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
-  # check if lambda is given, assign get_lambda accordingly
+  # check if lambda is given, assign nlam accordingly
   if(!is.null(lambda)){ # lambda is given
     nlam = length(lambda)
   }
@@ -226,6 +235,13 @@ cvILR = function(
   y = NULL, X, btree = NULL, sbp = NULL, U = NULL, lambda = NULL, nlam = 20, 
   nfolds = 10, foldid = NULL, intercept = TRUE
 ){
+  # checks
+  if(length(y) != nrow(X)) stop("fitILR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  # check if lambda is given, assign nlam accordingly
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
   
   # compute balances
   Xb = computeBalances(X, btree, sbp, U)

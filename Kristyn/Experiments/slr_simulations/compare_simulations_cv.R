@@ -3,8 +3,8 @@ library(reshape2)
 
 output_dir = "Kristyn/Experiments/slr_simulations/output"
 rng.seed = 123
-n = 100
-p = 200
+n = 50
+p = 30
 rho = 0.2 # 0.2, 0.5
 indices.theta = 1
 intercept = TRUE
@@ -59,11 +59,42 @@ slr.summaries = readRDS(paste0(
   ".rds"))
 print(slr.summaries[, c("mean", "se")])
 
+################################################################################
+# Oracle #
+################################################################################
+or.sims = readRDS(paste0(
+  output_dir,
+  "/oracle_cv_sims", 
+  "_PBA", 
+  "_theta_", paste(indices.theta, collapse = "_"),
+  "_dim", n, "x", p, 
+  "_rho", rho, 
+  "_int", intercept,
+  "_seed", rng.seed,
+  ".rds"))
+or.summaries = readRDS(paste0(
+  output_dir,
+  "/oracle_cv_summaries", 
+  "_PBA", 
+  "_theta_", paste(indices.theta, collapse = "_"),
+  "_dim", n, "x", p, 
+  "_rho", rho, 
+  "_int", intercept,
+  "_seed", rng.seed,
+  ".rds"))
+print(or.summaries[, c("mean", "se")])
+
+
+# plot
+
 cl.sims.gg = melt(data.frame(t(complasso.sims)))
 cl.sims.gg$type = "CompLasso"
 slr.sims.gg = melt(data.frame(t(slr.sims)))
 slr.sims.gg$type = "SLR"
-data.gg = rbind(cl.sims.gg, slr.sims.gg)
+or.sims.gg = melt(data.frame(t(or.sims)))
+or.sims.gg$type = "Oracle"
+data.gg = rbind(cl.sims.gg, slr.sims.gg, or.sims.gg)
+data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "Oracle"))
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + geom_boxplot() + 
   stat_summary(fun = mean, geom = "point", shape = 17, size = 2, color = "red") +

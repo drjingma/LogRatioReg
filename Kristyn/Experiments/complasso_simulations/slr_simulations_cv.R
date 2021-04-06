@@ -109,66 +109,69 @@ evals = foreach(
   # generate Y
   Y.test = Z.test %*% beta + epsilon.test
   
-  # apply supervised log-ratios method, using CV to select lambda
-  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept)
-  # transformed
+  # apply supervised log-ratios, using CV to select lambda
+  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
+              rho.type = rho.type)
   btree = slr$btree
   
+  # choose lambda
   lam.min.idx = which.min(slr$cvm)
   lam.min = slr$lambda[lam.min.idx]
   a0 = slr$int[lam.min.idx]
-  betahat = slr$bet[, lam.min.idx]
+  thetahat = slr$bet[, lam.min.idx]
+  Uhat = getU(btree = slr$btree)
+  betahat = getBeta(thetahat, U = Uhat)
   
-  # # plot lambda vs. GIC
-  # plot(slr$lambda, slr$cvm, type = "l")
-  # points(lam.min, min(slr$cvm))
-  # text(lam.min, min(slr$cvm),
-  #      paste0("(", round(lam.min, 3), ", ", 
-  #             round(min(slr$cvm), 3), ")", sep = ""), pos = 4)
-  
-  # evaluate model
-  # prediction error
-  # simulate independent test set of size n
-  # generate W
-  W.test = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
-  # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
-  V.test = exp(W.test)
-  rowsumsV.test = apply(V.test, 1, sum)
-  X.test = V.test / rowsumsV.test
-  epsilon.test = rnorm(n, 0, sigma_eps)
-  Z.test = log(X.test)
-  # generate Y
-  Y.test = Z.test %*% matrix(beta) + epsilon.test
-  # get fitted model
-  predictSLR = function(X){
-    a0 + computeBalances(X, btree) %*% betahat
-  }
-  Y.pred = predictSLR(X.test)
-  PE = crossprod(Y.test - Y.pred) / n
-  # estimation accuracy
-  # transform betahat to log-contrast space
-  betahat.tr = LRtoLC(betahat, btree)
-  EA1 = sum(abs(betahat.tr - beta))
-  EA2 = crossprod(betahat.tr - beta)
-  EAInfty = max(abs(betahat.tr - beta))
+  # evaluate model #
+  # 1. prediction error #
+  # 1a. on training set #
+  # get prediction error on training set
+  Yhat.train = a0 + computeBalances(X, btree) %*% thetahat
+  PE.train = crossprod(Y - Yhat.train) / n
+  # 1b. on test set #
+  # get prediction error on test set
+  Yhat.test = a0 + computeBalances(X.test, btree) %*% thetahat
+  PE.test = crossprod(Y.test - Yhat.test) / n
+  # 2. estimation accuracy #
+  # 2a. estimation of beta #
+  EA1 = sum(abs(betahat - beta))
+  EA2 = sqrt(crossprod(betahat - beta))
+  EAInfty = max(abs(betahat - beta))
+  # 3. selection accuracy #
+  # 3a. selection of beta #
+  non0.beta = (beta != 0)
+  non0s = sum(non0.beta)
+  non0.betahat = (betahat != 0)
   # FP
-  non0.betahat = (betahat.tr != 0)
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
   # FN
   FN = sum((non0.beta != non0.betahat) & non0.beta)
+  # TPR
+  TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   # return
-  c(PE, EA1, EA2, EAInfty, FP, FN)
+  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, sum(non0.beta))
 }
-rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "betaSparsity")
+
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
+
+saveRDS(
+  evals, 
+  file = paste0(output_dir,
+                "/slr_cv_sims", 
+                "_dim", n, "x", p, 
+                "_rho", rho, 
+                "_int", intercept,
+                "_seed", rng.seed,
+                ".rds"))
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
-                "/slr_cv_simulations", 
+                "/slr_cv_summaries", 
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,

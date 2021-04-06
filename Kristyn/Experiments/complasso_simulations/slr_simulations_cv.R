@@ -1,6 +1,6 @@
 # Method: Simulation study for compositional Lasso
-# Purpose: Simulate data, fit compositional Lasso to the data
-# Date: 1/2021
+# Purpose: Simulate data, fit supervised log-ratios method to the data
+# Date: 04/06/2021
 # Notes: 
 
 getwd()
@@ -9,7 +9,6 @@ output_dir = "Kristyn/Experiments/complasso_simulations/output"
 # libraries
 library(limSolve) # for constrained lm
 library(mvtnorm)
-library(stats) # for hclust()
 library(balance) # for sbp.fromHclust()
 
 # set up parallelization
@@ -38,15 +37,17 @@ functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
 
 # Method Settings
+tol = 1e-4
 nlam = 200
 intercept = TRUE
 K = 5
+rho.type = "square"
 
 # Simulation settings
 numSims = 100
-n = 100
-p = 200
-rho = 0.5 # 0.2, 0.5
+n = 50
+p = 30
+rho = 0.2 # 0.2, 0.5
 # beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
 non0.beta = (beta != 0)
@@ -70,7 +71,8 @@ for(i in 1:p){
 # set.seed(16) # leads to FN = 1
 evals = foreach(
   b = 1:numSims, 
-  .combine = cbind
+  .combine = cbind, 
+  .noexport = c("ConstrLassoC0")
 ) %dorng% {
   library(limSolve)
   library(mvtnorm)
@@ -78,14 +80,11 @@ evals = foreach(
   library(glmnet)
   library(compositions)
   library(stats)
-  library(balance) # for sbp.fromHclust()
-  
   source("RCode/func_libs.R")
-  source(paste0(functions_path, "supervisedlogratios.R"))
   
   nlam = 200
   
-  # simulate data
+  # simulate training data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
@@ -95,7 +94,20 @@ evals = foreach(
   epsilon = rnorm(n, 0, sigma_eps)
   Z = log(X)
   # generate Y
-  Y = Z %*% matrix(beta) + epsilon
+  Y = Z %*% beta + epsilon
+  
+  # simulate test data #
+  # simulate independent test set of size n
+  # generate W
+  W.test = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
+  # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
+  V.test = exp(W.test)
+  rowsumsV.test = apply(V.test, 1, sum)
+  X.test = V.test / rowsumsV.test
+  epsilon.test = rnorm(n, 0, sigma_eps)
+  Z.test = log(X.test)
+  # generate Y
+  Y.test = Z.test %*% beta + epsilon.test
   
   # apply supervised log-ratios method, using CV to select lambda
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept)

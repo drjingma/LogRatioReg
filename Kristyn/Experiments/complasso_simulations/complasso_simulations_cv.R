@@ -1,6 +1,6 @@
 # Method: Simulation study for compositional Lasso
 # Purpose: Simulate data, fit compositional Lasso to the data
-# Date: 1/2021
+# Date: 04/06/2021
 # Notes: 
 
 getwd()
@@ -9,6 +9,7 @@ output_dir = "Kristyn/Experiments/complasso_simulations/output"
 # libraries
 library(limSolve) # for constrained lm
 library(mvtnorm)
+library(balance) # for sbp.fromHclust()
 
 # set up parallelization
 library(foreach)
@@ -31,10 +32,14 @@ library(compositions)
 library(stats)
 source("RCode/func_libs.R")
 
+# Kristyn sources
+functions_path = "Kristyn/Functions/"
+source(paste0(functions_path, "supervisedlogratios.R"))
+
 # Method Settings
 tol = 1e-4
 nlam = 200
-intercept = FALSE
+intercept = TRUE
 K = 5
 
 # Simulation settings
@@ -78,7 +83,7 @@ evals = foreach(
   
   nlam = 200
   
-  # simulate data
+  # simulate training data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
@@ -88,7 +93,20 @@ evals = foreach(
   epsilon = rnorm(n, 0, sigma_eps)
   Z = log(X)
   # generate Y
-  Y = Z %*% matrix(beta) + epsilon
+  Y = Z %*% beta + epsilon
+  
+  # simulate test data #
+  # simulate independent test set of size n
+  # generate W
+  W.test = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
+  # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
+  V.test = exp(W.test)
+  rowsumsV.test = apply(V.test, 1, sum)
+  X.test = V.test / rowsumsV.test
+  epsilon.test = rnorm(n, 0, sigma_eps)
+  Z.test = log(X.test)
+  # generate Y
+  Y.test = Z.test %*% beta + epsilon.test
   
   # apply compositional lasso, using CV to select lambda
   complasso = cv.func(
@@ -101,44 +119,57 @@ evals = foreach(
   a0 = complasso$int[lam.min.idx]
   betahat = complasso$bet[, lam.min.idx]
   
-  # plot(complasso$lambda, complasso$cvm, type = "l")
-  
-  # evaluate model
-  # prediction error
-  # simulate independent test set of size n
-  # generate W
-  W.test = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
-  # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
-  V.test = exp(W.test)
-  rowsumsV.test = apply(V.test, 1, sum)
-  X.test = V.test / rowsumsV.test
-  epsilon.test = rnorm(n, 0, sigma_eps)
-  Z.test = log(X.test)
-  # generate Y
-  Y.test = Z.test %*% matrix(beta) + epsilon.test
-  PE = crossprod(Y.test - a0 - Z.test %*% betahat) / n
-  # estimation accuracy
+  # evaluate model #
+  # 1. prediction error #
+  # 1a. on training set #
+  # get prediction error on training set
+  Yhat.train = a0 + log(X) %*% betahat
+  PE.train = crossprod(Y - Yhat.train) / n
+  # 1b. on test set #
+  # get prediction error on test set
+  Yhat.test = a0 + log(X.test) %*% betahat
+  PE.test = crossprod(Y.test - Yhat.test) / n
+  # 2. estimation accuracy #
+  # 2a. estimation of beta #
   EA1 = sum(abs(betahat - beta))
-  EA2 = crossprod(betahat - beta)
+  EA2 = sqrt(crossprod(betahat - beta))
   EAInfty = max(abs(betahat - beta))
-  # FP
+  # 3. selection accuracy #
+  # 3a. selection of beta #
+  non0.beta = (beta != 0)
   non0.betahat = (betahat != 0)
+  # FP
   FP = sum((non0.beta != non0.betahat) & non0.betahat)
   # FN
   FN = sum((non0.beta != non0.betahat) & non0.beta)
+  # TPR
+  TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   # return
-  c(PE, EA1, EA2, EAInfty, FP, FN)
+  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, sum(non0.beta))
 }
-rownames(evals) = c("PE", "EA1", "EA2", "EAInfty", "FP", "FN")
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "betaSparsity")
+
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
+
+saveRDS(
+  evals, 
+  file = paste0(output_dir,
+                "/complasso_cv_sims", 
+                "_theta_", paste(indices.theta, collapse = "_"),
+                "_dim", n, "x", p, 
+                "_rho", rho, 
+                "_int", intercept,
+                "_seed", rng.seed,
+                ".rds"))
 saveRDS(
   evals.df, 
   file = paste0(output_dir,
-                "/complasso_cv_simulations", 
+                "/complasso_cv_summaries", 
+                "_theta_", paste(indices.theta, collapse = "_"),
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,

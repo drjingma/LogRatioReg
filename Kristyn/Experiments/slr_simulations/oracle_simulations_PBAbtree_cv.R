@@ -128,12 +128,10 @@ evals = foreach(
   # generate Y
   Y.test = Xb.test %*% theta + epsilon.test
   
-  # NO MODEL-FITTING -- THIS IS ORACLE CASE.
-  # but then, where do I get theta? ############################################
-  # for now, assume thetahat = theta
-  # apply supervised log-ratios, using CV to select lambda
+  # apply oracle, using CV to select lambda
   oracle = cvILR(y = Y, X = X, sbp = sbp, U = U, nlam = nlam, nfolds = K,
               intercept = intercept)
+  
   # choose lambda
   lam.min.idx = which.min(oracle$cvm)
   lam.min = oracle$lambda[lam.min.idx]

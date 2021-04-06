@@ -40,7 +40,6 @@ library(selbal)
 # Method Settings
 opt.cri = "max"
 K = 5
-intercept = TRUE
 # n.iter? default is 10
 
 # Simulation settings

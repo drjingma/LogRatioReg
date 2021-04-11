@@ -151,8 +151,12 @@ evals = foreach(
   norm.const = sqrt((r * s) / (r + s))
   u.selbal = norm.const * pba.selbal
   
-  lm(as.vector(Y) ~ log(X) %*% as.matrix(u.selbal))
-  selbal.fit$glm
+  # check: these are equal
+  # lm(as.vector(Y) ~ log(X) %*% as.matrix(u.selbal))
+  # selbal.fit$glm
+  
+  thetahat = coefficients(selbal.fit$glm)[2]
+  betahat = u.selbal %*% as.matrix(thetahat)
   
   # evaluate model #
   # 1. prediction error #

@@ -3,8 +3,8 @@ library(reshape2)
 
 output_dir = "Kristyn/Experiments/complasso_simulations/output"
 rng.seed = 123
-n = 100
-p = 200
+n = 50
+p = 30
 rho = 0.2 # 0.2, 0.5
 intercept = TRUE
 

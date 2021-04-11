@@ -1,10 +1,11 @@
 library(ggplot2)
 library(reshape2)
+library(ggpubr)
 
 output_dir = "Kristyn/Experiments/complasso_simulations/output"
 rng.seed = 123
-n = 50
-p = 30
+n = 100
+p = 200
 rho = 0.2 # 0.2, 0.5
 intercept = TRUE
 
@@ -66,8 +67,13 @@ slr.sims.gg$type = "SLR"
 data.gg = rbind(cl.sims.gg, slr.sims.gg)
 data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR"))
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
-  facet_wrap(vars(variable), scales = "free_y") + geom_boxplot() + 
-  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, color = "red") +
+  facet_wrap(vars(variable), scales = "free_y") + 
+  geom_boxplot() + 
+  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
+               geom = "errorbar", width = 0.75, 
+               linetype = "dashed") +
+  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
+               color = "red") +
   theme_bw() + 
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank())

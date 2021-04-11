@@ -71,3 +71,33 @@ ggplot(data.gg, aes(x = type, y = value, color = type)) +
   theme_bw() + 
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank())
+
+# zoom in to PEtr, PEte
+PEtr.gg = data.gg[data.gg$variable == "PEtr", ]
+plt.PEtr = ggplot(PEtr.gg, aes(x = type, y = value, color = type)) + 
+  geom_boxplot() +
+  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
+               geom = "errorbar", width = 0.75, 
+               linetype = "dashed") +
+  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
+               color = "red") +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank(), 
+        legend.position = "none")
+# plt.PEtr
+PEte.gg = data.gg[data.gg$variable == "PEte", ]
+PEte.gg$value = log(PEte.gg$value)
+plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) + 
+  geom_boxplot() +
+  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
+               geom = "errorbar", width = 0.75, 
+               linetype = "dashed") +
+  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
+               color = "red") +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank(), 
+        legend.position = "none")
+# plt.PEte
+ggarrange(plt.PEtr, plt.PEte)

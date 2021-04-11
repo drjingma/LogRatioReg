@@ -1,10 +1,11 @@
 library(ggplot2)
 library(reshape2)
+library(ggpubr)
 
 output_dir = "Kristyn/Experiments/slr_simulations/output"
 rng.seed = 123
-n = 50
-p = 30
+n = 100
+p = 200
 rho = 0.2 # 0.2, 0.5
 indices.theta = 1
 intercept = TRUE
@@ -101,3 +102,33 @@ ggplot(data.gg, aes(x = type, y = value, color = type)) +
   theme_bw() + 
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank())
+
+# zoom in to PEtr, PEte
+PEtr.gg = data.gg[data.gg$variable == "PEtr", ]
+plt.PEtr = ggplot(PEtr.gg, aes(x = type, y = value, color = type)) + 
+  geom_boxplot() +
+  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
+               geom = "errorbar", width = 0.75, 
+               linetype = "dashed") +
+  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
+               color = "red") +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank(), 
+        legend.position = "none")
+# plt.PEtr
+PEte.gg = data.gg[data.gg$variable == "PEte", ]
+PEte.gg$value = log(PEte.gg$value)
+plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) + 
+  geom_boxplot() +
+  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
+               geom = "errorbar", width = 0.75, 
+               linetype = "dashed") +
+  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
+               color = "red") +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank(), 
+        legend.position = "none")
+# plt.PEte
+ggarrange(plt.PEtr, plt.PEte)

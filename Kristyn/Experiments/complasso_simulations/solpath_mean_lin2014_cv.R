@@ -302,8 +302,6 @@ S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
 TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
 S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
 TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
-S.hat.or.avg = apply(S.hat.or.mat, 1, mean, na.rm = TRUE)
-TPR.or.avg = apply(TPR.or.mat, 1, mean, na.rm = TRUE)
 
 # complasso stuff
 cl.gg.complete = data.frame(
@@ -315,14 +313,9 @@ slr.gg.complete = data.frame(
   "S.hat" = S.hat.slr.avg, 
   "TPR" = TPR.slr.avg)
 slr.gg.complete$Type = "SLR"
-# or.stuff
-or.gg.complete = data.frame(
-  "S.hat" = S.hat.or.avg, 
-  "TPR" = TPR.or.avg)
-or.gg.complete$Type = "Oracle"
 # ggplot
-gg.complete = rbind(slr.gg.complete, cl.gg.complete, or.gg.complete)
-gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR", "Oracle"))
+gg.complete = rbind(slr.gg.complete, cl.gg.complete)
+gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
 ggplot(gg.complete, aes(x = S.hat, y = TPR)) + 
   geom_line(aes(color = Type), size = 1) +
   theme_bw()

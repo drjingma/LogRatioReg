@@ -315,14 +315,9 @@ slr.gg.complete = data.frame(
   "S.hat" = S.hat.slr.avg, 
   "TPR" = TPR.slr.avg)
 slr.gg.complete$Type = "SLR"
-# or.stuff
-or.gg.complete = data.frame(
-  "S.hat" = S.hat.or.avg, 
-  "TPR" = TPR.or.avg)
-or.gg.complete$Type = "Oracle"
 # ggplot
-gg.complete = rbind(slr.gg.complete, cl.gg.complete, or.gg.complete)
-gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR", "Oracle"))
+gg.complete = rbind(slr.gg.complete, cl.gg.complete)
+gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
 ggplot(gg.complete, aes(x = S.hat, y = TPR)) + 
   geom_line(aes(color = Type), size = 1) +
   theme_bw()

@@ -44,8 +44,9 @@ rho.type = "square"
 numSims = 100
 n = 100
 p = 200
-rho = 0 # 0.2, 0.5
-indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
+rho = 0.2 # 0.2, 0.5
+# indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
+indices.theta = c(159, 179, 14, 195, 170)
 # indices.theta = 1
 # indices.theta = p - 1
 values.theta = NULL

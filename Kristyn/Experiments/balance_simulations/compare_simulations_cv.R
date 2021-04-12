@@ -9,7 +9,7 @@ p = 200
 rho = 0 # 0.2, 0.5
 # indices.theta = 1
 # indices.theta = p - 1
-indices.theta = 
+indices.theta = c(159, 179, 14, 195, 170)
 intercept = TRUE
 
 ################################################################################
@@ -134,3 +134,4 @@ plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) +
         legend.position = "none")
 # plt.PEte
 ggarrange(plt.PEtr, plt.PEte)
+

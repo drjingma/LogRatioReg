@@ -45,8 +45,8 @@ intercept = TRUE
 
 # Simulation settings
 numSims = 100
-n = 50
-p = 30
+n = 100
+p = 200
 rho = 0.2 # 0.2, 0.5
 # should these indices.theta & values.theta go inside loop? ####################
 # they are (potentially) random, after all.
@@ -71,10 +71,8 @@ for(i in 1:p){
 # Simulations #
 ################################################################################
 
-# set.seed(1)
-evals = foreach(
-  b = 1:numSims, 
-  .combine = cbind
+data.sims = foreach(
+  b = 1:numSims
 ) %dorng% {
   library(limSolve)
   library(mvtnorm)
@@ -83,10 +81,11 @@ evals = foreach(
   library(compositions)
   library(stats)
   library(balance) # for sbp.fromHclust()
-  library(selbal)
   
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
+  
+  nlam = 200
   
   # simulate training data #
   # generate W
@@ -98,7 +97,7 @@ evals = foreach(
   sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
   U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
-  Xb = computeBalances(X, U = U) # ilr(X) 
+  Xb = computeBalances(X, U = U) # ilr(X) # ilr(X)
   # get theta
   theta = rep(0, p - 1)
   if(is.null(values.theta)){
@@ -129,6 +128,47 @@ evals = foreach(
   Xb.test = computeBalances(X.test, U = U.test) # ilr(X)
   # generate Y
   Y.test = Xb.test %*% theta + epsilon.test
+  
+  list(X = X, 
+       Xb = Xb, 
+       Y = Y, 
+       U = U, 
+       theta = theta, 
+       beta = beta, 
+       X.test = X.test, 
+       Xb.test = Xb.test, 
+       Y.test = Y.test, 
+       U.test = U.test)
+}
+
+# set.seed(1)
+evals = matrix(NA, nrow = 9, ncol = numSims)
+for(b in 1:numSims){
+  library(limSolve)
+  library(mvtnorm)
+  library(Matrix)
+  library(glmnet)
+  library(compositions)
+  library(stats)
+  library(balance) # for sbp.fromHclust()
+  library(selbal)
+  
+  source("RCode/func_libs.R")
+  source(paste0(functions_path, "supervisedlogratios.R"))
+  
+  # training data #
+  X = data.sims[[b]]$X
+  U = data.sims[[b]]$U
+  Xb = data.sims[[b]]$Xb
+  theta = data.sims[[b]]$theta
+  beta = data.sims[[b]]$beta
+  Y = data.sims[[b]]$Y
+  
+  # test data #
+  X = data.sims[[b]]$X.test
+  U = data.sims[[b]]$U.test
+  Xb = data.sims[[b]]$Xb.test
+  Y = data.sims[[b]]$Y.test
   
   # apply supervised log-ratios, using CV to select lambda=
   rownames(X) = paste("Sample", 1:nrow(X), sep = "_")
@@ -193,7 +233,8 @@ evals = foreach(
   # TPR
   TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   # return
-  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, sum(non0.beta))
+  evals[, b] = c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, 
+                 sum(non0.beta))
 }
 rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", 
                     "betaSparsity")

@@ -268,57 +268,57 @@ sims3 = foreach(
        fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
 }
 
-# organize the simulation results to have more easily-accessable matrices #
-# cl
-fit.cl.list = list()
-TPR.cl.mat = matrix(NA, nlam, numSims)
-S.hat.cl.mat = matrix(NA, nlam, numSims)
-lambda.cl.mat = matrix(NA, nlam, numSims)
-# slr
-fit.slr.list = list()
-TPR.slr.mat = matrix(NA, nlam, numSims)
-S.hat.slr.mat = matrix(NA, nlam, numSims)
-lambda.slr.mat = matrix(NA, nlam, numSims)
-for(i in 1:numSims){
-  sim.tmp = sims3[[i]]
-  # cl
-  fit.cl.list[[i]] = sim.tmp$fit.cl
-  TPR.cl.mat[, i] = sim.tmp$TPR.cl
-  S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
-  lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
-  # slr
-  fit.slr.list[[i]] = sim.tmp$fit.slr
-  TPR.slr.mat[, i] = sim.tmp$TPR.slr
-  S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
-  lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-}
-
-
-
-# average TPR and S.hat ########################################################
-
-dim(S.hat.cl.mat)
-S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
-TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
-S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
-TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
-
-# complasso stuff
-cl.gg.complete = data.frame(
-  "S.hat" = S.hat.cl.avg, 
-  "TPR" = TPR.cl.avg)
-cl.gg.complete$Type = "CompLasso"
-# slr stuff
-slr.gg.complete = data.frame(
-  "S.hat" = S.hat.slr.avg, 
-  "TPR" = TPR.slr.avg)
-slr.gg.complete$Type = "SLR"
-# ggplot
-gg.complete = rbind(slr.gg.complete, cl.gg.complete)
-gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
-ggplot(gg.complete, aes(x = S.hat, y = TPR)) + 
-  geom_line(aes(color = Type), size = 1) +
-  theme_bw()
+# # organize the simulation results to have more easily-accessable matrices ######
+# # cl
+# fit.cl.list = list()
+# TPR.cl.mat = matrix(NA, nlam, numSims)
+# S.hat.cl.mat = matrix(NA, nlam, numSims)
+# lambda.cl.mat = matrix(NA, nlam, numSims)
+# # slr
+# fit.slr.list = list()
+# TPR.slr.mat = matrix(NA, nlam, numSims)
+# S.hat.slr.mat = matrix(NA, nlam, numSims)
+# lambda.slr.mat = matrix(NA, nlam, numSims)
+# for(i in 1:numSims){
+#   sim.tmp = sims3[[i]]
+#   # cl
+#   fit.cl.list[[i]] = sim.tmp$fit.cl
+#   TPR.cl.mat[, i] = sim.tmp$TPR.cl
+#   S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
+#   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
+#   # slr
+#   fit.slr.list[[i]] = sim.tmp$fit.slr
+#   TPR.slr.mat[, i] = sim.tmp$TPR.slr
+#   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
+#   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
+# }
+# 
+# 
+# 
+# # average TPR and S.hat ########################################################
+# 
+# dim(S.hat.cl.mat)
+# S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
+# TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
+# S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
+# TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
+# 
+# # complasso stuff
+# cl.gg.complete = data.frame(
+#   "S.hat" = S.hat.cl.avg, 
+#   "TPR" = TPR.cl.avg)
+# cl.gg.complete$Type = "CompLasso"
+# # slr stuff
+# slr.gg.complete = data.frame(
+#   "S.hat" = S.hat.slr.avg, 
+#   "TPR" = TPR.slr.avg)
+# slr.gg.complete$Type = "SLR"
+# # ggplot
+# gg.complete = rbind(slr.gg.complete, cl.gg.complete)
+# gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
+# ggplot(gg.complete, aes(x = S.hat, y = TPR)) + 
+#   geom_line(aes(color = Type), size = 1) +
+#   theme_bw()
 
 
 # save results #################################################################

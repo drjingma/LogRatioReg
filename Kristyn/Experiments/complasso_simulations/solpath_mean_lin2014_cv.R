@@ -5,9 +5,6 @@
 getwd()
 output_dir = "Kristyn/Experiments/complasso_simulations/output"
 
-getwd()
-output_dir = "Kristyn/Experiments/complasso_simulations/output"
-
 # libraries
 library(limSolve) # for constrained lm
 library(mvtnorm)
@@ -85,6 +82,19 @@ for(i in 1:p){
     SigmaW[i, j] = rho^abs(i - j)
   }
 }
+
+################################################################################
+# if simulations are saved, read them in
+
+# sims3 = readRDS(paste0(output_dir,
+#                        "/sims_solpaths",
+#                        "_theta_", paste(indices.theta, collapse = "_"),
+#                        "_dim", n, "x", p,
+#                        "_rho", rho,
+#                        "_int", intercept,
+#                        "_seed", rng.seed,
+#                        "_numSims", numSims,
+#                        ".rds"))
 
 ################################################################################
 # Simulations -- different lambda sequence #
@@ -324,7 +334,6 @@ saveRDS(
   sims3,
   file = paste0(output_dir,
                 "/sims_solpaths",
-                "_theta_", paste(indices.theta, collapse = "_"),
                 "_dim", n, "x", p,
                 "_rho", rho,
                 "_int", intercept,

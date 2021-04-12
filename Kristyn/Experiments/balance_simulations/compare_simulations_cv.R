@@ -6,8 +6,10 @@ output_dir = "Kristyn/Experiments/balance_simulations/output"
 rng.seed = 123
 n = 100
 p = 200
-rho = 0.2 # 0.2, 0.5
-indices.theta = 1
+rho = 0 # 0.2, 0.5
+# indices.theta = 1
+# indices.theta = p - 1
+indices.theta = 
 intercept = TRUE
 
 ################################################################################

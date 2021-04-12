@@ -166,10 +166,10 @@ for(b in 1:numSims){
   Y = data.sims[[b]]$Y
   
   # test data #
-  X = data.sims[[b]]$X.test
-  U = data.sims[[b]]$U.test
-  Xb = data.sims[[b]]$Xb.test
-  Y = data.sims[[b]]$Y.test
+  X.test = data.sims[[b]]$X.test
+  U.test = data.sims[[b]]$U.test
+  Xb.test = data.sims[[b]]$Xb.test
+  Y.test = data.sims[[b]]$Y.test
   
   # apply supervised log-ratios, using CV to select lambda=
   rownames(X) = paste("Sample", 1:nrow(X), sep = "_")

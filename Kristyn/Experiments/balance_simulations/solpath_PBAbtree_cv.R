@@ -2,7 +2,7 @@
 # simulate a data set, fit Complasso and SLR, and plot the solution path
 
 getwd()
-output_dir = "Kristyn/Experiments/slr_simulations/output"
+output_dir = "Kristyn/Experiments/balance_simulations/output"
 
 # libraries
 library(mvtnorm)

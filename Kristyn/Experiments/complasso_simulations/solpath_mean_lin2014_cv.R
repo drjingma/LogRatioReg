@@ -1,18 +1,17 @@
-# last updated: 04/06/2021
-# simulate a data set, fit Complasso and SLR, and plot the solution path
-# tried randomly selecting theta_j to be in active set, half of them negative
+# last updated: 04/11/2021
+# simulate a data set using settings in Lin et al 2014, 
+# fit Complasso and SLR, and plot the solution path.
 
 getwd()
-output_dir = "Kristyn/Experiments/balance_simulations/output"
+output_dir = "Kristyn/Experiments/complasso_simulations/output"
+
+getwd()
+output_dir = "Kristyn/Experiments/complasso_simulations/output"
 
 # libraries
+library(limSolve) # for constrained lm
 library(mvtnorm)
-library(stats) # for hclust()
 library(balance) # for sbp.fromHclust()
-
-# plotting
-library(ggplot2)
-library(reshape2)
 
 # set up parallelization
 library(foreach)
@@ -67,17 +66,14 @@ K = 5
 rho.type = "square"
 
 # Simulation settings
-numSims = 20
+numSims = 100
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-# indices.theta = c(25, 100, 150, 199) # some index between 1 and p - 1
-## maybe try different magnitudes? different signs? ############################
-indices.theta = sample(1:(p - 1), 5, replace = FALSE)
-values.theta = NULL
-# values.theta = rep(5, length(indices.theta))
-
-sigma_eps = 0.2
+# beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
+beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+non0.beta = (beta != 0)
+sigma_eps = 0.5
 seed = 1
 muW = c(
   rep(log(p), 5), 
@@ -104,43 +100,20 @@ sims = foreach(
   library(glmnet)
   library(compositions)
   library(stats)
-  library(balance) # for sbp.fromHclust()
-  
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
-  print(paste0("starting sim ", b))
   
-  # nlam = 50
-  
-  # re-sample new theta?
-  # indices.theta = sample(1:(p - 1), 5, replace = FALSE)
-  
-  # simulate some data #
+  # simulate training data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
   V = exp(W)
   rowsumsV = apply(V, 1, sum)
   X = V / rowsumsV
-  sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
-  U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
-  Xb = computeBalances(X, U = U) # ilr(X)
-  # get theta
-  theta = rep(0, p - 1)
-  if(is.null(values.theta)){
-    theta[indices.theta] = 1
-  } else{
-    if(length(indices.theta) == length(values.theta)){
-      stop("indices.theta does not have same length as values.theta")
-    }
-    theta[indices.theta] = values.theta
-  }
-  theta = as.matrix(theta)
-  # get beta
-  beta = getBeta(theta, U = U)
+  Z = log(X)
   # generate Y
-  Y = Xb %*% theta + epsilon
+  Y = Z %*% beta + epsilon
   
   # apply compositional lasso
   complasso = cv.func(
@@ -179,29 +152,9 @@ sims = foreach(
     S.hat.slr[l] = sum(non0.betahat)
   }
   
-  # apply oracle
-  oracle = cvILR(y = Y, X = X, sbp = sbp, U = U, nlam = nlam, nfolds = K,
-                 intercept = intercept)
-  
-  # calculate TPR for oracle
-  nlam.or = length(oracle$lambda)
-  TPR.or = rep(NA, nlam.or)
-  S.hat.or = rep(NA, nlam.or)
-  for(l in 1:nlam.or){
-    a0 = oracle$int[l]
-    thetahat = oracle$bet[, l]
-    betahat = getBeta(thetahat, U = U)
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR.or[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.or[l] = sum(non0.betahat)
-  }
-  
-  list(X = X, Xb = Xb, Y = Y, theta = theta, beta = beta, U = U, 
+  list(X = X, Y = Y,
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
-       fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr, 
-       fit.or = oracle, TPR.or = TPR.or, S.hat.or = S.hat.or)
+       fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
 }
 
 
@@ -217,11 +170,6 @@ fit.slr.list = list()
 TPR.slr.mat = matrix(NA, nlam, numSims)
 S.hat.slr.mat = matrix(NA, nlam, numSims)
 lambda.slr.mat = matrix(NA, nlam, numSims)
-# oracle
-fit.or.list = list()
-TPR.or.mat = matrix(NA, nlam, numSims)
-S.hat.or.mat = matrix(NA, nlam, numSims)
-lambda.or.mat = matrix(NA, nlam, numSims)
 for(i in 1:numSims){
   sim.tmp = sims[[i]]
   # cl
@@ -234,11 +182,6 @@ for(i in 1:numSims){
   TPR.slr.mat[, i] = sim.tmp$TPR.slr
   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-  # oracle
-  fit.or.list[[i]] = sim.tmp$fit.or
-  TPR.or.mat[, i] = sim.tmp$TPR.or
-  S.hat.or.mat[, i] = sim.tmp$S.hat.or
-  lambda.or.mat[, i] = sim.tmp$fit.or$lambda
 }
 
 
@@ -250,9 +193,7 @@ lambda.df = data.frame(
   complasso = exp(seq(max(log(lambda.cl.mat)), 
                       min(log(lambda.cl.mat)), length.out = nlam)),
   slr = exp(seq(max(log(lambda.slr.mat)), 
-                min(log(lambda.slr.mat)),length.out = nlam)),
-  oracle = exp(seq(max(log(lambda.or.mat)), 
-                   min(log(lambda.or.mat)),length.out = nlam))
+                min(log(lambda.slr.mat)),length.out = nlam))
 )
 
 registerDoRNG(rng.seed)
@@ -265,21 +206,13 @@ sims3 = foreach(
   library(glmnet)
   library(compositions)
   library(stats)
-  library(balance) # for sbp.fromHclust()
-  
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
-  print(paste0("starting sim ", b))
   
-  # re-sample new theta?
-  # indices.theta = sample(1:(p - 1), 5, replace = FALSE)
+  print(paste0("starting sim ", b))
   
   # get simulated data #
   X = sims[[b]]$X
-  U = sims[[b]]$U
-  Xb = sims[[b]]$Xb
-  theta = sims[[b]]$theta
-  beta = sims[[b]]$beta
   Y = sims[[b]]$Y
   
   # apply compositional lasso
@@ -320,30 +253,9 @@ sims3 = foreach(
     S.hat.slr[l] = sum(non0.betahat)
   }
   
-  # apply oracle
-  oracle = cvILR(
-    y = Y, X = X, sbp = sbp, U = U, lambda = lambda.df$oracle, nfolds = K,
-    intercept = intercept)
-  
-  # calculate TPR for oracle
-  nlam.or = length(oracle$lambda)
-  TPR.or = rep(NA, nlam.or)
-  S.hat.or = rep(NA, nlam.or)
-  for(l in 1:nlam.or){
-    a0 = oracle$int[l]
-    thetahat = oracle$bet[, l]
-    betahat = getBeta(thetahat, U = U)
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR.or[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.or[l] = sum(non0.betahat)
-  }
-  
-  list(X = X, Xb = Xb, Y = Y, theta = theta, beta = beta, U = U, 
+  list(X = X, Y = Y, 
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
-       fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr, 
-       fit.or = oracle, TPR.or = TPR.or, S.hat.or = S.hat.or)
+       fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
 }
 
 # organize the simulation results to have more easily-accessable matrices #
@@ -357,11 +269,6 @@ fit.slr.list = list()
 TPR.slr.mat = matrix(NA, nlam, numSims)
 S.hat.slr.mat = matrix(NA, nlam, numSims)
 lambda.slr.mat = matrix(NA, nlam, numSims)
-# oracle
-fit.or.list = list()
-TPR.or.mat = matrix(NA, nlam, numSims)
-S.hat.or.mat = matrix(NA, nlam, numSims)
-lambda.or.mat = matrix(NA, nlam, numSims)
 for(i in 1:numSims){
   sim.tmp = sims3[[i]]
   # cl
@@ -374,11 +281,6 @@ for(i in 1:numSims){
   TPR.slr.mat[, i] = sim.tmp$TPR.slr
   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-  # oracle
-  fit.or.list[[i]] = sim.tmp$fit.or
-  TPR.or.mat[, i] = sim.tmp$TPR.or
-  S.hat.or.mat[, i] = sim.tmp$S.hat.or
-  lambda.or.mat[, i] = sim.tmp$fit.or$lambda
 }
 
 
@@ -411,9 +313,10 @@ or.gg.complete$Type = "Oracle"
 # ggplot
 gg.complete = rbind(slr.gg.complete, cl.gg.complete, or.gg.complete)
 gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR", "Oracle"))
-plt = ggplot(gg.complete, aes(x = S.hat, y = TPR)) + 
+ggplot(gg.complete, aes(x = S.hat, y = TPR)) + 
   geom_line(aes(color = Type), size = 1) +
   theme_bw()
+
 
 # save results #################################################################
 

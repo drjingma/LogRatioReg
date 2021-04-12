@@ -82,8 +82,8 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
 # using a hierarchical tree, compute the balances for X
 computeBalances = function(X, btree = NULL, sbp = NULL, U = NULL){
   # checks
-  if(class(X) != "matrix"){
-    if(class(X) == "numeric"){
+  if(!("matrix" %in% class(X))){
+    if("numeric" %in% class(X)){
       X = matrix(X, ncol = length(X))
     } else{
       warning("computeBalances: X is neither of class matrix nor numeric.")

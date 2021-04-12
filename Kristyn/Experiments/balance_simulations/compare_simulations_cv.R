@@ -2,7 +2,7 @@ library(ggplot2)
 library(reshape2)
 library(ggpubr)
 
-output_dir = "Kristyn/Experiments/slr_simulations/output"
+output_dir = "Kristyn/Experiments/balance_simulations/output"
 rng.seed = 123
 n = 100
 p = 200

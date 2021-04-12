@@ -2,7 +2,7 @@
 # elements = 0) determines the sparsity of beta
 
 getwd()
-output_dir = "Kristyn/Experiments/slr_simulations/output"
+output_dir = "Kristyn/Experiments/balance_simulations/output"
 
 # libraries
 library(mvtnorm)

@@ -6,10 +6,10 @@ output_dir = "Kristyn/Experiments/balance_simulations/output"
 rng.seed = 123
 n = 100
 p = 200
-rho = 0 # 0.2, 0.5
-# indices.theta = 1
+rho = 0.2 # 0.2, 0.5
+indices.theta = 1
 # indices.theta = p - 1
-indices.theta = c(159, 179, 14, 195, 170)
+# indices.theta = c(159, 179, 14, 195, 170)
 intercept = TRUE
 
 ################################################################################
@@ -87,6 +87,31 @@ or.summaries = readRDS(paste0(
   ".rds"))
 print(or.summaries[, c("mean", "se")])
 
+################################################################################
+# Selbal #
+################################################################################
+selbal.sims = readRDS(paste0(
+  output_dir,
+  "/selbal_cv_sims", 
+  "_PBA", 
+  "_theta_", paste(indices.theta, collapse = "_"),
+  "_dim", n, "x", p, 
+  "_rho", rho, 
+  "_int", intercept,
+  "_seed", rng.seed,
+  ".rds"))
+selbal.summaries = readRDS(paste0(
+  output_dir,
+  "/selbal_cv_summaries", 
+  "_PBA", 
+  "_theta_", paste(indices.theta, collapse = "_"),
+  "_dim", n, "x", p, 
+  "_rho", rho, 
+  "_int", intercept,
+  "_seed", rng.seed,
+  ".rds"))
+print(selbal.summaries[, c("mean", "se")])
+
 
 # plot
 
@@ -96,11 +121,17 @@ slr.sims.gg = melt(data.frame(t(slr.sims)))
 slr.sims.gg$type = "SLR"
 or.sims.gg = melt(data.frame(t(or.sims)))
 or.sims.gg$type = "Oracle"
-data.gg = rbind(cl.sims.gg, slr.sims.gg, or.sims.gg)
-data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "Oracle"))
+sel.sims.gg = melt(data.frame(t(selbal.sims)))
+sel.sims.gg$type = "selbal"
+data.gg = rbind(cl.sims.gg, slr.sims.gg, or.sims.gg, sel.sims.gg)
+data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "Oracle", "selbal"))
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + geom_boxplot() + 
-  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, color = "red") +
+  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
+               geom = "errorbar", width = 0.75, 
+               linetype = "dashed") +
+  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
+               color = "red") +
   theme_bw() + 
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank())

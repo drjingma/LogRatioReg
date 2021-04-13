@@ -71,9 +71,11 @@ numSims = 20
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
-# indices.theta = 1
-# indices.theta = p - 1
+# indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
+# indices.theta = c(159, 179, 14, 195, 170) # the randomly chosen, above
+# indices.theta = 1 # saturated -- all 200 taxa
+# indices.theta = p - 1 # sparse -- only 2 taxa
+indices.theta = c(197, 198, 199) # log ratios with 2 taxa each
 values.theta = NULL
 # values.theta = rep(5, length(indices.theta))
 

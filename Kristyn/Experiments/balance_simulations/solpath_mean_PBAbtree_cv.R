@@ -260,7 +260,9 @@ for(i in 1:numSims){
 
 
 ################################################################################
-# using the same lambda sequence in each method
+# using the same lambda sequence in each method ################################
+################################################################################
+
 nlam = 200
 lambda.df = data.frame(
   complasso = exp(seq(max(log(lambda.cl.mat)), 
@@ -362,88 +364,92 @@ sims3 = foreach(
        fit.or = oracle, TPR.or = TPR.or, S.hat.or = S.hat.or)
 }
 
+################################################################################
+# plot #########################################################################
+################################################################################
 
+# # organize the simulation results to have more easily-accessable matrices ######
+# # cl
+# fit.cl.list = list()
+# TPR.cl.mat = matrix(NA, nlam, numSims)
+# S.hat.cl.mat = matrix(NA, nlam, numSims)
+# lambda.cl.mat = matrix(NA, nlam, numSims)
+# # slr
+# fit.slr.list = list()
+# TPR.slr.mat = matrix(NA, nlam, numSims)
+# S.hat.slr.mat = matrix(NA, nlam, numSims)
+# lambda.slr.mat = matrix(NA, nlam, numSims)
+# # oracle
+# fit.or.list = list()
+# TPR.or.mat = matrix(NA, nlam, numSims)
+# S.hat.or.mat = matrix(NA, nlam, numSims)
+# lambda.or.mat = matrix(NA, nlam, numSims)
+# for(i in 1:numSims){
+#   sim.tmp = sims3[[i]]
+#   # cl
+#   fit.cl.list[[i]] = sim.tmp$fit.cl
+#   TPR.cl.mat[, i] = sim.tmp$TPR.cl
+#   S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
+#   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
+#   # slr
+#   fit.slr.list[[i]] = sim.tmp$fit.slr
+#   TPR.slr.mat[, i] = sim.tmp$TPR.slr
+#   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
+#   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
+#   # oracle
+#   fit.or.list[[i]] = sim.tmp$fit.or
+#   TPR.or.mat[, i] = sim.tmp$TPR.or
+#   S.hat.or.mat[, i] = sim.tmp$S.hat.or
+#   lambda.or.mat[, i] = sim.tmp$fit.or$lambda
+# }
+# 
+# 
+# 
+# # average TPR and S.hat ########################################################
+# 
+# dim(S.hat.cl.mat)
+# S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
+# TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
+# S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
+# TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
+# S.hat.or.avg = apply(S.hat.or.mat, 1, mean, na.rm = TRUE)
+# TPR.or.avg = apply(TPR.or.mat, 1, mean, na.rm = TRUE)
+# 
+# # complasso stuff
+# cl.gg.complete = data.frame(
+#   "S.hat" = S.hat.cl.avg,
+#   "TPR" = TPR.cl.avg)
+# cl.gg.complete$Type = "CompLasso"
+# # slr stuff
+# slr.gg.complete = data.frame(
+#   "S.hat" = S.hat.slr.avg,
+#   "TPR" = TPR.slr.avg)
+# slr.gg.complete$Type = "SLR"
+# # or.stuff
+# or.gg.complete = data.frame(
+#   "S.hat" = S.hat.or.avg,
+#   "TPR" = TPR.or.avg)
+# or.gg.complete$Type = "Oracle"
+# # ggplot
+# gg.complete = rbind(slr.gg.complete, cl.gg.complete, or.gg.complete)
+# gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR", "Oracle"))
+# plt = ggplot(gg.complete, aes(x = S.hat, y = TPR)) +
+#   geom_line(aes(color = Type), size = 1) +
+#   theme_bw()
+# plt
 
-# organize the simulation results to have more easily-accessable matrices ######
-# cl
-fit.cl.list = list()
-TPR.cl.mat = matrix(NA, nlam, numSims)
-S.hat.cl.mat = matrix(NA, nlam, numSims)
-lambda.cl.mat = matrix(NA, nlam, numSims)
-# slr
-fit.slr.list = list()
-TPR.slr.mat = matrix(NA, nlam, numSims)
-S.hat.slr.mat = matrix(NA, nlam, numSims)
-lambda.slr.mat = matrix(NA, nlam, numSims)
-# oracle
-fit.or.list = list()
-TPR.or.mat = matrix(NA, nlam, numSims)
-S.hat.or.mat = matrix(NA, nlam, numSims)
-lambda.or.mat = matrix(NA, nlam, numSims)
-for(i in 1:numSims){
-  sim.tmp = sims3[[i]]
-  # cl
-  fit.cl.list[[i]] = sim.tmp$fit.cl
-  TPR.cl.mat[, i] = sim.tmp$TPR.cl
-  S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
-  lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
-  # slr
-  fit.slr.list[[i]] = sim.tmp$fit.slr
-  TPR.slr.mat[, i] = sim.tmp$TPR.slr
-  S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
-  lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-  # oracle
-  fit.or.list[[i]] = sim.tmp$fit.or
-  TPR.or.mat[, i] = sim.tmp$TPR.or
-  S.hat.or.mat[, i] = sim.tmp$S.hat.or
-  lambda.or.mat[, i] = sim.tmp$fit.or$lambda
-}
-
-
-
-# average TPR and S.hat ########################################################
-
-dim(S.hat.cl.mat)
-S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
-TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
-S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
-TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
-S.hat.or.avg = apply(S.hat.or.mat, 1, mean, na.rm = TRUE)
-TPR.or.avg = apply(TPR.or.mat, 1, mean, na.rm = TRUE)
-
-# complasso stuff
-cl.gg.complete = data.frame(
-  "S.hat" = S.hat.cl.avg,
-  "TPR" = TPR.cl.avg)
-cl.gg.complete$Type = "CompLasso"
-# slr stuff
-slr.gg.complete = data.frame(
-  "S.hat" = S.hat.slr.avg,
-  "TPR" = TPR.slr.avg)
-slr.gg.complete$Type = "SLR"
-# or.stuff
-or.gg.complete = data.frame(
-  "S.hat" = S.hat.or.avg,
-  "TPR" = TPR.or.avg)
-or.gg.complete$Type = "Oracle"
-# ggplot
-gg.complete = rbind(slr.gg.complete, cl.gg.complete, or.gg.complete)
-gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR", "Oracle"))
-plt = ggplot(gg.complete, aes(x = S.hat, y = TPR)) +
-  geom_line(aes(color = Type), size = 1) +
-  theme_bw()
-plt
-
+################################################################################
 # save results #################################################################
+################################################################################
 
-# saveRDS(
-#   sims3,
-#   file = paste0(output_dir,
-#                 "/sims_solpaths",
-#                 "_theta_", paste(indices.theta, collapse = "_"),
-#                 "_dim", n, "x", p,
-#                 "_rho", rho,
-#                 "_int", intercept,
-#                 "_seed", rng.seed,
-#                 "_numSims", numSims,
-#                 ".rds"))
+saveRDS(
+  sims3,
+  file = paste0(output_dir,
+                "/sims_solpaths",
+                "_theta_", paste(indices.theta, collapse = "_"),
+                "_dim", n, "x", p,
+                "_rho", rho,
+                "_int", intercept,
+                "_seed", rng.seed,
+                "_numSims", numSims,
+                ".rds"))

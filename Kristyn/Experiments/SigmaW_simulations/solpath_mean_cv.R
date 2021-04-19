@@ -100,7 +100,8 @@ U = getU(btree = SigmaWtree) # U
 # nlam = 200
 # sims3 = readRDS(paste0(output_dir,
 #                        "/sims_solpaths",
-#                        "_theta_", paste(indices.theta, collapse = "_"),
+#                        "_theta_random", 
+#                        # "_theta_", paste(indices.theta, collapse = "_"),
 #                        "_dim", n, "x", p,
 #                        "_rho", rho,
 #                        "_int", intercept,

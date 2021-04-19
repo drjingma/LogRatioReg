@@ -22,7 +22,7 @@ intercept = TRUE
 complasso.sims = readRDS(paste0(
   output_dir,
   "/complasso_cv_sims", 
-  "_PBA", 
+  "_SigmaW", 
   "_theta_", paste(indices.theta, collapse = "_"),
   "_dim", n, "x", p, 
   "_rho", rho, 
@@ -32,7 +32,7 @@ complasso.sims = readRDS(paste0(
 complasso.summaries = readRDS(paste0(
   output_dir,
   "/complasso_cv_summaries", 
-  "_PBA", 
+  "_SigmaW", 
   "_theta_", paste(indices.theta, collapse = "_"),
   "_dim", n, "x", p, 
   "_rho", rho, 
@@ -47,7 +47,7 @@ print(complasso.summaries[, c("mean", "se")])
 slr.sims = readRDS(paste0(
   output_dir,
   "/slr_cv_sims", 
-  "_PBA", 
+  "_SigmaW", 
   "_theta_", paste(indices.theta, collapse = "_"),
   "_dim", n, "x", p, 
   "_rho", rho, 
@@ -57,7 +57,7 @@ slr.sims = readRDS(paste0(
 slr.summaries = readRDS(paste0(
   output_dir,
   "/slr_cv_summaries", 
-  "_PBA", 
+  "_SigmaW", 
   "_theta_", paste(indices.theta, collapse = "_"),
   "_dim", n, "x", p, 
   "_rho", rho, 
@@ -71,8 +71,8 @@ print(slr.summaries[, c("mean", "se")])
 ################################################################################
 or.sims = readRDS(paste0(
   output_dir,
-  "/oracle_cv_sims", 
-  "_PBA", 
+  "/oracle_cv_sims",
+  "_SigmaW", 
   "_theta_", paste(indices.theta, collapse = "_"),
   "_dim", n, "x", p, 
   "_rho", rho, 
@@ -82,7 +82,7 @@ or.sims = readRDS(paste0(
 or.summaries = readRDS(paste0(
   output_dir,
   "/oracle_cv_summaries", 
-  "_PBA", 
+  "_SigmaW", 
   "_theta_", paste(indices.theta, collapse = "_"),
   "_dim", n, "x", p, 
   "_rho", rho, 
@@ -94,27 +94,27 @@ print(or.summaries[, c("mean", "se")])
 ################################################################################
 # Selbal #
 ################################################################################
-selbal.sims = readRDS(paste0(
-  output_dir,
-  "/selbal_cv_sims", 
-  "_PBA", 
-  "_theta_", paste(indices.theta, collapse = "_"),
-  "_dim", n, "x", p, 
-  "_rho", rho, 
-  "_int", intercept,
-  "_seed", rng.seed,
-  ".rds"))
-selbal.summaries = readRDS(paste0(
-  output_dir,
-  "/selbal_cv_summaries", 
-  "_PBA", 
-  "_theta_", paste(indices.theta, collapse = "_"),
-  "_dim", n, "x", p, 
-  "_rho", rho, 
-  "_int", intercept,
-  "_seed", rng.seed,
-  ".rds"))
-print(selbal.summaries[, c("mean", "se")])
+# selbal.sims = readRDS(paste0(
+#   output_dir,
+#   "/selbal_cv_sims", 
+#   "_PBA", 
+#   "_theta_", paste(indices.theta, collapse = "_"),
+#   "_dim", n, "x", p, 
+#   "_rho", rho, 
+#   "_int", intercept,
+#   "_seed", rng.seed,
+#   ".rds"))
+# selbal.summaries = readRDS(paste0(
+#   output_dir,
+#   "/selbal_cv_summaries", 
+#   "_PBA", 
+#   "_theta_", paste(indices.theta, collapse = "_"),
+#   "_dim", n, "x", p, 
+#   "_rho", rho, 
+#   "_int", intercept,
+#   "_seed", rng.seed,
+#   ".rds"))
+# print(selbal.summaries[, c("mean", "se")])
 
 
 # plot
@@ -125,10 +125,14 @@ slr.sims.gg = melt(data.frame(t(slr.sims)))
 slr.sims.gg$type = "SLR"
 or.sims.gg = melt(data.frame(t(or.sims)))
 or.sims.gg$type = "Oracle"
-sel.sims.gg = melt(data.frame(t(selbal.sims)))
-sel.sims.gg$type = "selbal"
-data.gg = rbind(cl.sims.gg, slr.sims.gg, or.sims.gg, sel.sims.gg)
-data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "Oracle", "selbal"))
+# sel.sims.gg = melt(data.frame(t(selbal.sims)))
+# sel.sims.gg$type = "selbal"
+# data.gg = rbind(cl.sims.gg, slr.sims.gg, or.sims.gg, sel.sims.gg)
+# data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "Oracle", "selbal"))
+
+data.gg = rbind(cl.sims.gg, slr.sims.gg, or.sims.gg)
+data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "Oracle"))
+
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + geom_boxplot() + 
   stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
@@ -169,4 +173,3 @@ plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) +
         legend.position = "none")
 # plt.PEte
 ggarrange(plt.PEtr, plt.PEte)
-

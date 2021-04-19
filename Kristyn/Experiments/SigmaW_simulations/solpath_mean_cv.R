@@ -1,9 +1,8 @@
-# last updated: 04/06/2021
-# simulate a data set, fit Complasso and SLR, and plot the solution path
-# tried randomly selecting theta_j to be in active set, half of them negative
+# last updated: 04/19/2021
+# compare different methods from SigmaW tree simulations, using solution path
 
 getwd()
-output_dir = "Kristyn/Experiments/balance_simulations/output"
+output_dir = "Kristyn/Experiments/SigmaW_simulations/output"
 
 # libraries
 library(mvtnorm)
@@ -75,7 +74,7 @@ rho = 0.2 # 0.2, 0.5
 # indices.theta = c(159, 179, 14, 195, 170) # the randomly chosen, above
 # indices.theta = 1 # saturated -- all 200 taxa
 # indices.theta = p - 1 # sparse -- only 2 taxa
-indices.theta = c(197, 198, 199) # log ratios with 2 taxa each
+# indices.theta = c(197, 198, 199) # log ratios with 2 taxa each
 values.theta = NULL
 # values.theta = rep(5, length(indices.theta))
 
@@ -91,6 +90,9 @@ for(i in 1:p){
     SigmaW[i, j] = rho^abs(i - j)
   }
 }
+
+SigmaWtree = hclust(as.dist(1 - SigmaW), method = "complete")
+U = getU(btree = SigmaWtree) # U
 
 ################################################################################
 # if simulations are saved, read them in
@@ -138,16 +140,17 @@ sims = foreach(
   V = exp(W)
   rowsumsV = apply(V, 1, sum)
   X = V / rowsumsV
-  sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
-  U = getU(sbp = sbp) # U
   epsilon = rnorm(n, 0, sigma_eps)
   Xb = computeBalances(X, U = U) # ilr(X)
   # get theta
+  numTheta = rpois(1, 5) + 1
+  indices.theta = sample(1:(p - 1), numTheta, replace = FALSE) # choose bt 1 and p - 1
+  values.theta = runif(numTheta, 0.5, 5)
   theta = rep(0, p - 1)
   if(is.null(values.theta)){
     theta[indices.theta] = 1
   } else{
-    if(length(indices.theta) == length(values.theta)){
+    if(length(indices.theta) != length(values.theta)){
       stop("indices.theta does not have same length as values.theta")
     }
     theta[indices.theta] = values.theta
@@ -196,7 +199,7 @@ sims = foreach(
   }
   
   # apply oracle
-  oracle = cvILR(y = Y, X = X, sbp = sbp, U = U, nlam = nlam, nfolds = K,
+  oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, nfolds = K,
                  intercept = intercept)
   
   # calculate TPR for oracle
@@ -214,7 +217,7 @@ sims = foreach(
     S.hat.or[l] = sum(non0.betahat)
   }
   
-  list(X = X, Xb = Xb, Y = Y, theta = theta, beta = beta, U = U, 
+  list(X = X, Xb = Xb, Y = Y, theta = theta, beta = beta, 
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
        fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr, 
        fit.or = oracle, TPR.or = TPR.or, S.hat.or = S.hat.or)
@@ -294,7 +297,6 @@ sims3 = foreach(
   
   # get simulated data #
   X = sims[[b]]$X
-  U = sims[[b]]$U
   Xb = sims[[b]]$Xb
   theta = sims[[b]]$theta
   beta = sims[[b]]$beta
@@ -340,8 +342,8 @@ sims3 = foreach(
   
   # apply oracle
   oracle = cvILR(
-    y = Y, X = X, sbp = sbp, U = U, lambda = lambda.df$oracle, nfolds = K,
-    intercept = intercept)
+    y = Y, X = X, btree = SigmaWtree, U = U, lambda = lambda.df$oracle, 
+    nfolds = K, intercept = intercept)
   
   # calculate TPR for oracle
   nlam.or = length(oracle$lambda)
@@ -446,7 +448,8 @@ saveRDS(
   sims3,
   file = paste0(output_dir,
                 "/sims_solpaths",
-                "_theta_", paste(indices.theta, collapse = "_"),
+                "_theta_random", 
+                # "_theta_", paste(indices.theta, collapse = "_"),
                 "_dim", n, "x", p,
                 "_rho", rho,
                 "_int", intercept,

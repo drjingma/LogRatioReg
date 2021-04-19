@@ -104,7 +104,7 @@ data.sims = foreach(
   if(is.null(values.theta)){
     theta[indices.theta] = 1
   } else{
-    if(length(indices.theta) == length(values.theta)){
+    if(length(indices.theta) != length(values.theta)){
       stop("indices.theta does not have same length as values.theta")
     }
     theta[indices.theta] = values.theta

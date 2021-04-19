@@ -1,8 +1,11 @@
+# last updated: 04/19/2021
+# compare different methods from SigmaW tree simulations
+
 library(ggplot2)
 library(reshape2)
 library(ggpubr)
 
-output_dir = "Kristyn/Experiments/balance_simulations/output"
+output_dir = "Kristyn/Experiments/SigmaW_simulations/output"
 rng.seed = 123
 n = 100
 p = 200

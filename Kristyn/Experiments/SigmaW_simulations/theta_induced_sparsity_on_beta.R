@@ -1,8 +1,9 @@
+# last updated: 04/19/2021
 # understand how the index of the nonzero element of theta (where all other
 # elements = 0) determines the sparsity of beta
 
 getwd()
-output_dir = "Kristyn/Experiments/balance_simulations/output"
+output_dir = "Kristyn/Experiments/SigmaW_simulations/output"
 
 # libraries
 library(mvtnorm)
@@ -60,6 +61,8 @@ for(i in 1:p){
   }
 }
 
+SigmaWtree = hclust(as.dist(1 - SigmaW), method = "complete")
+
 ################################################################################
 # Simulations #
 ################################################################################
@@ -73,13 +76,12 @@ W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
 V = exp(W)
 rowsumsV = apply(V, 1, sum)
 X = V / rowsumsV
-sbp = sbp.fromPBA(X) # contrasts matrix, a.k.a. sbp matrix
-U = getU(sbp = sbp) # U
+U = getU(btree = SigmaWtree) # U
 epsilon = rnorm(n, 0, sigma_eps)
 Xb = log(X) %*% U # ilr(X)
 # each theta has one nonzero element
 theta_mat = diag(p - 1)
-beta_mat = apply(theta_mat, 2, function(x) getBeta(x, sbp = sbp))
+beta_mat = apply(theta_mat, 2, function(x) getBeta(x, btree = SigmaWtree))
 non0beta_vec = apply(beta_mat, 2, function(x) sum(x != 0))
 
 library(ggplot2)

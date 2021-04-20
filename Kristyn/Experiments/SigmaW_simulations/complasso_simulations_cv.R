@@ -15,7 +15,7 @@ library(future)
 library(doFuture)
 library(parallel)
 registerDoFuture()
-nworkers = detectCores()
+nworkers = detectCores() - 2
 plan(multisession, workers = nworkers)
 
 library(rngtools)
@@ -44,11 +44,11 @@ K = 5
 numSims = 100
 n = 100
 p = 200
-rho = 0.2 # 0.2, 0.5
+rho = 0 # 0.2, 0.5
 # indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
 # indices.theta = c(159, 179, 14, 195, 170) # the randomly chosen, above
-indices.theta = 1 # saturated -- all 200 taxa
-# indices.theta = p - 1 # sparse -- only 2 taxa
+# indices.theta = 1 # saturated -- all 200 taxa
+indices.theta = p - 1 # sparse -- only 2 taxa
 # indices.theta = c(197, 198, 199) # log ratios with 2 taxa each
 values.theta = NULL
 sigma_eps = 0.5
@@ -167,7 +167,8 @@ evals = foreach(
   # return
   c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, sum(non0.beta))
 }
-rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "betaSparsity")
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", 
+                    "betaSparsity")
 
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)

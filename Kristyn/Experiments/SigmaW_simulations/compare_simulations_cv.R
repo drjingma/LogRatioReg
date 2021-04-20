@@ -10,10 +10,10 @@ rng.seed = 123
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-# indices.theta = 1
+indices.theta = 1
 # indices.theta = p - 1
 # indices.theta = c(159, 179, 14, 195, 170)
-indices.theta = c(197, 198, 199)
+# indices.theta = c(197, 198, 199)
 intercept = TRUE
 
 ################################################################################

@@ -40,9 +40,9 @@ fitSLR2 <- function(
   }
   
   # SVD of (I:-A)
-  if (is.null(Q)) Q <- svdA(A)
+  if (is.null(Q)) Q <- rare:::svdA(A)
   # SVD of X
-  E <- svdX(Z_use, rho)
+  E <- rare:::svdX(Z_use, rho)
   # Two implications up to this point: 1. Q and E will be stored in memory and be
   # passed in the solver as arguments (which can be problematic when n or p is large).
   # 2. ADMM iterates at a fixed rho. If varying rho is adopted, E should be updated as well.
@@ -68,7 +68,7 @@ fitSLR2 <- function(
       theta[[i]] <- as.matrix(ret$beta)
     } else {
       # general case when 0 < alpha < 1
-      ret <- our_solver(Z_use, as.matrix(y_use), Q, E, lambda, alpha[i], rho, 
+      ret <- rare:::our_solver(Z_use, as.matrix(y_use), Q, E, lambda, alpha[i], rho, 
                         eps1, eps2, maxite)
       beta[[i]] <- ret$beta
       theta[[i]] <- ret$gamma # gamma is actually theta
@@ -126,7 +126,7 @@ cvSLR2 <- function(
   # Fit based on folds and compute error metric
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
-    fit_cv <- rarefit(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
+    fit_cv <- fitSLR2(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
                       intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha, ...)
     pred_te <- lapply(seq(nalpha), function(k) {
       if (fitObj$intercept) {

@@ -18,6 +18,8 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
       } else{
         val = abs(cor(Zjk_demeaned, y_demeaned))
       }
+      # if(is.na(val)) stop("getSupervisedTree() : correlation = 0")
+      if(is.na(val)) val = 0 #######################################################################################
       cormat[j, k] = val
       cormat[k, j] = val
     }

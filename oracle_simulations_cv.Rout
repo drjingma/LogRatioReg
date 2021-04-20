@@ -35,7 +35,7 @@ Type 'q()' to quit R.
 > library(doFuture)
 > library(parallel)
 > registerDoFuture()
-> nworkers = detectCores()
+> nworkers = detectCores() - 2
 > plan(multisession, workers = nworkers)
 > 
 > library(rngtools)
@@ -114,11 +114,11 @@ The following object is masked from ‘package:base’:
 > numSims = 3
 > n = 100
 > p = 200
-> rho = 0.2 # 0.2, 0.5
+> rho = 0 # 0.2, 0.5
 > # indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
 > # indices.theta = c(159, 179, 14, 195, 170) # the randomly chosen, above
-> indices.theta = 1 # saturated -- all 200 taxa
-> # indices.theta = p - 1 # sparse -- only 2 taxa
+> # indices.theta = 1 # saturated -- all 200 taxa
+> indices.theta = p - 1 # sparse -- only 2 taxa
 > # indices.theta = c(197, 198, 199) # log ratios with 2 taxa each
 > values.theta = NULL
 > sigma_eps = 0.5
@@ -315,16 +315,16 @@ The following object is masked from ‘package:base’:
 > eval.ses = eval.sds / sqrt(numSims)
 > evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 > evals.df
-                     mean          sd          se
-PEtr           0.21808971 0.023690087 0.013677478
-PEte           0.26912148 0.023545940 0.013594255
-EA1            0.49590895 0.249696436 0.144162305
-EA2            0.08991612 0.008249896 0.004763080
-EAInfty        0.03974298 0.014797401 0.008543283
-FP             0.00000000 0.000000000 0.000000000
-FN             0.00000000 0.000000000 0.000000000
-TPR            1.00000000 0.000000000 0.000000000
-betaSparsity 200.00000000 0.000000000 0.000000000
+                     mean           sd           se
+PEtr           0.23392716   0.05188056  0.029953257
+PEte           0.27165230   0.01643136  0.009486651
+EA1            0.34884376   0.13819769  0.079788475
+EA2            0.12693761   0.00794969  0.004589756
+EAInfty        0.07615887   0.01744136  0.010069774
+FP           120.00000000 104.73299385 60.467622190
+FN             0.00000000   0.00000000  0.000000000
+TPR            1.00000000   0.00000000  0.000000000
+betaSparsity   2.00000000   0.00000000  0.000000000
 > 
 > saveRDS(
 +   evals, 
@@ -351,4 +351,4 @@ betaSparsity 200.00000000 0.000000000 0.000000000
 > 
 > proc.time()
    user  system elapsed 
-  8.447   1.400  53.329 
+  7.023   1.388  43.425 

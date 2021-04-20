@@ -35,7 +35,7 @@ Type 'q()' to quit R.
 > library(doFuture)
 > library(parallel)
 > registerDoFuture()
-> nworkers = detectCores()
+> nworkers = detectCores() - 2
 > plan(multisession, workers = nworkers)
 > 
 > library(rngtools)
@@ -114,11 +114,11 @@ The following object is masked from ‘package:base’:
 > numSims = 100
 > n = 100
 > p = 200
-> rho = 0.2 # 0.2, 0.5
+> rho = 0 # 0.2, 0.5
 > # indices.theta = sample(1:(p - 1), 5, replace = FALSE) # choose bt 1 and p - 1
 > # indices.theta = c(159, 179, 14, 195, 170) # the randomly chosen, above
-> indices.theta = 1 # saturated -- all 200 taxa
-> # indices.theta = p - 1 # sparse -- only 2 taxa
+> # indices.theta = 1 # saturated -- all 200 taxa
+> indices.theta = p - 1 # sparse -- only 2 taxa
 > # indices.theta = c(197, 198, 199) # log ratios with 2 taxa each
 > values.theta = NULL
 > sigma_eps = 0.5
@@ -1298,236 +1298,6 @@ The following object is masked from ‘package:base’:
 
     startsWith
 
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
 > rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "betaSparsity")
 > 
 > eval.means = apply(evals, 1, mean)
@@ -1536,15 +1306,15 @@ The following object is masked from ‘package:base’:
 > evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 > evals.df
                     mean          sd          se
-PEtr           0.2680811  0.10876546 0.010876546
-PEte           1.1651273  0.18775429 0.018775429
-EA1            8.6263164  0.30777533 0.030777533
-EA2            0.8454573  0.03580440 0.003580440
-EAInfty        0.1989172  0.02132383 0.002132383
-FP             0.0000000  0.00000000 0.000000000
-FN            99.5500000 46.79535827 4.679535827
-TPR            0.5022500  0.23397679 0.023397679
-betaSparsity 200.0000000  0.00000000 0.000000000
+PEtr          0.20575024  0.05217529 0.005217529
+PEte          0.29262139  0.04845923 0.004845923
+EA1           0.58237656  0.42770854 0.042770854
+EA2           0.17007174  0.05640755 0.005640755
+EAInfty       0.09418789  0.03122371 0.003122371
+FP           30.10000000 37.75612868 3.775612868
+FN            0.00000000  0.00000000 0.000000000
+TPR           1.00000000  0.00000000 0.000000000
+betaSparsity  2.00000000  0.00000000 0.000000000
 > 
 > saveRDS(
 +   evals, 
@@ -1571,4 +1341,4 @@ betaSparsity 200.0000000  0.00000000 0.000000000
 > 
 > proc.time()
    user  system elapsed 
- 11.028   1.679 231.082 
+  8.586   1.631 139.309 

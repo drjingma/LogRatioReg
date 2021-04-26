@@ -158,14 +158,14 @@ evals = foreach(
   betahat = u.selbal %*% as.matrix(thetahat)
   
   # evaluate model #
+  
   # 1. prediction error #
   # 1a. on training set #
   # get prediction error on training set
   # Yhat.train = a0 + computeBalances(X, btree) %*% thetahat
-  Yhat.train = predict.glm(selbal.fit$glm, 
-                           newdata = data.frame(X), 
+  Yhat.train = predict.glm(selbal.fit$glm, newdata = data.frame(X), 
                            type = "response")
-  PE.train = crossprod(Y - Yhat.train) / n
+  PE.train = as.vector(crossprod(Y - Yhat.train) / n)
   # 1b. on test set #
   # get prediction error on test set
   # Yhat.test = a0 + computeBalances(X.test, btree) %*% thetahat
@@ -173,30 +173,55 @@ evals = foreach(
   colnames(X.test) = paste("V", 1:ncol(X), sep = "")
   Yhat.test = predict.glm(selbal.fit$glm, newdata = data.frame(X.test), 
                           type = "response")
-  PE.test = crossprod(Y.test - Yhat.test) / n
+  PE.test = as.vector(crossprod(Y.test - Yhat.test) / n)
+  
   # 2. estimation accuracy #
   # 2a. estimation of beta #
   betahat = as.matrix(u.selbal) %*% as.matrix(coefficients(selbal.fit$glm)[2])
   EA1 = sum(abs(betahat - beta))
-  EA2 = sqrt(crossprod(betahat - beta))
+  EA2 = as.vector(sqrt(crossprod(betahat - beta)))
   EAInfty = max(abs(betahat - beta))
+  
   # 3. selection accuracy #
   # 3a. selection of beta #
-  non0.beta = (beta != 0)
-  non0s = sum(non0.beta)
-  non0.betahat = (betahat != 0)
+  
+  # new version #
+  non0.beta = abs(beta) > 10e-8
+  is0.beta = abs(beta) <= 10e-8
+  non0.betahat = abs(betahat) > 10e-8
+  is0.betahat = betahat <= 10e-8
   # FP
-  FP = sum((non0.beta != non0.betahat) & non0.betahat)
+  FP = sum(is0.beta & non0.betahat)
   # FN
   FN = sum((non0.beta != non0.betahat) & non0.beta)
   # TPR
   TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
+  # beta sparsity
+  bspars = sum(non0.beta)
+  
+  # old version #
+  non0.beta.old = (beta != 0)
+  is0.beta.old = (beta == 0)
+  non0.betahat.old = (betahat != 0)
+  is0.betahat.old = (betahat == 0)
+  # FP - old version
+  FP.old = sum(is0.beta.old & non0.betahat.old)
+  # FN - old version
+  FN.old = sum((non0.beta.old != non0.betahat.old) & non0.beta.old)
+  # TPR - old version
+  TPR.old = sum((non0.beta.old == non0.betahat.old) & non0.betahat.old) / 
+    sum(non0.beta.old)
+  # beta sparsity - old version
+  bspars.old = sum(non0.beta.old)
+  
   # return
-  c(PE.train, PE.test, EA1, EA2, EAInfty, FP, FN, TPR, sum(non0.beta))
+  c(PE.train, PE.test, EA1, EA2, EAInfty, 
+    FP, FN, TPR, bspars,
+    FP.old, FN.old, TPR.old, bspars.old)
 }
-rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", 
-                    "betaSparsity")
-
+rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
+                    "FP", "FN", "TPR", "betaSparsity", 
+                    "FPold", "FNold", "TPRold", "betaSparsityOld")
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)

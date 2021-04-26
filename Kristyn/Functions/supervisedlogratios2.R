@@ -6,7 +6,9 @@ fitSLR2 <- function(
 ){
   btree = getSupervisedTree(y, X, linkage, rho.type)
   U = getU(btree = btree)
-  A = U
+  if(is.null(A)){
+    A = U
+  }
   Z = log(X)
   
   n <- nrow(X)
@@ -58,8 +60,8 @@ fitSLR2 <- function(
       beta[[i]] <- as.matrix(ret$beta)
       theta[[i]] <- NA
     } else if (alpha[i] == 1) {
-      ret = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                   intercept = FALSE)
+      # ret = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+      #              intercept = FALSE)
       ret <- glmnet(Z_use %*% U, y_use, family = "gaussian", lambda = lambda, 
                     standardize = FALSE, intercept = FALSE, 
                     penalty.factor = c(rep(1, p-1), 0), 
@@ -92,10 +94,10 @@ cvSLR2 <- function(
 ){
   
   fitObj = fitSLR2(
-    y, X, A = NULL, U = NULL, linkage = "complete",
-    Q = NULL, intercept = TRUE, lambda = NULL, 
-    alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
-    rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6)
+    y, X, A = A, U = U, linkage = linkage,
+    Q = Q, intercept = intercept, lambda = lambda, 
+    alpha = alpha, nlam = nlam, lam.min.ratio = lam.min.ratio, nalpha = nalpha,
+    rho = rho, eps1 = eps1, eps2 = eps2, maxite = maxite)
   errtype = "mean-squared-error"
   
   n <- length(y)

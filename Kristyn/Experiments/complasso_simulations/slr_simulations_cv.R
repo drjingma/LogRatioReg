@@ -113,6 +113,7 @@ evals = foreach(
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
               rho.type = rho.type)
   btree = slr$btree
+  # plot(btree)
   
   # choose lambda
   lam.min.idx = which.min(slr$cvm)

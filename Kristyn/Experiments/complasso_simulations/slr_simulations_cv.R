@@ -40,7 +40,7 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 tol = 1e-4
 nlam = 200
 intercept = TRUE
-K = 10
+K = 5
 rho.type = "square"
 
 # Simulation settings

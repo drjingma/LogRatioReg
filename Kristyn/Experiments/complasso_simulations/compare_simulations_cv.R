@@ -9,6 +9,13 @@ p = 200
 rho = 0.2 # 0.2, 0.5
 intercept = TRUE
 
+# other stuff
+metrics0 = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
+             "FP", "FN", "TPR", "betaSparsity", 
+             "FPold", "FNold", "TPRold", "betaSparsityOld")
+metrics = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
+            "FP", "FN", "TPR", "betaSparsity")
+
 ################################################################################
 # Compositional Lasso #
 ################################################################################
@@ -30,7 +37,7 @@ complasso.summaries = readRDS(paste0(
   "_seed", rng.seed,
   ".rds"
 ))
-print(complasso.summaries[, c("mean", "se")])
+print(complasso.summaries[metrics, c("mean", "se")])
 
 ################################################################################
 # Supervised Log Ratios #
@@ -53,7 +60,7 @@ slr.summaries = readRDS(paste0(
   "_seed", rng.seed,
   ".rds"
 ))
-print(slr.summaries[, c("mean", "se")])
+print(slr.summaries[metrics, c("mean", "se")])
 
 
 

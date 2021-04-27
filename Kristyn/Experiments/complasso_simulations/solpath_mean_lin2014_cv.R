@@ -62,7 +62,7 @@ standardizeXY <- function(X, Y){
 tol = 1e-4
 nlam = 3 # for testing
 intercept = TRUE
-K = 10
+K = 5
 rho.type = "square"
 
 # Simulation settings
@@ -91,10 +91,11 @@ for(i in 1:p){
 
 # nlam = 200
 # sims3 = readRDS(paste0(output_dir,
-#                        "/sims_solpaths",
+#                        "/solpaths",
 #                        "_dim", n, "x", p,
 #                        "_rho", rho,
 #                        "_int", intercept,
+#                        "_K", K,
 #                        "_seed", rng.seed,
 #                        "_numSims", numSims,
 #                        ".rds"))

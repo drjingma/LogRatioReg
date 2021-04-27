@@ -8,6 +8,7 @@ n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
 intercept = TRUE
+K = 5
 
 # other stuff
 metrics0 = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
@@ -25,6 +26,7 @@ complasso.sims = readRDS(paste0(
   "_dim", n, "x", p, 
   "_rho", rho, 
   "_int", intercept, 
+  "_K", K,
   "_seed", rng.seed,
   ".rds"
 ))
@@ -34,6 +36,7 @@ complasso.summaries = readRDS(paste0(
   "_dim", n, "x", p, 
   "_rho", rho, 
   "_int", intercept, 
+  "_K", K,
   "_seed", rng.seed,
   ".rds"
 ))
@@ -48,6 +51,7 @@ slr.sims = readRDS(paste0(
   "_dim", n, "x", p, 
   "_rho", rho, 
   "_int", intercept, 
+  "_K", K,
   "_seed", rng.seed,
   ".rds"
 ))
@@ -57,6 +61,7 @@ slr.summaries = readRDS(paste0(
   "_dim", n, "x", p, 
   "_rho", rho, 
   "_int", intercept, 
+  "_K", K,
   "_seed", rng.seed,
   ".rds"
 ))

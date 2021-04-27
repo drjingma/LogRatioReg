@@ -8,7 +8,7 @@ n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
 intercept = TRUE
-K = 5
+K = 10
 
 # other stuff
 metrics0 = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
@@ -77,6 +77,7 @@ cl.sims.gg$type = "CompLasso"
 slr.sims.gg = melt(data.frame(t(slr.sims)))
 slr.sims.gg$type = "SLR"
 data.gg = rbind(cl.sims.gg, slr.sims.gg)
+data.gg = dplyr::filter(data.gg, variable %in% metrics)
 data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR"))
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + 
@@ -91,7 +92,9 @@ ggplot(data.gg, aes(x = type, y = value, color = type)) +
         axis.title.y = element_blank())
 
 # zoom in to PEtr, PEte
+# plot PEtr
 PEtr.gg = data.gg[data.gg$variable == "PEtr", ]
+# PEtr.gg$value = log(PEtr.gg$value)
 plt.PEtr = ggplot(PEtr.gg, aes(x = type, y = value, color = type)) + 
   geom_boxplot() +
   stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
@@ -103,9 +106,9 @@ plt.PEtr = ggplot(PEtr.gg, aes(x = type, y = value, color = type)) +
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank(), 
         legend.position = "none")
-# plt.PEtr
+# plot PEte
 PEte.gg = data.gg[data.gg$variable == "PEte", ]
-PEte.gg$value = log(PEte.gg$value)
+# PEte.gg$value = log(PEte.gg$value)
 plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) + 
   geom_boxplot() +
   stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
@@ -117,5 +120,5 @@ plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) +
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank(), 
         legend.position = "none")
-# plt.PEte
-ggarrange(plt.PEtr, plt.PEte)
+# plot both
+# ggarrange(plt.PEtr, plt.PEte)

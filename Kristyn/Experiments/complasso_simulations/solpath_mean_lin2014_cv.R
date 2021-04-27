@@ -62,7 +62,7 @@ standardizeXY <- function(X, Y){
 tol = 1e-4
 nlam = 3 # for testing
 intercept = TRUE
-K = 5
+K = 10
 rho.type = "square"
 
 # Simulation settings
@@ -70,8 +70,13 @@ numSims = 100
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
-# beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+# which beta?
+beta.settings = "old"
+if(beta.settings == "old" | beta.settings = "linetal2014"){
+  beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+} else{
+  beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
+}
 non0.beta = (beta != 0)
 sigma_eps = 0.5
 seed = 1
@@ -90,15 +95,27 @@ for(i in 1:p){
 # if simulations are saved, read them in
 
 # nlam = 200
-# sims3 = readRDS(paste0(output_dir,
-#                        "/solpaths",
-#                        "_dim", n, "x", p,
-#                        "_rho", rho,
-#                        "_int", intercept,
-#                        "_K", K,
-#                        "_seed", rng.seed,
-#                        "_numSims", numSims,
-#                        ".rds"))
+# if(beta.settings == "old" | beta.settings = "linetal2014"){
+#   sims3 = readRDS(paste0(output_dir,
+#                          "/solpaths_old",
+#                          "_dim", n, "x", p,
+#                          "_rho", rho,
+#                          "_int", intercept,
+#                          "_K", K,
+#                          "_seed", rng.seed,
+#                          "_numSims", numSims,
+#                          ".rds"))
+# } else{
+#   sims3 = readRDS(paste0(output_dir,
+#                          "/solpaths",
+#                          "_dim", n, "x", p,
+#                          "_rho", rho,
+#                          "_int", intercept,
+#                          "_K", K,
+#                          "_seed", rng.seed,
+#                          "_numSims", numSims,
+#                          ".rds"))
+# }
 
 ################################################################################
 # Simulations -- different lambda sequence #
@@ -328,14 +345,28 @@ sims3 = foreach(
 
 # save results #################################################################
 
-saveRDS(
-  sims3,
-  file = paste0(output_dir,
-                "/solpaths",
-                "_dim", n, "x", p,
-                "_rho", rho,
-                "_int", intercept,
-                "_K", K,
-                "_seed", rng.seed,
-                "_numSims", numSims,
-                ".rds"))
+if(beta.settings == "old" | beta.settings = "linetal2014"){
+  saveRDS(
+    sims3,
+    file = paste0(output_dir,
+                  "/solpaths_old",
+                  "_dim", n, "x", p,
+                  "_rho", rho,
+                  "_int", intercept,
+                  "_K", K,
+                  "_seed", rng.seed,
+                  "_numSims", numSims,
+                  ".rds"))
+} else{
+  saveRDS(
+    sims3,
+    file = paste0(output_dir,
+                  "/solpaths",
+                  "_dim", n, "x", p,
+                  "_rho", rho,
+                  "_int", intercept,
+                  "_K", K,
+                  "_seed", rng.seed,
+                  "_numSims", numSims,
+                  ".rds"))
+}

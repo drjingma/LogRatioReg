@@ -47,8 +47,13 @@ numSims = 100
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
-# beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+# which beta?
+beta.settings = "old"
+if(beta.settings == "old" | beta.settings = "linetal2014"){
+  beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+} else{
+  beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
+}
 non0.beta = (beta != 0)
 sigma_eps = 0.5
 seed = 1
@@ -183,23 +188,18 @@ eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
 
-saveRDS(
-  evals, 
-  file = paste0(output_dir,
-                "/complasso_cv_sims", 
-                "_dim", n, "x", p, 
-                "_rho", rho, 
-                "_int", intercept,
-                "_K", K,
-                "_seed", rng.seed,
-                ".rds"))
-saveRDS(
-  evals.df, 
-  file = paste0(output_dir,
-                "/complasso_cv_summaries", 
-                "_dim", n, "x", p, 
-                "_rho", rho, 
-                "_int", intercept,
-                "_K", K,
-                "_seed", rng.seed,
-                ".rds"))
+file.end = paste0(
+  "_dim", n, "x", p, 
+  "_rho", rho, 
+  "_int", intercept,
+  "_K", K,
+  "_seed", rng.seed,
+  ".rds")
+
+if(beta.settings == "old" | beta.settings = "linetal2014"){
+  saveRDS(evals, file = paste0(output_dir, "/complasso_cv_sims_old", file.end))
+  saveRDS(evals.df, file = paste0(output_dir, "/complasso_cv_summaries_old", file.end))
+} else{
+  saveRDS(evals, file = paste0(output_dir, "/complasso_cv_sims", file.end))
+  saveRDS(evals.df, file = paste0(output_dir, "/complasso_cv_summaries", file.end))
+}

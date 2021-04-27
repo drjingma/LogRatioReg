@@ -1,0 +1,3623 @@
+
+R version 4.0.5 (2021-03-31) -- "Shake and Throw"
+Copyright (C) 2021 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # last updated: 04/26/2021
+> # simulate a data set using settings in Lin et al 2014, 
+> # fit Complasso and SLR, and plot the solution path.
+> 
+> getwd()
+[1] "/home/kristynp/Documents/LogRatioReg"
+> output_dir = "Kristyn/Experiments/complasso_simulations/output"
+> 
+> # libraries
+> library(limSolve) # for constrained lm
+> library(mvtnorm)
+> library(balance) # for sbp.fromHclust()
+> 
+> # set up parallelization
+> library(foreach)
+> library(future)
+> library(doFuture)
+> library(parallel)
+> registerDoFuture()
+> nworkers = detectCores()
+> plan(multisession, workers = nworkers)
+> 
+> library(rngtools)
+> library(doRNG)
+> rng.seed = 123 # 123, 345
+> registerDoRNG(rng.seed)
+> 
+> # Dr. Ma sources
+> library(Matrix)
+> library(glmnet)
+Loaded glmnet 4.0-2
+> library(compositions)
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+> library(stats)
+> source("RCode/func_libs.R")
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+> 
+> # Kristyn sources
+> functions_path = "Kristyn/Functions/"
+> source(paste0(functions_path, "supervisedlogratios.R"))
+> 
+> # ggplot
+> library(ggplot2)
+
+Attaching package: ‘ggplot2’
+
+The following object is masked from ‘package:limSolve’:
+
+    resolution
+
+> 
+> # helper functions
+> standardizeXY <- function(X, Y){
++   n = dim(X)[1]
++   p = dim(X)[2]
++   
++   # Center Y
++   Ymean = mean(Y)
++   Ytilde = Y - mean(Y)
++   
++   # Center and scale X
++   Xmeans = colMeans(X)
++   Xcen = X - matrix(Xmeans, n, p, byrow=T)
++   normsX2 = colSums(Xcen^2) / n
++   weights = 1 / sqrt(normsX2) # should weights be the vector, or the matix?
++   Xtilde = Xcen %*% diag(weights)
++   
++   # Return the mean of Y and means of columns of X, as well as weights to be used in back-scaling (that is sqrt(X_j'X_j/n))
++   return(list(Xtilde = Xtilde, Ytilde = Ytilde, Ymean = Ymean, Xmeans = Xmeans, weights = weights))
++ }
+> 
+> # Method Settings
+> tol = 1e-4
+> nlam = 3 # for testing
+> intercept = TRUE
+> K = 10
+> rho.type = "square"
+> 
+> # Simulation settings
+> numSims = 100
+> n = 100
+> p = 200
+> rho = 0.2 # 0.2, 0.5
+> beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
+> # beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+> non0.beta = (beta != 0)
+> sigma_eps = 0.5
+> seed = 1
+> muW = c(
++   rep(log(p), 5), 
++   rep(0, p - 5)
++ )
+> SigmaW = matrix(0, p, p)
+> for(i in 1:p){
++   for(j in 1:p){
++     SigmaW[i, j] = rho^abs(i - j)
++   }
++ }
+> 
+> ################################################################################
+> # if simulations are saved, read them in
+> 
+> # nlam = 200
+> # sims3 = readRDS(paste0(output_dir,
+> #                        "/sims_solpaths",
+> #                        "_dim", n, "x", p,
+> #                        "_rho", rho,
+> #                        "_int", intercept,
+> #                        "_seed", rng.seed,
+> #                        "_numSims", numSims,
+> #                        ".rds"))
+> 
+> ################################################################################
+> # Simulations -- different lambda sequence #
+> ################################################################################
+> 
+> registerDoRNG(rng.seed)
+> sims = foreach(
++   b = 1:numSims
++ ) %dorng% {
++   library(limSolve)
++   library(mvtnorm)
++   library(Matrix)
++   library(glmnet)
++   library(compositions)
++   library(stats)
++   source("RCode/func_libs.R")
++   source(paste0(functions_path, "supervisedlogratios.R"))
++   
++   # simulate training data #
++   # generate W
++   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
++   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
++   V = exp(W)
++   rowsumsV = apply(V, 1, sum)
++   X = V / rowsumsV
++   epsilon = rnorm(n, 0, sigma_eps)
++   Z = log(X)
++   # generate Y
++   Y = Z %*% beta + epsilon
++   
++   # apply compositional lasso
++   complasso = cv.func(
++     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
++     nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
++   
++   TPR.cl = rep(NA, nlam)
++   S.hat.cl = rep(NA, nlam)
++   for(l in 1:nlam){
++     a0 = complasso$int[l]
++     betahat = complasso$bet[, l]
++     # TPR
++     non0.beta = (beta != 0)
++     non0.betahat = (betahat != 0)
++     TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
++     S.hat.cl[l] = sum(non0.betahat)
++   }
++   
++   # apply supervised log-ratios
++   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
++               rho.type = rho.type)
++   
++   btree.slr = slr$btree
++   # calculate TPR for supervised log-ratios
++   nlam.slr = length(slr$lambda)
++   TPR.slr = rep(NA, nlam.slr)
++   S.hat.slr = rep(NA, nlam.slr)
++   for(l in 1:nlam.slr){
++     a0 = slr$int[l]
++     thetahat = slr$bet[, l]
++     betahat = getBeta(thetahat, btree.slr)
++     # TPR
++     non0.beta = (beta != 0)
++     non0.betahat = (betahat != 0)
++     TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
++     S.hat.slr[l] = sum(non0.betahat)
++   }
++   
++   list(X = X, Y = Y,
++        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
++        fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
++ }
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+> 
+> 
+> 
+> # organize the simulation results to have more easily-accessable matrices #
+> # cl
+> fit.cl.list = list()
+> TPR.cl.mat = matrix(NA, nlam, numSims)
+> S.hat.cl.mat = matrix(NA, nlam, numSims)
+> lambda.cl.mat = matrix(NA, nlam, numSims)
+> # slr
+> fit.slr.list = list()
+> TPR.slr.mat = matrix(NA, nlam, numSims)
+> S.hat.slr.mat = matrix(NA, nlam, numSims)
+> lambda.slr.mat = matrix(NA, nlam, numSims)
+> for(i in 1:numSims){
++   sim.tmp = sims[[i]]
++   # cl
++   fit.cl.list[[i]] = sim.tmp$fit.cl
++   TPR.cl.mat[, i] = sim.tmp$TPR.cl
++   S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
++   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
++   # slr
++   fit.slr.list[[i]] = sim.tmp$fit.slr
++   TPR.slr.mat[, i] = sim.tmp$TPR.slr
++   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
++   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
++ }
+> 
+> 
+> 
+> ################################################################################
+> # using the same lambda sequence in each method
+> nlam = 200
+> lambda.df = data.frame(
++   complasso = exp(seq(max(log(lambda.cl.mat)), 
++                       min(log(lambda.cl.mat)), length.out = nlam)),
++   slr = exp(seq(max(log(lambda.slr.mat)), 
++                 min(log(lambda.slr.mat)),length.out = nlam))
++ )
+> 
+> registerDoRNG(rng.seed)
+> sims3 = foreach(
++   b = 1:numSims
++ ) %dorng% {
++   library(limSolve)
++   library(mvtnorm)
++   library(Matrix)
++   library(glmnet)
++   library(compositions)
++   library(stats)
++   source("RCode/func_libs.R")
++   source(paste0(functions_path, "supervisedlogratios.R"))
++   
++   print(paste0("starting sim ", b))
++   
++   # get simulated data #
++   X = sims[[b]]$X
++   Y = sims[[b]]$Y
++   
++   # apply compositional lasso
++   complasso = cv.func(
++     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
++     lambda = lambda.df$complasso, nfolds = K, tol = tol, intercept = intercept)
++   
++   TPR.cl = rep(NA, nlam)
++   S.hat.cl = rep(NA, nlam)
++   for(l in 1:nlam){
++     a0 = complasso$int[l]
++     betahat = complasso$bet[, l]
++     # TPR
++     non0.beta = (beta != 0)
++     non0.betahat = (betahat != 0)
++     TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
++     S.hat.cl[l] = sum(non0.betahat)
++   }
++   
++   # apply supervised log-ratios
++   slr = cvSLR(
++     y = Y, X = X, lambda = lambda.df$slr, nfolds = K, intercept = intercept, 
++     rho.type = rho.type)
++   
++   btree.slr = slr$btree
++   # calculate TPR for supervised log-ratios
++   nlam.slr = length(slr$lambda)
++   TPR.slr = rep(NA, nlam.slr)
++   S.hat.slr = rep(NA, nlam.slr)
++   for(l in 1:nlam.slr){
++     a0 = slr$int[l]
++     thetahat = slr$bet[, l]
++     betahat = getBeta(thetahat, btree.slr)
++     # TPR
++     non0.beta = (beta != 0)
++     non0.betahat = (betahat != 0)
++     TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
++     S.hat.slr[l] = sum(non0.betahat)
++   }
++   
++   list(X = X, Y = Y, 
++        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
++        fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
++ }
+[1] "starting sim 1"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 2"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 3"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 4"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 5"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 6"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 7"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 8"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 9"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 10"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 11"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 12"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 13"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 14"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 15"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 16"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 17"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 18"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 19"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 20"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 21"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 22"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 23"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 24"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 25"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 26"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 27"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 28"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 29"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 30"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 31"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 32"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 33"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 34"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 35"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 36"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 37"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 38"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 39"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 40"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 41"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 42"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 43"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 44"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 45"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 46"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 47"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 48"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 49"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 50"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 51"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 52"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 53"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 54"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 55"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 56"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 57"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 58"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 59"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 60"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 61"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 62"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 63"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 64"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 65"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 66"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 67"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 68"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 69"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 70"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 71"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 72"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 73"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 74"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 75"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 76"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 77"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 78"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 79"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 80"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 81"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 82"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 83"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 84"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 85"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 86"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 87"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 88"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 89"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 90"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 91"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 92"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 93"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 94"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 95"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 96"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 97"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 98"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 99"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] "starting sim 100"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+> 
+> # # organize the simulation results to have more easily-accessable matrices ######
+> # # cl
+> # fit.cl.list = list()
+> # TPR.cl.mat = matrix(NA, nlam, numSims)
+> # S.hat.cl.mat = matrix(NA, nlam, numSims)
+> # lambda.cl.mat = matrix(NA, nlam, numSims)
+> # # slr
+> # fit.slr.list = list()
+> # TPR.slr.mat = matrix(NA, nlam, numSims)
+> # S.hat.slr.mat = matrix(NA, nlam, numSims)
+> # lambda.slr.mat = matrix(NA, nlam, numSims)
+> # for(i in 1:numSims){
+> #   sim.tmp = sims3[[i]]
+> #   # cl
+> #   fit.cl.list[[i]] = sim.tmp$fit.cl
+> #   TPR.cl.mat[, i] = sim.tmp$TPR.cl
+> #   S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
+> #   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
+> #   # slr
+> #   fit.slr.list[[i]] = sim.tmp$fit.slr
+> #   TPR.slr.mat[, i] = sim.tmp$TPR.slr
+> #   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
+> #   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
+> # }
+> # 
+> # 
+> # 
+> # # average TPR and S.hat ########################################################
+> # 
+> # dim(S.hat.cl.mat)
+> # S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
+> # TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
+> # S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
+> # TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
+> # 
+> # # complasso stuff
+> # cl.gg.complete = data.frame(
+> #   "S.hat" = S.hat.cl.avg,
+> #   "TPR" = TPR.cl.avg)
+> # cl.gg.complete$Type = "CompLasso"
+> # # slr stuff
+> # slr.gg.complete = data.frame(
+> #   "S.hat" = S.hat.slr.avg,
+> #   "TPR" = TPR.slr.avg)
+> # slr.gg.complete$Type = "SLR"
+> # # ggplot
+> # gg.complete = rbind(slr.gg.complete, cl.gg.complete)
+> # gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
+> # ggplot(gg.complete, aes(x = S.hat, y = TPR)) +
+> #   geom_line(aes(color = Type), size = 1) +
+> #   theme_bw()
+> 
+> 
+> # save results #################################################################
+> 
+> saveRDS(
++   sims3,
++   file = paste0(output_dir,
++                 "/sims_solpaths",
++                 "_dim", n, "x", p,
++                 "_rho", rho,
++                 "_int", intercept,
++                 "_seed", rng.seed,
++                 "_numSims", numSims,
++                 ".rds"))
+> 
+> proc.time()
+   user  system elapsed 
+ 21.846   3.199 916.812 

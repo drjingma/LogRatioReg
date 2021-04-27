@@ -35,6 +35,9 @@ source("RCode/func_libs.R")
 functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
 
+# ggplot
+library(ggplot2)
+
 # helper functions
 standardizeXY <- function(X, Y){
   n = dim(X)[1]

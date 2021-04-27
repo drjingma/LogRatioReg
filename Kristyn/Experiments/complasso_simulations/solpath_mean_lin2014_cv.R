@@ -95,7 +95,7 @@ for(i in 1:p){
 # if simulations are saved, read them in
 
 # nlam = 200
-# if(beta.settings == "old" | beta.settings = "linetal2014"){
+# if(beta.settings == "old" | beta.settings == "linetal2014"){
 #   sims3 = readRDS(paste0(output_dir,
 #                          "/solpaths_old",
 #                          "_dim", n, "x", p,
@@ -345,7 +345,7 @@ sims3 = foreach(
 
 # save results #################################################################
 
-if(beta.settings == "old" | beta.settings = "linetal2014"){
+if(beta.settings == "old" | beta.settings == "linetal2014"){
   saveRDS(
     sims3,
     file = paste0(output_dir,

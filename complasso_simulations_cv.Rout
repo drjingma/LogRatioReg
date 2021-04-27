@@ -19,7 +19,7 @@ Type 'q()' to quit R.
 
 > # Method: Simulation study for compositional Lasso
 > # Purpose: Simulate data, fit compositional Lasso to the data
-> # Date: 04/06/2021
+> # Date: 04/26/2021
 > # Notes: 
 > 
 > getwd()
@@ -2241,16 +2241,16 @@ The following object is masked from ‘package:base’:
 > evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 > evals.df
                       mean          sd          se
-PEtr             0.2001114  0.06574981 0.006574981
-PEte             0.3704746  0.07537141 0.007537141
-EA1              1.1931044  0.44346790 0.044346790
-EA2              0.3709372  0.05921441 0.005921441
-EAInfty          0.2180560  0.04396307 0.004396307
-FP              18.0900000 12.16394324 1.216394324
+PEtr             0.2004341  0.06562799 0.006562799
+PEte             0.3705092  0.07540196 0.007540196
+EA1              1.1918850  0.44591565 0.044591565
+EA2              0.3709945  0.05926066 0.005926066
+EAInfty          0.2181560  0.04391114 0.004391114
+FP              18.0200000 12.08971514 1.208971514
 FN               0.0100000  0.10000000 0.010000000
 TPR              0.9983333  0.01666667 0.001666667
 betaSparsity     6.0000000  0.00000000 0.000000000
-FPold           18.0900000 12.16394324 1.216394324
+FPold           18.0200000 12.08971514 1.208971514
 FNold            0.0100000  0.10000000 0.010000000
 TPRold           0.9983333  0.01666667 0.001666667
 betaSparsityOld  6.0000000  0.00000000 0.000000000
@@ -2262,6 +2262,7 @@ betaSparsityOld  6.0000000  0.00000000 0.000000000
 +                 "_dim", n, "x", p, 
 +                 "_rho", rho, 
 +                 "_int", intercept,
++                 "_K", K,
 +                 "_seed", rng.seed,
 +                 ".rds"))
 > saveRDS(
@@ -2271,9 +2272,10 @@ betaSparsityOld  6.0000000  0.00000000 0.000000000
 +                 "_dim", n, "x", p, 
 +                 "_rho", rho, 
 +                 "_int", intercept,
++                 "_K", K,
 +                 "_seed", rng.seed,
 +                 ".rds"))
 > 
 > proc.time()
    user  system elapsed 
- 11.777   1.999 532.209 
+ 11.888   1.902 518.622 

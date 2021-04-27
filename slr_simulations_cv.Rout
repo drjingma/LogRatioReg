@@ -19,7 +19,7 @@ Type 'q()' to quit R.
 
 > # Method: Simulation study for compositional Lasso
 > # Purpose: Simulate data, fit supervised log-ratios method to the data
-> # Date: 04/06/2021
+> # Date: 04/26/2021
 > # Notes: 
 > 
 > getwd()
@@ -1382,6 +1382,7 @@ betaSparsityOld   6.0000000  0.00000000 0.000000000
 +                 "_dim", n, "x", p, 
 +                 "_rho", rho, 
 +                 "_int", intercept,
++                 "_K", K,
 +                 "_seed", rng.seed,
 +                 ".rds"))
 > saveRDS(
@@ -1391,9 +1392,10 @@ betaSparsityOld   6.0000000  0.00000000 0.000000000
 +                 "_dim", n, "x", p, 
 +                 "_rho", rho, 
 +                 "_int", intercept,
++                 "_K", K,
 +                 "_seed", rng.seed,
 +                 ".rds"))
 > 
 > proc.time()
    user  system elapsed 
-  9.109   1.464 181.302 
+  8.492   1.633 156.672 

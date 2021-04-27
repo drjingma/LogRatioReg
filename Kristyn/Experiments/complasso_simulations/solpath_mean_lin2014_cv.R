@@ -330,10 +330,11 @@ sims3 = foreach(
 saveRDS(
   sims3,
   file = paste0(output_dir,
-                "/sims_solpaths",
+                "/solpaths",
                 "_dim", n, "x", p,
                 "_rho", rho,
                 "_int", intercept,
+                "_K", K,
                 "_seed", rng.seed,
                 "_numSims", numSims,
                 ".rds"))

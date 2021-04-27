@@ -194,6 +194,7 @@ saveRDS(
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,
+                "_K", K,
                 "_seed", rng.seed,
                 ".rds"))
 saveRDS(
@@ -203,5 +204,6 @@ saveRDS(
                 "_dim", n, "x", p, 
                 "_rho", rho, 
                 "_int", intercept,
+                "_K", K,
                 "_seed", rng.seed,
                 ".rds"))

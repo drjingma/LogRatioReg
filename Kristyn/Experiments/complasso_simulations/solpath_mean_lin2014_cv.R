@@ -320,7 +320,8 @@ sims3 = foreach(
 # gg.complete = rbind(slr.gg.complete, cl.gg.complete)
 # gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
 # ggplot(gg.complete, aes(x = S.hat, y = TPR)) +
-#   geom_line(aes(color = Type), size = 1) +
+#   geom_line(aes(color = Type), size = 1) + 
+#   xlim(0, 40) +
 #   theme_bw()
 
 

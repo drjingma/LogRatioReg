@@ -1,6 +1,6 @@
 # Method: Simulation study for compositional Lasso
 # Purpose: Simulate data, fit supervised log-ratios method to the data
-# Date: 04/06/2021
+# Date: 04/26/2021
 # Notes: 
 
 getwd()

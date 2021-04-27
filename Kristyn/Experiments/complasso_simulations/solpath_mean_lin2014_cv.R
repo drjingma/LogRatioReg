@@ -1,4 +1,4 @@
-# last updated: 04/11/2021
+# last updated: 04/26/2021
 # simulate a data set using settings in Lin et al 2014, 
 # fit Complasso and SLR, and plot the solution path.
 
@@ -62,7 +62,7 @@ standardizeXY <- function(X, Y){
 tol = 1e-4
 nlam = 3 # for testing
 intercept = TRUE
-K = 5
+K = 10
 rho.type = "square"
 
 # Simulation settings

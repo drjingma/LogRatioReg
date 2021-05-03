@@ -9,6 +9,7 @@ p = 200
 rho = 0.2 # 0.2, 0.5
 intercept = TRUE
 K = 10
+beta.settings = "new"
 
 # other stuff
 metrics0 = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
@@ -16,55 +17,52 @@ metrics0 = c("PEtr", "PEte", "EA1", "EA2", "EAInfty",
              "FPold", "FNold", "TPRold", "betaSparsityOld")
 metrics = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
             "FP", "FN", "TPR", "betaSparsity")
+file.end = paste0(
+  "_dim", n, "x", p, 
+  "_rho", rho, 
+  "_int", intercept,
+  "_K", K,
+  "_seed", rng.seed,
+  ".rds")
 
 ################################################################################
 # Compositional Lasso #
 ################################################################################
-complasso.sims = readRDS(paste0(
-  output_dir,
-  "/complasso_cv_sims", 
-  "_dim", n, "x", p, 
-  "_rho", rho, 
-  "_int", intercept, 
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds"
-))
-complasso.summaries = readRDS(paste0(
-  output_dir,
-  "/complasso_cv_summaries", 
-  "_dim", n, "x", p, 
-  "_rho", rho, 
-  "_int", intercept, 
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds"
-))
+if(beta.settings == "old" | beta.settings == "linetal2014"){
+  complasso.sims = readRDS(paste0(
+    output_dir, "/complasso_cv_sims_old", file.end
+  ))
+  complasso.summaries = readRDS(paste0(
+    output_dir, "/complasso_cv_summaries_old", file.end
+  ))
+} else{
+  complasso.sims = readRDS(paste0(
+    output_dir, "/complasso_cv_sims", file.end
+  ))
+  complasso.summaries = readRDS(paste0(
+    output_dir, "/complasso_cv_summaries", file.end
+  ))
+}
 print(complasso.summaries[metrics, c("mean", "se")])
 
 ################################################################################
 # Supervised Log Ratios #
 ################################################################################
-slr.sims = readRDS(paste0(
-  output_dir,
-  "/slr_cv_sims", 
-  "_dim", n, "x", p, 
-  "_rho", rho, 
-  "_int", intercept, 
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds"
-))
-slr.summaries = readRDS(paste0(
-  output_dir,
-  "/slr_cv_summaries", 
-  "_dim", n, "x", p, 
-  "_rho", rho, 
-  "_int", intercept, 
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds"
-))
+if(beta.settings == "old" | beta.settings == "linetal2014"){
+  slr.sims = readRDS(paste0(
+    output_dir, "/slr_cv_sims_old", file.end
+  ))
+  slr.summaries = readRDS(paste0(
+    output_dir, "/slr_cv_summaries_old", file.end
+  ))
+} else{
+  slr.sims = readRDS(paste0(
+    output_dir, "/slr_cv_sims", file.end
+  ))
+  slr.summaries = readRDS(paste0(
+    output_dir, "/slr_cv_summaries", file.end
+  ))
+}
 print(slr.summaries[metrics, c("mean", "se")])
 
 
@@ -121,4 +119,5 @@ plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) +
         axis.title.y = element_blank(), 
         legend.position = "none")
 # plot both
-# ggarrange(plt.PEtr, plt.PEte)
+ggarrange(plt.PEtr, plt.PEte)
+

@@ -7,7 +7,7 @@ fitSLR2 <- function(
   btree = getSupervisedTree(y, X, linkage, rho.type)
   U = getU(btree = btree)
   if(is.null(A)){
-    A = U
+    A = Matrix(U, sparse = TRUE)
   }
   Z = log(X)
   
@@ -64,7 +64,7 @@ fitSLR2 <- function(
       #              intercept = FALSE)
       ret <- glmnet(Z_use %*% U, y_use, family = "gaussian", lambda = lambda, 
                     standardize = FALSE, intercept = FALSE, 
-                    penalty.factor = c(rep(1, p-1), 0), 
+                    # penalty.factor = c(rep(1, p-1), 0), 
                     thresh = min(eps1, eps2), maxit = maxite)
       beta[[i]] <- as.matrix(A %*% ret$beta) # ret$beta is actually theta
       theta[[i]] <- as.matrix(ret$beta)
@@ -98,6 +98,7 @@ cvSLR2 <- function(
     Q = Q, intercept = intercept, lambda = lambda, 
     alpha = alpha, nlam = nlam, lam.min.ratio = lam.min.ratio, nalpha = nalpha,
     rho = rho, eps1 = eps1, eps2 = eps2, maxite = maxite)
+  btree = fitObj$btree
   errtype = "mean-squared-error"
   
   n <- length(y)
@@ -121,18 +122,16 @@ cvSLR2 <- function(
   set.seed(100) # set.seed for random number generator
   ii <- sample(n)
   folds <- list()
-  for (i in seq(nfolds))
-    folds[[i]] <- ii[seq(b[i] + 1, b[i + 1])]
-  folds
+  for (i in seq(nfolds)) folds[[i]] <- ii[seq(b[i] + 1, b[i + 1])]
   
   # Fit based on folds and compute error metric
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
     fit_cv <- fitSLR2(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
-                      intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha, ...)
+                      intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha)
     pred_te <- lapply(seq(nalpha), function(k) {
       if (fitObj$intercept) {
-        X[folds[[i]], ] %*% fit_cv$beta[[k]] + rep(fit_cv$beta0[[k]], each = length(folds[[i]]))
+        X[folds[[i]], ] %*% fit_cv$beta[[k]] + rep(fit_cv$a0[[k]], each = length(folds[[i]]))
       } else {
         X[folds[[i]], ] %*% fit_cv$beta[[k]]
       }
@@ -151,6 +150,7 @@ cvSLR2 <- function(
   return(list(
     int = fitObj$a0,
     bet = fitObj$beta,
+    thet = fitObj$theta,
     lambda = fitObj$lambda,
     fits = fitObj,
     btree = btree,

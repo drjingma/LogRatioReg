@@ -125,7 +125,7 @@ evals = foreach(
   lam.min = slr$lambda[lam.min.idx]
   a0 = slr$int[lam.min.idx]
   thetahat = slr$bet[, lam.min.idx]
-  Uhat = getU(btree = slr$btree)
+  Uhat = getU(btree = btree)
   betahat = getBeta(thetahat, U = Uhat)
   
   # evaluate model #
@@ -150,10 +150,20 @@ evals = foreach(
   # 3a. selection of beta #
   
   # new version #
+  ### rounding
+  # non0.beta = abs(beta) > 10e-8
+  # is0.beta = abs(beta) <= 10e-8
+  # non0.betahat = abs(betahat) > 10e-8
+  # is0.betahat = betahat <= 10e-8
+  ### using SBP matrix
+  SBP = sbp.fromHclust(btree)
+  non0.thetahat = (thetahat != 0)
+  sel.cols.SBP = SBP[, non0.thetahat]
+  non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
+  is0.betahat = !non0.betahat
+  # beta
   non0.beta = abs(beta) > 10e-8
   is0.beta = abs(beta) <= 10e-8
-  non0.betahat = abs(betahat) > 10e-8
-  is0.betahat = betahat <= 10e-8
   # FP
   FP = sum(is0.beta & non0.betahat)
   # FN

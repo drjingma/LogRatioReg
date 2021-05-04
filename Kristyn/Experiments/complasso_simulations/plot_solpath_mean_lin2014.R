@@ -38,26 +38,6 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 # ggplot
 library(ggplot2)
 
-# helper functions
-standardizeXY <- function(X, Y){
-  n = dim(X)[1]
-  p = dim(X)[2]
-  
-  # Center Y
-  Ymean = mean(Y)
-  Ytilde = Y - mean(Y)
-  
-  # Center and scale X
-  Xmeans = colMeans(X)
-  Xcen = X - matrix(Xmeans, n, p, byrow=T)
-  normsX2 = colSums(Xcen^2) / n
-  weights = 1 / sqrt(normsX2) # should weights be the vector, or the matix?
-  Xtilde = Xcen %*% diag(weights)
-  
-  # Return the mean of Y and means of columns of X, as well as weights to be used in back-scaling (that is sqrt(X_j'X_j/n))
-  return(list(Xtilde = Xtilde, Ytilde = Ytilde, Ymean = Ymean, Xmeans = Xmeans, weights = weights))
-}
-
 # Method Settings
 tol = 1e-4
 nlam = 3 # for testing

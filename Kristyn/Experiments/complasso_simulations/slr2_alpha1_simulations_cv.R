@@ -49,7 +49,7 @@ n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
 # which beta?
-beta.settings = "old"
+beta.settings = "new"
 if(beta.settings == "old" | beta.settings == "linetal2014"){
   beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
 } else{
@@ -212,9 +212,9 @@ file.end = paste0(
   ".rds")
 
 if(beta.settings == "old" | beta.settings == "linetal2014"){
-  saveRDS(evals, file = paste0(output_dir, "/slr_cv_sims_old", file.end))
-  saveRDS(evals.df, file = paste0(output_dir, "/slr_cv_summaries_old", file.end))
+  saveRDS(evals, file = paste0(output_dir, "/slr2_alpha1_cv_sims_old", file.end))
+  saveRDS(evals.df, file = paste0(output_dir, "/slr2_alpha1_cv_summaries_old", file.end))
 } else{
   saveRDS(evals, file = paste0(output_dir, "/slr2_alpha1_cv_sims", file.end))
-  saveRDS(evals.df, file = paste0(output_dir, "/slr_alpha1_cv_summaries", file.end))
+  saveRDS(evals.df, file = paste0(output_dir, "/slr2_alpha1_cv_summaries", file.end))
 }

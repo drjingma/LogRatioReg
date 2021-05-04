@@ -1,4 +1,4 @@
-# last updated: 04/26/2021
+# last updated: 05/03/2021
 # simulate a data set using settings in Lin et al 2014, 
 # fit Complasso and SLR, and plot the solution path.
 
@@ -62,7 +62,7 @@ standardizeXY <- function(X, Y){
 tol = 1e-4
 nlam = 3 # for testing
 intercept = TRUE
-K = 10
+K = 5
 rho.type = "square"
 
 # Simulation settings
@@ -90,32 +90,6 @@ for(i in 1:p){
     SigmaW[i, j] = rho^abs(i - j)
   }
 }
-
-################################################################################
-# if simulations are saved, read them in
-
-# nlam = 200
-# if(beta.settings == "old" | beta.settings == "linetal2014"){
-#   sims3 = readRDS(paste0(output_dir,
-#                          "/solpaths_old",
-#                          "_dim", n, "x", p,
-#                          "_rho", rho,
-#                          "_int", intercept,
-#                          "_K", K,
-#                          "_seed", rng.seed,
-#                          "_numSims", numSims,
-#                          ".rds"))
-# } else{
-#   sims3 = readRDS(paste0(output_dir,
-#                          "/solpaths",
-#                          "_dim", n, "x", p,
-#                          "_rho", rho,
-#                          "_int", intercept,
-#                          "_K", K,
-#                          "_seed", rng.seed,
-#                          "_numSims", numSims,
-#                          ".rds"))
-# }
 
 ################################################################################
 # Simulations -- different lambda sequence #
@@ -151,39 +125,9 @@ sims = foreach(
     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
     nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
   
-  # TPR.cl = rep(NA, nlam)
-  # S.hat.cl = rep(NA, nlam)
-  # for(l in 1:nlam){
-  #   a0 = complasso$int[l]
-  #   betahat = complasso$bet[, l]
-  #   non0.beta = (beta != 0)
-  #   non0.betahat = (betahat != 0)
-  #   # TPR & S.hat
-  #   TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-  #   S.hat.cl[l] = sum(non0.betahat)
-  # }
-  
   # apply supervised log-ratios
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
               rho.type = rho.type)
-  
-  # btree.slr = slr$btree
-  # # calculate TPR for supervised log-ratios
-  # nlam.slr = length(slr$lambda)
-  # TPR.slr = rep(NA, nlam.slr)
-  # S.hat.slr = rep(NA, nlam.slr)
-  # for(l in 1:nlam.slr){
-  #   a0 = slr$int[l]
-  #   thetahat = slr$bet[, l]
-  #   # betahat = getBeta(thetahat, btree.slr)
-  #   non0.beta = (beta != 0)
-  #   non0.thetahat = (thetahat != 0)
-  #   sel.cols.SBP = SBP[, non0.thetahat]
-  #   non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
-  #   # TPR & S.hat
-  #   TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-  #   S.hat.slr[l] = sum(non0.betahat)
-  # }
   
   list(X = X, Y = Y,
        fit.cl = complasso, #TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
@@ -272,6 +216,7 @@ sims3 = foreach(
     rho.type = rho.type)
   
   btree.slr = slr$btree
+  SBP = sbp.fromHclust(btree)
   # calculate TPR for supervised log-ratios
   nlam.slr = length(slr$lambda)
   TPR.slr = rep(NA, nlam.slr)
@@ -286,7 +231,7 @@ sims3 = foreach(
   #   TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
   #   S.hat.slr[l] = sum(non0.betahat)
   # }
-  ### Use SBP matrix, instead
+  ### Use SBP matrix, instead ###
   for(l in 1:nlam.slr){
     a0 = slr$int[l]
     thetahat = slr$bet[, l]
@@ -304,59 +249,6 @@ sims3 = foreach(
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
        fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
 }
-
-# # organize the simulation results to have more easily-accessable matrices ######
-# # cl
-# fit.cl.list = list()
-# TPR.cl.mat = matrix(NA, nlam, numSims)
-# S.hat.cl.mat = matrix(NA, nlam, numSims)
-# lambda.cl.mat = matrix(NA, nlam, numSims)
-# # slr
-# fit.slr.list = list()
-# TPR.slr.mat = matrix(NA, nlam, numSims)
-# S.hat.slr.mat = matrix(NA, nlam, numSims)
-# lambda.slr.mat = matrix(NA, nlam, numSims)
-# for(i in 1:numSims){
-#   sim.tmp = sims3[[i]]
-#   # cl
-#   fit.cl.list[[i]] = sim.tmp$fit.cl
-#   TPR.cl.mat[, i] = sim.tmp$TPR.cl
-#   S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
-#   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
-#   # slr
-#   fit.slr.list[[i]] = sim.tmp$fit.slr
-#   TPR.slr.mat[, i] = sim.tmp$TPR.slr
-#   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
-#   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-# }
-# 
-# 
-# 
-# # average TPR and S.hat ########################################################
-# 
-# dim(S.hat.cl.mat)
-# S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
-# TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
-# S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
-# TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
-# 
-# # complasso stuff
-# cl.gg.complete = data.frame(
-#   "S.hat" = S.hat.cl.avg,
-#   "TPR" = TPR.cl.avg)
-# cl.gg.complete$Type = "CompLasso"
-# # slr stuff
-# slr.gg.complete = data.frame(
-#   "S.hat" = S.hat.slr.avg,
-#   "TPR" = TPR.slr.avg)
-# slr.gg.complete$Type = "SLR"
-# # ggplot
-# gg.complete = rbind(slr.gg.complete, cl.gg.complete)
-# gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
-# ggplot(gg.complete, aes(x = S.hat, y = TPR)) +
-#   geom_line(aes(color = Type), size = 1) +
-#   xlim(0, 40) +
-#   theme_bw()
 
 
 # save results #################################################################

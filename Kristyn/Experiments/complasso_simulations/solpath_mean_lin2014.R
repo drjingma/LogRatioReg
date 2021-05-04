@@ -62,7 +62,7 @@ standardizeXY <- function(X, Y){
 tol = 1e-4
 nlam = 3 # for testing
 intercept = TRUE
-K = 10
+K = 5
 rho.type = "square"
 
 # Simulation settings
@@ -91,31 +91,6 @@ for(i in 1:p){
   }
 }
 
-################################################################################
-# if simulations are saved, read them in
-
-# nlam = 200
-# if(beta.settings == "old" | beta.settings == "linetal2014"){
-#   sims3 = readRDS(paste0(output_dir,
-#                          "/solpaths_old",
-#                          "_dim", n, "x", p,
-#                          "_rho", rho,
-#                          "_int", intercept,
-#                          "_K", K,
-#                          "_seed", rng.seed,
-#                          "_numSims", numSims,
-#                          ".rds"))
-# } else{
-#   sims3 = readRDS(paste0(output_dir,
-#                          "/solpaths",
-#                          "_dim", n, "x", p,
-#                          "_rho", rho,
-#                          "_int", intercept,
-#                          "_K", K,
-#                          "_seed", rng.seed,
-#                          "_numSims", numSims,
-#                          ".rds"))
-# }
 
 ################################################################################
 # Simulations -- different lambda sequence #
@@ -127,7 +102,7 @@ sims = foreach(
 ) %dorng% {
   library(limSolve)
   library(mvtnorm)
-  library(Matrix)
+  library(Matrix)q
   library(glmnet)
   library(compositions)
   library(stats)
@@ -288,59 +263,6 @@ sims3 = foreach(
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
        fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
 }
-
-# # organize the simulation results to have more easily-accessable matrices ######
-# # cl
-# fit.cl.list = list()
-# TPR.cl.mat = matrix(NA, nlam, numSims)
-# S.hat.cl.mat = matrix(NA, nlam, numSims)
-# lambda.cl.mat = matrix(NA, nlam, numSims)
-# # slr
-# fit.slr.list = list()
-# TPR.slr.mat = matrix(NA, nlam, numSims)
-# S.hat.slr.mat = matrix(NA, nlam, numSims)
-# lambda.slr.mat = matrix(NA, nlam, numSims)
-# for(i in 1:numSims){
-#   sim.tmp = sims3[[i]]
-#   # cl
-#   fit.cl.list[[i]] = sim.tmp$fit.cl
-#   TPR.cl.mat[, i] = sim.tmp$TPR.cl
-#   S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
-#   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
-#   # slr
-#   fit.slr.list[[i]] = sim.tmp$fit.slr
-#   TPR.slr.mat[, i] = sim.tmp$TPR.slr
-#   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
-#   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-# }
-# 
-# 
-# 
-# # average TPR and S.hat ########################################################
-# 
-# dim(S.hat.cl.mat)
-# S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
-# TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
-# S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
-# TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
-# 
-# # complasso stuff
-# cl.gg.complete = data.frame(
-#   "S.hat" = S.hat.cl.avg,
-#   "TPR" = TPR.cl.avg)
-# cl.gg.complete$Type = "CompLasso"
-# # slr stuff
-# slr.gg.complete = data.frame(
-#   "S.hat" = S.hat.slr.avg,
-#   "TPR" = TPR.slr.avg)
-# slr.gg.complete$Type = "SLR"
-# # ggplot
-# gg.complete = rbind(slr.gg.complete, cl.gg.complete)
-# gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
-# ggplot(gg.complete, aes(x = S.hat, y = TPR)) +
-#   geom_line(aes(color = Type), size = 1) +
-#   xlim(0, 40) +
-#   theme_bw()
 
 
 # save results #################################################################

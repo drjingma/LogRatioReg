@@ -49,7 +49,7 @@ n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
 # which beta?
-beta.settings = "new"
+beta.settings = "old"
 if(beta.settings == "old" | beta.settings == "linetal2014"){
   beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
 } else{

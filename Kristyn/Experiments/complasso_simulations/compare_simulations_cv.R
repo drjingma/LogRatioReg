@@ -65,7 +65,45 @@ if(beta.settings == "old" | beta.settings == "linetal2014"){
 }
 print(slr.summaries[metrics, c("mean", "se")])
 
+################################################################################
+# Supervised Log Ratios 2 - alpha = 1 #
+################################################################################
+if(beta.settings == "old" | beta.settings == "linetal2014"){
+  slr2a1.sims = readRDS(paste0(
+    output_dir, "/slr2_alpha1_cv_sims_old", file.end
+  ))
+  slr2a1.summaries = readRDS(paste0(
+    output_dir, "/slr2_alpha1_cv_summaries_old", file.end
+  ))
+} else{
+  slr2a1.sims = readRDS(paste0(
+    output_dir, "/slr2_alpha1_cv_sims", file.end
+  ))
+  slr2a1.summaries = readRDS(paste0(
+    output_dir, "/slr2_alpha1_cv_summaries", file.end
+  ))
+}
+print(slr2a1.summaries[metrics, c("mean", "se")])
 
+################################################################################
+# Supervised Log Ratios 2 - alpha = 1 #
+################################################################################
+if(beta.settings == "old" | beta.settings == "linetal2014"){
+  slr2a0.5.sims = readRDS(paste0(
+    output_dir, "/slr2_alpha0.5_cv_sims_old", file.end
+  ))
+  slr2a0.5.summaries = readRDS(paste0(
+    output_dir, "/slr2_alpha0.5_cv_summaries_old", file.end
+  ))
+} else{
+  slr2a0.5.sims = readRDS(paste0(
+    output_dir, "/slr2_alpha0.5_cv_sims", file.end
+  ))
+  slr2a0.5.summaries = readRDS(paste0(
+    output_dir, "/slr2_alpha0.5_cv_summaries", file.end
+  ))
+}
+print(slr2a0.5.summaries[metrics, c("mean", "se")])
 
 
 # plot
@@ -74,9 +112,13 @@ cl.sims.gg = melt(data.frame(t(complasso.sims)))
 cl.sims.gg$type = "CompLasso"
 slr.sims.gg = melt(data.frame(t(slr.sims)))
 slr.sims.gg$type = "SLR"
-data.gg = rbind(cl.sims.gg, slr.sims.gg)
+slr2a1.sims.gg = melt(data.frame(t(slr2a1.sims)))
+slr2a1.sims.gg$type = "SLR2alpha1"
+slr2a0.5.sims.gg = melt(data.frame(t(slr2a0.5.sims)))
+slr2a0.5.sims.gg$type = "SLR2alpha0.5"
+data.gg = rbind(cl.sims.gg, slr.sims.gg, slr2a1.sims.gg, slr2a0.5.sims.gg)
 data.gg = dplyr::filter(data.gg, variable %in% metrics)
-data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR"))
+data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "SLR2alpha1", "SLR2alpha0.5"))
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + 
   geom_boxplot() + 

@@ -44,7 +44,7 @@ intercept = TRUE
 K = 10
 
 # Simulation settings
-numSims = 100
+numSims = 3
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5

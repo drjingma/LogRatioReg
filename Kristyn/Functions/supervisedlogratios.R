@@ -1,8 +1,14 @@
 # Supervised Log Ratios Regression
-# do hierarchical clustering with specified linkage for compositional data X and y
+
+
+
+# do hierarchical clustering with specified linkage 
+#   for compositional data X and y
 getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
   n = dim(X)[1]
   p = dim(X)[2]
+  
+  # checks
   if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
   
   # calculate correlation of each pair of log-ratios with response y
@@ -19,6 +25,7 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
         val = abs(cor(Zjk_demeaned, y_demeaned))
       }
       # if(is.na(val)) stop("getSupervisedTree() : correlation = 0")
+      # hopefully we never have to use this line below.
       if(is.na(val)) val = 0 #######################################################################################
       cormat[j, k] = val
       cormat[k, j] = val
@@ -81,8 +88,13 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
 #   return(btree_slr)
 # }
 
-# using a hierarchical tree, compute the balances for X
+
+
+# Compute the balances for X
+# using a hierarchical tree or SBP matrix or transformation matrix U
 computeBalances = function(X, btree = NULL, sbp = NULL, U = NULL){
+  p = dim(X)[2]
+  
   # checks
   if(!("matrix" %in% class(X))){
     if("numeric" %in% class(X)){
@@ -91,7 +103,7 @@ computeBalances = function(X, btree = NULL, sbp = NULL, U = NULL){
       warning("computeBalances: X is neither of class matrix nor numeric.")
     }
   }
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
   
   # get U
   if(is.null(U)){
@@ -103,7 +115,12 @@ computeBalances = function(X, btree = NULL, sbp = NULL, U = NULL){
   return(balances)
 }
 
+
+
+# Compute the transformation matrix U
+#   using a hierarchical tree or SBP matrix
 getU = function(btree = NULL, sbp = NULL){
+  
   # get SBP matrix of contrasts (if not given)
   if(is.null(btree) & is.null(sbp)) stop("getU: need one of btree or sbp arg.")
   if(is.null(sbp) & !is.null(btree)) sbp = sbp.fromHclust(btree)
@@ -125,13 +142,18 @@ getU = function(btree = NULL, sbp = NULL){
 }
 
 
+
+# Fit supervised log-ratios model to compositional data X and response y
 fitSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE,
   rho.type = "squared"
 ){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
   # checks
-  if(length(y) != nrow(X)) stop("fitSLR : dimensions of y and X don't match")
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
   # check if lambda is given, assign nlam accordingly
   if(!is.null(lambda)){ # lambda is given
     nlam = length(lambda)
@@ -163,9 +185,12 @@ cvSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
   foldid = NULL, intercept = TRUE, rho.type = "squared"
 ){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
   # checks
-  if(length(y) != nrow(X)) stop("fitSLR : dimensions of y and X don't match")
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
   # check if lambda is given, assign nlam accordingly
   if(!is.null(lambda)){ # lambda is given
     nlam = length(lambda)
@@ -200,13 +225,20 @@ cvSLR = function(
   ))
 }
 
+
+# Fit any balance regression model to compositional data X and response y
+#   using the balances' associated binary tree, SBP matrix, or 
+#   transformation matrix U
 fitILR = function(
   y = NULL, X, btree = NULL, sbp = NULL, U = NULL, lambda = NULL, nlam = 20, 
   intercept = TRUE
 ){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
   # checks
-  if(length(y) != nrow(X)) stop("fitILR : dimensions of y and X don't match")
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  if(length(y) != n) stop("fitILR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
   # check if lambda is given, assign nlam accordingly
   if(!is.null(lambda)){ # lambda is given
     nlam = length(lambda)
@@ -237,9 +269,12 @@ cvILR = function(
   y = NULL, X, btree = NULL, sbp = NULL, U = NULL, lambda = NULL, nlam = 20, 
   nfolds = 10, foldid = NULL, intercept = TRUE
 ){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
   # checks
-  if(length(y) != nrow(X)) stop("fitILR : dimensions of y and X don't match")
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:ncol(X), sep = "")
+  if(length(y) != n) stop("fitILR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
   # check if lambda is given, assign nlam accordingly
   if(!is.null(lambda)){ # lambda is given
     nlam = length(lambda)
@@ -274,6 +309,9 @@ cvILR = function(
 
 
 
+# Obtain beta (or betahat)
+#   by transforming from balance regression model's theta (or thetahat)
+#   to the linear log-contrasts model with parameters beta
 getBeta = function(
   theta, btree = NULL, sbp = NULL, U = NULL
 ){

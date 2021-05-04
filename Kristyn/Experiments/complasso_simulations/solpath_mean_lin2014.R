@@ -126,67 +126,26 @@ sims = foreach(
     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
     nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
   
-  TPR.cl = rep(NA, nlam)
-  S.hat.cl = rep(NA, nlam)
-  for(l in 1:nlam){
-    a0 = complasso$int[l]
-    betahat = complasso$bet[, l]
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.cl[l] = sum(non0.betahat)
-  }
-  
   # apply supervised log-ratios
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
               rho.type = rho.type)
   
-  btree.slr = slr$btree
-  # calculate TPR for supervised log-ratios
-  nlam.slr = length(slr$lambda)
-  TPR.slr = rep(NA, nlam.slr)
-  S.hat.slr = rep(NA, nlam.slr)
-  for(l in 1:nlam.slr){
-    a0 = slr$int[l]
-    thetahat = slr$bet[, l]
-    betahat = getBeta(thetahat, btree.slr)
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.slr[l] = sum(non0.betahat)
-  }
-  
   list(X = X, Y = Y,
-       fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
-       fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
+       fit.cl = complasso, fit.slr = slr)
 }
 
 
 
 # organize the simulation results to have more easily-accessable matrices #
 # cl
-fit.cl.list = list()
-TPR.cl.mat = matrix(NA, nlam, numSims)
-S.hat.cl.mat = matrix(NA, nlam, numSims)
 lambda.cl.mat = matrix(NA, nlam, numSims)
 # slr
-fit.slr.list = list()
-TPR.slr.mat = matrix(NA, nlam, numSims)
-S.hat.slr.mat = matrix(NA, nlam, numSims)
 lambda.slr.mat = matrix(NA, nlam, numSims)
 for(i in 1:numSims){
   sim.tmp = sims[[i]]
   # cl
-  fit.cl.list[[i]] = sim.tmp$fit.cl
-  TPR.cl.mat[, i] = sim.tmp$TPR.cl
-  S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
   # slr
-  fit.slr.list[[i]] = sim.tmp$fit.slr
-  TPR.slr.mat[, i] = sim.tmp$TPR.slr
-  S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
 }
 

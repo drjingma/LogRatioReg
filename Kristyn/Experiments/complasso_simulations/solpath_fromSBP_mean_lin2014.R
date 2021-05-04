@@ -216,7 +216,7 @@ sims3 = foreach(
     rho.type = rho.type)
   
   btree.slr = slr$btree
-  SBP = sbp.fromHclust(btree)
+  SBP = sbp.fromHclust(btree.slr)
   # calculate TPR for supervised log-ratios
   nlam.slr = length(slr$lambda)
   TPR.slr = rep(NA, nlam.slr)

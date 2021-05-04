@@ -90,7 +90,8 @@ cvSLR2 <- function(
   y, X, A = NULL, U = NULL, linkage = "complete", rho.type = "squared",
   Q = NULL, intercept = TRUE, lambda = NULL, 
   alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
-  rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6, nfolds = 5
+  rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6, nfolds = 5, 
+  foldid = NULL
 ){
   
   fitObj = fitSLR2(
@@ -115,14 +116,19 @@ cvSLR2 <- function(
   }
   
   # make folds
-  nn <- round(n / nfolds)
-  sizes <- rep(nn, nfolds)
-  sizes[nfolds] <- sizes[nfolds] + n - nn * nfolds
-  b <- c(0, cumsum(sizes))
-  set.seed(100) # set.seed for random number generator
-  ii <- sample(n)
-  folds <- list()
-  for (i in seq(nfolds)) folds[[i]] <- ii[seq(b[i] + 1, b[i + 1])]
+  if(is.null(foldid)){
+    nn <- round(n / nfolds)
+    sizes <- rep(nn, nfolds)
+    sizes[nfolds] <- sizes[nfolds] + n - nn * nfolds
+    b <- c(0, cumsum(sizes))
+    # set.seed(100) # set.seed for random number generator
+    ii <- sample(n)
+    folds <- list()
+    for (i in seq(nfolds)) folds[[i]] <- ii[seq(b[i] + 1, b[i + 1])]
+  } else{
+    folds = list()
+    for(i in 1:nfolds) folds[[i]] = which(foldid == i)
+  }
   
   # Fit based on folds and compute error metric
   for (i in seq(nfolds)) {

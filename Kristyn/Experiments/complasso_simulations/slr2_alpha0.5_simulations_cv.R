@@ -115,7 +115,7 @@ evals = foreach(
   Y.test = Z.test %*% beta + epsilon.test
   
   # apply supervised log-ratios, using CV to select lambda
-  slr = cvSLR2(y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1, 
+  slr = cvSLR2(y = Y, X = X, nlam = nlam, nfolds = K, alpha = 0.5, 
                intercept = intercept)
   btree = slr$btree
   # plot(btree)

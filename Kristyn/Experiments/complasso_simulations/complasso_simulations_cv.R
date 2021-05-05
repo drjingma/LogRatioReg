@@ -35,6 +35,11 @@ source("RCode/func_libs.R")
 # Kristyn sources
 functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
+source(paste0(functions_path, "supervisedlogratios2.R"))
+
+# Simulation settings to change
+# rho.type = 2 # "square"
+beta.settings = "new"
 
 # Method Settings
 tol = 1e-4
@@ -48,12 +53,13 @@ n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
 # which beta?
-beta.settings = "old"
 if(beta.settings == "old" | beta.settings == "linetal2014"){
   beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
 } else{
   beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 }
+
+# Population parameters
 non0.beta = (beta != 0)
 sigma_eps = 0.5
 seed = 1
@@ -190,16 +196,12 @@ evals.df
 
 file.end = paste0(
   "_dim", n, "x", p, 
+  "_", beta.settings, 
   "_rho", rho, 
   "_int", intercept,
   "_K", K,
   "_seed", rng.seed,
   ".rds")
 
-if(beta.settings == "old" | beta.settings == "linetal2014"){
-  saveRDS(evals, file = paste0(output_dir, "/complasso_cv_sims_old", file.end))
-  saveRDS(evals.df, file = paste0(output_dir, "/complasso_cv_summaries_old", file.end))
-} else{
-  saveRDS(evals, file = paste0(output_dir, "/complasso_cv_sims", file.end))
-  saveRDS(evals.df, file = paste0(output_dir, "/complasso_cv_summaries", file.end))
-}
+saveRDS(evals, file = paste0(output_dir, "/complasso_sims", file.end))
+saveRDS(evals.df, file = paste0(output_dir, "/complasso_summaries", file.end))

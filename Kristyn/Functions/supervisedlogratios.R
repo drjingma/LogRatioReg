@@ -19,7 +19,7 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
       Zjk = log(X[, j]) - log(X[, k])
       Zjk_demeaned = Zjk - mean(Zjk)
       if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
-         rho.type == 1){
+         rho.type == 2){
         val = (cor(Zjk_demeaned, y_demeaned))^2
       } else{
         val = abs(cor(Zjk_demeaned, y_demeaned))

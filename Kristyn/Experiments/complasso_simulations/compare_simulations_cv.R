@@ -9,7 +9,7 @@ p = 200
 rho = 0.2 # 0.2, 0.5
 intercept = TRUE
 K = 10
-beta.settings = "new"
+beta.settings = "old"
 
 # other stuff
 metrics0 = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
@@ -128,7 +128,7 @@ ggplot(data.gg, aes(x = type, y = value, color = type)) +
   stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
                color = "red") +
   theme_bw() + 
-  theme(axis.title.x = element_blank(), 
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
         axis.title.y = element_blank())
 
 # zoom in to PEtr, PEte

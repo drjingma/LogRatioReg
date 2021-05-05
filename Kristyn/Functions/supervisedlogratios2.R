@@ -88,7 +88,7 @@
 # ){
 #   
 #   fitObj = fitSLR2new(
-#     y, X, A = A, U = U, linkage = linkage,
+#     y, X, A = A, U = U, linkage = linkage, rho.type = rho.type, 
 #     Q = Q, intercept = intercept, lambda = lambda, 
 #     alpha = alpha, nlam = nlam, lam.min.ratio = lam.min.ratio, nalpha = nalpha,
 #     rho = rho, eps1 = eps1, eps2 = eps2, maxite = maxite)
@@ -127,7 +127,7 @@
 #   for (i in seq(nfolds)) {
 #     # fit model on all but the ith fold
 #     fit_cv <- fitSLR2(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
-#                       intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha)
+#                       intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha, rho.type = rho.type)
 #     pred_te <- lapply(seq(nalpha), function(k) {
 #       if (fitObj$intercept) {
 #         X[folds[[i]], ] %*% fit_cv$beta[[k]] + rep(fit_cv$a0[[k]], each = length(folds[[i]]))
@@ -172,7 +172,7 @@ fitSLR2 <- function(
   y, X, A = NULL, U = NULL, linkage = "complete", rho.type = "squared",
   Q = NULL, intercept = TRUE, lambda = NULL, 
   alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
-  rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6
+  rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6, scaling = FALSE
 ){
   btree = getSupervisedTree(y, X, linkage, rho.type)
   U = getU(btree = btree)
@@ -190,10 +190,11 @@ fitSLR2 <- function(
   if (intercept) {
     Z_use <- Z - matrix(rep(1, times = n), ncol = 1) %*% 
       matrix(colMeans(Z), nrow = 1)
-    # # scale, too, though.....
-    # Z.sd <- apply(Z_use, 2, sd)
-    # Z_use <- scale(Z_use, center=FALSE, scale = Z.sd)
-    # just center y
+    # scale X if scaling = TRUE
+    if(scaling) {
+      Z.sd <- apply(Z_use, 2, sd)
+      Z_use <- scale(Z_use, center=FALSE, scale = Z.sd)
+    }
     y_use <- y - mean(y)
   }
   
@@ -231,6 +232,11 @@ fitSLR2 <- function(
       ret <- glmnet(Z_use, y_use, family = "gaussian", lambda = lambda, 
                     standardize = FALSE, intercept = FALSE, 
                     thresh = min(eps1, eps2), maxit = maxite)
+      if(scaling){ # scale back
+        beta[[i]] <- as.matrix(ret$beta / Z.sd)
+      } else{
+        beta[[i]] <- as.matrix(ret$beta)
+      }
       beta[[i]] <- as.matrix(ret$beta)
       theta[[i]] <- NA
     } else if (alpha[i] == 1) {
@@ -239,14 +245,22 @@ fitSLR2 <- function(
                     standardize = FALSE, intercept = FALSE, 
                     # penalty.factor = c(rep(1, p-1), 0), # not needed here
                     thresh = min(eps1, eps2), maxit = maxite)
-      # beta[[i]] <- as.matrix(A %*% (ret$beta / Z.sd))
-      beta[[i]] <- as.matrix(A %*% ret$beta) # ret$beta is actually theta
+      # ret$beta is actually theta
+      if(scaling){ # scale back
+        beta[[i]] <- as.matrix(A %*% (ret$beta / Z.sd))
+      } else{
+        beta[[i]] <- as.matrix(A %*% ret$beta)
+      }
       theta[[i]] <- as.matrix(ret$beta)
     } else {
       # general case when 0 < alpha < 1
       ret <- rare:::our_solver(Z_use, as.matrix(y_use), Q, E, lambda, alpha[i], rho, 
                         eps1, eps2, maxite)
-      beta[[i]] <- ret$beta
+      if(scaling){ # scale back
+        beta[[i]] <- ret$beta / Z.sd
+      } else{
+        beta[[i]] <- ret$beta
+      }
       theta[[i]] <- ret$gamma # gamma is actually theta
     }
     cat(sprintf("Finished model fits for alpha[%s].\n", i))
@@ -257,7 +271,8 @@ fitSLR2 <- function(
       (sum(y) - c(matrix(colSums(Z), nrow = 1) %*% b))/n)
   }
   list(a0 = beta0, beta = beta, theta = theta, lambda = lambda, 
-       alpha = alpha, A = A, Q = Q, intercept = intercept, btree = btree, U = U)
+       alpha = alpha, A = A, Q = Q, intercept = intercept, scaling = scaling,
+       btree = btree, U = U)
 }
 
 cvSLR2 <- function(
@@ -265,14 +280,14 @@ cvSLR2 <- function(
   Q = NULL, intercept = TRUE, lambda = NULL, 
   alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
   rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6, nfolds = 5, 
-  foldid = NULL
+  foldid = NULL, scaling = FALSE
 ){
   
   fitObj = fitSLR2(
-    y, X, A = A, U = U, linkage = linkage,
+    y, X, A = A, U = U, linkage = linkage, rho.type = rho.type, 
     Q = Q, intercept = intercept, lambda = lambda, 
     alpha = alpha, nlam = nlam, lam.min.ratio = lam.min.ratio, nalpha = nalpha,
-    rho = rho, eps1 = eps1, eps2 = eps2, maxite = maxite)
+    rho = rho, eps1 = eps1, eps2 = eps2, maxite = maxite, scaling = scaling)
   btree = fitObj$btree
   errtype = "mean-squared-error"
   
@@ -289,7 +304,7 @@ cvSLR2 <- function(
     stop("The error function needs to be either mean squared error or mean absolute error.")
   }
   
-  # make folds
+  # make folds, if necessary
   if(is.null(foldid)){
     nn <- round(n / nfolds)
     sizes <- rep(nn, nfolds)
@@ -308,7 +323,8 @@ cvSLR2 <- function(
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
     fit_cv <- fitSLR2(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
-                      intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha)
+                      intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha, 
+                      scaling = scaling, rho.type = rho.type)
     pred_te <- lapply(seq(nalpha), function(k) {
       if (fitObj$intercept) {
         X[folds[[i]], ] %*% fit_cv$beta[[k]] + rep(fit_cv$a0[[k]], each = length(folds[[i]]))

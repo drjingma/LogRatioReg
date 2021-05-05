@@ -37,6 +37,10 @@ functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
 source(paste0(functions_path, "supervisedlogratios2.R"))
 
+# Simulation settings to change
+rho.type = 2 # 1 = "absolute value", 2 = "square"
+beta.settings = "new"
+
 # Method Settings
 tol = 1e-4
 nlam = 200
@@ -49,12 +53,13 @@ n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
 # which beta?
-beta.settings = "old"
 if(beta.settings == "old" | beta.settings == "linetal2014"){
   beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
 } else{
   beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 }
+
+# Population parameters
 non0.beta = (beta != 0)
 sigma_eps = 0.5
 seed = 1
@@ -116,7 +121,7 @@ evals = foreach(
   
   # apply supervised log-ratios, using CV to select lambda
   slr = cvSLR2(y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1, 
-               intercept = intercept)
+               intercept = intercept, rho.type = rho.type)
   btree = slr$btree
   # plot(btree)
   
@@ -203,18 +208,16 @@ eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
 
+
 file.end = paste0(
   "_dim", n, "x", p, 
+  "_", beta.settings, 
   "_rho", rho, 
+  "_type", rho.type, 
   "_int", intercept,
   "_K", K,
   "_seed", rng.seed,
   ".rds")
 
-if(beta.settings == "old" | beta.settings == "linetal2014"){
-  saveRDS(evals, file = paste0(output_dir, "/slr2_alpha1_cv_sims_old", file.end))
-  saveRDS(evals.df, file = paste0(output_dir, "/slr2_alpha1_cv_summaries_old", file.end))
-} else{
-  saveRDS(evals, file = paste0(output_dir, "/slr2_alpha1_cv_sims", file.end))
-  saveRDS(evals.df, file = paste0(output_dir, "/slr2_alpha1_cv_summaries", file.end))
-}
+saveRDS(evals, file = paste0(output_dir, "/slr_sims", file.end))
+saveRDS(evals.df, file = paste0(output_dir, "/slr_summaries", file.end))

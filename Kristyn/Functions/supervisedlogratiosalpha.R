@@ -284,6 +284,7 @@ cvSLRalpha <- function(
   foldid = NULL, scaling = FALSE
 ){
   
+  # fit the models
   fitObj = fitSLRalpha(
     y = y, X = X, A = A, U = U, linkage = linkage, rho.type = rho.type, 
     Q = Q, intercept = intercept, lambda = lambda, alpha = alpha, nlam = nlam, 
@@ -299,11 +300,11 @@ cvSLRalpha <- function(
   
   # define error function
   errfun <- function(est, truth) colMeans((est - truth)^2)
-  if (errtype == "mean-absolute-error") {
-    errfun <- function(est, truth) colMeans(abs(est - truth))
-  } else if (errtype != "mean-squared-error") {
-    stop("The error function needs to be either mean squared error or mean absolute error.")
-  }
+  # if (errtype == "mean-absolute-error") {
+  #   errfun <- function(est, truth) colMeans(abs(est - truth))
+  # } else if (errtype != "mean-squared-error") {
+  #   stop("The error function needs to be either mean squared error or mean absolute error.")
+  # }
   
   # make folds, if necessary
   if(is.null(foldid)){
@@ -324,9 +325,12 @@ cvSLRalpha <- function(
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
     fit_cv <- fitSLRalpha(
-      y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
-      intercept = fitObj$intercept, lambda = fitObj$lambda, 
-      alpha = fitObj$alpha, scaling = scaling, rho.type = rho.type, rho = rho)
+      y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, U = fitObj$U, 
+      linkage = linkage, rho.type = rho.type, 
+      Q = fitObj$Q, intercept = fitObj$intercept, lambda = fitObj$lambda, 
+      alpha = fitObj$alpha, nlam = nlam, lam.min.ratio = lam.min.ratio, 
+      nalpha = nalpha, rho = rho, eps1 = eps1, eps2 = eps2, maxite = maxite,
+      scaling = fitObj$scaling)
     pred_te <- lapply(seq(nalpha), function(k) {
       if (fitObj$intercept) {
         X[folds[[i]], ] %*% fit_cv$beta[[k]] + 

@@ -30,20 +30,21 @@ source("RCode/func_libs.R")
 # Kristyn sources
 functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
-source(paste0(functions_path, "supervisedlogratios2.R"))
+source(paste0(functions_path, "supervisedlogratiosalpha.R"))
 
 # Method Settings
 tol = 1e-4
-nlam = 200
+nlam = 10# 100
 intercept = TRUE
-K = 10
+K = 3 #10
 rho.type = "square"
+linkage = "average"
 
 # Simulation settings
 numSims = 100
-n = 100
-p = 200
-rho = 0.2 # 0.2, 0.5
+n = 15 # 100
+p = 20 # 200
+rho = 0.5 # 0.2, 0.5
 # which beta?
 beta.settings = "new"
 if(beta.settings == "old" | beta.settings == "linetal2014"){
@@ -107,19 +108,17 @@ foldid = sample(rep(seq(nfolds), length = n))
 ################################################################################
 
 # apply the old slr #
-slr0 = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-             rho.type = rho.type
-             , foldid = foldid
-             )
+slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
+            rho.type = rho.type, linkage = linkage, foldid = foldid)
 
 # choose lambda
-lam.min.idx0 = which.min(slr0$cvm)
-lam.min0 = slr0$lambda[lam.min.idx0]
+lam.min.idx0 = which.min(slr$cvm)
+lam.min0 = slr$lambda[lam.min.idx0]
 
 # plot cvm vs lambda
-# plot(slr0$lambda, slr0$cvm, #xlim = c(range(slr$lambda) + c(-0.1, 0.2)), 
+# plot(slr$lambda, slr$cvm, #xlim = c(range(slr$lambda) + c(-0.1, 0.2)), 
 #      col = rgb(0,0,0, alpha = 0.25))
-ggplot(data.frame(lambda = slr0$lambda, cvm = slr0$cvm), 
+ggplot(data.frame(lambda = slr$lambda, cvm = slr$cvm), 
        aes(x = lambda, y = cvm)) + 
   geom_path() + 
   geom_point(alpha = 0.25) + 
@@ -128,17 +127,80 @@ ggplot(data.frame(lambda = slr0$lambda, cvm = slr0$cvm),
 lam.min0
 
 # betahat?
-thetahat0 = slr0$bet[, lam.min.idx0]
-betahat0 = getBeta(thetahat0, btree = slr0$btree)
+thetahat0 = slr$bet[, lam.min.idx0]
+betahat0 = getBeta(thetahat0, btree = slr$btree)
 sum(betahat0 != 0)
 
-################################################
+# old slr, with some changes
+slr.v2 = cvSLR0(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
+                rho.type = rho.type, linkage = linkage, foldid = foldid)
+all.equal(slr$lambda, slr.v2$lambda)
+all.equal(slr$bet, slr.v2$bet)
+all.equal(slr$a0, slr.v2$a0)
+all.equal(slr$cvm, as.numeric(slr.v2$cvm)) # not the same!
+cbind(slr$cvm, as.numeric(slr.v2$cvm))
+ggplot(data.frame(lambda = c(slr$lambda, slr.v2$lambda), 
+                  cvm = c(slr$cvm, as.numeric(slr.v2$cvm)), 
+                  type = c(rep("SLR cv.glmnet()", length(slr$lambda)),
+                           rep("SLR manual CV", length(slr.v2$lambda))
+                           )
+                  ),
+       aes(x = lambda, y = cvm, color = type)) + 
+  geom_path() + 
+  geom_point(alpha = 0.25) + 
+  theme_classic()
+
+################################################################################
+# line-by-line
+X = X; y = Y; nfolds = K; lambda = NULL
+
+n = dim(X)[1] # 100
+p = dim(X)[2] # 200
+
+# checks
+if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
+if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+# check if lambda is given, assign nlam accordingly
+if(!is.null(lambda)){ # lambda is given
+  nlam = length(lambda)
+}
+
+# compute balances
+btree = getSupervisedTree(y, X, linkage, rho.type)
+Xb = computeBalances(X, btree)
+
+# run cv.glmnet
+cv_exact = cv.glmnet(
+  x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+  foldid = foldid, intercept = intercept, type.measure = c("mse"))
+
+# check lambda length
+if(nlam != length(cv_exact$lambda)){
+  lambda <- log(cv_exact$lambda)
+  lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+  cv_exact = cv.glmnet(
+    x = Xb, y = y, lambda = lambda_new, nfolds = nfolds, 
+    foldid = foldid, intercept = intercept, type.measure = c("mse"))
+}
+
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 # apply the new slr, with alpha = 1 -- should be equivalent to old slr #
-slr = cvSLR2(y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1
-             , foldid = foldid
-             , lambda = slr0$lambda
-             )
+slr1 = cvSLRalpha(
+  y = Y, X = X, linkage = linkage, rho.type = rho.type, 
+  intercept = intercept, lambda = slr$lambda, 
+  alpha = 1, nlam = nlam, 
+  nfolds = K, 
+  foldid = foldid, scaling = TRUE
+)
 
 # choose lambda
 lam.min.idx = which.min(slr$cvm)
@@ -153,6 +215,22 @@ ggplot(data.frame(lambda = slr$lambda, cvm = slr$cvm),
   theme_classic()
 # what is the minimizing lambda?
 lam.min
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ################################################
 

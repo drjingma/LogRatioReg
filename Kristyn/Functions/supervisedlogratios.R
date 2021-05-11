@@ -221,9 +221,8 @@ cvSLR = function(
     cv_exact = cv.glmnet(
       x = Xb, y = y, lambda = lambda_new, nfolds = nfolds, 
       # note: yet another difference is that here, I specify type.measure to be 
-      #   "mse", rather than the default, "deviance",
-      #   but I think this should not be an issue since we are using a gaussian
-      #   model so they end up the same.
+      #   "mse", rather than the default, "deviance", --
+      #   however, for gaussian models, "deviance" is "mse".
       foldid = foldid, intercept = intercept, type.measure = c("mse"))
   }
   
@@ -237,6 +236,8 @@ cvSLR = function(
     cvm = cv_exact$cvm
   ))
 }
+
+
 
 
 # Fit any balance regression model to compositional data X and response y
@@ -365,4 +366,181 @@ getTPR = function(
     stop("getTPR: invalid type -- can only be ilr model or linear log contrast model")
   }
   return(c("S.hat" = S.hat, "TPR" = TPR))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Fit supervised log-ratios model to compositional data X and response y
+fitSLR0 = function(
+  y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE,
+  rho.type = "squared"
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  # checks
+  if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+  # check if lambda is given, assign nlam accordingly
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
+  
+  # compute balances
+  btree = getSupervisedTree(y, X, linkage, rho.type)
+  Xb = computeBalances(X, btree)
+  
+  # run glmnet
+  glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+                      intercept = intercept)
+  # check lambda length
+  if(nlam != length(glmnet.fit$lambda)){
+    # if it's not nlam, refit to nlam lambdas
+    lambda <- log(glmnet.fit$lambda)
+    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new)
+  }
+  return(list(
+    int = glmnet.fit$a0, 
+    bet = glmnet.fit$beta, 
+    lambda = glmnet.fit$lambda,
+    glmnet = glmnet.fit, 
+    btree = btree
+  ))
+}
+
+cvSLR0 = function(
+  y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
+  foldid = NULL, intercept = TRUE, rho.type = "squared"
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  # checks
+  if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+  # check if lambda is given, assign nlam accordingly
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
+  
+  # compute balances
+  btree = getSupervisedTree(y, X, linkage, rho.type)
+  Xb = computeBalances(X, btree)
+  
+  # # run cv.glmnet
+  # cv_exact = cv.glmnet(
+  #   x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+  #   foldid = foldid, intercept = intercept, type.measure = c("mse"))
+  
+  # fit the models
+  # run glmnet
+  fit_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+                      intercept = intercept)
+  # check lambda length
+  if(nlam != length(fit_exact$lambda)){
+    # if it's not nlam, refit to nlam lambdas
+    lambda <- log(fit_exact$lambda)
+    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    fit_exact = glmnet(x = Xb, y = y, lambda = lambda_new)
+  }
+  
+  # make folds, if necessary
+  if(is.null(foldid)){
+    nn <- round(n / nfolds)
+    sizes <- rep(nn, nfolds)
+    sizes[nfolds] <- sizes[nfolds] + n - nn * nfolds
+    b <- c(0, cumsum(sizes))
+    # set.seed(100) # set.seed for random number generator
+    ii <- sample(n)
+    folds <- list()
+    for (i in seq(nfolds)) folds[[i]] <- ii[seq(b[i] + 1, b[i + 1])]
+  } else{
+    folds = list()
+    for(i in 1:nfolds) folds[[i]] = which(foldid == i)
+  }
+  
+  errs <- array(NA, dim=c(nlam, 1, nfolds))
+  
+  # Fit based on folds and compute error metric
+  for (i in seq(nfolds)) {
+    # fit model on all but the ith fold
+    fit_cv <- glmnet(x = X[-folds[[i]], ], y = y[-folds[[i]]], 
+                     lambda = fit_exact$lambda, nlambda = nlam, 
+                     intercept = intercept)
+    pred_te <- lapply(seq(1), function(k) {
+      X[folds[[i]], ] %*% fit_cv$beta + 
+          rep(fit_cv$a0, each = length(folds[[i]]))
+    })
+    for (k in seq(nalpha)) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
+    cat("##########################\n")
+    cat(sprintf("Finished model fits for fold[%s].\n", i))
+    cat("##########################\n")
+  }
+  m <- apply(errs, c(1, 2), mean)
+  se <- apply(errs, c(1, 2), stats::sd) / sqrt(nfolds)
+  ibest <- which(m == min(m), arr.ind = TRUE)[1, , drop = FALSE]
+  
+  return(list(
+    int = fit_exact$a0,
+    bet = fit_exact$beta,
+    lambda = fit_exact$lambda,
+    glmnet = fit_exact,
+    btree = btree,
+    cvm = fit_exact$cvm
+  ))
 }

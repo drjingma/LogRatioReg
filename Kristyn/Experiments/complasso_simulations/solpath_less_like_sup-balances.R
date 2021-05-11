@@ -1,4 +1,4 @@
-# last updated: 05/03/2021
+# last updated: 05/10/2021
 # simulate a data set using settings in Lin et al 2014, 
 # fit Complasso and SLR, and plot the solution path.
 
@@ -42,14 +42,15 @@ library(ggplot2)
 tol = 1e-4
 nlam = 3 # for testing
 intercept = TRUE
-K = 5
-rho.type = "square"
+K = 10#5
+rho.type = "abs" #"square"
+linkage = "average"
 
 # Simulation settings
-numSims = 100
-n = 100
-p = 200
-rho = 0.2 # 0.2, 0.5
+numSims = 50#100
+n = 50#100
+p = 20#200
+rho = 0.5 # 0.2, 0.5
 # which beta?
 beta.settings = "new"
 if(beta.settings == "old" | beta.settings == "linetal2014"){
@@ -57,6 +58,7 @@ if(beta.settings == "old" | beta.settings == "linetal2014"){
 } else{
   beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 }
+names(beta) = paste0('s',1:p)
 non0.beta = (beta != 0)
 sigma_eps = 0.5
 seed = 1
@@ -70,6 +72,8 @@ for(i in 1:p){
     SigmaW[i, j] = rho^abs(i - j)
   }
 }
+# Sigma0 = rgExpDecay(p,rho)$Sigma
+# all.equal(SigmaW, Sigma0)
 
 ################################################################################
 # Simulations -- different lambda sequence #
@@ -91,6 +95,7 @@ sims = foreach(
   # simulate training data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
+  colnames(W) = paste0('s',1:p)
   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
   V = exp(W)
   rowsumsV = apply(V, 1, sum)
@@ -106,39 +111,50 @@ sims = foreach(
     nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
   
   # apply supervised log-ratios
-  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-              rho.type = rho.type)
+  # slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
+  #             rho.type = rho.type)
+  # S <- matrix(0,p,p)
+  # rownames(S) <- colnames(S) <- colnames(X)
+  # for (j in 1:(p-1)){
+  #   for (k in (j+1):p){
+  #     newx <- log(X[1:n,j]) - log(X[1:n,k])
+  #     newx <- newx - mean(newx)
+  #     newy <- Y - mean(Y)
+  #     S[j,k] <- S[k,j] <- abs(cor(newx,Y))
+  #     # S[j,k] <- S[k,j] <- abs(crossprod(newx,newy)/(sqrt(crossprod(newx)) * sqrt(crossprod(newy))))
+  #   }
+  # }
+  # h_supervised <- hclust(as.dist(1-S),method = linkage)
+  h_supervised <- getSupervisedTree(Y, X, linkage = linkage, rho.type = rho.type)
+  # plot(h_supervised)
+  # ggtree(h_supervised) + geom_point(aes(shape=isTip, color=isTip), size=3)
+  sbp_supervised <- sbp.fromHclust(h_supervised)
+  # ba_supervised <- balance.fromSBP(X,sbp_supervised)
+  Xb = computeBalances(X, sbp = sbp_supervised)
+  cv_exact = cv.glmnet(x = Xb, y = Y, nlambda = nlam, nfolds = K)
+  # cv_exact <- cv.glmnet(x=ba_supervised[1:n,],y=Y,lambda=NULL)
+  lambda <- log(cv_exact$lambda)
+  lambda_new <- exp(seq(max(lambda),min(lambda),length.out = nlam))
+  cv_exact <- cv.glmnet(x = Xb, y = Y, lambda = lambda_new, 
+                        type.measure = c("mse"))
   
   list(X = X, Y = Y,
-       fit.cl = complasso, #TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
-       fit.slr = slr#, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr
-       )
+       fit.cl = complasso, fit.slr = cv_exact
+  )
 }
 
 
 
 # organize the simulation results to have more easily-accessible matrices #
 # cl
-# fit.cl.list = list()
-# TPR.cl.mat = matrix(NA, nlam, numSims)
-# S.hat.cl.mat = matrix(NA, nlam, numSims)
 lambda.cl.mat = matrix(NA, nlam, numSims)
 # slr
-# fit.slr.list = list()
-# TPR.slr.mat = matrix(NA, nlam, numSims)
-# S.hat.slr.mat = matrix(NA, nlam, numSims)
 lambda.slr.mat = matrix(NA, nlam, numSims)
 for(i in 1:numSims){
   sim.tmp = sims[[i]]
   # cl
-  # fit.cl.list[[i]] = sim.tmp$fit.cl
-  # TPR.cl.mat[, i] = sim.tmp$TPR.cl
-  # S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
   # slr
-  # fit.slr.list[[i]] = sim.tmp$fit.slr
-  # TPR.slr.mat[, i] = sim.tmp$TPR.slr
-  # S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
 }
 
@@ -146,13 +162,14 @@ for(i in 1:numSims){
 
 ################################################################################
 # using the same lambda sequence in each method
-nlam = 200
+nlam = 100#200
 lambda.df = data.frame(
   complasso = exp(seq(max(log(lambda.cl.mat)), 
                       min(log(lambda.cl.mat)), length.out = nlam)),
   slr = exp(seq(max(log(lambda.slr.mat)), 
                 min(log(lambda.slr.mat)),length.out = nlam))
 )
+
 
 registerDoRNG(rng.seed)
 sims3 = foreach(
@@ -178,83 +195,43 @@ sims3 = foreach(
     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
     lambda = lambda.df$complasso, nfolds = K, tol = tol, intercept = intercept)
   
-  TPR.cl = rep(NA, nlam)
-  S.hat.cl = rep(NA, nlam)
-  for(l in 1:nlam){
-    a0 = complasso$int[l]
-    betahat = complasso$bet[, l]
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.cl[l] = sum(non0.betahat)
-  }
+  cl.res = apply(complasso$bet, 2, function(a) tpr.for.coef(beta, a))
+  S.hat.cl = cl.res[1, ]
+  TPR.cl = cl.res[2, ]
   
   # apply supervised log-ratios
-  slr = cvSLR(
-    y = Y, X = X, lambda = lambda.df$slr, nfolds = K, intercept = intercept, 
-    rho.type = rho.type)
-  
-  btree.slr = slr$btree
-  SBP = sbp.fromHclust(btree.slr)
-  # calculate TPR for supervised log-ratios
-  nlam.slr = length(slr$lambda)
-  TPR.slr = rep(NA, nlam.slr)
-  S.hat.slr = rep(NA, nlam.slr)
-  # for(l in 1:nlam.slr){
-  #   a0 = slr$int[l]
-  #   thetahat = slr$bet[, l]
-  #   betahat = getBeta(thetahat, btree.slr)
-  #   # TPR
-  #   non0.beta = (beta != 0)
-  #   non0.betahat = (betahat != 0)
-  #   TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-  #   S.hat.slr[l] = sum(non0.betahat)
+  # slr = cvSLR(
+  #   y = Y, X = X, lambda = lambda.df$slr, nfolds = K, intercept = intercept, 
+  #   rho.type = rho.type)
+  # S <- matrix(0,p,p)
+  # rownames(S) <- colnames(S) <- colnames(X)
+  # for (j in 1:(p-1)){
+  #   for (k in (j+1):p){
+  #     newx <- log(X[1:n,j]) - log(X[1:n,k])
+  #     newx <- newx - mean(newx)
+  #     newy <- Y - mean(Y)
+  #     S[j,k] <- S[k,j] <- abs(cor(newx,Y))
+  #     # S[j,k] <- S[k,j] <- abs(crossprod(newx,newy)/(sqrt(crossprod(newx)) * sqrt(crossprod(newy))))
+  #   }
   # }
-  ### Use SBP matrix, instead ###
-  for(l in 1:nlam.slr){
-    a0 = slr$int[l]
-    thetahat = slr$bet[, l]
-    # betahat = getBeta(thetahat, btree.slr)
-    non0.beta = (beta != 0)
-    non0.thetahat = (thetahat != 0)
-    sel.cols.SBP = SBP[, non0.thetahat, drop = FALSE]
-    non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
-    # TPR & S.hat
-    TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.slr[l] = sum(non0.betahat)
-  }
+  # h_supervised <- hclust(as.dist(1-S),method = "average") # linkage = average
+  h_supervised <- getSupervisedTree(Y, X, linkage = linkage, rho.type = rho.type)
+  # plot(h_supervised)
+  # ggtree(h_supervised) + geom_point(aes(shape=isTip, color=isTip), size=3)
+  
+  sbp_supervised <- sbp.fromHclust(h_supervised)
+  # ba_supervised <- balance.fromSBP(X, sbp_supervised)
+  Xb <- computeBalances(X, sbp = sbp_supervised)
+  slr <- cv.glmnet(x = Xb, y = Y, lambda = lambda.df$slr, nfolds = K, 
+                   type.measure = c("mse"))
+  
+  slr.res = apply(slr$glmnet.fit$beta, 2, 
+                  function(a) tpr.for.coef.ilr(beta, a, sbp_supervised))
+  S.hat.slr = slr.res[1, ]
+  TPR.slr = slr.res[2, ]
   
   list(X = X, Y = Y, 
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
        fit.slr = slr, TPR.slr = TPR.slr, S.hat.slr = S.hat.slr)
 }
 
-
-# save results #################################################################
-
-if(beta.settings == "old" | beta.settings == "linetal2014"){
-  saveRDS(
-    sims3,
-    file = paste0(output_dir,
-                  "/solpaths_old",
-                  "_dim", n, "x", p,
-                  "_rho", rho,
-                  "_int", intercept,
-                  "_K", K,
-                  "_seed", rng.seed,
-                  "_numSims", numSims,
-                  ".rds"))
-} else{
-  saveRDS(
-    sims3,
-    file = paste0(output_dir,
-                  "/solpaths",
-                  "_dim", n, "x", p,
-                  "_rho", rho,
-                  "_int", intercept,
-                  "_K", K,
-                  "_seed", rng.seed,
-                  "_numSims", numSims,
-                  ".rds"))
-}

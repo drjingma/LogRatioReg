@@ -168,7 +168,7 @@
 
 
 
-fitSLR2 <- function(
+fitSLRalpha <- function(
   y, X, A = NULL, U = NULL, linkage = "complete", rho.type = "squared",
   Q = NULL, intercept = TRUE, lambda = NULL, 
   alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
@@ -275,7 +275,7 @@ fitSLR2 <- function(
        btree = btree, U = U)
 }
 
-cvSLR2 <- function(
+cvSLRalpha <- function(
   y, X, A = NULL, U = NULL, linkage = "complete", rho.type = "squared",
   Q = NULL, intercept = TRUE, lambda = NULL, 
   alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
@@ -283,7 +283,7 @@ cvSLR2 <- function(
   foldid = NULL, scaling = FALSE
 ){
   
-  fitObj = fitSLR2(
+  fitObj = fitSLRalpha(
     y, X, A = A, U = U, linkage = linkage, rho.type = rho.type, 
     Q = Q, intercept = intercept, lambda = lambda, 
     alpha = alpha, nlam = nlam, lam.min.ratio = lam.min.ratio, nalpha = nalpha,
@@ -322,7 +322,7 @@ cvSLR2 <- function(
   # Fit based on folds and compute error metric
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
-    fit_cv <- fitSLR2(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
+    fit_cv <- fitSLRalpha(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
                       intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha, 
                       scaling = scaling, rho.type = rho.type)
     pred_te <- lapply(seq(nalpha), function(k) {

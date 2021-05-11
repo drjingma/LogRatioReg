@@ -12,7 +12,7 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
   if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
   
   # calculate correlation of each pair of log-ratios with response y
-  cormat = matrix(1, p, p) # diagonal == 1
+  cormat = matrix(0, p, p) # diagonal == 1
   y_demeaned = y - mean(y)
   for (j in 1:(p - 1)){
     for (k in (j + 1):p){
@@ -20,13 +20,15 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
       Zjk_demeaned = Zjk - mean(Zjk)
       if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
          rho.type == 2){
-        val = (cor(Zjk_demeaned, y_demeaned))^2
+        # val = (cor(Zjk_demeaned, y_demeaned))^2
+        val = (cor(Zjk, y))^2
       } else{
-        val = abs(cor(Zjk_demeaned, y_demeaned))
+        # val = abs(cor(Zjk_demeaned, y_demeaned))
+        val = abs(cor(Zjk, y))
       }
       # if(is.na(val)) stop("getSupervisedTree() : correlation = 0")
       # hopefully we never have to use this line below.
-      if(is.na(val)) val = 0 #######################################################################################
+      # if(is.na(val)) val = 1 #######################################################################################
       cormat[j, k] = val
       cormat[k, j] = val
     }
@@ -130,6 +132,7 @@ getU = function(btree = NULL, sbp = NULL){
   s.vec = colSums(sbp == -1)
   U = sbp
   for(i in 1:ncol(U)){
+    # divide 1s by r
     U[(U[, i] == 1), i] = 1 / r.vec[i]
     # divide -1s by s
     U[(U[, i] == -1), i] = -1 / s.vec[i]
@@ -168,6 +171,7 @@ fitSLR = function(
                       intercept = intercept)
   # check lambda length
   if(nlam != length(glmnet.fit$lambda)){
+    # if it's not nlam, refit to nlam lambdas
     lambda <- log(glmnet.fit$lambda)
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
     glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new)
@@ -208,9 +212,18 @@ cvSLR = function(
   # check lambda length
   if(nlam != length(cv_exact$lambda)){
     lambda <- log(cv_exact$lambda)
+    # note: one difference (that causes results to be slightly different)
+    #   between my implementation here and the one in sup-balances.R is that
+    #   in sup-balances.R the below line is instead
+    #   lambda_new <- exp(seq(max(lambda), min(lambda)+2,length.out = nlam))
+    #   -- it doesn't seem to be the biggest cause for difference, however.
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
     cv_exact = cv.glmnet(
       x = Xb, y = y, lambda = lambda_new, nfolds = nfolds, 
+      # note: yet another difference is that here, I specify type.measure to be 
+      #   "mse", rather than the default, "deviance",
+      #   but I think this should not be an issue since we are using a gaussian
+      #   model so they end up the same.
       foldid = foldid, intercept = intercept, type.measure = c("mse"))
   }
   
@@ -323,4 +336,33 @@ getBeta = function(
   # calculate beta
   beta = U %*% theta
   return(beta)
+}
+
+getTPR = function(
+  type = "ilr", beta, thetahat = NULL, sbp = NULL, betahat = NULL
+){
+  if(is.null(beta)) stop("getTPR: can't compute TPR without beta!")
+  if(type == "ilr" | type == 1 | type == "balance"){
+    if(is.null(sbp)) stop("getTPR: for ilr model, need sbp matrix!")
+    if(is.null(thetahat)) stop("getTPR: for ilr model, need thethat!")
+    # betahat = getBeta(thetahat, btree.slr)
+    non0.beta = (beta != 0)
+    non0.thetahat = (thetahat != 0)
+    sel.cols.SBP = sbp[, non0.thetahat, drop = FALSE]
+    non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
+    # TPR & S.hat
+    TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
+    S.hat = sum(non0.betahat)
+  } else if(type == "llc" | type == 2 | type == "lc" | type == "logcontrast" | 
+            type == "linearlogcontrast"){
+    if(is.null(betahat)) stop("getTPR: for linear log contrast model, need betahat!")
+    # TPR
+    non0.beta = (beta != 0)
+    non0.betahat = (betahat != 0)
+    TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
+    S.hat = sum(non0.betahat)
+  } else{
+    stop("getTPR: invalid type -- can only be ilr model or linear log contrast model")
+  }
+  return(c("S.hat" = S.hat, "TPR" = TPR))
 }

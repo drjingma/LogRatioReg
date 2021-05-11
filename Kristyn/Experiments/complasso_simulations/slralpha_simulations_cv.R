@@ -1,6 +1,6 @@
 # Method: Simulation study for compositional Lasso
 # Purpose: Simulate data, fit supervised log-ratios method to the data
-# Date: 04/26/2021
+# Date: 05/10/2021
 # Notes: 
 
 getwd()
@@ -35,23 +35,22 @@ source("RCode/func_libs.R")
 # Kristyn sources
 functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
-source(paste0(functions_path, "supervisedlogratios2.R"))
+source(paste0(functions_path, "supervisedlogratiosalpha.R"))
 
-# Simulation settings to change
-rho.type = 2 # 1 = "absolute value", 2 = "square"
+# Settings to toggle with
+rho.type = "square" # 1 = "absolute value", 2 = "square"
 beta.settings = "new"
-
-# Method Settings
+linkage = "average"
 tol = 1e-4
-nlam = 200
+nlam = 100
 intercept = TRUE
 K = 10
-
-# Simulation settings
-numSims = 100
 n = 100
 p = 200
-rho = 0.2 # 0.2, 0.5
+rho = 0.5 # 0.2, 0.5
+
+# Other simulation settings
+numSims = 100
 # which beta?
 if(beta.settings == "old" | beta.settings == "linetal2014"){
   beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
@@ -78,7 +77,9 @@ for(i in 1:p){
 # Simulations #
 ################################################################################
 
-# set.seed(16) # leads to FN = 1
+alpha = 0.5
+
+registerDoRNG(rng.seed)
 evals = foreach(
   b = 1:numSims, 
   .combine = cbind, 
@@ -91,8 +92,10 @@ evals = foreach(
   library(compositions)
   library(stats)
   source("RCode/func_libs.R")
+  source(paste0(functions_path, "supervisedlogratios.R"))
+  source(paste0(functions_path, "supervisedlogratiosalpha.R"))
   
-  nlam = 200
+  nlam = 100
   
   # simulate training data #
   # generate W
@@ -120,8 +123,9 @@ evals = foreach(
   Y.test = Z.test %*% beta + epsilon.test
   
   # apply supervised log-ratios, using CV to select lambda
-  slr = cvSLR2(y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1, 
-               intercept = intercept, rho.type = rho.type)
+  slr = cvSLRalpha(
+    y = Y, X = X, nlam = nlam, nfolds = K, alpha = alpha, 
+    intercept = intercept, rho.type = rho.type, linkage = linkage)
   btree = slr$btree
   # plot(btree)
   
@@ -152,7 +156,7 @@ evals = foreach(
   EA2 = as.vector(sqrt(crossprod(betahat - beta)))
   EAInfty = max(abs(betahat - beta))
   
-  # 3. selection accuracy #
+  # 3. selection accuracy #_
   # 3a. selection of beta #
   
   # new version #
@@ -199,6 +203,7 @@ evals = foreach(
     FP, FN, TPR, bspars,
     FP.old, FN.old, TPR.old, bspars.old)
 }
+
 rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
                     "FP", "FN", "TPR", "betaSparsity", 
                     "FPold", "FNold", "TPRold", "betaSparsityOld")
@@ -208,10 +213,10 @@ eval.ses = eval.sds / sqrt(numSims)
 evals.df = data.frame("mean" = eval.means, "sd" = eval.sds, "se" = eval.ses)
 evals.df
 
-
 file.end = paste0(
   "_dim", n, "x", p, 
   "_", beta.settings, 
+  "_alpha", alpha,
   "_rho", rho, 
   "_type", rho.type, 
   "_int", intercept,
@@ -219,5 +224,6 @@ file.end = paste0(
   "_seed", rng.seed,
   ".rds")
 
-saveRDS(evals, file = paste0(output_dir, "/slr_sims", file.end))
-saveRDS(evals.df, file = paste0(output_dir, "/slr_summaries", file.end))
+saveRDS(evals, file = paste0(output_dir, "/slralpha_sims", file.end))
+saveRDS(evals.df, file = paste0(output_dir, "/slralpha_summaries", file.end))
+

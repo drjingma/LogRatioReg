@@ -1,4 +1,4 @@
-# last updated: 04/26/2021
+# last updated: 05/10/2021
 # simulate a data set using settings in Lin et al 2014, 
 # fit Complasso and SLR, and plot the solution path.
 
@@ -98,6 +98,10 @@ if(beta.settings == "old" | beta.settings == "linetal2014"){
 }
 
 
+
+################################################################################
+################################################################################
+################################################################################
 # organize the simulation results to have more easily-accessable matrices ######
 # cl
 fit.cl.list = list()
@@ -137,18 +141,25 @@ TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
 cl.gg.complete = data.frame(
   "S.hat" = S.hat.cl.avg,
   "TPR" = TPR.cl.avg)
-cl.gg.complete$Type = "CompLasso"
+cl.gg.complete$Type = "classo"
 # slr stuff
 slr.gg.complete = data.frame(
   "S.hat" = S.hat.slr.avg,
   "TPR" = TPR.slr.avg)
-slr.gg.complete$Type = "SLR"
+slr.gg.complete$Type = "slr"
 # ggplot
 gg.complete = rbind(slr.gg.complete, cl.gg.complete)
-gg.complete$Type = factor(gg.complete$Type, levels = c("CompLasso", "SLR"))
-ggplot(gg.complete, aes(x = S.hat, y = TPR)) +
-  geom_line(aes(color = Type), size = 1) +
+gg.complete$Type = factor(gg.complete$Type, levels = c("classo", "slr"))
+ggplot(gg.complete, aes(x = S.hat, y = TPR, color = Type
+                        # , shape = Type, linetype = Type
+                        )) +
+  geom_line(size = 1) +
+  # geom_point(size = 3) +
   xlim(0, 40) +
-  theme_bw()
+  theme_bw() + 
+  theme(text = element_text(size = 20))
 
+all.equal(slr.gg.complete, slr.gg.complete.old)
 
+# slr.gg.complete.old = slr.gg.complete
+# 

@@ -1,6 +1,6 @@
 # Method: Simulation study for compositional Lasso
 # Purpose: Simulate data, fit supervised log-ratios method to the data
-# Date: 04/26/2021
+# Date: 05/10/2021
 # Notes: 
 
 getwd()
@@ -35,23 +35,22 @@ source("RCode/func_libs.R")
 # Kristyn sources
 functions_path = "Kristyn/Functions/"
 source(paste0(functions_path, "supervisedlogratios.R"))
-source(paste0(functions_path, "supervisedlogratios2.R"))
+source(paste0(functions_path, "supervisedlogratiosalpha.R"))
 
-# Simulation settings to change
-rho.type = 2 # 1 = "absolute value", 2 = "square"
+# Settings to toggle with
+rho.type = "square" # 1 = "absolute value", 2 = "square"
 beta.settings = "new"
-
-# Method Settings
+linkage = "average"
 tol = 1e-4
-nlam = 200
+nlam = 100
 intercept = TRUE
 K = 10
-
-# Simulation settings
-numSims = 100
 n = 100
 p = 200
-rho = 0.2 # 0.2, 0.5
+rho = 0.5 # 0.2, 0.5
+
+# Other simulation settings
+numSims = 100
 # which beta?
 if(beta.settings == "old" | beta.settings == "linetal2014"){
   beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
@@ -121,7 +120,7 @@ evals = foreach(
   
   # apply supervised log-ratios, using CV to select lambda
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-              rho.type = rho.type)
+              rho.type = rho.type, linkage = linkage)
   btree = slr$btree
   # plot(btree)
   

@@ -1,4 +1,4 @@
-# last updated: 04/26/2021
+# last updated: 05/03/2021
 # simulate a data set using settings in Lin et al 2014, 
 # fit Complasso and SLR, and plot the solution path.
 
@@ -38,45 +38,27 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 # ggplot
 library(ggplot2)
 
-# helper functions
-standardizeXY <- function(X, Y){
-  n = dim(X)[1]
-  p = dim(X)[2]
-  
-  # Center Y
-  Ymean = mean(Y)
-  Ytilde = Y - mean(Y)
-  
-  # Center and scale X
-  Xmeans = colMeans(X)
-  Xcen = X - matrix(Xmeans, n, p, byrow=T)
-  normsX2 = colSums(Xcen^2) / n
-  weights = 1 / sqrt(normsX2) # should weights be the vector, or the matix?
-  Xtilde = Xcen %*% diag(weights)
-  
-  # Return the mean of Y and means of columns of X, as well as weights to be used in back-scaling (that is sqrt(X_j'X_j/n))
-  return(list(Xtilde = Xtilde, Ytilde = Ytilde, Ymean = Ymean, Xmeans = Xmeans, weights = weights))
-}
-
 # Method Settings
 tol = 1e-4
 nlam = 3 # for testing
 intercept = TRUE
-K = 5
-rho.type = "square"
+K = 10#5
+rho.type = "abs" #"square"
+linkage = "average"
 
 # Simulation settings
-numSims = 100
-n = 100
-p = 200
-rho = 0.2 # 0.2, 0.5
+numSims = 50#100
+n = 50#100
+p = 20#200
+rho = 0.5 # 0.2, 0.5
 # which beta?
-beta.settings = "old"
-if(beta.settings == "old" | beta.settings = "linetal2014"){
+beta.settings = "new"
+if(beta.settings == "old" | beta.settings == "linetal2014"){
   beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
 } else{
   beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 }
+names(beta) = paste0('s',1:p)
 non0.beta = (beta != 0)
 sigma_eps = 0.5
 seed = 1
@@ -90,7 +72,8 @@ for(i in 1:p){
     SigmaW[i, j] = rho^abs(i - j)
   }
 }
-
+# Sigma0 = rgExpDecay(p,rho)$Sigma
+# all.equal(SigmaW, Sigma0)
 
 ################################################################################
 # Simulations -- different lambda sequence #
@@ -102,7 +85,7 @@ sims = foreach(
 ) %dorng% {
   library(limSolve)
   library(mvtnorm)
-  library(Matrix)q
+  library(Matrix)
   library(glmnet)
   library(compositions)
   library(stats)
@@ -112,6 +95,7 @@ sims = foreach(
   # simulate training data #
   # generate W
   W = rmvnorm(n = n, mean = muW, sigma = SigmaW) # n x p
+  colnames(W) = paste0('s',1:p)
   # let X = exp(w_ij) / (sum_k=1:p w_ik) ~ Logistic Normal (the covariates)
   V = exp(W)
   rowsumsV = apply(V, 1, sum)
@@ -127,16 +111,38 @@ sims = foreach(
     nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
   
   # apply supervised log-ratios
-  slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-              rho.type = rho.type)
+  # slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
+  #             rho.type = rho.type)
+  S <- matrix(0,p,p)
+  rownames(S) <- colnames(S) <- colnames(X)
+  for (j in 1:(p-1)){
+    for (k in (j+1):p){
+      newx <- log(X[1:n,j]) - log(X[1:n,k])
+      newx <- newx - mean(newx)
+      newy <- Y - mean(Y)
+      S[j,k] <- S[k,j] <- abs(cor(newx,Y))
+      # S[j,k] <- S[k,j] <- abs(crossprod(newx,newy)/(sqrt(crossprod(newx)) * sqrt(crossprod(newy))))
+    }
+  }
+  h_supervised <- hclust(as.dist(1-S),method = linkage)
+  # plot(h_supervised)
+  # ggtree(h_supervised) + geom_point(aes(shape=isTip, color=isTip), size=3)
+  sbp_supervised <- sbp.fromHclust(h_supervised)
+  ba_supervised <- balance.fromSBP(X,sbp_supervised)
+  cv_exact = cv.glmnet(x=ba_supervised[1:n,],y=Y,nlambda = nlam)
+  # cv_exact <- cv.glmnet(x=ba_supervised[1:n,],y=Y,lambda=NULL)
+  lambda <- log(cv_exact$lambda)
+  lambda_new <- exp(seq(max(lambda),min(lambda)+2,length.out = nlam))
+  cv_exact <- cv.glmnet(x=ba_supervised[1:n,],y=Y,lambda=lambda_new)
   
   list(X = X, Y = Y,
-       fit.cl = complasso, fit.slr = slr)
+       fit.cl = complasso, fit.slr = cv_exact
+       )
 }
 
 
 
-# organize the simulation results to have more easily-accessable matrices #
+# organize the simulation results to have more easily-accessible matrices #
 # cl
 lambda.cl.mat = matrix(NA, nlam, numSims)
 # slr
@@ -153,13 +159,14 @@ for(i in 1:numSims){
 
 ################################################################################
 # using the same lambda sequence in each method
-nlam = 200
+nlam = 100#200
 lambda.df = data.frame(
   complasso = exp(seq(max(log(lambda.cl.mat)), 
                       min(log(lambda.cl.mat)), length.out = nlam)),
   slr = exp(seq(max(log(lambda.slr.mat)), 
                 min(log(lambda.slr.mat)),length.out = nlam))
 )
+
 
 registerDoRNG(rng.seed)
 sims3 = foreach(
@@ -185,38 +192,43 @@ sims3 = foreach(
     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
     lambda = lambda.df$complasso, nfolds = K, tol = tol, intercept = intercept)
   
-  TPR.cl = rep(NA, nlam)
-  S.hat.cl = rep(NA, nlam)
-  for(l in 1:nlam){
-    a0 = complasso$int[l]
-    betahat = complasso$bet[, l]
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR.cl[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.cl[l] = sum(non0.betahat)
-  }
+  cl.res = apply(complasso$bet, 2, function(a) tpr.for.coef(beta, a))
+  S.hat.cl = cl.res[1, ]
+  TPR.cl = cl.res[2, ]
   
   # apply supervised log-ratios
-  slr = cvSLR(
-    y = Y, X = X, lambda = lambda.df$slr, nfolds = K, intercept = intercept, 
-    rho.type = rho.type)
-  
-  btree.slr = slr$btree
-  # calculate TPR for supervised log-ratios
-  nlam.slr = length(slr$lambda)
-  TPR.slr = rep(NA, nlam.slr)
-  S.hat.slr = rep(NA, nlam.slr)
-  for(l in 1:nlam.slr){
-    a0 = slr$int[l]
-    thetahat = slr$bet[, l]
-    betahat = getBeta(thetahat, btree.slr)
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR.slr[l] = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat.slr[l] = sum(non0.betahat)
+  # slr = cvSLR(
+  #   y = Y, X = X, lambda = lambda.df$slr, nfolds = K, intercept = intercept, 
+  #   rho.type = rho.type)
+  S <- matrix(0,p,p)
+  rownames(S) <- colnames(S) <- colnames(X)
+  for (j in 1:(p-1)){
+    for (k in (j+1):p){
+      newx <- log(X[1:n,j]) - log(X[1:n,k])
+      newx <- newx - mean(newx)
+      newy <- Y - mean(Y)
+      S[j,k] <- S[k,j] <- abs(cor(newx,Y))
+      # S[j,k] <- S[k,j] <- abs(crossprod(newx,newy)/(sqrt(crossprod(newx)) * sqrt(crossprod(newy))))
+    }
   }
+  h_supervised <- hclust(as.dist(1-S),method = linkage) # linkage = average
+  # plot(h_supervised)
+  # ggtree(h_supervised) + geom_point(aes(shape=isTip, color=isTip), size=3)
+  sbp_supervised <- sbp.fromHclust(h_supervised)
+  ba_supervised <- balance.fromSBP(X,sbp_supervised)
+  slr <- cv.glmnet(x=ba_supervised[1:n,],y=Y,lambda=lambda.df$slr)
+  # cv_exact <- cv.glmnet(x=ba_supervised[1:n,],y=Y,lambda=NULL)
+  # lambda <- log(cv_exact$lambda)
+  # lambda_new <- exp(seq(max(lambda),min(lambda)+2,length.out = nlam))
+  # slr <- cv.glmnet(x=ba_supervised[1:n,],y=Y,lambda=lambda_new)
+  ###
+  
+  # btree.slr = slr$btree
+  SBP = sbp.fromHclust(h_supervised) # sbp.fromHclust(btree.slr)
+  slr.res = apply(slr$glmnet.fit$beta, 2, 
+                  function(a) tpr.for.coef.ilr(beta, a, SBP))
+  S.hat.slr = slr.res[1, ]
+  TPR.slr = slr.res[2, ]
   
   list(X = X, Y = Y, 
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 
@@ -224,30 +236,3 @@ sims3 = foreach(
 }
 
 
-# save results #################################################################
-
-if(beta.settings == "old" | beta.settings == "linetal2014"){
-  saveRDS(
-    sims3,
-    file = paste0(output_dir,
-                  "/solpaths_old",
-                  "_dim", n, "x", p,
-                  "_rho", rho,
-                  "_int", intercept,
-                  "_K", K,
-                  "_seed", rng.seed,
-                  "_numSims", numSims,
-                  ".rds"))
-} else{
-  saveRDS(
-    sims3,
-    file = paste0(output_dir,
-                  "/solpaths",
-                  "_dim", n, "x", p,
-                  "_rho", rho,
-                  "_int", intercept,
-                  "_K", K,
-                  "_seed", rng.seed,
-                  "_numSims", numSims,
-                  ".rds"))
-}

@@ -1,4 +1,4 @@
-fitPBLasso = function(X, y, lambda = NULL){
+fitPBA = function(X, y, lambda = NULL){
   # get principle balances
   sbp_pba = pba(X)
   # lasso_fit

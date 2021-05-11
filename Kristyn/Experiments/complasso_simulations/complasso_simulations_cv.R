@@ -77,7 +77,7 @@ for(i in 1:p){
 # Simulations #
 ################################################################################
 
-# set.seed(16) # leads to FN = 1
+registerDoRNG(rng.seed)
 evals = foreach(
   b = 1:numSims, 
   .combine = cbind, 

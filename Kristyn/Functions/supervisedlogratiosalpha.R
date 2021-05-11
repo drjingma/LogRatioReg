@@ -227,19 +227,20 @@ fitSLRalpha <- function(
   # Iterate solution paths along alpha
   beta0 <- beta <- theta <- list()
   for (i in 1:nalpha) {
-    if (alpha[i] == 0) {
-      # linear log contrasts model ... but where is the constraint on beta? ###########################
-      ret <- glmnet(Z_use, y_use, family = "gaussian", lambda = lambda, 
-                    standardize = FALSE, intercept = FALSE, 
-                    thresh = min(eps1, eps2), maxit = maxite)
-      if(scaling){ # scale back
-        beta[[i]] <- as.matrix(ret$beta / Z.sd)
-      } else{
-        beta[[i]] <- as.matrix(ret$beta)
-      }
-      beta[[i]] <- as.matrix(ret$beta)
-      theta[[i]] <- NA
-    } else if (alpha[i] == 1) {
+    # if (alpha[i] == 0) {
+    #   # linear log contrasts model ... but where is the constraint on beta? ##
+    #   ret <- glmnet(Z_use, y_use, family = "gaussian", lambda = lambda, 
+    #                 standardize = FALSE, intercept = FALSE, 
+    #                 thresh = min(eps1, eps2), maxit = maxite)
+    #   if(scaling){ # scale back
+    #     beta[[i]] <- as.matrix(ret$beta / Z.sd)
+    #   } else{
+    #     beta[[i]] <- as.matrix(ret$beta)
+    #   }
+    #   beta[[i]] <- as.matrix(ret$beta)
+    #   theta[[i]] <- NA
+    # } else if (alpha[i] == 1) {
+    if (alpha[i] == 1) {
       # balance regression case!
       ret <- glmnet(Z_use %*% U, y_use, family = "gaussian", lambda = lambda, 
                     standardize = FALSE, intercept = FALSE, 
@@ -255,7 +256,7 @@ fitSLRalpha <- function(
     } else {
       # general case when 0 < alpha < 1
       ret <- rare:::our_solver(Z_use, as.matrix(y_use), Q, E, lambda, alpha[i], rho, 
-                        eps1, eps2, maxite)
+                               eps1, eps2, maxite)
       if(scaling){ # scale back
         beta[[i]] <- ret$beta / Z.sd
       } else{
@@ -284,10 +285,10 @@ cvSLRalpha <- function(
 ){
   
   fitObj = fitSLRalpha(
-    y, X, A = A, U = U, linkage = linkage, rho.type = rho.type, 
-    Q = Q, intercept = intercept, lambda = lambda, 
-    alpha = alpha, nlam = nlam, lam.min.ratio = lam.min.ratio, nalpha = nalpha,
-    rho = rho, eps1 = eps1, eps2 = eps2, maxite = maxite, scaling = scaling)
+    y = y, X = X, A = A, U = U, linkage = linkage, rho.type = rho.type, 
+    Q = Q, intercept = intercept, lambda = lambda, alpha = alpha, nlam = nlam, 
+    lam.min.ratio = lam.min.ratio, nalpha = nalpha, rho = rho, 
+    eps1 = eps1, eps2 = eps2, maxite = maxite, scaling = scaling)
   btree = fitObj$btree
   errtype = "mean-squared-error"
   
@@ -322,12 +323,14 @@ cvSLRalpha <- function(
   # Fit based on folds and compute error metric
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
-    fit_cv <- fitSLRalpha(y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
-                      intercept = fitObj$intercept, lambda = fitObj$lambda, alpha = fitObj$alpha, 
-                      scaling = scaling, rho.type = rho.type)
+    fit_cv <- fitSLRalpha(
+      y = y[-folds[[i]]], X = X[-folds[[i]], ], A = fitObj$A, Q = fitObj$Q,
+      intercept = fitObj$intercept, lambda = fitObj$lambda, 
+      alpha = fitObj$alpha, scaling = scaling, rho.type = rho.type, rho = rho)
     pred_te <- lapply(seq(nalpha), function(k) {
       if (fitObj$intercept) {
-        X[folds[[i]], ] %*% fit_cv$beta[[k]] + rep(fit_cv$a0[[k]], each = length(folds[[i]]))
+        X[folds[[i]], ] %*% fit_cv$beta[[k]] + 
+          rep(fit_cv$a0[[k]], each = length(folds[[i]]))
       } else {
         X[folds[[i]], ] %*% fit_cv$beta[[k]]
       }

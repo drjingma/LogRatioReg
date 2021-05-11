@@ -124,7 +124,7 @@ sims = foreach(
     intercept = intercept, rho.type = rho.type, linkage = linkage)
   
   list(X = X, Y = Y,
-       fit.cl = complasso, fit.slr = slr, fit.slr0.5, fit.slr1
+       fit.cl = complasso, fit.slr = slr, fit.slr0.5 = slr0.5, fit.slr1 = slr1
   )
 }
 

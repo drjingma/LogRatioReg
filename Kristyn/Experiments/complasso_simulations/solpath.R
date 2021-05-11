@@ -212,7 +212,7 @@ sims3 = foreach(
   # caculate TPR
   btree.slr0.5 = slr0.5$btree
   SBP0.5 = sbp.fromHclust(btree.slr0.5)
-  slr0.5.res = apply(slr$bet, 2, function(a) tpr.for.coef.ilr(beta, a, SBP0.5))
+  slr0.5.res = apply(slr0.5$bet, 2, function(a) tpr.for.coef.ilr(beta, a, SBP0.5))
   S.hat.slr0.5 = slr0.5.res[1, ]
   TPR.slr0.5 = slr0.5.res[2, ]
   
@@ -223,7 +223,7 @@ sims3 = foreach(
   # caculate TPR
   btree.slr1 = slr1$btree
   SBP1 = sbp.fromHclust(btree.slr1)
-  slr1.res = apply(slr$bet, 2, function(a) tpr.for.coef.ilr(beta, a, SBP1))
+  slr1.res = apply(slr1$bet, 2, function(a) tpr.for.coef.ilr(beta, a, SBP1))
   S.hat.slr1 = slr1.res[1, ]
   TPR.slr1 = slr1.res[2, ]
   

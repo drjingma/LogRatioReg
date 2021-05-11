@@ -38,18 +38,20 @@ source(paste0(functions_path, "supervisedlogratios.R"))
 # ggplot
 library(ggplot2)
 
-# Method Settings
+# Settings to toggle with
+rho.type = "square" # 1 = "absolute value", 2 = "square"
+beta.settings = "new"
+linkage = "average"
 tol = 1e-4
-nlam = 3 # for testing
+nlam = 100 
 intercept = TRUE
-K = 5
-rho.type = "square"
-
-# Simulation settings
-numSims = 100
+K = 10
 n = 100
 p = 200
-rho = 0.2 # 0.2, 0.5
+rho = 0.5 # 0.2, 0.5
+
+# Simulation settings
+numSims = 50#100
 # which beta?
 beta.settings = "new"
 if(beta.settings == "old" | beta.settings == "linetal2014"){
@@ -74,30 +76,11 @@ for(i in 1:p){
 ################################################################################
 # if simulations are saved, read them in
 
-nlam = 200
-if(beta.settings == "old" | beta.settings == "linetal2014"){
-  sims3 = readRDS(paste0(output_dir,
-                         "/solpaths_old",
-                         "_dim", n, "x", p,
-                         "_rho", rho,
-                         "_int", intercept,
-                         "_K", K,
-                         "_seed", rng.seed,
-                         "_numSims", numSims,
-                         ".rds"))
-} else{
-  sims3 = readRDS(paste0(output_dir,
-                         "/solpaths",
-                         "_dim", n, "x", p,
-                         "_rho", rho,
-                         "_int", intercept,
-                         "_K", K,
-                         "_seed", rng.seed,
-                         "_numSims", numSims,
-                         ".rds"))
-}
-
-
+sims3 = readRDS(paste0(
+  output_dir,
+  "/solpaths_dim100x200_new_rho0.5_typesquare_intTRUE_K10_numSims50_seed123.rds"
+)
+)
 
 ################################################################################
 ################################################################################
@@ -113,6 +96,16 @@ fit.slr.list = list()
 TPR.slr.mat = matrix(NA, nlam, numSims)
 S.hat.slr.mat = matrix(NA, nlam, numSims)
 lambda.slr.mat = matrix(NA, nlam, numSims)
+# slr0.5
+fit.slr0.5.list = list()
+TPR.slr0.5.mat = matrix(NA, nlam, numSims)
+S.hat.slr0.5.mat = matrix(NA, nlam, numSims)
+lambda.slr0.5.mat = matrix(NA, nlam, numSims)
+# slr1
+fit.slr1.list = list()
+TPR.slr1.mat = matrix(NA, nlam, numSims)
+S.hat.slr1.mat = matrix(NA, nlam, numSims)
+lambda.slr1.mat = matrix(NA, nlam, numSims)
 for(i in 1:numSims){
   sim.tmp = sims3[[i]]
   # cl
@@ -125,6 +118,16 @@ for(i in 1:numSims){
   TPR.slr.mat[, i] = sim.tmp$TPR.slr
   S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
+  # slr
+  fit.slr0.5.list[[i]] = sim.tmp$fit.slr0.5
+  TPR.slr0.5.mat[, i] = sim.tmp$TPR.slr0.5
+  S.hat.slr0.5.mat[, i] = sim.tmp$S.hat.slr0.5
+  lambda.slr0.5.mat[, i] = sim.tmp$fit.slr0.5$lambda
+  # slr
+  fit.slr1.list[[i]] = sim.tmp$fit.slr1
+  TPR.slr1.mat[, i] = sim.tmp$TPR.slr1
+  S.hat.slr1.mat[, i] = sim.tmp$S.hat.slr1
+  lambda.slr1.mat[, i] = sim.tmp$fit.slr1$lambda
 }
 
 
@@ -132,10 +135,18 @@ for(i in 1:numSims){
 # average TPR and S.hat ########################################################
 
 dim(S.hat.cl.mat)
+# classo
 S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
 TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
+# slr
 S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
 TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
+# slr0.5
+S.hat.slr0.5.avg = apply(S.hat.slr0.5.mat, 1, mean, na.rm = TRUE)
+TPR.slr0.5.avg = apply(TPR.slr0.5.mat, 1, mean, na.rm = TRUE)
+# slr
+S.hat.slr1.avg = apply(S.hat.slr1.mat, 1, mean, na.rm = TRUE)
+TPR.slr1.avg = apply(TPR.slr1.mat, 1, mean, na.rm = TRUE)
 
 # complasso stuff
 cl.gg.complete = data.frame(
@@ -147,14 +158,26 @@ slr.gg.complete = data.frame(
   "S.hat" = S.hat.slr.avg,
   "TPR" = TPR.slr.avg)
 slr.gg.complete$Type = "slr"
+# slr0.5 stuff
+slr0.5.gg.complete = data.frame(
+  "S.hat" = S.hat.slr0.5.avg,
+  "TPR" = TPR.slr0.5.avg)
+slr0.5.gg.complete$Type = "slr0.5"
+# slr1 stuff
+slr1.gg.complete = data.frame(
+  "S.hat" = S.hat.slr1.avg,
+  "TPR" = TPR.slr1.avg)
+slr1.gg.complete$Type = "slr1"
 # ggplot
-gg.complete = rbind(slr.gg.complete, cl.gg.complete)
-gg.complete$Type = factor(gg.complete$Type, levels = c("classo", "slr"))
+gg.complete = rbind(
+  cl.gg.complete, slr.gg.complete, slr0.5.gg.complete, slr1.gg.complete)
+gg.complete$Type = factor(gg.complete$Type, 
+                          levels = c("classo", "slr", "slr0.5", "slr1"))
 ggplot(gg.complete, aes(x = S.hat, y = TPR, color = Type
-                        # , shape = Type, linetype = Type
+                        , shape = Type, linetype = Type
                         )) +
   geom_line(size = 1) +
-  # geom_point(size = 3) +
+  geom_point(size = 3) +
   xlim(0, 40) +
   theme_bw() + 
   theme(text = element_text(size = 20))

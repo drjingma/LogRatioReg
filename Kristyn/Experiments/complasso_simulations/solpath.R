@@ -1,4 +1,4 @@
-# last updated: 05/10/2021
+# last updated: 05/11/2021
 # simulate a data set using settings in Lin et al 2014, 
 # fit Complasso and SLR, and plot the solution path.
 
@@ -140,8 +140,8 @@ for(i in 1:numSims){
   sim.tmp = sims[[i]]
   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-  lambda.slr0.5.mat[, i] = sim.tmp$fit.slr0.5[[1]]$lambda
-  lambda.slr1.mat[, i] = sim.tmp$fit.slr1[[1]]$lambda
+  lambda.slr0.5.mat[, i] = sim.tmp$fit.slr0.5$lambda
+  lambda.slr1.mat[, i] = sim.tmp$fit.slr1$lambda
 }
 
 
@@ -157,7 +157,7 @@ lambda.df = data.frame(
   slr0.5 = exp(seq(max(log(lambda.slr0.5.mat)), 
                 min(log(lambda.slr0.5.mat)),length.out = nlam)), 
   slr1 = exp(seq(max(log(lambda.slr1.mat)), 
-                min(log(lambda.slr1.mat)),length.out = nlam)), 
+                min(log(lambda.slr1.mat)),length.out = nlam))
 )
 
 

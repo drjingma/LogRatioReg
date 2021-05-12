@@ -41,8 +41,8 @@ rho.type = "square"
 linkage = "average"
 
 # Simulation settings
-numSims = 100
-n = 15 # 100
+# numSims = 100
+n = 3 # 100
 p = 20 # 200
 rho = 0.5 # 0.2, 0.5
 # which beta?
@@ -150,38 +150,33 @@ ggplot(data.frame(lambda = c(slr$lambda, slr.v2$lambda),
   geom_point(alpha = 0.25) + 
   theme_classic()
 
+
+
 ################################################################################
 # line-by-line
-X = X; y = Y; nfolds = K; lambda = NULL
+y = Y; nfolds = K; lambda = NULL
 
-n = dim(X)[1] # 100
-p = dim(X)[2] # 200
 
-# checks
-if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
-if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
-# check if lambda is given, assign nlam accordingly
-if(!is.null(lambda)){ # lambda is given
-  nlam = length(lambda)
-}
 
-# compute balances
-btree = getSupervisedTree(y, X, linkage, rho.type)
-Xb = computeBalances(X, btree)
 
-# run cv.glmnet
-cv_exact = cv.glmnet(
-  x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
-  foldid = foldid, intercept = intercept, type.measure = c("mse"))
 
-# check lambda length
-if(nlam != length(cv_exact$lambda)){
-  lambda <- log(cv_exact$lambda)
-  lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-  cv_exact = cv.glmnet(
-    x = Xb, y = y, lambda = lambda_new, nfolds = nfolds, 
-    foldid = foldid, intercept = intercept, type.measure = c("mse"))
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

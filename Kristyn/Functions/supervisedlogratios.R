@@ -516,6 +516,9 @@ cvSLR0 = function(
   
   errs <- array(NA, dim=c(nlam, 1, nfolds))
   
+  # define error function
+  errfun <- function(est, truth) colMeans((est - truth)^2)
+  
   # Fit based on folds and compute error metric
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
@@ -526,14 +529,14 @@ cvSLR0 = function(
       X[folds[[i]], ] %*% fit_cv$beta + 
           rep(fit_cv$a0, each = length(folds[[i]]))
     })
-    for (k in seq(nalpha)) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
+    for (k in 1) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
     cat("##########################\n")
     cat(sprintf("Finished model fits for fold[%s].\n", i))
     cat("##########################\n")
   }
   m <- apply(errs, c(1, 2), mean)
   se <- apply(errs, c(1, 2), stats::sd) / sqrt(nfolds)
-  ibest <- which(m == min(m), arr.ind = TRUE)[1, , drop = FALSE]
+  # ibest <- which(m == min(m), arr.ind = TRUE)[1, , drop = FALSE]
   
   return(list(
     int = fit_exact$a0,
@@ -541,6 +544,6 @@ cvSLR0 = function(
     lambda = fit_exact$lambda,
     glmnet = fit_exact,
     btree = btree,
-    cvm = fit_exact$cvm
+    cvm = m#fit_exact$cvm
   ))
 }

@@ -309,13 +309,13 @@ evals = foreach(
   err[3,1] <- fit_coat$mse.pred
   # roc_coat <- apply(fit_coat$beta, 2, function(a) tpr.for.coef.ilr(beta_lc, a, sbp_coat))
   
-  pred_classo_1 <- z_test %*% fit_classo$bet[,which.min(fit_classo$cvm)]
-  err[5,1] <- mean((pred_classo_1 - y_test)^2)
+  # pred_classo_1 <- z_test %*% fit_classo$bet[,which.min(fit_classo$cvm)]
+  # err[5,1] <- mean((pred_classo_1 - y_test)^2)
   # roc_classo <- apply(fit_classo$bet, 2, function(a) tpr.for.coef(beta_lc, a))
   
-  # pred_classo_2 <- fit_classo$int[which.min(fit_classo$cvm)] +
-  #   z_test %*% fit_classo$bet[,which.min(fit_classo$cvm)]
-  # err[5,1] <- mean((pred_classo_2 - y_test)^2) 
+  pred_classo_2 <- fit_classo$int[which.min(fit_classo$cvm)] +
+    z_test %*% fit_classo$bet[,which.min(fit_classo$cvm)]
+  err[5,1] <- mean((pred_classo_2 - y_test)^2)
   
   err[4,1] <- fit_pba$mse.pred
   # roc_pba <- apply(fit_pba$beta, 2, function(a) tpr.for.coef.ilr(beta_lc, a, sbp_pba@sbp))
@@ -341,7 +341,7 @@ plt = ggplot(data.gg, aes(x = variable, y = value, fill = variable)) +
   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
         axis.title.y = element_blank())
 
-ggsave("MSE.pdf", 
+ggsave("MSE2.pdf", 
        plot = plt, 
        width = 6, 
        height = 4, 

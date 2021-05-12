@@ -515,6 +515,7 @@ cvSLR0 = function(
   }
   
   errs <- array(NA, dim=c(nlam, 1, nfolds))
+  errs2 = matrix(NA, nrow = )
   
   # define error function
   errfun <- function(est, truth) colMeans((est - truth)^2)

@@ -108,20 +108,24 @@ sims = foreach(
   complasso = cv.func(
     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
     nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
+  print("finished complasso")
   
   # apply supervised log-ratios
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept,
               rho.type = rho.type, linkage = linkage)
+  print("finished slr")
   
   # apply slralpha=0.5
   slr0.5 = cvSLRalpha(
     y = Y, X = X, nlam = nlam, nfolds = K, alpha = 0.5, 
     intercept = intercept, rho.type = rho.type, linkage = linkage)
+  print("finished slr with alpha = 0.5")
   
   # apply slralpha=1
   slr1 = cvSLRalpha(
     y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1, 
     intercept = intercept, rho.type = rho.type, linkage = linkage)
+  print("finished slr with alpha = 1")
   
   list(X = X, Y = Y,
        fit.cl = complasso, fit.slr = slr, fit.slr0.5 = slr0.5, fit.slr1 = slr1
@@ -190,6 +194,7 @@ sims3 = foreach(
   #   getTPR( type = "llc", beta = beta, betahat = a))
   S.hat.cl = cl.res[1, ]
   TPR.cl = cl.res[2, ]
+  print("finished complasso")
   
   # apply supervised log-ratios
   slr = cvSLR(
@@ -203,6 +208,7 @@ sims3 = foreach(
   #   getTPR( type = "ilr", beta = beta, thetahat = a, sbp = SBP))
   S.hat.slr = slr.res[1, ]
   TPR.slr = slr.res[2, ]
+  print("finished slr")
   
   # apply slr0.5
   # apply slralpha=0.5
@@ -212,9 +218,10 @@ sims3 = foreach(
   # caculate TPR
   btree.slr0.5 = slr0.5$btree
   SBP0.5 = sbp.fromHclust(btree.slr0.5)
-  slr0.5.res = apply(slr0.5$bet, 2, function(a) tpr.for.coef.ilr(beta, a, SBP0.5))
+  slr0.5.res = apply(slr0.5$thet[[1]], 2, function(a) tpr.for.coef.ilr(beta, a, SBP0.5))
   S.hat.slr0.5 = slr0.5.res[1, ]
   TPR.slr0.5 = slr0.5.res[2, ]
+  print("finished slr with alpha = 0.5")
   
   # apply slralpha=1
   slr1 = cvSLRalpha(
@@ -223,9 +230,10 @@ sims3 = foreach(
   # caculate TPR
   btree.slr1 = slr1$btree
   SBP1 = sbp.fromHclust(btree.slr1)
-  slr1.res = apply(slr1$bet, 2, function(a) tpr.for.coef.ilr(beta, a, SBP1))
+  slr1.res = apply(slr1$thet[[1]], 2, function(a) tpr.for.coef.ilr(beta, a, SBP1))
   S.hat.slr1 = slr1.res[1, ]
   TPR.slr1 = slr1.res[2, ]
+  print("finished slr with alpha = 1")
   
   list(X = X, Y = Y, 
        fit.cl = complasso, TPR.cl = TPR.cl, S.hat.cl = S.hat.cl, 

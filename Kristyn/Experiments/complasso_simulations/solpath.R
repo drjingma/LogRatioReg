@@ -47,6 +47,7 @@ K = 10
 n = 100
 p = 200
 rho = 0.5 # 0.2, 0.5
+scaling = FALSE
 
 # Simulation settings
 numSims = 50#100
@@ -107,24 +108,27 @@ sims = foreach(
   # apply compositional lasso
   complasso = cv.func(
     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
-    nlam = nlam, nfolds = K, tol = tol, intercept = intercept)
+    nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
+    scaling = scaling)
   print("finished complasso")
   
   # apply supervised log-ratios
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept,
-              rho.type = rho.type, linkage = linkage)
+              rho.type = rho.type, linkage = linkage, standardize = scaling)
   print("finished slr")
   
   # apply slralpha=0.5
   slr0.5 = cvSLRalpha(
     y = Y, X = X, nlam = nlam, nfolds = K, alpha = 0.5, 
-    intercept = intercept, rho.type = rho.type, linkage = linkage)
+    intercept = intercept, rho.type = rho.type, linkage = linkage, 
+    scaling = scaling)
   print("finished slr with alpha = 0.5")
   
   # apply slralpha=1
   slr1 = cvSLRalpha(
     y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1, 
-    intercept = intercept, rho.type = rho.type, linkage = linkage)
+    intercept = intercept, rho.type = rho.type, linkage = linkage, 
+    scaling = scaling)
   print("finished slr with alpha = 1")
   
   list(X = X, Y = Y,
@@ -178,7 +182,7 @@ sims3 = foreach(
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
   
-  print(paste0("starting sim ", b))
+  print(paste0("starting sim ", b, " ########################################"))
   
   # get simulated data #
   X = sims[[b]]$X
@@ -187,7 +191,8 @@ sims3 = foreach(
   # apply compositional lasso
   complasso = cv.func(
     method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
-    lambda = lambda.df$complasso, nfolds = K, tol = tol, intercept = intercept)
+    lambda = lambda.df$complasso, nfolds = K, tol = tol, intercept = intercept, 
+    scaling = scaling)
   # calculate TPR
   cl.res = apply(complasso$bet, 2, function(a) tpr.for.coef(beta, a))
   # cl.res = apply(complasso$bet, 2, function(a) 
@@ -199,7 +204,7 @@ sims3 = foreach(
   # apply supervised log-ratios
   slr = cvSLR(
     y = Y, X = X, lambda = lambda.df$slr, nfolds = K, intercept = intercept,
-    rho.type = rho.type, linkage = linkage)
+    rho.type = rho.type, linkage = linkage, standardize = scaling)
   # caculate TPR
   btree.slr = slr$btree
   SBP = sbp.fromHclust(btree.slr)
@@ -214,7 +219,8 @@ sims3 = foreach(
   # apply slralpha=0.5
   slr0.5 = cvSLRalpha(
     y = Y, X = X, lambda = lambda.df$slr0.5, nfolds = K, alpha = 0.5, 
-    intercept = intercept, rho.type = rho.type, linkage = linkage)
+    intercept = intercept, rho.type = rho.type, linkage = linkage, 
+    scaling = scaling)
   # caculate TPR
   btree.slr0.5 = slr0.5$btree
   SBP0.5 = sbp.fromHclust(btree.slr0.5)
@@ -226,7 +232,8 @@ sims3 = foreach(
   # apply slralpha=1
   slr1 = cvSLRalpha(
     y = Y, X = X, lambda = lambda.df$slr1, nfolds = K, alpha = 1, 
-    intercept = intercept, rho.type = rho.type, linkage = linkage)
+    intercept = intercept, rho.type = rho.type, linkage = linkage, 
+    scaling = scaling)
   # caculate TPR
   btree.slr1 = slr1$btree
   SBP1 = sbp.fromHclust(btree.slr1)
@@ -250,7 +257,8 @@ file.end = paste0(
   "_", beta.settings,
   "_rho", rho,
   "_type", rho.type,
-  "_int", intercept,
+  "_int", intercept, 
+  "_scale", scaling,
   "_K", K,
   "_numSims", numSims,
   "_seed", rng.seed,

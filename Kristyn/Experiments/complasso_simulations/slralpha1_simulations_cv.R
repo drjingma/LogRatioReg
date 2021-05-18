@@ -207,7 +207,7 @@ evals = foreach(
 }
 
 rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
-                    "FP", "FN", "TPR", "betaSparsity", 
+                    "FP", "FN", "TPR", "betaSparsity"
                     # "FPold", "FNold", "TPRold", "betaSparsityOld"
                     )
 eval.means = apply(evals, 1, mean)
@@ -223,6 +223,7 @@ file.end = paste0(
   "_rho", rho, 
   "_type", rho.type, 
   "_int", intercept,
+  "_scale", scaling,
   "_K", K,
   "_seed", rng.seed,
   ".rds")

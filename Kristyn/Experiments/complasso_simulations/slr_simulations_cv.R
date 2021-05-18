@@ -48,6 +48,7 @@ K = 10
 n = 100
 p = 200
 rho = 0.5 # 0.2, 0.5
+scaling = FALSE
 
 # Other simulation settings
 numSims = 100
@@ -120,7 +121,7 @@ evals = foreach(
   
   # apply supervised log-ratios, using CV to select lambda
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-              rho.type = rho.type, linkage = linkage)
+              rho.type = rho.type, linkage = linkage, standardize = scaling)
   btree = slr$btree
   # plot(btree)
   
@@ -177,29 +178,31 @@ evals = foreach(
   # beta sparsity
   bspars = sum(non0.beta)
   
-  # old version #
-  non0.beta.old = (beta != 0)
-  is0.beta.old = (beta == 0)
-  non0.betahat.old = (betahat != 0)
-  is0.betahat.old = (betahat == 0)
-  # FP - old version
-  FP.old = sum(is0.beta.old & non0.betahat.old)
-  # FN - old version
-  FN.old = sum((non0.beta.old != non0.betahat.old) & non0.beta.old)
-  # TPR - old version
-  TPR.old = sum((non0.beta.old == non0.betahat.old) & non0.betahat.old) / 
-    sum(non0.beta.old)
-  # beta sparsity - old version
-  bspars.old = sum(non0.beta.old)
+  # # old version #
+  # non0.beta.old = (beta != 0)
+  # is0.beta.old = (beta == 0)
+  # non0.betahat.old = (betahat != 0)
+  # is0.betahat.old = (betahat == 0)
+  # # FP - old version
+  # FP.old = sum(is0.beta.old & non0.betahat.old)
+  # # FN - old version
+  # FN.old = sum((non0.beta.old != non0.betahat.old) & non0.beta.old)
+  # # TPR - old version
+  # TPR.old = sum((non0.beta.old == non0.betahat.old) & non0.betahat.old) / 
+  #   sum(non0.beta.old)
+  # # beta sparsity - old version
+  # bspars.old = sum(non0.beta.old)
   
   # return
   c(PE.train, PE.test, EA1, EA2, EAInfty, 
     FP, FN, TPR, bspars,
-    FP.old, FN.old, TPR.old, bspars.old)
+    # FP.old, FN.old, TPR.old, bspars.old
+    )
 }
 rownames(evals) = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
                     "FP", "FN", "TPR", "betaSparsity", 
-                    "FPold", "FNold", "TPRold", "betaSparsityOld")
+                    # "FPold", "FNold", "TPRold", "betaSparsityOld"
+                    )
 eval.means = apply(evals, 1, mean)
 eval.sds = apply(evals, 1, sd)
 eval.ses = eval.sds / sqrt(numSims)

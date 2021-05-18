@@ -6,6 +6,11 @@ library(mvtnorm)
 library(balance) # for sbp.fromHclust()
 library(rare)
 
+# plotting libraries
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+
 # set up parallelization
 library(foreach)
 library(future)
@@ -14,7 +19,6 @@ library(parallel)
 registerDoFuture()
 nworkers = detectCores()
 plan(multisession, workers = nworkers)
-
 library(rngtools)
 library(doRNG)
 rng.seed = 123 # 123, 345
@@ -42,8 +46,8 @@ linkage = "average"
 
 # Simulation settings
 # numSims = 100
-n = 3 # 100
-p = 20 # 200
+n = 6 # 100
+p = 8 # 200
 rho = 0.5 # 0.2, 0.5
 # which beta?
 beta.settings = "new"
@@ -109,7 +113,8 @@ foldid = sample(rep(seq(nfolds), length = n))
 
 # apply the old slr #
 slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-            rho.type = rho.type, linkage = linkage, foldid = foldid)
+            rho.type = rho.type, linkage = linkage, foldid = foldid, 
+            standardize = FALSE)
 
 # choose lambda
 lam.min.idx0 = which.min(slr$cvm)
@@ -133,7 +138,8 @@ sum(betahat0 != 0)
 
 # old slr, with some changes
 slr.v2 = cvSLR0(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
-                rho.type = rho.type, linkage = linkage, foldid = foldid)
+                rho.type = rho.type, linkage = linkage, foldid = foldid, 
+                scaling = FALSE)
 all.equal(slr$lambda, slr.v2$lambda)
 all.equal(slr$bet, slr.v2$bet)
 all.equal(slr$a0, slr.v2$a0)
@@ -145,9 +151,9 @@ ggplot(data.frame(lambda = c(slr$lambda, slr.v2$lambda),
                            rep("SLR manual CV", length(slr.v2$lambda))
                            )
                   ),
-       aes(x = lambda, y = cvm, color = type)) + 
-  geom_path() + 
-  geom_point(alpha = 0.25) + 
+       aes(x = lambda, y = cvm, color = type, linetype = type)) + 
+  geom_path(size = 1) + 
+  geom_point(alpha = 0.25, size = 2) + 
   theme_classic()
 
 
@@ -156,31 +162,123 @@ ggplot(data.frame(lambda = c(slr$lambda, slr.v2$lambda),
 # line-by-line
 y = Y; nfolds = K; lambda = NULL
 
+################################################################################
+# calculat MSE by hand...
 
+# the large p is, the higher the discrepancy between the ROC curves...
+all.equal(slr$int, slr.v2$int) # TRUE
+all.equal(slr$bet, slr.v2$bet) # TRUE
+all.equal(slr$lambda, slr.v2$lambda) # TRUE
+all.equal(as.vector(slr$cvm), as.vector(slr.v2$cvm)) # "Mean relative difference: 0.007774666"
+as.vector(slr$cvm) # uses cv.glmnet
+as.vector(slr.v2$cvm) # calculates by hand the same way as slralpha
 
+# calculating by hand a different way:
+folds = list()
+for(i in 1:nfolds) folds[[i]] = which(foldid == i)
 
+lambdas = slr$lambda
+fit.preval = matrix(NA, nrow = n, ncol = nlam)
 
+# fold 1 #
+i = 1
+# fit the model, ommitting the fold
+fold1.fit = glmnet(x = X[-folds[[i]], ], y = Y[-folds[[i]]], 
+                   lambda = lambdas, nlambda = nlam, 
+                   intercept = intercept)
+# predicted values on the fold
+fold1.pred = X[folds[[i]], ] %*% fold1.fit$beta + 
+  rep(fold1.fit$a0, each = length(folds[[i]]))
+# error = squared deviation from the predicted value and true y
+fold1.err = fold1.pred
+for(j in 1:nlam) fold1.err[, j] = (fold1.err[, j] - Y[folds[[i]]])^2
+# fold1.err
+# Y[folds[[i]]]
+# fold1.err - Y[folds[[i]]]
+# (fold1.err - Y[folds[[i]]])^2
+fold1.errmeans = colMeans(fold1.err)
+slr.v2$errs[, , i] # matches slr.v2
+# slr$cv.glmnet$fit.preval
+# what is fit.preval?
+# a prevalidated array is returned containing fitted values for each observation 
+# and each value of ‘lambda’. This means these fits are computed with this 
+# observation and the rest of its fold omitted
+for(j in 1:length(folds[[i]])){
+  fit.preval[folds[[i]][j], ] = fold1.pred[j, ]
+}
+# predicted values on all data
+fold1.pred.all = X %*% fold1.fit$beta + rep(fold1.fit$a0, each = n)
+# error = squared deviation from the predicted value and true y
+fold1.err.all = fold1.pred.all
+for(j in 1:nlam) fold1.pred.all[, j] = (fold1.pred.all[, j] - Y)^2
+fold1.err.all
 
+# fold 2 #
+i = 2
+# fit the model, ommitting the fold
+fold2.fit = glmnet(x = X[-folds[[i]], ], y = Y[-folds[[i]]], 
+                   lambda = lambdas, nlambda = nlam, 
+                   intercept = intercept)
+# predicted values on the fold
+fold2.pred = X[folds[[i]], ] %*% fold2.fit$beta + 
+  rep(fold2.fit$a0, each = length(folds[[i]]))
+# error = squared deviation from the predicted value and true y
+fold2.err = fold2.pred
+for(j in 1:nlam) fold2.err[, j] = (fold2.err[, j] - Y[folds[[i]]])^2
+fold2.errmeans = colMeans(fold2.err)
+slr.v2$errs[, , i] # matches slr.v2
+for(j in 1:length(folds[[i]])){
+  fit.preval[folds[[i]][j], ] = fold2.pred[j, ]
+}
+# predicted values on all data
+fold2.pred.all = X %*% fold2.fit$beta + rep(fold2.fit$a0, each = n)
+# error = squared deviation from the predicted value and true y
+fold2.err.all = fold2.pred.all
+for(j in 1:nlam) fold2.pred.all[, j] = (fold2.pred.all[, j] - Y)^2
 
+# fold 3 #
+i = 3
+# fit the model, ommitting the fold
+fold3.fit = glmnet(x = X[-folds[[i]], ], y = Y[-folds[[i]]], 
+                   lambda = lambdas, nlambda = nlam, 
+                   intercept = intercept)
+# predicted values on the fold
+fold3.pred = X[folds[[i]], ] %*% fold3.fit$beta + 
+  rep(fold3.fit$a0, each = length(folds[[i]]))
+# error = squared deviation from the predicted value and true y
+fold3.err = fold3.pred
+for(j in 1:nlam) fold3.err[, j] = (fold3.err[, j] - Y[folds[[i]]])^2
 
+fold3.errmeans = colMeans(fold3.err)
+slr.v2$errs[, , i] # matches slr.v2
+for(j in 1:length(folds[[i]])){
+  fit.preval[folds[[i]][j], ] = fold3.pred[j, ]
+}
+# predicted values on all data
+fold3.pred.all = X %*% fold3.fit$beta + rep(fold3.fit$a0, each = n)
+# error = squared deviation from the predicted value and true y
+fold3.err.all = fold3.pred.all
+for(j in 1:nlam) fold3.pred.all[, j] = (fold3.pred.all[, j] - Y)^2
+pred.all.foldmean = (fold1.pred.all + fold2.pred.all + fold3.pred.all) / nfolds
+all.equal(as.matrix(slr$cv.glmnet$fit.preval), fit.preval)
 
+mean((slr$cv.glmnet$fit.preval[, nlam] - Y)^2)
+slr$cv.glmnet$cvm[nlam]
 
+# turns out the problem was that I was fitting X instead of Xb at each fold!
 
+# scaling issues... posssibly centering issues too?
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+btree = slr$btree
+U = getU(btree = btree)
+logX = log(X)
+logX.cent = logX - matrix(rep(1, times = n), ncol = 1) %*% 
+  matrix(colMeans(logX), nrow = 1)
+logX.cent.U = logX.cent %*% U
+Xb = computeBalances(X, btree)
+ilrX.cent = Xb - matrix(rep(1, times = n), ncol = 1) %*% 
+  matrix(colMeans(Xb), nrow = 1)
+all.equal(logX.cent.U, ilrX.cent) # TRUE
 
 ################################################################################
 ################################################################################
@@ -189,21 +287,19 @@ y = Y; nfolds = K; lambda = NULL
 ################################################################################
 
 # apply the new slr, with alpha = 1 -- should be equivalent to old slr #
-slr1 = cvSLRalpha(
+slr.a1 = cvSLRalpha(
   y = Y, X = X, linkage = linkage, rho.type = rho.type, 
   intercept = intercept, lambda = slr$lambda, 
-  alpha = 1, nlam = nlam, 
-  nfolds = K, 
-  foldid = foldid, scaling = TRUE
+  alpha = 1, nlam = nlam, nfolds = K, foldid = foldid, scaling = FALSE
 )
 
 # choose lambda
-lam.min.idx = which.min(slr$cvm)
-lam.min = slr$lambda[lam.min.idx]
+lam.min.idx = which.min(slr.a1$cvm)
+lam.min = slr.a1$lambda[lam.min.idx]
 
 # plot cvm vs lambda
-# plot(slr$lambda, slr$cvm, col = rgb(0,0,0, alpha = 0.25))
-ggplot(data.frame(lambda = slr$lambda, cvm = slr$cvm), 
+# plot(slr.a1$lambda, slr.a1$cvm, col = rgb(0,0,0, alpha = 0.25))
+ggplot(data.frame(lambda = slr.a1$lambda, cvm = slr.a1$cvm), 
        aes(x = lambda, y = cvm)) + 
   geom_path() + 
   geom_point(alpha = 0.25) + 
@@ -229,42 +325,28 @@ lam.min
 
 ################################################
 
-# apply the new slr with scaling = TRUE, with alpha = 1
-slr2 = cvSLR2(y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1
-             , foldid = foldid
-             , lambda = slr0$lambda
-             , scaling = TRUE
-)
-
-# choose lambda
-lam.min.idx2 = which.min(slr2$cvm)
-lam.min2 = slr2$lambda[lam.min.idx2]
-
-# plot cvm vs lambda
-# plot(slr2$lambda, slr2$cvm, col = rgb(0,0,0, alpha = 0.25))
-ggplot(data.frame(lambda = slr2$lambda, cvm = slr2$cvm), 
-       aes(x = lambda, y = cvm)) + 
-  geom_path() + 
-  geom_point(alpha = 0.25) + 
-  theme_classic()
-# what is the minimizing lambda?
-lam.min2
-
-##############################################
 
 # plot both together
-ggplot(data.frame(lambda = c(slr0$lambda, slr$lambda, slr2$lambda), 
-                  cvm = c(slr0$cvm, slr$cvm, slr2$cvm), 
-                  type = c(rep("SLR", length(slr0$lambda)),
-                           rep("SLR2", length(slr$lambda)), 
-                           rep("SLR2scale", length(slr2$lambda)))),
-       aes(x = lambda, y = cvm, color = type)) + 
-  geom_path() + 
-  geom_point(alpha = 0.25) + 
-  theme_classic() + 
-  geom_vline(xintercept = c(lam.min0, lam.min, lam.min2), alpha = 0.5)
+ggplot(data.frame(lambda = c(slr$lambda, slr.v2$lambda, slr.a1$lambda), 
+                  cvm = c(slr$cvm, slr.v2$cvm, slr.a1$cvm), 
+                  type = c(rep("SLR, cv.glmnet", length(slr$lambda)),
+                           rep("SLR, manual cvm", length(slr.v2$lambda)), 
+                           rep("SLRalpha1", length(slr.a1$lambda)))),
+       aes(x = lambda, y = cvm, color = type, linetype = type)) + 
+  geom_path(size = 1) + 
+  geom_point(alpha = 0.25, size = 2) + 
+  theme_classic()
 
-# betahat?
+# thetahat?
+slr$bet
+slr.v2$bet
+slr.a1$theta
+
+#betahat?
+U %*% slr$bet
+U %*% slr.v2$bet
+slr.a1$beta
+
 betahat = slr$bet[[1]][, lam.min.idx]
 thetahat = slr$thet[[1]][, lam.min.idx]
 sum(betahat != 0)

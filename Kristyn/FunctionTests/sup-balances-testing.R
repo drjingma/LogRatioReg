@@ -1,3 +1,14 @@
+# trying to recreate Dr. Ma's results, comparing slr (the old version) to
+#   compositional lasso, along with a few other methods (coat, propr, pba)
+#   created two plots:
+#     - ROC curve / solution paths, with S.hat on the x-axis, TPR on the y-axis
+#     - MSE boxplots, for both rho = 0.2 and rho = 0.5, where MSE is 
+#         the average prediction error on independent test set, 
+#         1/n sum((y - y.hat)^2)
+################################################################################
+# in this script, I try to recreate the ROC curve plot, for one run, 
+#   with minimal changes to the original sup-balances.R code.
+
 rm(list=ls())
 
 library(dplyr)

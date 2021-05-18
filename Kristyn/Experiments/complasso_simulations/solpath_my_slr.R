@@ -1,6 +1,8 @@
 # last updated: 05/10/2021
 # simulate a data set using settings in Lin et al 2014, 
 # fit Complasso and SLR, and plot the solution path.
+# Unlike solpath_like_sup-balances and solpath_less_like_sup-balances, I'm
+#   using my slr functions.
 
 getwd()
 output_dir = "Kristyn/Experiments/complasso_simulations/output"

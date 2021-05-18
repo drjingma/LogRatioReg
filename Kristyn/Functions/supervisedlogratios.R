@@ -148,8 +148,8 @@ getU = function(btree = NULL, sbp = NULL){
 
 # Fit supervised log-ratios model to compositional data X and response y
 fitSLR = function(
-  y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE,
-  rho.type = "squared"
+  y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE, 
+  standardize = standardize, rho.type = "squared"
 ){
   n = dim(X)[1]
   p = dim(X)[2]
@@ -168,13 +168,14 @@ fitSLR = function(
   
   # run glmnet
   glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                      intercept = intercept)
+                      intercept = intercept, standardize = standardize)
   # check lambda length
   if(nlam != length(glmnet.fit$lambda)){
     # if it's not nlam, refit to nlam lambdas
     lambda <- log(glmnet.fit$lambda)
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new)
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new, 
+                        intercept = intercept,  standardize = standardize)
   }
   return(list(
     int = glmnet.fit$a0, 
@@ -187,7 +188,8 @@ fitSLR = function(
 
 cvSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
-  foldid = NULL, intercept = TRUE, rho.type = "squared"
+  foldid = NULL, intercept = TRUE, standardize = TRUE, rho.type = "squared", 
+  keep = FALSE
 ){
   n = dim(X)[1]
   p = dim(X)[2]
@@ -207,7 +209,8 @@ cvSLR = function(
   # run cv.glmnet
   cv_exact = cv.glmnet(
     x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
-    foldid = foldid, intercept = intercept, type.measure = c("mse"))
+    foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+    keep = keep, standardize = standardize)
   
   # check lambda length
   if(nlam != length(cv_exact$lambda)){
@@ -223,7 +226,8 @@ cvSLR = function(
       # note: yet another difference is that here, I specify type.measure to be 
       #   "mse", rather than the default, "deviance", --
       #   however, for gaussian models, "deviance" is "mse".
-      foldid = foldid, intercept = intercept, type.measure = c("mse"))
+      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+      keep = keep, standardize = standardize)
   }
   
   return(list(
@@ -245,7 +249,7 @@ cvSLR = function(
 #   transformation matrix U
 fitILR = function(
   y = NULL, X, btree = NULL, sbp = NULL, U = NULL, lambda = NULL, nlam = 20, 
-  intercept = TRUE
+  intercept = TRUE, standardize = TRUE
 ){
   n = dim(X)[1]
   p = dim(X)[2]
@@ -263,12 +267,13 @@ fitILR = function(
   
   # run glmnet
   glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                      intercept = intercept)
+                      intercept = intercept, standardize = standardize)
   # check lambda length
   if(nlam != length(glmnet.fit$lambda)){
     lambda <- log(glmnet.fit$lambda)
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new)
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new, 
+                        intercept = intercept, standardize = standardize)
   }
   return(list(
     int = glmnet.fit$a0, 
@@ -281,7 +286,8 @@ fitILR = function(
 
 cvILR = function(
   y = NULL, X, btree = NULL, sbp = NULL, U = NULL, lambda = NULL, nlam = 20, 
-  nfolds = 10, foldid = NULL, intercept = TRUE
+  nfolds = 10, foldid = NULL, intercept = TRUE, standardize = TRUE, 
+  keep = FALSE
 ){
   n = dim(X)[1]
   p = dim(X)[2]
@@ -300,7 +306,8 @@ cvILR = function(
   # run cv.glmnet
   cv_exact = cv.glmnet(
     x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
-    foldid = foldid, intercept = intercept, type.measure = c("mse"))
+    foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+    keep = keep, standardize = standardize)
   
   # check lambda length
   if(nlam != length(cv_exact$lambda)){
@@ -308,7 +315,8 @@ cvILR = function(
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
     cv_exact = cv.glmnet(
       x = Xb, y = y, lambda = lambda_new, nfolds = nfolds, 
-      foldid = foldid, intercept = intercept, type.measure = c("mse"))
+      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+      keep = keep, standardize = standardize)
   }
   return(list(
     int = cv_exact$glmnet.fit$a0,
@@ -426,9 +434,11 @@ getTPR = function(
 
 # Fit supervised log-ratios model to compositional data X and response y
 fitSLR0 = function(
-  y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE,
-  rho.type = "squared"
+  y, X, Xb = NULL, btree = NULL, sbp = NULL, U = NULL, linkage = "complete", 
+  lambda = NULL, nlam = 20, intercept = TRUE, scaling = TRUE, rho.type = "squared"
 ){
+  # browser()
+  
   n = dim(X)[1]
   p = dim(X)[2]
   
@@ -441,22 +451,50 @@ fitSLR0 = function(
   }
   
   # compute balances
-  btree = getSupervisedTree(y, X, linkage, rho.type)
-  Xb = computeBalances(X, btree)
+  if(is.null(btree)) btree = getSupervisedTree(y, X, linkage, rho.type)
+  if(is.null(U)) U = getU(btree = btree, sbp = sbp)
+  if(is.null(Xb)) Xb = computeBalances(X, btree = btree, sbp = sbp, U = U)
   
+  # Centering and scaling
+  old_Xb = Xb
+  Xb_mu = colMeans(Xb)
+  old_y = y
+  y_mu = mean(y)
+  # Center Xb and y if intercept is to be included
+  if (intercept) {
+    Xb <- Xb - matrix(rep(1, times = n), ncol = 1) %*%
+      matrix(Xb_mu, nrow = 1)
+    y <- y - y_mu
+  }
+  # scale Xb if scaling = TRUE
+  # note: only scale if also centering
+  if(scaling) {
+    Xb_sd = apply(Xb, 2, function(x) sqrt(sum(x^2) / n))
+    Xb = apply(Xb, 2, function(x) x / sqrt(sum(x^2) / n))
+  }
   # run glmnet
   glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                      intercept = intercept)
+                      intercept = FALSE, standardize = FALSE)
   # check lambda length
   if(nlam != length(glmnet.fit$lambda)){
     # if it's not nlam, refit to nlam lambdas
     lambda <- log(glmnet.fit$lambda)
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new)
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new, intercept = FALSE, 
+                        standardize = FALSE)
+  }
+  beta = glmnet.fit$beta
+  # back-scale
+  if(scaling){ # scale back
+    beta <- diag(1 / Xb_sd) %*% beta
+  }
+  # Take care of intercept
+  if (intercept) {
+    beta0 <- y_mu - Xb_mu %*% beta
   }
   return(list(
-    int = glmnet.fit$a0, 
-    bet = glmnet.fit$beta, 
+    int = beta0, 
+    bet = beta, 
     lambda = glmnet.fit$lambda,
     glmnet = glmnet.fit, 
     btree = btree
@@ -465,8 +503,10 @@ fitSLR0 = function(
 
 cvSLR0 = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
-  foldid = NULL, intercept = TRUE, rho.type = "squared"
+  foldid = NULL, intercept = TRUE, scaling = TRUE, rho.type = "squared"
 ){
+  # browser()
+  
   n = dim(X)[1]
   p = dim(X)[2]
   
@@ -488,16 +528,26 @@ cvSLR0 = function(
   #   foldid = foldid, intercept = intercept, type.measure = c("mse"))
   
   # fit the models
+  ##### directly #####
   # run glmnet
-  fit_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                      intercept = intercept)
-  # check lambda length
-  if(nlam != length(fit_exact$lambda)){
-    # if it's not nlam, refit to nlam lambdas
-    lambda <- log(fit_exact$lambda)
-    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    fit_exact = glmnet(x = Xb, y = y, lambda = lambda_new)
-  }
+  # fit_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+  #                     intercept = intercept)
+  # # check lambda length
+  # if(nlam != length(fit_exact$lambda)){
+  #   # if it's not nlam, refit to nlam lambdas
+  #   lambda <- log(fit_exact$lambda)
+  #   lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+  #   fit_exact = glmnet(x = Xb, y = y, lambda = lambda_new)
+  # }
+  ##### calling fitSLR0 #####
+  fitObj = fitSLR0(
+    y = y, 
+    X = X,
+    # Xb = Xb, 
+    btree = btree,
+    linkage = "complete", lambda = lambda, 
+    nlam = nlam, intercept = intercept, scaling = scaling,
+    rho.type = "squared")
   
   # make folds, if necessary
   if(is.null(foldid)){
@@ -523,12 +573,21 @@ cvSLR0 = function(
   # Fit based on folds and compute error metric
   for (i in seq(nfolds)) {
     # fit model on all but the ith fold
-    fit_cv <- glmnet(x = X[-folds[[i]], ], y = y[-folds[[i]]], 
-                     lambda = fit_exact$lambda, nlambda = nlam, 
-                     intercept = intercept)
+    ##### directly #####
+    # fit_cv <- glmnet(x = Xb[-folds[[i]], ], y = y[-folds[[i]]], 
+    #                  lambda = fit_exact$lambda, nlambda = nlam, 
+    #                  intercept = intercept)
+    ##### calling fitSLR0 #####
+    fit_cv = fitSLR0(
+      y = y[-folds[[i]]], 
+      X = X[-folds[[i]], ],
+      # Xb = Xb[-folds[[i]], ], 
+      btree = btree,
+      linkage = "complete", lambda = fitObj$lambda, nlam = nlam, 
+      intercept = intercept, scaling = scaling, rho.type = "squared")
     pred_te <- lapply(seq(1), function(k) {
-      X[folds[[i]], ] %*% fit_cv$beta + 
-          rep(fit_cv$a0, each = length(folds[[i]]))
+      Xb[folds[[i]], ] %*% fit_cv$bet + 
+          rep(fit_cv$int, each = length(folds[[i]]))
     })
     for (k in 1) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
     cat("##########################\n")
@@ -540,11 +599,12 @@ cvSLR0 = function(
   # ibest <- which(m == min(m), arr.ind = TRUE)[1, , drop = FALSE]
   
   return(list(
-    int = fit_exact$a0,
-    bet = fit_exact$beta,
-    lambda = fit_exact$lambda,
-    glmnet = fit_exact,
+    int = fitObj$int,
+    bet = fitObj$bet,
+    lambda = fitObj$lambda,
+    glmnet = fitObj$glmnet,
     btree = btree,
     cvm = m#fit_exact$cvm
+    , errs = errs
   ))
 }

@@ -1,3 +1,17 @@
+# trying to recreate Dr. Ma's results, comparing slr (the old version) to
+#   compositional lasso, along with a few other methods (coat, propr, pba)
+#   created two plots:
+#     - ROC curve / solution paths, with S.hat on the x-axis, TPR on the y-axis
+#     - MSE boxplots, for both rho = 0.2 and rho = 0.5, where MSE is 
+#         the average prediction error on independent test set, 
+#         1/n sum((y - y.hat)^2)
+################################################################################
+# in this script, I try to recreate the MSE boxplots, which requires many
+#   runs. 
+# note: in the original version, the intercept for complasso isn't used.
+#   I make boxplots using the original complasso mse calculation (w/o intercept)
+#     as well as the mse calculation with intercept.
+
 rm(list=ls())
 
 library(dplyr)
@@ -341,8 +355,8 @@ plt = ggplot(data.gg, aes(x = variable, y = value, fill = variable)) +
   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
         axis.title.y = element_blank())
 
-ggsave("MSE2.pdf", 
-       plot = plt, 
-       width = 6, 
-       height = 4, 
-       units = "in")
+# ggsave("MSE2.pdf", 
+#        plot = plt, 
+#        width = 6, 
+#        height = 4, 
+#        units = "in")

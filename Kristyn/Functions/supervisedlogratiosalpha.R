@@ -3,8 +3,9 @@ fitSLRalpha <- function(
   rho.type = "squared",
   Q = NULL, intercept = TRUE, lambda = NULL, 
   alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
-  rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6, scaling = TRUE
+  rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6, scaling = FALSE
 ){
+  # scaling doesn't work rn.
   # browser()
   
   if(is.null(btree)) btree = getSupervisedTree(y, X, linkage, rho.type)
@@ -140,8 +141,9 @@ cvSLRalpha <- function(
   Q = NULL, intercept = TRUE, lambda = NULL, 
   alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
   rho = 1e-2, eps1 = 1e-6, eps2 = 1e-5, maxite = 1e6, nfolds = 5, 
-  foldid = NULL, scaling = TRUE
+  foldid = NULL, scaling = FALSE
 ){
+  # scaling doesn't work rn.
   # browser()
   
   # fit the models

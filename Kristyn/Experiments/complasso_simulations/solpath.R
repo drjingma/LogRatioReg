@@ -3,7 +3,7 @@
 # fit Complasso and SLR, and plot the solution path.
 
 getwd()
-output_dir = "Kristyn/Experiments/complasso_simulations/output"
+output_dir = "Kristyn/Experiments/complasso_simulations/output_solpath"
 
 # libraries
 library(limSolve) # for constrained lm
@@ -218,7 +218,7 @@ sims3 = foreach(
   # caculate TPR
   btree.slr0.5 = slr0.5$btree
   SBP0.5 = sbp.fromHclust(btree.slr0.5)
-  slr0.5.res = apply(slr0.5$thet[[1]], 2, function(a) tpr.for.coef.ilr(beta, a, SBP0.5))
+  slr0.5.res = apply(slr0.5$theta[[1]], 2, function(a) tpr.for.coef.ilr(beta, a, SBP0.5))
   S.hat.slr0.5 = slr0.5.res[1, ]
   TPR.slr0.5 = slr0.5.res[2, ]
   print("finished slr with alpha = 0.5")
@@ -230,7 +230,7 @@ sims3 = foreach(
   # caculate TPR
   btree.slr1 = slr1$btree
   SBP1 = sbp.fromHclust(btree.slr1)
-  slr1.res = apply(slr1$thet[[1]], 2, function(a) tpr.for.coef.ilr(beta, a, SBP1))
+  slr1.res = apply(slr1$theta[[1]], 2, function(a) tpr.for.coef.ilr(beta, a, SBP1))
   S.hat.slr1 = slr1.res[1, ]
   TPR.slr1 = slr1.res[2, ]
   print("finished slr with alpha = 1")
@@ -257,3 +257,109 @@ file.end = paste0(
   ".rds")
 
 saveRDS(sims3, file = paste0(output_dir, "/solpaths", file.end))
+
+################################################################################
+################################################################################
+################################################################################
+# organize the simulation results to have more easily-accessable matrices ######
+# cl
+fit.cl.list = list()
+TPR.cl.mat = matrix(NA, nlam, numSims)
+S.hat.cl.mat = matrix(NA, nlam, numSims)
+lambda.cl.mat = matrix(NA, nlam, numSims)
+# slr
+fit.slr.list = list()
+TPR.slr.mat = matrix(NA, nlam, numSims)
+S.hat.slr.mat = matrix(NA, nlam, numSims)
+lambda.slr.mat = matrix(NA, nlam, numSims)
+# slr0.5
+fit.slr0.5.list = list()
+TPR.slr0.5.mat = matrix(NA, nlam, numSims)
+S.hat.slr0.5.mat = matrix(NA, nlam, numSims)
+lambda.slr0.5.mat = matrix(NA, nlam, numSims)
+# slr1
+fit.slr1.list = list()
+TPR.slr1.mat = matrix(NA, nlam, numSims)
+S.hat.slr1.mat = matrix(NA, nlam, numSims)
+lambda.slr1.mat = matrix(NA, nlam, numSims)
+for(i in 1:numSims){
+  sim.tmp = sims3[[i]]
+  # cl
+  fit.cl.list[[i]] = sim.tmp$fit.cl
+  TPR.cl.mat[, i] = sim.tmp$TPR.cl
+  S.hat.cl.mat[, i] = sim.tmp$S.hat.cl
+  lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
+  # slr
+  fit.slr.list[[i]] = sim.tmp$fit.slr
+  TPR.slr.mat[, i] = sim.tmp$TPR.slr
+  S.hat.slr.mat[, i] = sim.tmp$S.hat.slr
+  lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
+  # slr
+  fit.slr0.5.list[[i]] = sim.tmp$fit.slr0.5
+  TPR.slr0.5.mat[, i] = sim.tmp$TPR.slr0.5
+  S.hat.slr0.5.mat[, i] = sim.tmp$S.hat.slr0.5
+  lambda.slr0.5.mat[, i] = sim.tmp$fit.slr0.5$lambda
+  # slr
+  fit.slr1.list[[i]] = sim.tmp$fit.slr1
+  TPR.slr1.mat[, i] = sim.tmp$TPR.slr1
+  S.hat.slr1.mat[, i] = sim.tmp$S.hat.slr1
+  lambda.slr1.mat[, i] = sim.tmp$fit.slr1$lambda
+}
+
+
+
+# average TPR and S.hat ########################################################
+
+dim(S.hat.cl.mat)
+# classo
+S.hat.cl.avg = apply(S.hat.cl.mat, 1, mean, na.rm = TRUE)
+TPR.cl.avg = apply(TPR.cl.mat, 1, mean, na.rm = TRUE)
+# slr
+S.hat.slr.avg = apply(S.hat.slr.mat, 1, mean, na.rm = TRUE)
+TPR.slr.avg = apply(TPR.slr.mat, 1, mean, na.rm = TRUE)
+# slr0.5
+S.hat.slr0.5.avg = apply(S.hat.slr0.5.mat, 1, mean, na.rm = TRUE)
+TPR.slr0.5.avg = apply(TPR.slr0.5.mat, 1, mean, na.rm = TRUE)
+# slr
+S.hat.slr1.avg = apply(S.hat.slr1.mat, 1, mean, na.rm = TRUE)
+TPR.slr1.avg = apply(TPR.slr1.mat, 1, mean, na.rm = TRUE)
+
+# complasso stuff
+cl.gg.complete = data.frame(
+  "S.hat" = S.hat.cl.avg,
+  "TPR" = TPR.cl.avg)
+cl.gg.complete$Type = "classo"
+# slr stuff
+slr.gg.complete = data.frame(
+  "S.hat" = S.hat.slr.avg,
+  "TPR" = TPR.slr.avg)
+slr.gg.complete$Type = "slr"
+# slr0.5 stuff
+slr0.5.gg.complete = data.frame(
+  "S.hat" = S.hat.slr0.5.avg,
+  "TPR" = TPR.slr0.5.avg)
+slr0.5.gg.complete$Type = "slr0.5"
+# slr1 stuff
+slr1.gg.complete = data.frame(
+  "S.hat" = S.hat.slr1.avg,
+  "TPR" = TPR.slr1.avg)
+slr1.gg.complete$Type = "slr1"
+# ggplot
+gg.complete = rbind(
+  cl.gg.complete, slr.gg.complete, slr0.5.gg.complete, slr1.gg.complete)
+gg.complete$Type = factor(gg.complete$Type, 
+                          levels = c("classo", "slr", "slr0.5", "slr1"))
+plt = ggplot(gg.complete, aes(x = S.hat, y = TPR, color = Type
+                        , shape = Type, linetype = Type
+)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  xlim(0, 40) +
+  theme_bw() + 
+  theme(text = element_text(size = 20))
+
+ggsave("solpath.pdf",
+       plot = plt,
+       width = 6,
+       height = 4,
+       units = "in")

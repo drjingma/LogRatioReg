@@ -125,7 +125,8 @@ evals = foreach(
   # apply supervised log-ratios, using CV to select lambda
   slr = cvSLRalpha(
     y = Y, X = X, nlam = nlam, nfolds = K, alpha = alpha, 
-    intercept = intercept, rho.type = rho.type, linkage = linkage, scaling = scaling)
+    intercept = intercept, rho.type = rho.type, linkage = linkage, 
+    scaling = scaling)
   btree = slr$btree
   # plot(btree)
   
@@ -200,7 +201,7 @@ evals = foreach(
   
   # return
   c(PE.train, PE.test, EA1, EA2, EAInfty, 
-    FP, FN, TPR, bspars,
+    FP, FN, TPR, bspars
     # FP.old, FN.old, TPR.old, bspars.old
     )
 }

@@ -92,7 +92,7 @@ evals = foreach(
   library(stats)
   source("RCode/func_libs.R")
   
-  nlam = 200
+  nlam = 100
   
   # simulate training data #
   # generate W
@@ -182,7 +182,7 @@ evals = foreach(
   
   # return
   c(PE.train, PE.test, EA1, EA2, EAInfty, 
-    FP, FN, TPR, bspars,
+    FP, FN, TPR, bspars
     # FP.old, FN.old, TPR.old, bspars.old
     )
 }

@@ -114,7 +114,7 @@ foldid = sample(rep(seq(nfolds), length = n))
 # apply the old slr #
 slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
             rho.type = rho.type, linkage = linkage, foldid = foldid, 
-            standardize = FALSE)
+            standardize = TRUE)
 
 # choose lambda
 lam.min.idx0 = which.min(slr$cvm)
@@ -139,7 +139,7 @@ sum(betahat0 != 0)
 # old slr, with some changes
 slr.v2 = cvSLR0(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
                 rho.type = rho.type, linkage = linkage, foldid = foldid, 
-                scaling = FALSE)
+                scaling = TRUE)
 all.equal(slr$lambda, slr.v2$lambda)
 all.equal(slr$bet, slr.v2$bet)
 all.equal(slr$a0, slr.v2$a0)
@@ -290,7 +290,7 @@ all.equal(logX.cent.U, ilrX.cent) # TRUE
 slr.a1 = cvSLRalpha(
   y = Y, X = X, linkage = linkage, rho.type = rho.type, 
   intercept = intercept, lambda = slr$lambda, 
-  alpha = 1, nlam = nlam, nfolds = K, foldid = foldid, scaling = FALSE
+  alpha = 1, nlam = nlam, nfolds = K, foldid = foldid, scaling = TRUE
 )
 
 # choose lambda
@@ -306,21 +306,6 @@ ggplot(data.frame(lambda = slr.a1$lambda, cvm = slr.a1$cvm),
   theme_classic()
 # what is the minimizing lambda?
 lam.min
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ################################################
@@ -341,6 +326,8 @@ ggplot(data.frame(lambda = c(slr$lambda, slr.v2$lambda, slr.a1$lambda),
 slr$bet
 slr.v2$bet
 slr.a1$theta
+all.equal(unname(as.matrix(slr$bet)), unname(as.matrix(slr.v2$bet)))
+all.equal(unname(as.matrix(slr$bet)), unname(as.matrix(slr.a1$theta)))
 
 #betahat?
 U %*% slr$bet

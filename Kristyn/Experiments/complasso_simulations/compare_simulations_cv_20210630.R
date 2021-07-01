@@ -1,9 +1,12 @@
 library(ggplot2)
-library(reshape2)
 library(ggpubr)
+library(data.table)
+library(reshape2)
 
 output_dir = "Kristyn/Experiments/complasso_simulations/output_20210630"
 
+numSims = 100
+rng.seed = 123
 rho.type = "square" # 1 = "absolute value", 2 = "square"
 beta.settings = "new"
 linkage = "average"
@@ -20,9 +23,6 @@ scaling = TRUE
 metrics = c("PEtr", "PEte", "EA1", "EA2", "EAInfty", 
             "FP", "FN", "TPR", "betaSparsity")
 
-################################################################################
-# Compositional Lasso #
-################################################################################
 file.end = paste0(
   "_dim", n, "x", p, 
   "_", beta.settings, 
@@ -33,78 +33,55 @@ file.end = paste0(
   "_seed", rng.seed,
   ".rds")
 
-complasso.sim1 = readRDS(paste0(
-  output_dir, "/complasso_sim1", file.end
-))
-complasso.summaries = readRDS(paste0(
-  output_dir, "/complasso_summaries", file.end
-))
-print(complasso.summaries[metrics, c("mean", "se")])
+################################################################################
+# Compositional Lasso #
+################################################################################
+
+# import
+cl.sims.list = list()
+for(i in 1:numSims){
+  sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/complasso_sim", i, file.end
+  ))))
+  rownames(sim.tmp) = NULL
+  cl.sims.list[[i]] = data.table(sim.tmp)
+}
+cl.sims = as.data.frame(rbindlist(cl.sims.list))
+
+# summary stats
+cl.eval.means = apply(cl.sims, 2, mean)
+cl.eval.sds = apply(cl.sims, 2, sd)
+cl.eval.ses = cl.eval.sds / sqrt(numSims)
+cl.summaries = data.frame(
+  "mean" = cl.eval.means, "sd" = cl.eval.sds, "se" = cl.eval.ses)
+cl.summaries
+
+print(cl.summaries[metrics, c("mean", "se")])
 
 ################################################################################
 # Supervised Log Ratios #
 ################################################################################
-file.end = paste0(
-  "_dim", n, "x", p, 
-  "_", beta.settings, 
-  "_rho", rho, 
-  "_type", rho.type,
-  "_int", intercept,
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds")
-slr.sims = readRDS(paste0(
-  output_dir, "/slr_sims", file.end
-))
-slr.summaries = readRDS(paste0(
-  output_dir, "/slr_summaries", file.end
-))
+
+# import
+slr.sims.list = list()
+for(i in 1:numSims){
+  sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_sim", i, file.end
+  ))))
+  rownames(sim.tmp) = NULL
+  slr.sims.list[[i]] = data.table(sim.tmp)
+}
+slr.sims = as.data.frame(rbindlist(slr.sims.list))
+
+# summary stats
+slr.eval.means = apply(slr.sims, 2, mean)
+slr.eval.sds = apply(slr.sims, 2, sd)
+slr.eval.ses = slr.eval.sds / sqrt(numSims)
+slr.summaries = data.frame(
+  "mean" = slr.eval.means, "sd" = slr.eval.sds, "se" = slr.eval.ses)
+slr.summaries
+
 print(slr.summaries[metrics, c("mean", "se")])
-
-################################################################################
-# Supervised Log Ratios with alpha -- alpha = 0.5 #
-################################################################################
-alpha = 0.5
-file.end = paste0(
-  "_dim", n, "x", p, 
-  "_", beta.settings, 
-  "_alpha", alpha, 
-  "_rho", rho, 
-  "_type", rho.type,
-  "_int", intercept,
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds")
-slr0.5.sims = readRDS(paste0(
-  output_dir, "/slralpha_sims", file.end
-))
-slr0.5.summaries = readRDS(paste0(
-  output_dir, "/slralpha_summaries", file.end
-))
-print(slr0.5.summaries[metrics, c("mean", "se")])
-
-################################################################################
-# Supervised Log Ratios with alpha -- alpha = 1 #
-################################################################################
-alpha = 1
-file.end = paste0(
-  "_dim", n, "x", p, 
-  "_", beta.settings, 
-  "_alpha", alpha, 
-  "_rho", rho, 
-  "_type", rho.type,
-  "_int", intercept,
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds")
-slr1.sims = readRDS(paste0(
-  output_dir, "/slralpha_sims", file.end
-))
-slr1.summaries = readRDS(paste0(
-  output_dir, "/slralpha_summaries", file.end
-))
-print(slr1.summaries[metrics, c("mean", "se")])
-
 
 ################################################################################
 ################################################################################
@@ -113,17 +90,13 @@ print(slr1.summaries[metrics, c("mean", "se")])
 
 # plot
 
-cl.sims.gg = melt(data.frame(t(complasso.sims)))
+cl.sims.gg = reshape2::melt(cl.sims)
 cl.sims.gg$type = "CompLasso"
-slr.sims.gg = melt(data.frame(t(slr.sims)))
+slr.sims.gg = reshape2::melt(slr.sims)
 slr.sims.gg$type = "SLR"
-slr1.sims.gg = melt(data.frame(t(slr1.sims)))
-slr1.sims.gg$type = "SLRalpha1"
-slr0.5.sims.gg = melt(data.frame(t(slr0.5.sims)))
-slr0.5.sims.gg$type = "SLRalpha0.5"
-data.gg = rbind(cl.sims.gg, slr.sims.gg, slr1.sims.gg, slr0.5.sims.gg)
+data.gg = rbind(cl.sims.gg, slr.sims.gg)
 data.gg = dplyr::filter(data.gg, variable %in% metrics)
-data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR", "SLRalpha1", "SLRalpha0.5"))
+data.gg$type = factor(data.gg$type, levels = c("CompLasso", "SLR"))
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + 
   geom_boxplot() + 

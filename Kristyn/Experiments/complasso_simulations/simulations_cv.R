@@ -4,7 +4,7 @@
 # Notes: 
 
 getwd()
-output_dir = "Kristyn/Experiments/complasso_simulations/output_20210730"
+output_dir = "Kristyn/Experiments/complasso_simulations/output_20210630"
 
 # libraries
 library(limSolve) # for constrained lm
@@ -48,7 +48,7 @@ K = 10
 n = 100
 p = 200
 rho = 0.5 # 0.2, 0.5
-scaling = FALSE
+scaling = TRUE
 
 # Other simulation settings
 numSims = 100

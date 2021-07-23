@@ -81,8 +81,7 @@ for(i in 1:p){
 registerDoRNG(rng.seed)
 evals = foreach(
   b = 1:numSims, 
-  .combine = cbind, 
-  .noexport = c("ConstrLassoC0")
+  .combine = cbind
 ) %dorng% {
   library(limSolve)
   library(mvtnorm)
@@ -93,7 +92,44 @@ evals = foreach(
   source("RCode/func_libs.R")
   source(paste0(functions_path, "supervisedlogratios.R"))
   
+  # Settings to toggle with
+  rho.type = "square" # 1 = "absolute value", 2 = "square"
+  beta.settings = "new"
+  linkage = "average"
+  tol = 1e-4
   nlam = 100
+  intercept = TRUE
+  K = 10
+  n = 100
+  p = 200
+  rho = 0.5 # 0.2, 0.5
+  scaling = TRUE
+  
+  # which beta?
+  if(beta.settings == "old" | beta.settings == "linetal2014"){
+    beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
+  } else{
+    beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
+  }
+  
+  # Population parameters
+  non0.beta = (beta != 0)
+  sigma_eps = 0.5
+  seed = 1
+  muW = c(
+    rep(log(p), 5), 
+    rep(0, p - 5)
+  )
+  SigmaW = matrix(0, p, p)
+  for(i in 1:p){
+    for(j in 1:p){
+      SigmaW[i, j] = rho^abs(i - j)
+    }
+  }
+  
+  nlam = 100
+  
+  ##############################################################################
   
   # for beta selection accuracy metrics
   slr.non0.beta = abs(beta) > 10e-8
@@ -248,6 +284,7 @@ evals = foreach(
   # apply compositional lasso, using CV to select lambda
   complasso = cv.func(
     method="ConstrLasso", y = Y, x = Z, Cmat = matrix(1, p, 1), nlam = nlam, 
+    lambda = lambda, # like aim31 #######################################################
     nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
   
   # choose lambda

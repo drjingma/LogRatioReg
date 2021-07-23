@@ -4,7 +4,7 @@
 # Notes: 
 
 getwd()
-output_dir = "Kristyn/Experiments/complasso_simulations/output_20210630"
+output_dir = "Kristyn/Experiments/complasso_simulations/output_20210722"
 
 # libraries
 library(limSolve) # for constrained lm

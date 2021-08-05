@@ -4,7 +4,9 @@ library(data.table)
 library(reshape2)
 
 # output_dir = "Kristyn/Experiments/complasso_simulations/output_20210630"
-output_dir = "Kristyn/Experiments/complasso_simulations/output_20210722"
+# output_dir = "Kristyn/Experiments/complasso_simulations/output_20210722"
+output_dir = "Kristyn/Experiments/complasso_simulations/output_20210723"
+
 
 numSims = 100
 rng.seed = 123

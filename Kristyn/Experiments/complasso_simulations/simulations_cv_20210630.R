@@ -1,7 +1,7 @@
 # Method: Simulation study for compositional Lasso
-# Purpose: Simulate data, fit supervised log-ratios method to the data
+# Purpose: Simulate data, fit supervised log-ratios method AND compositional 
+#   lasso to the data
 # Date: 06/30/2021
-# Notes: 
 
 getwd()
 output_dir = "Kristyn/Experiments/complasso_simulations/output_20210630"

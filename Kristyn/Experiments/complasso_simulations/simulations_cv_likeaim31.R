@@ -4,7 +4,7 @@
 # Notes: cv.glmnet for predictions, but beta from refit.glmnet, like in aim31
 
 getwd()
-output_dir = "Kristyn/Experiments/complasso_simulations/output_aim31consistent"
+output_dir = "Kristyn/Experiments/complasso_simulations/output_likeaim31"
 
 # libraries
 library(limSolve) # for constrained lm

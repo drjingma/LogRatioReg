@@ -117,23 +117,22 @@ sims = foreach(
               rho.type = rho.type, linkage = linkage, standardize = scaling)
   print("finished slr")
   
-  # apply slralpha=0.5
-  slr0.5 = cvSLRalpha(
-    y = Y, X = X, nlam = nlam, nfolds = K, alpha = 0.5, 
-    intercept = intercept, rho.type = rho.type, linkage = linkage, 
-    scaling = scaling)
-  print("finished slr with alpha = 0.5")
-  
-  # apply slralpha=1
-  slr1 = cvSLRalpha(
-    y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1, 
-    intercept = intercept, rho.type = rho.type, linkage = linkage, 
-    scaling = scaling)
-  print("finished slr with alpha = 1")
+  # # apply slralpha=0.5
+  # slr0.5 = cvSLRalpha(
+  #   y = Y, X = X, nlam = nlam, nfolds = K, alpha = 0.5, 
+  #   intercept = intercept, rho.type = rho.type, linkage = linkage, 
+  #   scaling = scaling)
+  # print("finished slr with alpha = 0.5")
+  # 
+  # # apply slralpha=1
+  # slr1 = cvSLRalpha(
+  #   y = Y, X = X, nlam = nlam, nfolds = K, alpha = 1, 
+  #   intercept = intercept, rho.type = rho.type, linkage = linkage, 
+  #   scaling = scaling)
+  # print("finished slr with alpha = 1")
   
   list(X = X, Y = Y,
-       fit.cl = complasso, fit.slr = slr, fit.slr0.5 = slr0.5, fit.slr1 = slr1
-  )
+       fit.cl = complasso, fit.slr = slr)#, fit.slr0.5 = slr0.5, fit.slr1 = slr1)
 }
 
 
@@ -142,14 +141,14 @@ sims = foreach(
 # 
 lambda.cl.mat = matrix(NA, nlam, numSims)
 lambda.slr.mat = matrix(NA, nlam, numSims)
-lambda.slr0.5.mat = matrix(NA, nlam, numSims)
-lambda.slr1.mat = matrix(NA, nlam, numSims)
+# lambda.slr0.5.mat = matrix(NA, nlam, numSims)
+# lambda.slr1.mat = matrix(NA, nlam, numSims)
 for(i in 1:numSims){
   sim.tmp = sims[[i]]
   lambda.cl.mat[, i] = sim.tmp$fit.cl$lambda
   lambda.slr.mat[, i] = sim.tmp$fit.slr$lambda
-  lambda.slr0.5.mat[, i] = sim.tmp$fit.slr0.5$lambda
-  lambda.slr1.mat[, i] = sim.tmp$fit.slr1$lambda
+  # lambda.slr0.5.mat[, i] = sim.tmp$fit.slr0.5$lambda
+  # lambda.slr1.mat[, i] = sim.tmp$fit.slr1$lambda
 }
 
 
@@ -161,11 +160,11 @@ lambda.df = data.frame(
   complasso = exp(seq(max(log(lambda.cl.mat)), 
                       min(log(lambda.cl.mat)), length.out = nlam)),
   slr = exp(seq(max(log(lambda.slr.mat)), 
-                min(log(lambda.slr.mat)),length.out = nlam)), 
-  slr0.5 = exp(seq(max(log(lambda.slr0.5.mat)), 
-                min(log(lambda.slr0.5.mat)),length.out = nlam)), 
-  slr1 = exp(seq(max(log(lambda.slr1.mat)), 
-                min(log(lambda.slr1.mat)),length.out = nlam))
+                min(log(lambda.slr.mat)),length.out = nlam))#, 
+  # slr0.5 = exp(seq(max(log(lambda.slr0.5.mat)), 
+  #               min(log(lambda.slr0.5.mat)),length.out = nlam)), 
+  # slr1 = exp(seq(max(log(lambda.slr1.mat)), 
+  #               min(log(lambda.slr1.mat)),length.out = nlam))
 )
 
 

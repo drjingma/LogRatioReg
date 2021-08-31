@@ -1,7 +1,6 @@
 # Method: Simulation study for compositional Lasso
 # Purpose: Simulate data, fit supervised log-ratios method to the data
 # Date: 08/29/2021
-# Notes: cv.glmnet for predictions, but beta from refit.glmnet, like in aim31
 
 getwd()
 output_dir = "Kristyn/Experiments/complasso_simulations/output_kristyn_metrics_roc"

@@ -297,7 +297,7 @@ res = foreach(
   
   # roc
   cl.roc <- apply(complasso$bet, 2, function(a) 
-    tpr.for.coef(a, beta, sbp_supervised)) # used cv.glmnet beta matrix
+    roc.for.coef(a, beta))
   
   saveRDS(cl.roc, file = paste0(output_dir, "/classo_roc", b, file.end))
 }

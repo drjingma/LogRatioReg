@@ -1,7 +1,6 @@
 # Method: Simulation study for compositional Lasso
 # Purpose: Simulate data, fit supervised log-ratios method to the data
 # Date: 08/29/2021
-# Notes: cv.glmnet for predictions, but beta from refit.glmnet, like in aim31
 
 getwd()
 output_dir = "Kristyn/Experiments/complasso_simulations/output_kristyn_metrics_roc"
@@ -266,7 +265,7 @@ res = foreach(
   
   # roc
   cl.roc <- apply(complasso$bet, 2, function(a) 
-    roc.for.coef(a, beta)) # used cv.glmnet beta matrix
+    roc.for.coef(a, beta))
   
   saveRDS(cl.roc, file = paste0(output_dir, "/classo_roc", b, file.end))
 }

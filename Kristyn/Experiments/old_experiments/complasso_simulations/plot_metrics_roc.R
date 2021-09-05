@@ -134,7 +134,7 @@ plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) +
         axis.title.y = element_blank(), 
         legend.position = "none")
 # plot both
-ggarrange(plt.PEtr, plt.PEte)
+# ggarrange(plt.PEtr, plt.PEte)
 
 
 
@@ -190,9 +190,17 @@ for(i in 1:length(S.hat.vals)){
 }
 
 # plot
-plot(S.hat.vals, cl.tpr.avg, type = "l", col = 2)
-lines(S.hat.vals, slr.tpr.avg, col = 3)
-
+# plot(S.hat.vals, cl.tpr.avg, type = "l", col = 2)
+# lines(S.hat.vals, slr.tpr.avg, col = 3)
+data.gg = rbind(
+  data.frame(S_hat = S.hat.vals, TPR = cl.tpr.avg, Method = "classo"), 
+  data.frame(S_hat = S.hat.vals, TPR = slr.tpr.avg, Method = "slr")
+)
+ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
+    geom_line(alpha = 0.5, na.rm = TRUE) +
+    geom_point(alpha = 0.5, na.rm = TRUE) +
+    # xlim(0, 40) +
+    theme_bw()
 
 
 ################################################################################
@@ -236,42 +244,16 @@ slr.S.hat.avg2 = apply(slr.S.hat.mat2, 1, mean, na.rm = TRUE)
 slr.TPR.avg2 = apply(slr.TPR.mat2, 1, mean, na.rm = TRUE)
 
 # plot
-plot(cl.S.hat.avg2, cl.TPR.avg2, type = "l", col = 2)
-lines(slr.S.hat.avg2, slr.TPR.avg2, col = 3)
-
-# # complasso stuff
-# cl.gg.complete = data.frame(
-#   "S.hat" = S.hat.cl.avg,
-#   "TPR" = TPR.cl.avg)
-# cl.gg.complete$Type = "classo"
-# # slr stuff
-# slr.gg.complete = data.frame(
-#   "S.hat" = S.hat.slr.avg,
-#   "TPR" = TPR.slr.avg)
-# slr.gg.complete$Type = "slr"
-# # slr0.5 stuff
-# slr0.5.gg.complete = data.frame(
-#   "S.hat" = S.hat.slr0.5.avg,
-#   "TPR" = TPR.slr0.5.avg)
-# slr0.5.gg.complete$Type = "slr0.5"
-# # slr1 stuff
-# slr1.gg.complete = data.frame(
-#   "S.hat" = S.hat.slr1.avg,
-#   "TPR" = TPR.slr1.avg)
-# slr1.gg.complete$Type = "slr1"
-# # ggplot
-# gg.complete = rbind(
-#   cl.gg.complete, slr.gg.complete, slr0.5.gg.complete, slr1.gg.complete)
-# gg.complete$Type = factor(gg.complete$Type, 
-#                           levels = c("classo", "slr", "slr0.5", "slr1"))
-# ggplot(gg.complete, aes(x = S.hat, y = TPR, color = Type
-#                         , shape = Type, linetype = Type
-# )) +
-#   geom_line(size = 1) +
-#   geom_point(size = 3) +
-#   xlim(0, 40) +
-#   theme_bw() + 
-#   theme(text = element_text(size = 20))
-# 
-# all.equal(slr.gg.complete, slr.gg.complete.old)
+data.gg2 = rbind(
+  data.frame(S_hat = cl.S.hat.avg2, TPR = cl.TPR.avg2, Method = "classo"), 
+  data.frame(S_hat = slr.S.hat.avg2, TPR = slr.TPR.avg2, Method = "slr")
+)
+# plot(cl.S.hat.avg2, cl.TPR.avg2, type = "l", col = 2)
+# lines(slr.S.hat.avg2, slr.TPR.avg2, col = 3)
+ggplot(data.gg2[!is.na(data.gg2$TPR),], 
+       aes(x = S_hat, y = TPR, color = Method)) + 
+  geom_line(alpha = 0.5, na.rm = TRUE) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  # xlim(0, 40) +
+  theme_bw()
 

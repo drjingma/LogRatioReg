@@ -152,7 +152,7 @@ res = foreach(
   slr = cvSLR(y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
               rho.type = rho.type, linkage = linkage, standardize = scaling)
   end.time = Sys.time()
-  slr.timing = end.time - start.time
+  slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
   btree = slr$btree
   # plot(btree)
   
@@ -227,7 +227,7 @@ res = foreach(
     method="ConstrLasso", y = Y, x = Z, Cmat = matrix(1, p, 1), nlam = nlam, 
     nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
   end.time = Sys.time()
-  classo.timing = end.time - start.time
+  classo.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
   
   # choose lambda
   cl.lam.min.idx = which.min(complasso$cvm)
@@ -282,89 +282,6 @@ res = foreach(
   
   saveRDS(cl.roc, file = paste0(output_dir, "/classo_roc", b, file.end))
   
-  ##############################################################################
-  # selbal
-  ##############################################################################
-  rownames(X) = paste("Sample", 1:nrow(X), sep = "_")
-  colnames(X) = paste("V", 1:ncol(X), sep = "")
-  
-  # apply selbal, using CV to select the optimal number of variables
-  start.time = Sys.time()
-  selbal.fit = selbal.cv(x = X, y = as.vector(Y), n.fold = K)
-  end.time = Sys.time()
-  selbal.timing = end.time - start.time
-  
-  # U (transformation) matrix
-  u.selbal = rep(0, p)
-  names(u.selbal) = colnames(X)
-  pba.pos = unlist(subset(
-    selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
-  r = length(pba.pos)
-  pba.neg = unlist(subset(
-    selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
-  s = length(pba.neg)
-  u.selbal[pba.pos] = 1 / r
-  u.selbal[pba.neg] = -1 / s
-  norm.const = sqrt((r * s) / (r + s))
-  u.selbal = norm.const * u.selbal
-  # check: these are equal
-  # lm(as.vector(Y) ~ log(X) %*% as.matrix(u.selbal))
-  # selbal.fit$glm
-  selbal.thetahat = coefficients(selbal.fit$glm)[2]
-  selbal.betahat = u.selbal %*% as.matrix(selbal.thetahat)
-  
-  # evaluate model #
-  
-  # 1. prediction error #
-  # 1a. on training set #
-  # get prediction error on training set
-  selbal.Yhat.train = predict.glm(selbal.fit$glm, 
-                           newdata = data.frame(X), 
-                           type = "response")
-  selbal.PE.train = crossprod(Y - selbal.Yhat.train) / n
-  # 1b. on test set #
-  # get prediction error on test set
-  rownames(X.test) = paste("Sample", 1:nrow(X), sep = "_")
-  colnames(X.test) = paste("V", 1:ncol(X), sep = "")
-  selbal.Yhat.test = predict.glm(selbal.fit$glm, newdata = data.frame(X.test), 
-                          type = "response")
-  selbal.PE.test = crossprod(Y.test - selbal.Yhat.test) / n
-  
-  # 2. estimation accuracy (i.t.o. beta) #
-  selbal.EA1 = sum(abs(selbal.betahat - beta))
-  selbal.EA2 = sqrt(crossprod(selbal.betahat - beta))
-  selbal.EAInfty = max(abs(selbal.betahat - beta))
-  
-  # 3. selection accuracy (i.t.o. beta) #
-  selbal.non0.betahat = abs(selbal.betahat) > 10e-8
-  selbal.is0.betahat = selbal.betahat <= 10e-8
-  # FP
-  selbal.FP = sum(is0.beta & selbal.non0.betahat)
-  # FN
-  selbal.FN = sum((non0.beta != cl.non0.betahat) & non0.beta)
-  # TPR
-  selbal.TPR = sum((non0.beta == selbal.non0.betahat) & selbal.non0.betahat) / 
-    sum(non0.beta)
-  
-  saveRDS(c(
-    "PEtr" = selbal.PE.train, 
-    "PEte" = selbal.PE.test, 
-    "EA1" = selbal.EA1, 
-    "EA2" = selbal.EA2, 
-    "EAInfty" = selbal.EAInfty, 
-    "FP" = selbal.FP, 
-    "FN" = selbal.FN, 
-    "TPR" = selbal.TPR, 
-    "timing" = selbal.timing,
-    "betaSparsity" = bspars
-  ), 
-  file = paste0(output_dir, "/selbal_metrics", b, file.end))
-  
-  # roc
-  # selbal.roc <- apply(slr$bet, 2, function(a) 
-  #   roc.for.coef.LR(a, beta, sbp.fromHclust(btree)))
-  # 
-  # saveRDS(selbal.roc, file = paste0(output_dir, "/selbal_roc", b, file.end))
 }
 
 

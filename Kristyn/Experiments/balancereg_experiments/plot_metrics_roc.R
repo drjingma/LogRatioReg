@@ -17,7 +17,7 @@ rng.seed = 123
 
 # Settings to toggle with
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-beta.settings = "new"
+theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
 linkage = "average"
 tol = 1e-4
 nlam = 100
@@ -30,13 +30,19 @@ scaling = TRUE
 
 file.end = paste0(
   "_dim", n, "x", p, 
-  "_", beta.settings, 
+  "_", theta.settings, 
   "_rho", rho, 
   "_int", intercept,
   "_scale", scaling,
   "_K", K,
   "_seed", rng.seed,
   ".rds")
+
+if(theta.settings == "both"){ # the ones that have selbal
+  has.selbal = TRUE
+} else{
+  has.selbal = FALSE
+}
 
 ################################################################################
 # plot metrics
@@ -49,7 +55,7 @@ metrics_names = c(
 # import metrics
 cl.sims.list = list()
 slr.sims.list = list()
-selbal.sims.list = list()
+if(has.selbal) selbal.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
@@ -63,16 +69,18 @@ for(i in 1:numSims){
   ))))
   rownames(slr.sim.tmp) = NULL
   slr.sims.list[[i]] = data.table(slr.sim.tmp)
-  # selbal
+  if(has.selbal){
+    # selbal
   selbal.sim.tmp = t(data.frame(readRDS(paste0(
     output_dir, "/selbal_metrics", i, file.end
   ))))
   rownames(selbal.sim.tmp) = NULL
   selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
+  }
 }
 cl.sims = as.data.frame(rbindlist(cl.sims.list))
 slr.sims = as.data.frame(rbindlist(slr.sims.list))
-selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
+if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
 
 # summary stats for classo metrics
 cl.eval.means = apply(cl.sims, 2, mean)
@@ -90,27 +98,36 @@ slr.summaries = data.frame(
   "mean" = slr.eval.means, "sd" = slr.eval.sds, "se" = slr.eval.ses)
 # print(slr.summaries[metrics, c("mean", "se")])
 
-# summary stats for selbal metrics
+if(has.selbal){
+  # summary stats for selbal metrics
 selbal.eval.means = apply(selbal.sims, 2, mean)
 selbal.eval.sds = apply(selbal.sims, 2, sd)
 selbal.eval.ses = selbal.eval.sds / sqrt(numSims)
 selbal.summaries = data.frame(
   "mean" = selbal.eval.means, "sd" = selbal.eval.sds, "se" = selbal.eval.ses)
 # print(selbal.summaries[metrics, c("mean", "se")])
+}
 
 # boxplots for the slr and classo metrics
 cl.sims.gg = reshape2::melt(cl.sims)
 cl.sims.gg$type = "classo"
 slr.sims.gg = reshape2::melt(slr.sims)
 slr.sims.gg$type = "slr"
-selbal.sims.gg = reshape2::melt(selbal.sims)
+if(has.selbal){
+  selbal.sims.gg = reshape2::melt(selbal.sims)
 selbal.sims.gg$type = "selbal"
-data.gg = rbind(
-  cl.sims.gg, 
-  slr.sims.gg, 
-  selbal.sims.gg)
+}
+if(has.selbal){
+  data.gg = rbind(cl.sims.gg, slr.sims.gg, selbal.sims.gg)
+} else{
+  data.gg = rbind(cl.sims.gg, slr.sims.gg)
+}
 data.gg = dplyr::filter(data.gg, variable %in% metrics_names)
-data.gg$type = factor(data.gg$type)#, levels = c("classo", "slr", "selbal"))
+if(has.selbal){
+  data.gg$type = factor(data.gg$type, levels = c("classo", "slr", "selbal"))
+} else{
+  data.gg$type = factor(data.gg$type, levels = c("classo", "slr"))
+}
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + 
   geom_boxplot() + 

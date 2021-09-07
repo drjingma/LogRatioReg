@@ -83,10 +83,10 @@ res = foreach(
   # Settings to toggle with
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   theta.settings = "multsparse" 
-  # dense => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
-  # sparse => j = p - 1
-  # both => theta = c(1, p - 1)
-  # multsparse = c(p - 3:1)
+  # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
+  # "sparse" => j = p - 1
+  # "both" => theta = c(1, p - 1)
+  # "multsparse" = c(p - 3:1)
   values.theta = 1
   linkage = "average"
   tol = 1e-4

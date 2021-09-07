@@ -110,7 +110,7 @@ data.gg = rbind(
   slr.sims.gg, 
   selbal.sims.gg)
 data.gg = dplyr::filter(data.gg, variable %in% metrics_names)
-data.gg$type = factor(data.gg$type)#, levels = c("classo", "slr", "selbal"))
+data.gg$type = factor(data.gg$type, levels = c("classo", "slr", "selbal"))
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + 
   geom_boxplot() + 

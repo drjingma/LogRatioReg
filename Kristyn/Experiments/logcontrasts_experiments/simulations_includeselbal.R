@@ -103,7 +103,6 @@ res = foreach(
   # Population parameters
   non0.beta = (beta != 0)
   sigma_eps = 0.5
-  seed = 1
   muW = c(rep(log(p), 5), rep(0, p - 5))
   SigmaW <- rgExpDecay(p,rho)$Sigma
   
@@ -130,18 +129,18 @@ res = foreach(
   logW <- mvrnorm(n = n * 2, mu = muW, Sigma = SigmaW) 
   W <- exp(logW)
   colnames(W) <- paste0('s', 1:p)
+  names(beta) <- colnames(W)
   XAll <- sweep(W, 1, rowSums(W), FUN='/')
   ZAll = log(XAll)
-  names(beta) <- colnames(W)
   yAll <-  ZAll %*% beta + rnorm(n) * sigma_eps
   
   # subset out training and test sets
   X = XAll[1:n, ]
   X.test = XAll[-(1:n), ]
   Z = ZAll[1:n, ]
-  Z.test = ZAll[-(1:n)] 
-  Y <- yAll[1:n,]
-  Y.test <- yAll[-(1:n),]
+  Z.test = ZAll[-(1:n), ]
+  Y <- yAll[1:n, , drop = TRUE]
+  Y.test <- yAll[-(1:n), , drop = TRUE]
   
   ##############################################################################
   # supervised log-ratios
@@ -213,7 +212,7 @@ res = foreach(
   
   # roc
   slr.roc <- apply(slr$bet, 2, function(a) 
-    roc.for.coef.LR(a, beta, sbp.fromHclust(btree)))
+    roc.for.coef.LR(a, beta, slr.SBP))
   
   saveRDS(slr.roc, file = paste0(output_dir, "/slr_roc", b, file.end))
   
@@ -362,7 +361,7 @@ res = foreach(
   
   # roc
   # selbal.roc <- apply(slr$bet, 2, function(a) 
-  #   roc.for.coef.LR(a, beta, sbp.fromHclust(btree)))
+  #   roc.for.coef.LR(a, beta, ...))
   # 
   # saveRDS(selbal.roc, file = paste0(output_dir, "/selbal_roc", b, file.end))
 }

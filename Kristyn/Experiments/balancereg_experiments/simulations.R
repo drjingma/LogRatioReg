@@ -82,7 +82,12 @@ res = foreach(
   
   # Settings to toggle with
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  beta.settings = "new"
+  theta.settings = "both" 
+  # dense => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
+  # sparse => j = p - 1
+  # both => theta = c(1, p - 1)
+  # multsparse = c(p - 3:1)
+  values.theta = 1
   linkage = "average"
   tol = 1e-4
   nlam = 100
@@ -93,30 +98,27 @@ res = foreach(
   rho = 0.5 # 0.2, 0.5
   scaling = TRUE
   
-  # which beta?
-  if(beta.settings == "old" | beta.settings == "linetal2014"){
-    beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
-  } else{
-    beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
+  # theta settings
+  if(theta.settings == "dense"){
+    indices.theta = 1
+  } else if(theta.settings == "sparse"){
+    indices.theta = p - 1
+  } else if(theta.settings == "both"){
+    indices.theta = c(1, p - 1)
+  } else{ # if(theta.settings == "multsparse")
+    indices.theta = p - 3:1
   }
   
   # Population parameters
-  non0.beta = (beta != 0)
   sigma_eps = 0.5
-  seed = 1
   muW = c(rep(log(p), 5), rep(0, p - 5))
   SigmaW <- rgExpDecay(p,rho)$Sigma
-  
-  # for beta selection accuracy metrics
-  slr.non0.beta = abs(beta) > 10e-8
-  is0.beta = abs(beta) <= 10e-8
-  
-  # beta sparsity
-  bspars = sum(non0.beta)
+  SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
+  U = getU(btree = SigmaWtree) # transformation matrix
   
   file.end = paste0(
     "_dim", n, "x", p, 
-    "_", beta.settings, 
+    "_", theta.settings, 
     "_rho", rho, 
     "_int", intercept,
     "_scale", scaling,
@@ -132,16 +134,44 @@ res = foreach(
   colnames(W) <- paste0('s', 1:p)
   XAll <- sweep(W, 1, rowSums(W), FUN='/')
   ZAll = log(XAll)
+  ilrXAll = computeBalances(XAll, U = U)
+  
+  # get theta
+  theta = rep(0, p - 1)
+  if(is.null(values.theta)){
+    # assume values.theta = 1
+    values.theta = 1
+  }
+  if(length(values.theta) == 1){
+    # if values.theta = 1, assume it's the same value for all nonzero indices
+    values.theta = rep(values.theta, length(indices.theta))
+  } else if(length(values.theta) != length(indices.theta)){
+    # when 1 < length(values.theta) < total # of nonzero values
+    stop("indices.theta does not have same length as values.theta")
+  }
+  theta[indices.theta] = values.theta
+  theta = as.matrix(theta)
+  # get beta
+  beta = as.vector(getBeta(theta, U = U))
   names(beta) <- colnames(W)
-  yAll <-  ZAll %*% beta + rnorm(n) * sigma_eps
+  # generate Y
+  yAll = ilrXAll %*% theta + rnorm(n) * sigma_eps
   
   # subset out training and test sets
   X = XAll[1:n, ]
   X.test = XAll[-(1:n), ]
   Z = ZAll[1:n, ]
-  Z.test = ZAll[-(1:n)] 
-  Y <- yAll[1:n,]
-  Y.test <- yAll[-(1:n),]
+  Z.test = ZAll[-(1:n), ]
+  ilrX = ilrXAll[1:n, ]
+  ilrX.test = ilrXAll[-(1:n), ]
+  Y <- yAll[1:n, , drop = TRUE]
+  Y.test <- yAll[-(1:n), , drop = TRUE]
+  
+  # about beta
+  non0.beta = (beta != 0)
+  slr.non0.beta = abs(beta) > 10e-8
+  is0.beta = abs(beta) <= 10e-8
+  bspars = sum(non0.beta)
   
   ##############################################################################
   # supervised log-ratios
@@ -209,13 +239,13 @@ res = foreach(
     "timing" = slr.timing,
     "betaSparsity" = bspars
   ), 
-  file = paste0(output_dir, "/0slr_metrics", b, file.end))
+  file = paste0(output_dir, "/slr_metrics", b, file.end))
   
   # roc
   slr.roc <- apply(slr$bet, 2, function(a) 
-    roc.for.coef.LR(a, beta, sbp.fromHclust(btree)))
+    roc.for.coef.LR(a, beta, slr.SBP))
   
-  saveRDS(slr.roc, file = paste0(output_dir, "/0slr_roc", b, file.end))
+  saveRDS(slr.roc, file = paste0(output_dir, "/slr_roc", b, file.end))
   
   ##############################################################################
   # compositional lasso
@@ -274,14 +304,97 @@ res = foreach(
     "timing" = classo.timing,
     "betaSparsity" = bspars
   ), 
-  file = paste0(output_dir, "/0classo_metrics", b, file.end))
+  file = paste0(output_dir, "/classo_metrics", b, file.end))
   
   # roc
   cl.roc <- apply(complasso$bet, 2, function(a) 
     roc.for.coef(a, beta))
   
-  saveRDS(cl.roc, file = paste0(output_dir, "/0classo_roc", b, file.end))
+  saveRDS(cl.roc, file = paste0(output_dir, "/classo_roc", b, file.end))
   
+  # ##############################################################################
+  # # selbal
+  # ##############################################################################
+  # rownames(X) = paste("Sample", 1:nrow(X), sep = "_")
+  # colnames(X) = paste("V", 1:ncol(X), sep = "")
+  # 
+  # # apply selbal, using CV to select the optimal number of variables
+  # start.time = Sys.time()
+  # selbal.fit = selbal.cv(x = X, y = as.vector(Y), n.fold = K)
+  # end.time = Sys.time()
+  # selbal.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # U (transformation) matrix
+  # u.selbal = rep(0, p)
+  # names(u.selbal) = colnames(X)
+  # pba.pos = unlist(subset(
+  #   selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
+  # r = length(pba.pos)
+  # pba.neg = unlist(subset(
+  #   selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
+  # s = length(pba.neg)
+  # u.selbal[pba.pos] = 1 / r
+  # u.selbal[pba.neg] = -1 / s
+  # norm.const = sqrt((r * s) / (r + s))
+  # u.selbal = norm.const * u.selbal
+  # # check: these are equal
+  # # lm(as.vector(Y) ~ log(X) %*% as.matrix(u.selbal))
+  # # selbal.fit$glm
+  # selbal.thetahat = coefficients(selbal.fit$glm)[2]
+  # selbal.betahat = u.selbal %*% as.matrix(selbal.thetahat)
+  # 
+  # # evaluate model #
+  # 
+  # # 1. prediction error #
+  # # 1a. on training set #
+  # # get prediction error on training set
+  # selbal.Yhat.train = predict.glm(selbal.fit$glm, 
+  #                          newdata = data.frame(X), 
+  #                          type = "response")
+  # selbal.PE.train = crossprod(Y - selbal.Yhat.train) / n
+  # # 1b. on test set #
+  # # get prediction error on test set
+  # rownames(X.test) = paste("Sample", 1:nrow(X), sep = "_")
+  # colnames(X.test) = paste("V", 1:ncol(X), sep = "")
+  # selbal.Yhat.test = predict.glm(selbal.fit$glm, newdata = data.frame(X.test), 
+  #                         type = "response")
+  # selbal.PE.test = crossprod(Y.test - selbal.Yhat.test) / n
+  # 
+  # # 2. estimation accuracy (i.t.o. beta) #
+  # selbal.EA1 = sum(abs(selbal.betahat - beta))
+  # selbal.EA2 = sqrt(crossprod(selbal.betahat - beta))
+  # selbal.EAInfty = max(abs(selbal.betahat - beta))
+  # 
+  # # 3. selection accuracy (i.t.o. beta) #
+  # selbal.non0.betahat = abs(selbal.betahat) > 10e-8
+  # selbal.is0.betahat = selbal.betahat <= 10e-8
+  # # FP
+  # selbal.FP = sum(is0.beta & selbal.non0.betahat)
+  # # FN
+  # selbal.FN = sum((non0.beta != cl.non0.betahat) & non0.beta)
+  # # TPR
+  # selbal.TPR = sum((non0.beta == selbal.non0.betahat) & selbal.non0.betahat) / 
+  #   sum(non0.beta)
+  # 
+  # saveRDS(c(
+  #   "PEtr" = selbal.PE.train, 
+  #   "PEte" = selbal.PE.test, 
+  #   "EA1" = selbal.EA1, 
+  #   "EA2" = selbal.EA2, 
+  #   "EAInfty" = selbal.EAInfty, 
+  #   "FP" = selbal.FP, 
+  #   "FN" = selbal.FN, 
+  #   "TPR" = selbal.TPR, 
+  #   "timing" = selbal.timing,
+  #   "betaSparsity" = bspars
+  # ), 
+  # file = paste0(output_dir, "/selbal_metrics", b, file.end))
+
+  # roc
+  # selbal.roc <- apply(slr$bet, 2, function(a) 
+  #   roc.for.coef.LR(a, beta, ...))
+  # 
+  # saveRDS(selbal.roc, file = paste0(output_dir, "/selbal_roc", b, file.end))
 }
 
 

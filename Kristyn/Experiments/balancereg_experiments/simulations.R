@@ -402,6 +402,7 @@ res = foreach(
   # 3a. selection of beta #
   ### using SBP matrix
   or.SBP = sbp.fromHclust(or.btree)
+  row.names(or.SBP) = colnames(W)
   or.non0.thetahat = (or.thetahat != 0)
   or.sel.cols.SBP = or.SBP[, or.non0.thetahat, drop = FALSE]
   or.non0.betahat = apply(or.sel.cols.SBP, 1, function(row) any(row != 0))

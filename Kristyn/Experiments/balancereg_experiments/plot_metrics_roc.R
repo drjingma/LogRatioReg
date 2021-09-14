@@ -18,6 +18,7 @@ rng.seed = 123
 # Settings to toggle with
 rho.type = "square" # 1 = "absolute value", 2 = "square"
 theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
+# or "block" or "pair+block"
 linkage = "average"
 tol = 1e-4
 nlam = 100

@@ -32,7 +32,6 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:numSims
 ) %dorng% {
-  print(b)
   library(limSolve)
   library(mvtnorm)
   library(Matrix)
@@ -83,7 +82,7 @@ res = foreach(
   
   # Settings to toggle with
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "block" 
+  theta.settings = "pairblock" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "sparse" => j = p - 1
   # "both" => theta = c(1, p - 1)
@@ -130,7 +129,7 @@ res = foreach(
   block2vars = ((p / 2) + 1):p
   # for each column (contrast), find which variables are included (1 or -1)
   contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-  if(theta.settings == "block"){
+  if(theta.settings == "block" | theta.settings == "pairblock"){
     # get the contrasts with length p / 2 -- there are 2 of them
     #   not necessary, but may save on unnecessary computation in the next step
     block.contrasts = which(sapply(contrast.vars, length) == p / 2)
@@ -140,7 +139,7 @@ res = foreach(
         isTRUE(all.equal(unname(sort(x)), block2vars)))
     block2vars.contrast = block.contrasts[is.block2vars.contrast]
     indices.theta = unname(block2vars.contrast)
-    if(theta.settings == "pair+block"){
+    if(theta.settings == "pairblock"){
       # find pair, too
       #   again, not necessary, but saves computation
       pair.contrasts = which(sapply(contrast.vars, length) == 2)

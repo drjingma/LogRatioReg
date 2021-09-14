@@ -112,7 +112,10 @@ res = foreach(
   # Population parameters
   sigma_eps = 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  SigmaW <- rgExpDecay(p,rho)$Sigma
+  Gamma11 = matrix(0.9, p / 2, p / 2)
+  for(i in 1:nrow(Gamma11)) Gamma11[i, i] = 1
+  Gamma12 = matrix(0, p / 2, p / 2)
+  SigmaW = cbind(rbind(Gamma11, Gamma12), rbind(Gamma12, Gamma11))
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
   U = getU(btree = SigmaWtree) # transformation matrix
   
@@ -211,8 +214,7 @@ res = foreach(
   # 2. estimation accuracy #
   # 2a. estimation of beta #
   slr.EA1 = sum(abs(slr.betahat - beta))
-  slr.EA2 = as.vector(sqrt(crossprod(
-    slr.betahat - beta)))
+  slr.EA2 = as.vector(sqrt(crossprod(slr.betahat - beta)))
   slr.EAInfty = max(abs(slr.betahat - beta))
   # 2b. estimation accuracy for active set
   slr.betahat.active = slr.betahat[non0.beta]

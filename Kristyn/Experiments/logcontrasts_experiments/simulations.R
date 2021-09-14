@@ -201,7 +201,7 @@ res = foreach(
   ### using SBP matrix
   slr.SBP = sbp.fromHclust(btree)
   slr.non0.thetahat = (slr.thetahat != 0)
-  slr.sel.cols.SBP = slr.SBP[, slr.non0.thetahat]
+  slr.sel.cols.SBP = slr.SBP[, slr.non0.thetahat, drop = FALSE]
   slr.non0.betahat = apply(slr.sel.cols.SBP, 1, function(row) any(row != 0))
   #
   slr.FP = sum(is0.beta & slr.non0.betahat)

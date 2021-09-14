@@ -50,6 +50,7 @@ if(theta.settings %in% c("block", "pairblock")){
 
 ################################################################################
 # plot metrics
+metric_names = NULL
 # metrics_names = c(
 #   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing", 
 #   "betaSparsity")
@@ -221,6 +222,12 @@ cl.S.hat.mat = matrix(NA, nlam, numSims)
 slr.roc.list = list()
 slr.TPR.mat = matrix(NA, nlam, numSims)
 slr.S.hat.mat = matrix(NA, nlam, numSims)
+if(has.oracle){
+  # oracle
+  or.roc.list = list()
+  or.TPR.mat = matrix(NA, nlam, numSims)
+  or.S.hat.mat = matrix(NA, nlam, numSims)
+}
 for(i in 1:numSims){
   # cl
   cl.sim.tmp = readRDS(paste0(
@@ -236,6 +243,13 @@ for(i in 1:numSims){
   slr.roc.list[[i]] = slr.sim.tmp
   slr.TPR.mat[, i] = slr.sim.tmp["tpr", ]
   slr.S.hat.mat[, i] = slr.sim.tmp["S_hat", ]
+  # oracle
+  or.sim.tmp = readRDS(paste0(
+    output_dir, "/oracle_roc", i, file.end
+  ))
+  or.roc.list[[i]] = or.sim.tmp
+  or.TPR.mat[, i] = or.sim.tmp["tpr", ]
+  or.S.hat.mat[, i] = or.sim.tmp["S_hat", ]
 }
 
 # average over each possible S.hat value
@@ -244,10 +258,20 @@ cl.TPR.vec = as.vector(cl.TPR.mat)
 cl.S.hat.vec = as.vector(cl.S.hat.mat)
 slr.TPR.vec = as.vector(slr.TPR.mat)
 slr.S.hat.vec = as.vector(slr.S.hat.mat)
+if(has.oracle){
+  or.TPR.vec = as.vector(or.TPR.mat)
+  or.S.hat.vec = as.vector(or.S.hat.mat)
+}
+
 # get the averages
-S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec)))
+if(has.oracle){
+  S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec, or.S.hat.vec)))
+} else{
+  S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec)))
+}
 cl.tpr.avg = rep(NA, length(S.hat.vals))
 slr.tpr.avg = rep(NA, length(S.hat.vals))
+if(has.oracle) or.tpr.avg = rep(NA, length(S.hat.vals))
 for(i in 1:length(S.hat.vals)){
   val.tmp = S.hat.vals[i]
   # classo
@@ -256,6 +280,9 @@ for(i in 1:length(S.hat.vals)){
   # slr
   slr.which.idx.tmp = which(slr.S.hat.vec == val.tmp)
   slr.tpr.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp])
+  # oracle
+  or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
+  or.tpr.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
 }
 
 # plot
@@ -265,6 +292,9 @@ data.gg = rbind(
   data.frame(S_hat = S.hat.vals, TPR = cl.tpr.avg, Method = "classo"), 
   data.frame(S_hat = S.hat.vals, TPR = slr.tpr.avg, Method = "slr")
 )
+if(has.oracle){
+  data.gg = rbind(data.gg, data.frame(S_hat = S.hat.vals, TPR = or.tpr.avg, Method = "oracle"))
+}
 ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
   geom_line(alpha = 0.5, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) +

@@ -1,11 +1,11 @@
-# Purpose: Simulate data from linear log contrasts model to compare
+# Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 09/03/2021
+# Date: 09/06/2021
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/logcontrasts_experiments/outputs"
+output_dir = "Kristyn/Experiments/balancereg_experiments/outputs"
 
 library(ggplot2)
 library(ggpubr)
@@ -17,7 +17,8 @@ rng.seed = 123
 
 # Settings to toggle with
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-beta.settings = "new"
+theta.settings = "block" # "dense", "sparse", "both", "multsparse"
+# or "block", "pairblock"
 linkage = "average"
 tol = 1e-4
 nlam = 100
@@ -30,7 +31,7 @@ scaling = TRUE
 
 file.end = paste0(
   "_dim", n, "x", p, 
-  "_", beta.settings, 
+  "_", theta.settings, 
   "_rho", rho, 
   "_int", intercept,
   "_scale", scaling,
@@ -38,18 +39,28 @@ file.end = paste0(
   "_seed", rng.seed,
   ".rds")
 
+has.selbal = FALSE
+has.oracle = FALSE
+if(FALSE){
+  has.selbal = TRUE
+}
+if(theta.settings %in% c("block", "pairblock")){
+  has.oracle = TRUE
+}
+
 ################################################################################
 # plot metrics
 # metrics_names = c(
 #   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing", 
 #   "betaSparsity")
-metrics_names = c(
-  "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing")
+# metrics_names = c(
+#   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing")
 
 # import metrics
 cl.sims.list = list()
 slr.sims.list = list()
-# selbal.sims.list = list()
+if(has.selbal) selbal.sims.list = list()
+if(has.oracle) or.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
@@ -63,16 +74,27 @@ for(i in 1:numSims){
   ))))
   rownames(slr.sim.tmp) = NULL
   slr.sims.list[[i]] = data.table(slr.sim.tmp)
-  # # selbal
-  # selbal.sim.tmp = t(data.frame(readRDS(paste0(
-  #   output_dir, "/selbal_metrics", i, file.end
-  # ))))
-  # rownames(selbal.sim.tmp) = NULL
-  # selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
+  if(has.selbal){
+    # selbal
+    selbal.sim.tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/selbal_metrics", i, file.end
+    ))))
+    rownames(selbal.sim.tmp) = NULL
+    or.sims.list[[i]] = data.table(selbal.sim.tmp)
+  }
+  if(has.oracle){
+    # oracle
+    or.sim.tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/oracle_metrics", i, file.end
+    ))))
+    rownames(or.sim.tmp) = NULL
+    or.sims.list[[i]] = data.table(or.sim.tmp)
+  }
 }
 cl.sims = as.data.frame(rbindlist(cl.sims.list))
 slr.sims = as.data.frame(rbindlist(slr.sims.list))
-# selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
+if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
+if(has.oracle) or.sims = as.data.frame(rbindlist(or.sims.list))
 
 # summary stats for classo metrics
 cl.eval.means = apply(cl.sims, 2, mean)
@@ -90,28 +112,55 @@ slr.summaries = data.frame(
   "mean" = slr.eval.means, "sd" = slr.eval.sds, "se" = slr.eval.ses)
 # print(slr.summaries[metrics, c("mean", "se")])
 
-# # summary stats for selbal metrics
-# selbal.eval.means = apply(selbal.sims, 2, mean)
-# selbal.eval.sds = apply(selbal.sims, 2, sd)
-# selbal.eval.ses = selbal.eval.sds / sqrt(numSims)
-# selbal.summaries = data.frame(
-#   "mean" = selbal.eval.means, "sd" = selbal.eval.sds, "se" = selbal.eval.ses)
-# # print(selbal.summaries[metrics, c("mean", "se")])
+if(has.selbal){
+  # summary stats for selbal metrics
+  selbal.eval.means = apply(selbal.sims, 2, mean)
+  selbal.eval.sds = apply(selbal.sims, 2, sd)
+  selbal.eval.ses = selbal.eval.sds / sqrt(numSims)
+  selbal.summaries = data.frame(
+    "mean" = selbal.eval.means, "sd" = selbal.eval.sds, "se" = selbal.eval.ses)
+  # print(selbal.summaries[metrics, c("mean", "se")])
+}
+
+if(has.oracle){
+  # summary stats for oracle metrics
+  or.eval.means = apply(or.sims, 2, mean)
+  or.eval.sds = apply(or.sims, 2, sd)
+  or.eval.ses = or.eval.sds / sqrt(numSims)
+  or.summaries = data.frame(
+    "mean" = or.eval.means, "sd" = or.eval.sds, "se" = or.eval.ses)
+  # print(or.summaries[metrics, c("mean", "se")])
+}
 
 # boxplots for the slr and classo metrics
 cl.sims.gg = reshape2::melt(cl.sims)
 cl.sims.gg$type = "classo"
 slr.sims.gg = reshape2::melt(slr.sims)
 slr.sims.gg$type = "slr"
-# selbal.sims.gg = reshape2::melt(selbal.sims)
-# selbal.sims.gg$type = "selbal"
-data.gg = rbind(
-  cl.sims.gg, 
-  slr.sims.gg #, 
-  # selbal.sims.gg
-)
-data.gg = dplyr::filter(data.gg, variable %in% metrics_names)
-data.gg$type = factor(data.gg$type, levels = c("classo", "slr", "selbal"))
+if(has.selbal){
+  selbal.sims.gg = reshape2::melt(selbal.sims)
+  selbal.sims.gg$type = "selbal"
+}
+if(has.oracle){
+  or.sims.gg = reshape2::melt(or.sims)
+  or.sims.gg$type = "oracle"
+}
+data.gg = rbind(cl.sims.gg, slr.sims.gg)
+levels.gg = c("classo", "slr")
+if(has.oracle){
+  data.gg = rbind(data.gg, or.sims.gg)
+  levels.gg = c(levels.gg, "oracle")
+}
+if(has.selbal){
+  data.gg = rbind(data.gg, selbal.sims.gg)
+  levels.gg = c(levels.gg, "selbal")
+}
+
+if(!is.null(metric_names)){
+  data.gg = dplyr::filter(data.gg, variable %in% metrics_names)
+}
+data.gg$type = factor(data.gg$type, levels = levels.gg)
+
 ggplot(data.gg, aes(x = type, y = value, color = type)) + 
   facet_wrap(vars(variable), scales = "free_y") + 
   geom_boxplot() + 

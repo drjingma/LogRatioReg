@@ -18,7 +18,7 @@ rng.seed = 123
 # Settings to toggle with
 rho.type = "square" # 1 = "absolute value", 2 = "square"
 theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
-# or "block" or "pair+block"
+# or "block" or "pairblock"
 linkage = "average"
 tol = 1e-4
 nlam = 100
@@ -72,11 +72,11 @@ for(i in 1:numSims){
   slr.sims.list[[i]] = data.table(slr.sim.tmp)
   if(has.selbal){
     # selbal
-  selbal.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/selbal_metrics", i, file.end
-  ))))
-  rownames(selbal.sim.tmp) = NULL
-  selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
+    selbal.sim.tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/selbal_metrics", i, file.end
+    ))))
+    rownames(selbal.sim.tmp) = NULL
+    selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
   }
 }
 cl.sims = as.data.frame(rbindlist(cl.sims.list))
@@ -101,12 +101,12 @@ slr.summaries = data.frame(
 
 if(has.selbal){
   # summary stats for selbal metrics
-selbal.eval.means = apply(selbal.sims, 2, mean)
-selbal.eval.sds = apply(selbal.sims, 2, sd)
-selbal.eval.ses = selbal.eval.sds / sqrt(numSims)
-selbal.summaries = data.frame(
-  "mean" = selbal.eval.means, "sd" = selbal.eval.sds, "se" = selbal.eval.ses)
-# print(selbal.summaries[metrics, c("mean", "se")])
+  selbal.eval.means = apply(selbal.sims, 2, mean)
+  selbal.eval.sds = apply(selbal.sims, 2, sd)
+  selbal.eval.ses = selbal.eval.sds / sqrt(numSims)
+  selbal.summaries = data.frame(
+    "mean" = selbal.eval.means, "sd" = selbal.eval.sds, "se" = selbal.eval.ses)
+  # print(selbal.summaries[metrics, c("mean", "se")])
 }
 
 # boxplots for the slr and classo metrics
@@ -116,7 +116,7 @@ slr.sims.gg = reshape2::melt(slr.sims)
 slr.sims.gg$type = "slr"
 if(has.selbal){
   selbal.sims.gg = reshape2::melt(selbal.sims)
-selbal.sims.gg$type = "selbal"
+  selbal.sims.gg$type = "selbal"
 }
 if(has.selbal){
   data.gg = rbind(cl.sims.gg, slr.sims.gg, selbal.sims.gg)
@@ -234,10 +234,10 @@ data.gg = rbind(
   data.frame(S_hat = S.hat.vals, TPR = slr.tpr.avg, Method = "slr")
 )
 ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
-    geom_line(alpha = 0.5, na.rm = TRUE) +
-    geom_point(alpha = 0.5, na.rm = TRUE) +
-    # xlim(0, 40) +
-    theme_bw()
+  geom_line(alpha = 0.5, na.rm = TRUE) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  # xlim(0, 40) +
+  theme_bw()
 
 
 

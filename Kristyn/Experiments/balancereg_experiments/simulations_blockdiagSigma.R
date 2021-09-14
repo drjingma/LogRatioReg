@@ -1,6 +1,6 @@
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 09/06/2021
+# Date: 09/13/2021
 
 ################################################################################
 # libraries and settings
@@ -32,6 +32,7 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:numSims
 ) %dorng% {
+  print(b)
   library(limSolve)
   library(mvtnorm)
   library(Matrix)

@@ -17,14 +17,14 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
-> # Purpose: Simulate data from balance regression model to compare
+> # Purpose: Simulate data from linear log contrasts model to compare
 > #   compositional lasso and supervised log-ratios methods
-> # Date: 09/06/2021
+> # Date: 09/03/2021
 > 
 > ################################################################################
 > # libraries and settings
 > 
-> output_dir = "Kristyn/Experiments/balancereg_experiments/outputs"
+> output_dir = "Kristyn/Experiments/logcontrasts_experiments/outputs"
 > 
 > # set up parallelization
 > library(foreach)
@@ -101,12 +101,9 @@ Type 'q()' to quit R.
 +   
 +   # Settings to toggle with
 +   rho.type = "square" # 1 = "absolute value", 2 = "square"
-+   theta.settings = "multsparse" 
-+   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
-+   # "sparse" => j = p - 1
-+   # "both" => theta = c(1, p - 1)
-+   # "multsparse" = c(p - 3:1)
-+   values.theta = 1
++   beta.settings = "new"
++   # "new" => first 6 entries of beta are nonzero (active set)
++   # "old" | "linetal2014 => specify beta like in Lin et al. 2014 simulations
 +   linkage = "average"
 +   tol = 1e-4
 +   nlam = 100
@@ -117,27 +114,29 @@ Type 'q()' to quit R.
 +   rho = 0.5 # 0.2, 0.5
 +   scaling = TRUE
 +   
-+   # theta settings
-+   if(theta.settings == "dense"){
-+     indices.theta = 1
-+   } else if(theta.settings == "sparse"){
-+     indices.theta = p - 1
-+   } else if(theta.settings == "both"){
-+     indices.theta = c(1, p - 1)
-+   } else{ # if(theta.settings == "multsparse")
-+     indices.theta = p - 3:1
++   # which beta?
++   if(beta.settings == "old" | beta.settings == "linetal2014"){
++     beta = c(1, -0.8, 0.6, 0, 0, -1.5, -0.5, 1.2, rep(0, p - 8))
++   } else{
++     beta = c(1, 0.4, 1.2, -1.5, -0.8, 0.3, rep(0, p - 6))
 +   }
 +   
 +   # Population parameters
 +   sigma_eps = 0.5
 +   muW = c(rep(log(p), 5), rep(0, p - 5))
 +   SigmaW <- rgExpDecay(p,rho)$Sigma
-+   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
-+   U = getU(btree = SigmaWtree) # transformation matrix
++   
++   # for beta metrics
++   non0.beta = (beta != 0)
++   slr.non0.beta = abs(beta) > 10e-8
++   is0.beta = abs(beta) <= 10e-8
++   bspars = sum(non0.beta)
++   beta.active = beta[non0.beta]
++   beta.inactive = beta[is0.beta]
 +   
 +   file.end = paste0(
 +     "_dim", n, "x", p, 
-+     "_", theta.settings, 
++     "_", beta.settings, 
 +     "_rho", rho, 
 +     "_int", intercept,
 +     "_scale", scaling,
@@ -151,48 +150,18 @@ Type 'q()' to quit R.
 +   logW <- mvrnorm(n = n * 2, mu = muW, Sigma = SigmaW) 
 +   W <- exp(logW)
 +   colnames(W) <- paste0('s', 1:p)
++   names(beta) <- colnames(W)
 +   XAll <- sweep(W, 1, rowSums(W), FUN='/')
 +   ZAll = log(XAll)
-+   ilrXAll = computeBalances(XAll, U = U)
-+   
-+   # get theta
-+   theta = rep(0, p - 1)
-+   if(is.null(values.theta)){
-+     # assume values.theta = 1
-+     values.theta = 1
-+   }
-+   if(length(values.theta) == 1){
-+     # if values.theta = 1, assume it's the same value for all nonzero indices
-+     values.theta = rep(values.theta, length(indices.theta))
-+   } else if(length(values.theta) != length(indices.theta)){
-+     # when 1 < length(values.theta) < total # of nonzero values
-+     stop("indices.theta does not have same length as values.theta")
-+   }
-+   theta[indices.theta] = values.theta
-+   theta = as.matrix(theta)
-+   # get beta
-+   beta = as.vector(getBeta(theta, U = U))
-+   names(beta) <- colnames(W)
-+   # generate Y
-+   yAll = ilrXAll %*% theta + rnorm(n) * sigma_eps
++   yAll <-  ZAll %*% beta + rnorm(n) * sigma_eps
 +   
 +   # subset out training and test sets
 +   X = XAll[1:n, ]
 +   X.test = XAll[-(1:n), ]
 +   Z = ZAll[1:n, ]
 +   Z.test = ZAll[-(1:n), ]
-+   ilrX = ilrXAll[1:n, ]
-+   ilrX.test = ilrXAll[-(1:n), ]
 +   Y <- yAll[1:n, , drop = TRUE]
 +   Y.test <- yAll[-(1:n), , drop = TRUE]
-+   
-+   # about beta
-+   non0.beta = (beta != 0)
-+   slr.non0.beta = abs(beta) > 10e-8
-+   is0.beta = abs(beta) <= 10e-8
-+   bspars = sum(non0.beta)
-+   beta.active = beta[non0.beta]
-+   beta.inactive = beta[is0.beta]
 +   
 +   ##############################################################################
 +   # supervised log-ratios
@@ -231,8 +200,7 @@ Type 'q()' to quit R.
 +   # 2. estimation accuracy #
 +   # 2a. estimation of beta #
 +   slr.EA1 = sum(abs(slr.betahat - beta))
-+   slr.EA2 = as.vector(sqrt(crossprod(
-+     slr.betahat - beta)))
++   slr.EA2 = as.vector(sqrt(crossprod(slr.betahat - beta)))
 +   slr.EAInfty = max(abs(slr.betahat - beta))
 +   # 2b. estimation accuracy for active set
 +   slr.betahat.active = slr.betahat[non0.beta]
@@ -367,94 +335,8 @@ Type 'q()' to quit R.
 +   saveRDS(cl.roc, file = paste0(output_dir, "/classo_roc", b, file.end))
 +   
 +   ##############################################################################
-+   # oracle method
++   # note: oracle isn't for this setting
 +   ##############################################################################
-+   
-+   # apply oracle method, using CV to select lambda
-+   start.time = Sys.time()
-+   oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
-+                  nfolds = K, intercept = intercept, standardize = scaling)
-+   end.time = Sys.time()
-+   or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-+   or.btree = SigmaWtree
-+   # plot(or.btree)
-+   
-+   # choose lambda
-+   or.lam.min.idx = which.min(oracle$cvm)
-+   or.lam.min = oracle$lambda[or.lam.min.idx]
-+   or.a0 = oracle$int[or.lam.min.idx]
-+   or.thetahat = oracle$bet[, or.lam.min.idx]
-+   or.Uhat = getU(btree = or.btree)
-+   or.betahat = getBeta(or.thetahat, U = or.Uhat)
-+   
-+   # evaluate model #
-+   
-+   # 1. prediction error #
-+   # 1a. on training set #
-+   # get prediction error on training set
-+   or.Yhat.train = or.a0 + computeBalances(X, or.btree) %*% or.thetahat
-+   or.PE.train = as.vector(crossprod(Y - or.Yhat.train) / n)
-+   # 1b. on test set #
-+   # get prediction error on test set
-+   or.Yhat.test = or.a0 + computeBalances(X.test, or.btree) %*% or.thetahat
-+   or.PE.test = as.vector(crossprod(Y.test - or.Yhat.test) / n)
-+   
-+   # 2. estimation accuracy #
-+   # 2a. estimation of beta #
-+   or.EA1 = sum(abs(or.betahat - beta))
-+   or.EA2 = as.vector(sqrt(crossprod(or.betahat - beta)))
-+   or.EAInfty = max(abs(or.betahat - beta))
-+   # 2b. estimation accuracy for active set
-+   or.betahat.active = or.betahat[non0.beta]
-+   or.EA1.active = sum(abs(or.betahat.active - beta.active))
-+   or.EA2.active = as.vector(sqrt(crossprod(
-+     or.betahat.active - beta.active)))
-+   or.EAInfty.active = max(abs(or.betahat.active - beta.active))
-+   # 2c. estimation accuracy for inactive set
-+   or.betahat.inactive = or.betahat[is0.beta]
-+   or.EA1.inactive = sum(abs(or.betahat.inactive - beta.inactive))
-+   or.EA2.inactive = as.vector(sqrt(crossprod(
-+     or.betahat.inactive - beta.inactive)))
-+   or.EAInfty.inactive = max(abs(or.betahat.inactive - beta.inactive))
-+   
-+   # 3. selection accuracy #
-+   # 3a. selection of beta #
-+   ### using SBP matrix
-+   or.SBP = sbp.fromHclust(or.btree)
-+   or.non0.thetahat = (or.thetahat != 0)
-+   or.sel.cols.SBP = or.SBP[, or.non0.thetahat]
-+   or.non0.betahat = apply(or.sel.cols.SBP, 1, function(row) any(row != 0))
-+   #
-+   or.FP = sum(is0.beta & or.non0.betahat)
-+   or.FN = sum((non0.beta != or.non0.betahat) & non0.beta)
-+   or.TPR = sum((non0.beta == or.non0.betahat) & or.non0.betahat) / 
-+     sum(non0.beta)
-+   
-+   saveRDS(c(
-+     "PEtr" = or.PE.train, 
-+     "PEte" = or.PE.test, 
-+     "EA1" = or.EA1, 
-+     "EA2" = or.EA2, 
-+     "EAInfty" = or.EAInfty, 
-+     "EA1Active" = or.EA1.active, 
-+     "EA2Active" = or.EA2.active, 
-+     "EAInftyActive" = or.EAInfty.active, 
-+     "EA1Inactive" = or.EA1.inactive, 
-+     "EA2Inactive" = or.EA2.inactive, 
-+     "EAInftyInactive" = or.EAInfty.inactive, 
-+     "FP" = or.FP, 
-+     "FN" = or.FN, 
-+     "TPR" = or.TPR, 
-+     "timing" = or.timing,
-+     "betaSparsity" = bspars
-+   ), 
-+   file = paste0(output_dir, "/oracle_metrics", b, file.end))
-+   
-+   # roc
-+   or.roc <- apply(oracle$bet, 2, function(a) 
-+     roc.for.coef.LR(a, beta, or.SBP))
-+   
-+   saveRDS(or.roc, file = paste0(output_dir, "/oracle_roc", b, file.end))
 +   
 +   # ##############################################################################
 +   # # selbal
@@ -508,64 +390,39 @@ Type 'q()' to quit R.
 +   # selbal.EA1 = sum(abs(selbal.betahat - beta))
 +   # selbal.EA2 = sqrt(crossprod(selbal.betahat - beta))
 +   # selbal.EAInfty = max(abs(selbal.betahat - beta))
++   # 
++   # # 3. selection accuracy (i.t.o. beta) #
++   # selbal.non0.betahat = abs(selbal.betahat) > 10e-8
++   # selbal.is0.betahat = selbal.betahat <= 10e-8
++   # # FP
++   # selbal.FP = sum(is0.beta & selbal.non0.betahat)
++   # # FN
++   # selbal.FN = sum((non0.beta != cl.non0.betahat) & non0.beta)
++   # # TPR
++   # selbal.TPR = sum((non0.beta == selbal.non0.betahat) & selbal.non0.betahat) / 
++   #   sum(non0.beta)
++   # 
++   # saveRDS(c(
++   #   "PEtr" = selbal.PE.train, 
++   #   "PEte" = selbal.PE.test, 
++   #   "EA1" = selbal.EA1, 
++   #   "EA2" = selbal.EA2, 
++   #   "EAInfty" = selbal.EAInfty, 
++   #   "FP" = selbal.FP, 
++   #   "FN" = selbal.FN, 
++   #   "TPR" = selbal.TPR, 
++   #   "timing" = selbal.timing,
++   #   "betaSparsity" = bspars
++   # ), 
++   # file = paste0(output_dir, "/selbal_metrics", b, file.end))
++   
++   # roc
++   # selbal.roc <- apply(slr$bet, 2, function(a) 
++   #   roc.for.coef.LR(a, beta, ...))
++   # 
++   # saveRDS(selbal.roc, file = paste0(output_dir, "/selbal_roc", b, file.end))
++ }
 [1] 1
-[1] 2
-[1] 3
-[1] 4
-[1] 5
-[1] 6
-[1] 7
-[1] 8
-[1] 9
-[1] 10
-[1] 1
-[1] 2
-[1] 3
-[1] 4
-[1] 5
-[1] 6
-[1] 7
-[1] 8
-[1] 9
-[1] 10
-Loaded glmnet 4.0-2
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
-
-Attaching package: ‘balance’
-
-The following object is masked from ‘package:compositions’:
-
-    balance
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Exc[1] 1
 [1] 2
 [1] 3
 [1] 4
@@ -4537,5 +4394,5 @@ The following object is masked from ‘package:base’:
 > 
 > 
 > proc.time()
-    user   system  elapsed 
-  11.086    0.953 1006.109 
+   user  system elapsed 
+  4.860   1.029 339.068 

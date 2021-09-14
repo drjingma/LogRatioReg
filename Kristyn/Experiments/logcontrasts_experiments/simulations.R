@@ -83,6 +83,8 @@ res = foreach(
   # Settings to toggle with
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   beta.settings = "new"
+  # "new" => first 6 entries of beta are nonzero (active set)
+  # "old" | "linetal2014 => specify beta like in Lin et al. 2014 simulations
   linkage = "average"
   tol = 1e-4
   nlam = 100

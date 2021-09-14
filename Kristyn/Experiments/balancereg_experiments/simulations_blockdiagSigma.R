@@ -82,11 +82,15 @@ res = foreach(
   
   # Settings to toggle with
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "multsparse" 
+  theta.settings = "block" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "sparse" => j = p - 1
   # "both" => theta = c(1, p - 1)
   # "multsparse" = c(p - 3:1)
+  
+  # "block" => choose the block of correlated variables in Gamma2
+  # "pair+block" => choose one pair of correlated variable in Gamma1 +
+  #   the block of correlated variables in Gamma2
   values.theta = 1
   linkage = "average"
   tol = 1e-4
@@ -105,19 +109,49 @@ res = foreach(
     indices.theta = p - 1
   } else if(theta.settings == "both"){
     indices.theta = c(1, p - 1)
-  } else{ # if(theta.settings == "multsparse")
+  } else if(theta.settings == "multsparse"){
     indices.theta = p - 3:1
   }
   
   # Population parameters
   sigma_eps = 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  Gamma11 = matrix(0.9, p / 2, p / 2)
-  for(i in 1:nrow(Gamma11)) Gamma11[i, i] = 1
-  Gamma12 = matrix(0, p / 2, p / 2)
-  SigmaW = cbind(rbind(Gamma11, Gamma12), rbind(Gamma12, Gamma11))
+  SigmaW11 = matrix(0.9, p / 2, p / 2)
+  for(i in 1:nrow(SigmaW11)) SigmaW11[i, i] = 1
+  SigmaW12 = matrix(0, p / 2, p / 2)
+  SigmaW = cbind(rbind(SigmaW11, SigmaW12), rbind(SigmaW12, SigmaW11))
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
   U = getU(btree = SigmaWtree) # transformation matrix
+  
+  # theta settings for block-diagonal Sigma
+  SBP = sbp.fromHclust(SigmaWtree)
+  block1vars = 1:(p / 2)
+  block2vars = ((p / 2) + 1):p
+  # for each column (contrast), find which variables are included (1 or -1)
+  contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
+  if(theta.settings == "block"){
+    # get the contrasts with length p / 2 -- there are 2 of them
+    #   not necessary, but may save on unnecessary computation in the next step
+    block.contrasts = which(sapply(contrast.vars, length) == p / 2)
+    # find out which one contains block2vars
+    is.block2vars.contrast = sapply(
+      contrast.vars[block.contrasts], FUN = function(x) 
+        isTRUE(all.equal(unname(sort(x)), block2vars)))
+    block2vars.contrast = block.contrasts[is.block2vars.contrast]
+    indices.theta = unname(block2vars.contrast)
+    if(theta.settings == "pair+block"){
+      # find pair, too
+      #   again, not necessary, but saves computation
+      pair.contrasts = which(sapply(contrast.vars, length) == 2)
+      # find out which one is a pair of variables in block1
+      is.block1pairvars.contrast = sapply(
+        contrast.vars[pair.contrasts], FUN = function(x) all(x %in% block1vars))
+      block1pairvars.contrast = pair.contrasts[is.block1pairvars.contrast]
+      indices.theta = unname(c(block2vars.contrast, block1pairvars.contrast))
+    }
+  } else{
+    stop("invalid theta.settings")
+  }
   
   file.end = paste0(
     "_dim", n, "x", p, 

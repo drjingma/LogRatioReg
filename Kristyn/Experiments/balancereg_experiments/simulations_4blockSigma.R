@@ -82,7 +82,7 @@ res = foreach(
   
   # Settings to toggle with
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "block12"  
+  theta.settings = "2blocks"  
   # "block12" => choose j corresp. to blocks 1 & 2
   #   (one block w/-1, other w/1 in a contrast)
   values.theta = 1
@@ -96,56 +96,45 @@ res = foreach(
   gamma_ij = 0.2 # 0.2, 0.9
   scaling = TRUE
   
-  # theta settings
-  if(theta.settings == "dense"){
-    indices.theta = 1
-  } else if(theta.settings == "sparse"){
-    indices.theta = p - 1
-  } else if(theta.settings == "both"){
-    indices.theta = c(1, p - 1)
-  } else if(theta.settings == "multsparse"){
-    indices.theta = p - 3:1
-  }
-  
   # Population parameters
   sigma_eps = 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  SigmaW11 = matrix(gamma_ij, p / 2, p / 2)
-  for(i in 1:nrow(SigmaW11)) SigmaW11[i, i] = 1
-  SigmaW12 = matrix(0, p / 2, p / 2)
-  SigmaW = cbind(rbind(SigmaW11, SigmaW12), rbind(SigmaW12, SigmaW11))
+  SigmaWblock = matrix(gamma_ij, p / 4, p / 4)
+  for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
+  SigmaW0 = matrix(0, p / 4, p / 4)
+  SigmaW = cbind(
+    rbind(SigmaWblock, SigmaW0, SigmaW0, SigmaW0), 
+    rbind(SigmaW0, SigmaWblock, SigmaW0, SigmaW0), 
+    rbind(SigmaW0, SigmaW0, SigmaWblock, SigmaW0),  
+    rbind(SigmaW0, SigmaW0, SigmaW0, SigmaWblock)
+  )
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
   U = getU(btree = SigmaWtree) # transformation matrix
   # plot(SigmaWtree)
+  # sbp.fromHclust(SigmaWtree)
   
-  # theta settings for block-diagonal Sigma
-  SBP = sbp.fromHclust(SigmaWtree)
-  block1vars = 1:(p / 2)
-  block2vars = ((p / 2) + 1):p
-  # for each column (contrast), find which variables are included (1 or -1)
-  contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-  if(theta.settings == "block" | theta.settings == "pairblock"){
-    # get the contrasts with length p / 2 -- there are 2 of them
+  # theta settings
+  if(theta.settings == "dense"){
+    indices.theta = 1
+  } else if(theta.settings == "2blocks"){
+    SBP = sbp.fromHclust(SigmaWtree)
+    # for each column (contrast), find which variables are included (1 or -1)
+    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
+    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
     #   not necessary, but may save on unnecessary computation in the next step
     block.contrasts = which(sapply(contrast.vars, length) == p / 2)
-    # find out which one contains block2vars
-    is.block2vars.contrast = sapply(
-      contrast.vars[block.contrasts], FUN = function(x) 
-        isTRUE(all.equal(unname(sort(x)), block2vars)))
-    block2vars.contrast = block.contrasts[is.block2vars.contrast]
-    indices.theta = unname(block2vars.contrast)
-    if(theta.settings == "pairblock"){
-      # find pair, too
-      #   again, not necessary, but saves computation
-      pair.contrasts = which(sapply(contrast.vars, length) == 2)
-      # find out which one is a pair of variables in block1
-      is.block1pairvars.contrast = sapply(
-        contrast.vars[pair.contrasts], FUN = function(x) all(x %in% block1vars))
-      block1pairvars.contrast = pair.contrasts[is.block1pairvars.contrast]
-      indices.theta = unname(c(block2vars.contrast, block1pairvars.contrast))
+    # pick one such contrast
+    if(length(block.contrasts) == 1){
+      indices.theta = unname(block.contrasts)
+    } else{
+      indices.theta = unname(sample(x = block.contrasts, 1))
     }
   } else{
     stop("invalid theta.settings")
+  }
+  # error checking indices.theta found based on theta.settings argument
+  if(is.null(indices.theta) | length(indices.theta) != 1){
+    stop("invalid indices.theta")
   }
   
   file.end = paste0(

@@ -93,7 +93,7 @@ res = foreach(
   K = 10
   n = 100
   p = 200
-  gamma_ij = 0.2 # 0.2, 0.9
+  gamma_ij = 0.9 # 0.2, 0.9
   scaling = TRUE
   
   # Population parameters

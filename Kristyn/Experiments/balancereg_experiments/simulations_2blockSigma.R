@@ -93,7 +93,7 @@ res = foreach(
   K = 10
   n = 100
   p = 200
-  gamma_ij = 0.2 # 0.2, 0.5, 0.9
+  gamma_ij = 0.9 # 0.2, 0.5, 0.9
   scaling = TRUE
   
   # Population parameters
@@ -105,7 +105,7 @@ res = foreach(
   SigmaW = cbind(rbind(SigmaW11, SigmaW12), rbind(SigmaW12, SigmaW11))
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
   U = getU(btree = SigmaWtree) # transformation matrix
-  plot(SigmaWtree)
+  # plot(SigmaWtree)
   # sbp.fromHclust(SigmaWtree)
   
   # theta settings

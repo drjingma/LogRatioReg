@@ -1,6 +1,6 @@
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 09/06/2021
+# Date: 09/14/2021
 
 ################################################################################
 # libraries and settings
@@ -17,8 +17,8 @@ rng.seed = 123
 
 # Settings to toggle with
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
-# or "block" or "pairblock"
+theta.settings = "block" # "dense", "sparse", "both", "multsparse"
+# or "block", "pairblock"
 linkage = "average"
 tol = 1e-4
 nlam = 100
@@ -39,24 +39,30 @@ file.end = paste0(
   "_seed", rng.seed,
   ".rds")
 
-if(theta.settings == "both"){ # the ones that have selbal
+has.selbal = FALSE
+has.oracle = TRUE
+if(FALSE){
   has.selbal = TRUE
-} else{
-  has.selbal = FALSE
 }
+# if(theta.settings %in% c("block", "pairblock")){
+#   has.oracle = TRUE
+# }
 
 ################################################################################
 # plot metrics
+
+metric_names = NULL
 # metrics_names = c(
 #   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing", 
 #   "betaSparsity")
-metrics_names = c(
-  "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing")
+# metrics_names = c(
+#   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing")
 
 # import metrics
 cl.sims.list = list()
 slr.sims.list = list()
 if(has.selbal) selbal.sims.list = list()
+if(has.oracle) or.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
@@ -76,12 +82,21 @@ for(i in 1:numSims){
       output_dir, "/selbal_metrics", i, file.end
     ))))
     rownames(selbal.sim.tmp) = NULL
-    selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
+    or.sims.list[[i]] = data.table(selbal.sim.tmp)
+  }
+  if(has.oracle){
+    # oracle
+    or.sim.tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/oracle_metrics", i, file.end
+    ))))
+    rownames(or.sim.tmp) = NULL
+    or.sims.list[[i]] = data.table(or.sim.tmp)
   }
 }
 cl.sims = as.data.frame(rbindlist(cl.sims.list))
 slr.sims = as.data.frame(rbindlist(slr.sims.list))
 if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
+if(has.oracle) or.sims = as.data.frame(rbindlist(or.sims.list))
 
 # summary stats for classo metrics
 cl.eval.means = apply(cl.sims, 2, mean)
@@ -109,27 +124,46 @@ if(has.selbal){
   # print(selbal.summaries[metrics, c("mean", "se")])
 }
 
+if(has.oracle){
+  # summary stats for oracle metrics
+  or.eval.means = apply(or.sims, 2, mean)
+  or.eval.sds = apply(or.sims, 2, sd)
+  or.eval.ses = or.eval.sds / sqrt(numSims)
+  or.summaries = data.frame(
+    "mean" = or.eval.means, "sd" = or.eval.sds, "se" = or.eval.ses)
+  # print(or.summaries[metrics, c("mean", "se")])
+}
+
 # boxplots for the slr and classo metrics
 cl.sims.gg = reshape2::melt(cl.sims)
-cl.sims.gg$type = "classo"
+cl.sims.gg$Method = "classo"
 slr.sims.gg = reshape2::melt(slr.sims)
-slr.sims.gg$type = "slr"
+slr.sims.gg$Method = "slr"
 if(has.selbal){
   selbal.sims.gg = reshape2::melt(selbal.sims)
-  selbal.sims.gg$type = "selbal"
+  selbal.sims.gg$Method = "selbal"
+}
+if(has.oracle){
+  or.sims.gg = reshape2::melt(or.sims)
+  or.sims.gg$Method = "oracle"
+}
+data.gg = rbind(cl.sims.gg, slr.sims.gg)
+levels.gg = c("classo", "slr")
+if(has.oracle){
+  data.gg = rbind(data.gg, or.sims.gg)
+  levels.gg = c(levels.gg, "oracle")
 }
 if(has.selbal){
-  data.gg = rbind(cl.sims.gg, slr.sims.gg, selbal.sims.gg)
-} else{
-  data.gg = rbind(cl.sims.gg, slr.sims.gg)
+  data.gg = rbind(data.gg, selbal.sims.gg)
+  levels.gg = c(levels.gg, "selbal")
 }
-data.gg = dplyr::filter(data.gg, variable %in% metrics_names)
-if(has.selbal){
-  data.gg$type = factor(data.gg$type, levels = c("classo", "slr", "selbal"))
-} else{
-  data.gg$type = factor(data.gg$type, levels = c("classo", "slr"))
+
+if(!is.null(metric_names)){
+  data.gg = dplyr::filter(data.gg, variable %in% metrics_names)
 }
-ggplot(data.gg, aes(x = type, y = value, color = type)) + 
+data.gg$Method = factor(data.gg$Method, levels = levels.gg)
+
+ggplot(data.gg, aes(x = Method, y = value, color = Method)) + 
   facet_wrap(vars(variable), scales = "free_y") + 
   geom_boxplot() + 
   stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
@@ -189,6 +223,12 @@ cl.S.hat.mat = matrix(NA, nlam, numSims)
 slr.roc.list = list()
 slr.TPR.mat = matrix(NA, nlam, numSims)
 slr.S.hat.mat = matrix(NA, nlam, numSims)
+if(has.oracle){
+  # oracle
+  or.roc.list = list()
+  or.TPR.mat = matrix(NA, nlam, numSims)
+  or.S.hat.mat = matrix(NA, nlam, numSims)
+}
 for(i in 1:numSims){
   # cl
   cl.sim.tmp = readRDS(paste0(
@@ -204,6 +244,15 @@ for(i in 1:numSims){
   slr.roc.list[[i]] = slr.sim.tmp
   slr.TPR.mat[, i] = slr.sim.tmp["tpr", ]
   slr.S.hat.mat[, i] = slr.sim.tmp["S_hat", ]
+  if(has.oracle){
+    # oracle
+    or.sim.tmp = readRDS(paste0(
+      output_dir, "/oracle_roc", i, file.end
+    ))
+    or.roc.list[[i]] = or.sim.tmp
+    or.TPR.mat[, i] = or.sim.tmp["tpr", ]
+    or.S.hat.mat[, i] = or.sim.tmp["S_hat", ]
+  }
 }
 
 # average over each possible S.hat value
@@ -212,10 +261,20 @@ cl.TPR.vec = as.vector(cl.TPR.mat)
 cl.S.hat.vec = as.vector(cl.S.hat.mat)
 slr.TPR.vec = as.vector(slr.TPR.mat)
 slr.S.hat.vec = as.vector(slr.S.hat.mat)
+if(has.oracle){
+  or.TPR.vec = as.vector(or.TPR.mat)
+  or.S.hat.vec = as.vector(or.S.hat.mat)
+}
+
 # get the averages
-S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec)))
+if(has.oracle){
+  S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec, or.S.hat.vec)))
+} else{
+  S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec)))
+}
 cl.tpr.avg = rep(NA, length(S.hat.vals))
 slr.tpr.avg = rep(NA, length(S.hat.vals))
+if(has.oracle) or.tpr.avg = rep(NA, length(S.hat.vals))
 for(i in 1:length(S.hat.vals)){
   val.tmp = S.hat.vals[i]
   # classo
@@ -224,6 +283,9 @@ for(i in 1:length(S.hat.vals)){
   # slr
   slr.which.idx.tmp = which(slr.S.hat.vec == val.tmp)
   slr.tpr.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp])
+  # oracle
+  or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
+  or.tpr.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
 }
 
 # plot
@@ -233,6 +295,12 @@ data.gg = rbind(
   data.frame(S_hat = S.hat.vals, TPR = cl.tpr.avg, Method = "classo"), 
   data.frame(S_hat = S.hat.vals, TPR = slr.tpr.avg, Method = "slr")
 )
+if(has.oracle){
+  data.gg = rbind(
+    data.gg, 
+    data.frame(S_hat = S.hat.vals, TPR = or.tpr.avg, Method = "oracle"))
+}
+data.gg$Method = factor(data.gg$Method, levels = levels.gg)
 ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
   geom_line(alpha = 0.5, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) +

@@ -29,7 +29,7 @@ K = 10
 n = 100
 p = 200
 rho = 0.2 # 0.2, 0.5
-cor_ij = 0.2 # 0.2, 0.9
+cor_ij = 0.2 # 0.2, 0.5
 scaling = TRUE
 
 if(sigma.settings == "lin14Sigma"){

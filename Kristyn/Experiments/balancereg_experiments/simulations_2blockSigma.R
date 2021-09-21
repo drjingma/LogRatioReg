@@ -81,6 +81,7 @@ res = foreach(
   }
   
   # Settings to toggle with
+  sigma.settings = "2blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   theta.settings = "dense" # block, dense
   # "block2" => choose j corresp. to block of correlated variables in block 2
@@ -93,13 +94,13 @@ res = foreach(
   K = 10
   n = 100
   p = 200
-  gamma_ij = 0.9 # 0.2, 0.5, 0.9
+  cor_ij = 0.2 # 0.2, 0.5, 0.9
   scaling = TRUE
   
   # Population parameters
   sigma_eps = 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  SigmaW11 = matrix(gamma_ij, p / 2, p / 2)
+  SigmaW11 = matrix(cor_ij, p / 2, p / 2)
   for(i in 1:nrow(SigmaW11)) SigmaW11[i, i] = 1
   SigmaW12 = matrix(0, p / 2, p / 2)
   SigmaW = cbind(rbind(SigmaW11, SigmaW12), rbind(SigmaW12, SigmaW11))
@@ -128,8 +129,9 @@ res = foreach(
   
   file.end = paste0(
     "_dim", n, "x", p, 
+    "_", sigma.settings,
     "_", theta.settings, 
-    "_gamma", gamma_ij, 
+    "_cor", cor_ij, 
     "_int", intercept,
     "_scale", scaling,
     "_K", K,

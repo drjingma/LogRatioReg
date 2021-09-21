@@ -81,6 +81,7 @@ res = foreach(
   }
   
   # Settings to toggle with
+  sigma.settings = "lin14Sigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   theta.settings = "sparse" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
@@ -118,6 +119,7 @@ res = foreach(
   
   file.end = paste0(
     "_dim", n, "x", p, 
+    "_", sigma.settings,
     "_", theta.settings, 
     "_rho", rho, 
     "_int", intercept,

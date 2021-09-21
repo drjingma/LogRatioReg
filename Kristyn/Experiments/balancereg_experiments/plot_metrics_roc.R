@@ -16,28 +16,43 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
+sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "block" # "dense", "sparse", "both", "multsparse"
+theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
 # or "block", "pairblock"
+# or 2blocks
 linkage = "average"
 tol = 1e-4
-nlam = 100
+nlam = 200
 intercept = TRUE
 K = 10
 n = 100
 p = 200
-rho = 0.5 # 0.2, 0.5
+rho = 0.2 # 0.2, 0.5
+cor_ij = 0.2 # 0.2, 0.9
 scaling = TRUE
 
-file.end = paste0(
-  "_dim", n, "x", p, 
-  "_", theta.settings, 
-  "_rho", rho, 
-  "_int", intercept,
-  "_scale", scaling,
-  "_K", K,
-  "_seed", rng.seed,
-  ".rds")
+if(sigma.settings == "lin14Sigma"){
+  file.end = paste0( # for old simulations
+    "_dim", n, "x", p,
+    "_", theta.settings,
+    "_rho", rho,
+    "_int", intercept,
+    "_scale", scaling,
+    "_K", K,
+    "_seed", rng.seed,
+    ".rds")
+} else{ # for block-diagonal Sigma, either "2blockSigma" or "4blockSigma"
+  file.end = paste0(
+    "_dim", n, "x", p, 
+    "_", theta.settings, 
+    "_cor", cor_ij, 
+    "_int", intercept,
+    "_scale", scaling,
+    "_K", K,
+    "_seed", rng.seed,
+    ".rds")
+}
 
 has.selbal = FALSE
 has.oracle = TRUE

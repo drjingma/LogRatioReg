@@ -81,25 +81,26 @@ res = foreach(
   }
   
   # Settings to toggle with
+  sigma.settings = "4blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   theta.settings = "2blocks"  
-  # "block12" => choose j corresp. to blocks 1 & 2
+  # "2blocks" => choose j corresp. to two blocks
   #   (one block w/-1, other w/1 in a contrast)
   values.theta = 1
   linkage = "average"
   tol = 1e-4
-  nlam = 100
+  nlam = 200
   intercept = TRUE
   K = 10
   n = 100
   p = 200
-  gamma_ij = 0.9 # 0.2, 0.9
+  cor_ij = 0.2 # 0.2, 0.5, 0.9
   scaling = TRUE
   
   # Population parameters
   sigma_eps = 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  SigmaWblock = matrix(gamma_ij, p / 4, p / 4)
+  SigmaWblock = matrix(cor_ij, p / 4, p / 4)
   for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
   SigmaW0 = matrix(0, p / 4, p / 4)
   SigmaW = cbind(
@@ -139,8 +140,9 @@ res = foreach(
   
   file.end = paste0(
     "_dim", n, "x", p, 
+    "_", sigma.settings,
     "_", theta.settings, 
-    "_gamma", gamma_ij, 
+    "_cor", cor_ij, 
     "_int", intercept,
     "_scale", scaling,
     "_K", K,

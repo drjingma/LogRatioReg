@@ -1,6 +1,6 @@
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 09/06/2021
+# Date: 09/23/2021
 
 ################################################################################
 # libraries and settings
@@ -45,6 +45,41 @@ res = foreach(
   source("Kristyn/Functions/supervisedlogratios.R")
   
   # helper functions
+  getMSEyhat = function(y, n, betahat0, betahat, predMat){
+    yhat = betahat0 + predMat %*% betahat
+    mse = as.vector(crossprod(y - yhat) / n)
+    return(mse)
+  }
+  getEstimationAccuracy = function(true.beta, betahat){
+    EA1 = sum(abs(betahat - true.beta))
+    EA2 = as.vector(sqrt(crossprod(betahat - true.beta)))
+    EAInfty = max(abs(betahat - true.beta))
+    return(list(
+      EA1 = EA1, 
+      EA2 = EA2, 
+      EAInfty = EAInfty
+    ))
+  }
+  getSelectionAccuracy = function(is0.true.beta, non0.true.beta, non0.betahat){
+    FP = sum(is0.true.beta & non0.betahat)
+    FN = sum((non0.true.beta != non0.betahat) & non0.true.beta)
+    TPR = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
+      sum(non0.true.beta)
+    # F-score = precision / recall
+    # precision = # true positive results / # of positive results
+    #   (including those not identified correctly)
+    precision = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
+      sum(non0.betahat) 
+    # recall = sensitivity = TPR = # true positive results / # of true positives
+    Fscore = precision / TPR
+    return(list(
+      FP = FP, 
+      FN = FN, 
+      TPR = TPR, 
+      precision = precision, 
+      Fscore = Fscore
+    ))
+  }
   roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
     TP = sum((abs(beta_hat) > eps) * (abs(beta) > eps))
     FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
@@ -54,16 +89,12 @@ res = foreach(
     names(out) <- c('S_hat','tpr')
     return(out)
   }
-  
   roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
-    
     if (is.null(sbp)){
       stop('A sequential binary partition tree is needed for roc evaluation!')
     }
-    
     # first identify the variable at the LR scale
     index <- which(abs(beta_hat) > eps)
-    
     # map to original variable
     if (length(index)==0){
       S_hat <- NULL
@@ -111,7 +142,7 @@ res = foreach(
   }
   
   # Population parameters
-  sigma_eps = 0.5
+  sigma_eps = 0.01 # 0.05, 0.01, 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
   SigmaW <- rgExpDecay(p,rho)$Sigma
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
@@ -121,6 +152,7 @@ res = foreach(
     "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
+    "_noise", strsplit(as.character(sigma_eps), split = "\\.")[[1]][2],
     "_rho", rho, 
     "_int", intercept,
     "_scale", scaling,
@@ -135,7 +167,6 @@ res = foreach(
   W <- exp(logW)
   colnames(W) <- paste0('s', 1:p)
   XAll <- sweep(W, 1, rowSums(W), FUN='/')
-  ZAll = log(XAll)
   ilrXAll = computeBalances(XAll, U = U)
   
   # get theta
@@ -162,10 +193,6 @@ res = foreach(
   # subset out training and test sets
   X = XAll[1:n, ]
   X.test = XAll[-(1:n), ]
-  Z = ZAll[1:n, ]
-  Z.test = ZAll[-(1:n), ]
-  ilrX = ilrXAll[1:n, ]
-  ilrX.test = ilrXAll[-(1:n), ]
   Y <- yAll[1:n, , drop = TRUE]
   Y.test <- yAll[-(1:n), , drop = TRUE]
   
@@ -174,8 +201,6 @@ res = foreach(
   slr.non0.beta = abs(beta) > 10e-8
   is0.beta = abs(beta) <= 10e-8
   bspars = sum(non0.beta)
-  beta.active = beta[non0.beta]
-  beta.inactive = beta[is0.beta]
   
   ##############################################################################
   # supervised log-ratios
@@ -188,76 +213,61 @@ res = foreach(
     rho.type = rho.type, linkage = linkage, standardize = scaling)
   end.time = Sys.time()
   slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-  btree = slr$btree
-  # plot(btree)
+  slr.btree = slr$btree
+  # plot(slr.btree)
   
   # choose lambda
   slr.lam.min.idx = which.min(slr$cvm)
   slr.lam.min = slr$lambda[slr.lam.min.idx]
   slr.a0 = slr$int[slr.lam.min.idx]
   slr.thetahat = slr$bet[, slr.lam.min.idx]
-  slr.Uhat = getU(btree = btree)
+  slr.Uhat = getU(btree = slr.btree)
   slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
   
   # evaluate model #
   
   # 1. prediction error #
   # 1a. on training set #
-  # get prediction error on training set
-  slr.Yhat.train = slr.a0 + computeBalances(X, btree) %*% slr.thetahat
-  slr.PE.train = as.vector(crossprod(Y - slr.Yhat.train) / n)
+  slr.PE.train = getMSEyhat(
+    Y, n, slr.a0, slr.thetahat, computeBalances(X, slr.btree))
   # 1b. on test set #
-  # get prediction error on test set
-  slr.Yhat.test = slr.a0 + computeBalances(X.test, btree) %*% slr.thetahat
-  slr.PE.test = as.vector(crossprod(Y.test - slr.Yhat.test) / n)
+  slr.PE.test = getMSEyhat(
+    Y.test, n, slr.a0, slr.thetahat, computeBalances(X.test, slr.btree))
   
   # 2. estimation accuracy #
   # 2a. estimation of beta #
-  slr.EA1 = sum(abs(slr.betahat - beta))
-  slr.EA2 = as.vector(sqrt(crossprod(
-    slr.betahat - beta)))
-  slr.EAInfty = max(abs(slr.betahat - beta))
+  slr.EA = getEstimationAccuracy(beta, slr.betahat)
   # 2b. estimation accuracy for active set
-  slr.betahat.active = slr.betahat[non0.beta]
-  slr.EA1.active = sum(abs(slr.betahat.active - beta.active))
-  slr.EA2.active = as.vector(sqrt(crossprod(
-    slr.betahat.active - beta.active)))
-  slr.EAInfty.active = max(abs(slr.betahat.active - beta.active))
+  slr.EA.active = getEstimationAccuracy(beta[non0.beta], slr.betahat[non0.beta])
   # 2c. estimation accuracy for inactive set
-  slr.betahat.inactive = slr.betahat[is0.beta]
-  slr.EA1.inactive = sum(abs(slr.betahat.inactive - beta.inactive))
-  slr.EA2.inactive = as.vector(sqrt(crossprod(
-    slr.betahat.inactive - beta.inactive)))
-  slr.EAInfty.inactive = max(abs(slr.betahat.inactive - beta.inactive))
+  slr.EA.inactive = getEstimationAccuracy(beta[is0.beta], slr.betahat[is0.beta])
   
   # 3. selection accuracy #
   # 3a. selection of beta #
   ### using SBP matrix
-  slr.SBP = sbp.fromHclust(btree)
+  slr.SBP = sbp.fromHclust(slr.btree)
   slr.non0.thetahat = (slr.thetahat != 0)
   slr.sel.cols.SBP = slr.SBP[, slr.non0.thetahat, drop = FALSE]
   slr.non0.betahat = apply(slr.sel.cols.SBP, 1, function(row) any(row != 0))
-  #
-  slr.FP = sum(is0.beta & slr.non0.betahat)
-  slr.FN = sum((non0.beta != slr.non0.betahat) & non0.beta)
-  slr.TPR = sum((non0.beta == slr.non0.betahat) & slr.non0.betahat) / 
-    sum(non0.beta)
+  slr.SA = getSelectionAccuracy(is0.beta, non0.beta, slr.non0.betahat)
   
   saveRDS(c(
     "PEtr" = slr.PE.train, 
     "PEte" = slr.PE.test, 
-    "EA1" = slr.EA1, 
-    "EA2" = slr.EA2, 
-    "EAInfty" = slr.EAInfty, 
-    "EA1Active" = slr.EA1.active, 
-    "EA2Active" = slr.EA2.active, 
-    "EAInftyActive" = slr.EAInfty.active, 
-    "EA1Inactive" = slr.EA1.inactive, 
-    "EA2Inactive" = slr.EA2.inactive, 
-    "EAInftyInactive" = slr.EAInfty.inactive, 
-    "FP" = slr.FP, 
-    "FN" = slr.FN, 
-    "TPR" = slr.TPR, 
+    "EA1" = slr.EA$EA1, 
+    "EA2" = slr.EA$EA2, 
+    "EAInfty" = slr.EA$EAInfty, 
+    "EA1Active" = slr.EA.active$EA1, 
+    "EA2Active" = slr.EA.active$EA2, 
+    "EAInftyActive" = slr.EA.active$EAInfty, 
+    "EA1Inactive" = slr.EA.inactive$EA1, 
+    "EA2Inactive" = slr.EA.inactive$EA2, 
+    "EAInftyInactive" = slr.EA.inactive$EAInfty, 
+    "FP" = slr.SA$FP, 
+    "FN" = slr.SA$FN, 
+    "TPR" = slr.SA$TPR, 
+    "precision" = slr.SA$precision, 
+    "Fscore" = slr.SA$Fscore,
     "timing" = slr.timing,
     "betaSparsity" = bspars
   ), 
@@ -276,7 +286,7 @@ res = foreach(
   # apply compositional lasso, using CV to select lambda
   start.time = Sys.time()
   complasso = cv.func(
-    method="ConstrLasso", y = Y, x = Z, Cmat = matrix(1, p, 1), nlam = nlam, 
+    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
     nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
   end.time = Sys.time()
   classo.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
@@ -291,53 +301,39 @@ res = foreach(
   
   # 1. prediction error #
   # 1a. on training set #
-  # get prediction error on training set
-  cl.Yhat.train = cl.a0 + log(X) %*% cl.betahat
-  cl.PE.train = as.vector(crossprod(Y - cl.Yhat.train) / n)
+  cl.PE.train = getMSEyhat(Y, n, cl.a0, cl.betahat, log(X))
   # 1b. on test set #
-  # get prediction error on test set
-  cl.Yhat.test = cl.a0 + log(X.test) %*% cl.betahat
-  cl.PE.test = as.vector(crossprod(Y.test - cl.Yhat.test) / n)
+  cl.PE.test = getMSEyhat(Y.test, n, cl.a0, cl.betahat, log(X.test))
   
-  # 2. estimation accuracy (i.t.o. beta) #
-  cl.EA1 = sum(abs(cl.betahat - beta))
-  cl.EA2 = as.vector(sqrt(crossprod(cl.betahat - beta)))
-  cl.EAInfty = max(abs(cl.betahat - beta))
+  # 2. estimation accuracy #
+  # 2a. estimation of beta #
+  cl.EA = getEstimationAccuracy(beta, cl.betahat)
   # 2b. estimation accuracy for active set
-  cl.betahat.active = cl.betahat[non0.beta]
-  cl.EA1.active = sum(abs(cl.betahat.active - beta.active))
-  cl.EA2.active = as.vector(sqrt(crossprod(
-    cl.betahat.active - beta.active)))
-  cl.EAInfty.active = max(abs(cl.betahat.active - beta.active))
+  cl.EA.active = getEstimationAccuracy(beta[non0.beta], cl.betahat[non0.beta])
   # 2c. estimation accuracy for inactive set
-  cl.betahat.inactive = cl.betahat[is0.beta]
-  cl.EA1.inactive = sum(abs(cl.betahat.inactive - beta.inactive))
-  cl.EA2.inactive = as.vector(sqrt(crossprod(
-    cl.betahat.inactive - beta.inactive)))
-  cl.EAInfty.inactive = max(abs(cl.betahat.inactive - beta.inactive))
+  cl.EA.inactive = getEstimationAccuracy(beta[is0.beta], cl.betahat[is0.beta])
   
   # 3. selection accuracy (i.t.o. beta) #
   cl.non0.betahat = abs(cl.betahat) > 10e-8
-  cl.FP = sum(is0.beta & cl.non0.betahat)
-  cl.FN = sum((non0.beta != cl.non0.betahat) & non0.beta)
-  cl.TPR = sum((non0.beta == cl.non0.betahat) & cl.non0.betahat) / 
-    sum(non0.beta)
+  cl.SA = getSelectionAccuracy(is0.beta, non0.beta, cl.non0.betahat)
   
   saveRDS(c(
     "PEtr" = cl.PE.train, 
     "PEte" = cl.PE.test, 
-    "EA1" = cl.EA1, 
-    "EA2" = cl.EA2, 
-    "EAInfty" = cl.EAInfty, 
-    "EA1Active" = cl.EA1.active, 
-    "EA2Active" = cl.EA2.active, 
-    "EAInftyActive" = cl.EAInfty.active, 
-    "EA1Inactive" = cl.EA1.inactive, 
-    "EA2Inactive" = cl.EA2.inactive, 
-    "EAInftyInactive" = cl.EAInfty.inactive, 
-    "FP" = cl.FP, 
-    "FN" = cl.FN, 
-    "TPR" = cl.TPR, 
+    "EA1" = cl.EA$EA1, 
+    "EA2" = cl.EA$EA2, 
+    "EAInfty" = cl.EA$EAInfty, 
+    "EA1Active" = cl.EA.active$EA1, 
+    "EA2Active" = cl.EA.active$EA2, 
+    "EAInftyActive" = cl.EA.active$EAInfty, 
+    "EA1Inactive" = cl.EA.inactive$EA1, 
+    "EA2Inactive" = cl.EA.inactive$EA2, 
+    "EAInftyInactive" = cl.EA.inactive$EAInfty, 
+    "FP" = cl.SA$FP, 
+    "FN" = cl.SA$FN, 
+    "TPR" = cl.SA$TPR, 
+    "precision" = cl.SA$precision, 
+    "Fscore" = cl.SA$Fscore,
     "timing" = classo.timing,
     "betaSparsity" = bspars
   ), 
@@ -374,31 +370,19 @@ res = foreach(
   
   # 1. prediction error #
   # 1a. on training set #
-  # get prediction error on training set
-  or.Yhat.train = or.a0 + computeBalances(X, or.btree) %*% or.thetahat
-  or.PE.train = as.vector(crossprod(Y - or.Yhat.train) / n)
+  or.PE.train = getMSEyhat(
+    Y, n, or.a0, or.thetahat, computeBalances(X, or.btree))
   # 1b. on test set #
-  # get prediction error on test set
-  or.Yhat.test = or.a0 + computeBalances(X.test, or.btree) %*% or.thetahat
-  or.PE.test = as.vector(crossprod(Y.test - or.Yhat.test) / n)
+  or.PE.test = getMSEyhat(
+    Y.test, n, or.a0, or.thetahat, computeBalances(X.test, or.btree))
   
   # 2. estimation accuracy #
   # 2a. estimation of beta #
-  or.EA1 = sum(abs(or.betahat - beta))
-  or.EA2 = as.vector(sqrt(crossprod(or.betahat - beta)))
-  or.EAInfty = max(abs(or.betahat - beta))
+  or.EA = getEstimationAccuracy(beta, or.betahat)
   # 2b. estimation accuracy for active set
-  or.betahat.active = or.betahat[non0.beta]
-  or.EA1.active = sum(abs(or.betahat.active - beta.active))
-  or.EA2.active = as.vector(sqrt(crossprod(
-    or.betahat.active - beta.active)))
-  or.EAInfty.active = max(abs(or.betahat.active - beta.active))
+  or.EA.active = getEstimationAccuracy(beta[non0.beta], or.betahat[non0.beta])
   # 2c. estimation accuracy for inactive set
-  or.betahat.inactive = or.betahat[is0.beta]
-  or.EA1.inactive = sum(abs(or.betahat.inactive - beta.inactive))
-  or.EA2.inactive = as.vector(sqrt(crossprod(
-    or.betahat.inactive - beta.inactive)))
-  or.EAInfty.inactive = max(abs(or.betahat.inactive - beta.inactive))
+  or.EA.inactive = getEstimationAccuracy(beta[is0.beta], or.betahat[is0.beta])
   
   # 3. selection accuracy #
   # 3a. selection of beta #
@@ -408,27 +392,25 @@ res = foreach(
   or.non0.thetahat = (or.thetahat != 0)
   or.sel.cols.SBP = or.SBP[, or.non0.thetahat, drop = FALSE]
   or.non0.betahat = apply(or.sel.cols.SBP, 1, function(row) any(row != 0))
-  #
-  or.FP = sum(is0.beta & or.non0.betahat)
-  or.FN = sum((non0.beta != or.non0.betahat) & non0.beta)
-  or.TPR = sum((non0.beta == or.non0.betahat) & or.non0.betahat) / 
-    sum(non0.beta)
+  or.SA = getSelectionAccuracy(is0.beta, non0.beta, or.non0.betahat)
   
   saveRDS(c(
     "PEtr" = or.PE.train, 
     "PEte" = or.PE.test, 
-    "EA1" = or.EA1, 
-    "EA2" = or.EA2, 
-    "EAInfty" = or.EAInfty, 
-    "EA1Active" = or.EA1.active, 
-    "EA2Active" = or.EA2.active, 
-    "EAInftyActive" = or.EAInfty.active, 
-    "EA1Inactive" = or.EA1.inactive, 
-    "EA2Inactive" = or.EA2.inactive, 
-    "EAInftyInactive" = or.EAInfty.inactive, 
-    "FP" = or.FP, 
-    "FN" = or.FN, 
-    "TPR" = or.TPR, 
+    "EA1" = or.EA$EA1, 
+    "EA2" = or.EA$EA2, 
+    "EAInfty" = or.EA$EAInfty, 
+    "EA1Active" = or.EA.active$EA1, 
+    "EA2Active" = or.EA.active$EA2, 
+    "EAInftyActive" = or.EA.active$EAInfty, 
+    "EA1Inactive" = or.EA.inactive$EA1, 
+    "EA2Inactive" = or.EA.inactive$EA2, 
+    "EAInftyInactive" = or.EA.inactive$EAInfty, 
+    "FP" = or.SA$FP, 
+    "FN" = or.SA$FN, 
+    "TPR" = or.SA$TPR, 
+    "precision" = or.SA$precision, 
+    "Fscore" = or.SA$Fscore,
     "timing" = or.timing,
     "betaSparsity" = bspars
   ), 

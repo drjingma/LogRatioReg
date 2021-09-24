@@ -142,7 +142,7 @@ res = foreach(
   }
   
   # Population parameters
-  sigma_eps = 0.01 # 0.05, 0.01, 0.5
+  sigma_eps = 0.5 # 0.05, 0.01, 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
   SigmaW <- rgExpDecay(p,rho)$Sigma
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)

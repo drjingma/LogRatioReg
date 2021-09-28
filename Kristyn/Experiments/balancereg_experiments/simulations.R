@@ -147,6 +147,10 @@ res = foreach(
   } else{ # if(theta.settings == "multsparse")
     indices.theta = p - 3:1
   }
+  # error checking indices.theta found based on theta.settings argument
+  if(is.null(indices.theta)){
+    stop("invalid indices.theta")
+  }
   
   file.end = paste0(
     "_dim", n, "x", p, 

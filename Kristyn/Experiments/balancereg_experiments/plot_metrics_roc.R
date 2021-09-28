@@ -17,9 +17,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, lin14Sigma
+sigma.settings = "2blockSigma" # 2blockSigma, 4blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "2blocks" # "dense", "sparse", "both", "multsparse"
+theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks"
 # if "2blockSigma" then "dense"
 # if "lin14Sigma" then "sparse" or "dense"
@@ -40,7 +40,7 @@ if(sigma.settings == "lin14Sigma"){
     "_dim", n, "x", p,
     "_", sigma.settings,
     "_", theta.settings,
-    "_noise", strsplit(as.character(sigma_eps), split = "\\.")[[1]][2],
+    "_noise", sigma_eps,
     "_rho", rho,
     "_int", intercept,
     "_scale", scaling,
@@ -52,7 +52,7 @@ if(sigma.settings == "lin14Sigma"){
     "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
-    "_noise", strsplit(as.character(sigma_eps), split = "\\.")[[1]][2],
+    "_noise", sigma_eps,
     "_cor", cor_ij, 
     "_int", intercept,
     "_scale", scaling,
@@ -203,7 +203,7 @@ if(sigma.settings == "lin14Sigma"){
       sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_metrics.pdf"),
     plot = last_plot(),
-    width = 8, height = 6, units = c("in")
+    width = 8, height = 5, units = c("in")
   )
 } else{
   ggsave(
@@ -212,7 +212,7 @@ if(sigma.settings == "lin14Sigma"){
       sigma.settings, "_noise", sigma_eps, "_cor", cor_ij,
       "_", theta.settings, "_metrics.pdf"),
     plot = last_plot(),
-    width = 8, height = 6, units = c("in")
+    width = 8, height = 5, units = c("in")
   )
 }
 
@@ -354,7 +354,7 @@ if(sigma.settings == "lin14Sigma"){
       sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_roc.pdf"),
     plot = last_plot(),
-    width = 8, height = 6, units = c("in")
+    width = 8, height = 5, units = c("in")
   )
 } else{
   ggsave(
@@ -363,7 +363,7 @@ if(sigma.settings == "lin14Sigma"){
       sigma.settings, "_noise", sigma_eps, "_cor", cor_ij,
       "_", theta.settings, "_roc.pdf"),
     plot = last_plot(),
-    width = 8, height = 6, units = c("in")
+    width = 8, height = 5, units = c("in")
   )
 }
 

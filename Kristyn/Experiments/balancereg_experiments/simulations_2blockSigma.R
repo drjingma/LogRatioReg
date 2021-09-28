@@ -125,7 +125,7 @@ res = foreach(
   K = 10
   n = 100
   p = 200
-  cor_ij = 0.5 # 0.2, 0.5
+  cor_ij = 0.2 # 0.2, 0.5
   scaling = TRUE
   
   # Population parameters

@@ -16,9 +16,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "2blockSigma" # 2blockSigma, 4blockSigma, lin14Sigma
+sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
+theta.settings = "2blocks" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks"
 # if "2blockSigma" then "dense"
 # if "lin14Sigma" then "sparse" or "dense"
@@ -29,15 +29,17 @@ intercept = TRUE
 K = 10
 n = 100
 p = 200
-rho = 0.2 # 0.5
-cor_ij = 0.5 # 0.2, 0.5
+rho = 0.5 # 0.5
+cor_ij = 0.2 # 0.2, 0.5
 scaling = TRUE
+sigma_eps = 0.5 # 0.01, 0.5
 
 if(sigma.settings == "lin14Sigma"){
   file.end = paste0( # for old simulations
     "_dim", n, "x", p,
     "_", sigma.settings,
     "_", theta.settings,
+    "_noise", strsplit(as.character(sigma_eps), split = "\\.")[[1]][2],
     "_rho", rho,
     "_int", intercept,
     "_scale", scaling,
@@ -49,6 +51,7 @@ if(sigma.settings == "lin14Sigma"){
     "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
+    "_noise", strsplit(as.character(sigma_eps), split = "\\.")[[1]][2],
     "_cor", cor_ij, 
     "_int", intercept,
     "_scale", scaling,

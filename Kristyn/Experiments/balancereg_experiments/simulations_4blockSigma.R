@@ -116,7 +116,8 @@ res = foreach(
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   theta.settings = "2blocks"  
   # "2blocks" => choose j corresp. to two blocks
-  #   (one block w/-1, other w/1 in a contrast)
+  #   (one block w/-1, other w/1 in a single contrast)
+  # "2blocks2contrasts" => choose two j's corresp to two separate blocks
   # "1block" => choose j corresp. to one block only
   values.theta = 1
   linkage = "average"
@@ -175,7 +176,20 @@ res = foreach(
     } else{
       indices.theta = unname(sample(x = block.contrasts, 1))
     }
-  }else{
+  } else if(theta.settings == "2blocks2contrasts"){
+    SBP = sbp.fromHclust(SigmaWtree)
+    # for each column (contrast), find which variables are included (1 or -1)
+    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
+    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
+    #   not necessary, but may save on unnecessary computation in the next step
+    block.contrasts = which(sapply(contrast.vars, length) == p / 4)
+    # pick one such contrast
+    if(length(block.contrasts) < 2){
+      stop("need at least 2 contrasts corresponding to two separate blocks")
+    } else{
+      indices.theta = unname(sample(x = block.contrasts, 2))
+    }
+  } else{
     stop("invalid theta.settings")
   }
   # error checking indices.theta found based on theta.settings argument

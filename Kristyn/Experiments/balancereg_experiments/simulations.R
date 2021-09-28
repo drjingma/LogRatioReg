@@ -114,7 +114,7 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "lin14Sigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "sparse" 
+  theta.settings = "multsparse" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "sparse" => j = p - 1
   # "both" => theta = c(1, p - 1)
@@ -131,7 +131,7 @@ res = foreach(
   scaling = TRUE
   
   # Population parameters
-  sigma_eps = 0.01 # 0.01, 0.5
+  sigma_eps = 0.5 # 0.01, 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
   SigmaW <- rgExpDecay(p,rho)$Sigma
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)

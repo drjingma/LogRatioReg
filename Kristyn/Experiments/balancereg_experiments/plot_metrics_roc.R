@@ -1,3 +1,4 @@
+rm(list=ls())
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
 # Date: 09/23/2021
@@ -29,7 +30,7 @@ intercept = TRUE
 K = 10
 n = 100
 p = 200
-rho = 0.5 # 0.5
+rho = 0.2 # 0.2, 0.5
 cor_ij = 0.2 # 0.2, 0.5
 scaling = TRUE
 sigma_eps = 0.5 # 0.01, 0.5
@@ -195,6 +196,25 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
   theme_bw() + 
   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
         axis.title.y = element_blank())
+if(sigma.settings == "lin14Sigma"){
+  ggsave(
+    filename = paste0(
+      "20210927_", 
+      sigma.settings, "_noise", sigma_eps, 
+      "_", theta.settings, "_metrics.pdf"),
+    plot = last_plot(),
+    width = 8, height = 6, units = c("in")
+  )
+} else{
+  ggsave(
+    filename = paste0(
+      "20210927_", 
+      sigma.settings, "_noise", sigma_eps, "_cor", cor_ij,
+      "_", theta.settings, "_metrics.pdf"),
+    plot = last_plot(),
+    width = 8, height = 6, units = c("in")
+  )
+}
 
 # zoom in to PEtr, PEte
 # plot PEtr
@@ -327,6 +347,24 @@ ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) +
   geom_point(alpha = 0.5, na.rm = TRUE) +
   # xlim(0, 40) +
   theme_bw()
-
+if(sigma.settings == "lin14Sigma"){
+  ggsave(
+    filename = paste0(
+      "20210927_", 
+      sigma.settings, "_noise", sigma_eps, 
+      "_", theta.settings, "_roc.pdf"),
+    plot = last_plot(),
+    width = 8, height = 6, units = c("in")
+  )
+} else{
+  ggsave(
+    filename = paste0(
+      "20210927_", 
+      sigma.settings, "_noise", sigma_eps, "_cor", cor_ij,
+      "_", theta.settings, "_roc.pdf"),
+    plot = last_plot(),
+    width = 8, height = 6, units = c("in")
+  )
+}
 
 

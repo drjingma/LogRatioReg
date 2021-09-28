@@ -71,7 +71,7 @@ res = foreach(
     precision = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
       sum(non0.betahat) 
     # recall = sensitivity = TPR = # true positive results / # of true positives
-    Fscore = precision / TPR
+    Fscore = 2 * precision * TPR / (precision + TPR)
     return(list(
       FP = FP, 
       FN = FN, 
@@ -162,7 +162,7 @@ res = foreach(
     "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
-    "_noise", strsplit(as.character(sigma_eps), split = "\\.")[[1]][2],
+    "_noise", sigma_eps,
     "_cor", cor_ij, 
     "_int", intercept,
     "_scale", scaling,

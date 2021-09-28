@@ -71,7 +71,7 @@ res = foreach(
     precision = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
       sum(non0.betahat) 
     # recall = sensitivity = TPR = # true positive results / # of true positives
-    Fscore = precision / TPR
+    Fscore = 2 * precision * TPR / (precision + TPR)
     return(list(
       FP = FP, 
       FN = FN, 
@@ -114,7 +114,7 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "lin14Sigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "multsparse" 
+  theta.settings = "sparse" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "sparse" => j = p - 1
   # "both" => theta = c(1, p - 1)
@@ -127,8 +127,15 @@ res = foreach(
   K = 10
   n = 100
   p = 200
-  rho = 0.5 # 0.2, 0.5
+  rho = 0.2 # 0.2, 0.5
   scaling = TRUE
+  
+  # Population parameters
+  sigma_eps = 0.01 # 0.01, 0.5
+  muW = c(rep(log(p), 5), rep(0, p - 5))
+  SigmaW <- rgExpDecay(p,rho)$Sigma
+  SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
+  U = getU(btree = SigmaWtree) # transformation matrix
   
   # theta settings
   if(theta.settings == "dense"){
@@ -141,18 +148,11 @@ res = foreach(
     indices.theta = p - 3:1
   }
   
-  # Population parameters
-  sigma_eps = 0.01 # 0.01, 0.5
-  muW = c(rep(log(p), 5), rep(0, p - 5))
-  SigmaW <- rgExpDecay(p,rho)$Sigma
-  SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
-  U = getU(btree = SigmaWtree) # transformation matrix
-  
   file.end = paste0(
     "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
-    "_noise", strsplit(as.character(sigma_eps), split = "\\.")[[1]][2],
+    "_noise", sigma_eps,
     "_rho", rho, 
     "_int", intercept,
     "_scale", scaling,

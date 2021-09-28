@@ -114,7 +114,7 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "4blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "2blocks"  
+  theta.settings = "2blocks2contrasts"  
   # "2blocks" => choose j corresp. to two blocks
   #   (one block w/-1, other w/1 in a single contrast)
   # "2blocks2contrasts" => choose two j's corresp to two separate blocks

@@ -154,7 +154,7 @@ res = foreach(
     stop("invalid theta.settings")
   }
   # error checking indices.theta found based on theta.settings argument
-  if(is.null(indices.theta) | length(indices.theta) != 1){
+  if(is.null(indices.theta)){
     stop("invalid indices.theta")
   }
   

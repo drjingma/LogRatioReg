@@ -19,7 +19,7 @@ rng.seed = 123
 # Settings to toggle with
 sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "2blocks2contrasts" # "dense", "sparse", "both", "multsparse"
+theta.settings = "1block" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks", "1block", "2blocks2contrasts"
 # if "2blockSigma" then "dense"
 # if "lin14Sigma" then "sparse" or "dense"

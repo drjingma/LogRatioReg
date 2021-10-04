@@ -1,12 +1,10 @@
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Note: Here, we simulate from a 2-block-diagonal Sigma and intend to:
-#   - have one active contrast corresponding to 2 of the 4 blocks, so that 
-#       slr correctly specifies the log-ratio formed by the 2 blocks --
-#       compare this to the results from simulations_2blockSigma.R with the 
-#       dense setting, which has the same structure (1 contrast containing 2 
-#       active blocks), but no inactive set.
-# Date: 09/28/2021
+# Note: Here, we simulate from a 10-block-diagonal Sigma and intend to:
+#   - have one active contrast pair within each block
+#   - compare slr to coat, where the latter captures correlated structure
+#       among covariates, but not whether the covariates are predicted
+# Date: 10/04/2021
 
 ################################################################################
 # libraries and settings
@@ -120,7 +118,7 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "4blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "2blocks"  
+  theta.settings = "2blocks2contrasts"  
   # "2blocks" => choose j corresp. to two blocks
   #   (one block w/-1, other w/1 in a single contrast)
   # "2blocks2contrasts" => choose two j's corresp to two separate blocks

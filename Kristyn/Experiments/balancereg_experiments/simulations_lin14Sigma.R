@@ -1,6 +1,10 @@
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 09/23/2021
+# Note: Here, we simulate from the Sigma specified in Lin et al.2014 and intend 
+#   to:
+#   - observe the behaviors of slr under different measurement noise, sigma_eps
+#   - compare to the compositional lasso model proposed in lin et al. 2014
+# Date: 09/28/2021
 
 ################################################################################
 # libraries and settings

@@ -1,6 +1,9 @@
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 09/23/2021
+# Note: Here, we simulate from a 2-block-diagonal Sigma and intend to:
+#   - have one active contrast corresponding to the two blocks, so that 
+#       slr correctly specifies the log-ratio formed by the 2 blocks
+# Date: 09/28/2021
 
 ################################################################################
 # libraries and settings

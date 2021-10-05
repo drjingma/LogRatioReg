@@ -69,7 +69,7 @@ res = foreach(
   scaling = TRUE
   
   # Population parameters
-  sigma_eps = 0.1 # 0.1, 0.5
+  sigma_eps = 0.5 # 0.1, 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
   num.blocks = 10
   SigmaWblock = matrix(cor_ij, p / num.blocks, p / num.blocks)

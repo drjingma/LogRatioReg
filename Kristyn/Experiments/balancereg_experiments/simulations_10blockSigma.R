@@ -47,82 +47,16 @@ res = foreach(
   library(selbal)
   source("RCode/func_libs.R")
   source("Kristyn/Functions/supervisedlogratios.R")
+  source("COAT-master/coat.R")
   
   # helper functions
-  getMSEyhat = function(y, n, betahat0, betahat, predMat){
-    yhat = betahat0 + predMat %*% betahat
-    mse = as.vector(crossprod(y - yhat) / n)
-    return(mse)
-  }
-  getEstimationAccuracy = function(true.beta, betahat){
-    EA1 = sum(abs(betahat - true.beta))
-    EA2 = as.vector(sqrt(crossprod(betahat - true.beta)))
-    EAInfty = max(abs(betahat - true.beta))
-    return(list(
-      EA1 = EA1, 
-      EA2 = EA2, 
-      EAInfty = EAInfty
-    ))
-  }
-  getSelectionAccuracy = function(is0.true.beta, non0.true.beta, non0.betahat){
-    FP = sum(is0.true.beta & non0.betahat)
-    FN = sum((non0.true.beta != non0.betahat) & non0.true.beta)
-    TPR = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
-      sum(non0.true.beta)
-    # F-score = precision / recall
-    # precision = # true positive results / # of positive results
-    #   (including those not identified correctly)
-    precision = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
-      sum(non0.betahat) 
-    # recall = sensitivity = TPR = # true positive results / # of true positives
-    Fscore = 2 * precision * TPR / (precision + TPR)
-    return(list(
-      FP = FP, 
-      FN = FN, 
-      TPR = TPR, 
-      precision = precision, 
-      Fscore = Fscore
-    ))
-  }
-  roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
-    TP = sum((abs(beta_hat) > eps) * (abs(beta) > eps))
-    FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
-    tpr <- TP/(TP + FN)
-    S_hat <- sum((abs(beta_hat) > eps))
-    out <- c(S_hat,tpr)
-    names(out) <- c('S_hat','tpr')
-    return(out)
-  }
-  roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
-    if (is.null(sbp)){
-      stop('A sequential binary partition tree is needed for roc evaluation!')
-    }
-    # first identify the variable at the LR scale
-    index <- which(abs(beta_hat) > eps)
-    # map to original variable
-    if (length(index)==0){
-      S_hat <- NULL
-    } else  if (length(index)==1){
-      S_hat <- names(which(abs(sbp[,index])>0))
-    } else {
-      S_hat <- names(which(rowSums(abs(sbp[,index]))>0))
-    }
-    S0 <- names(which((abs(beta) > eps)))
-    TP <- intersect(S_hat, S0)
-    tpr <- length(TP)/length(S0)
-    out <- c(length(S_hat),tpr)
-    names(out) <- c('S_hat','tpr')
-    return(out)
-  }
+  source("Kristyn/Functions/metrics.R")
   
   # Settings to toggle with
-  sigma.settings = "4blockSigma"
+  sigma.settings = "10blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "2blocks2contrasts"  
-  # "2blocks" => choose j corresp. to two blocks
-  #   (one block w/-1, other w/1 in a single contrast)
-  # "2blocks2contrasts" => choose two j's corresp to two separate blocks
-  # "1block" => choose j corresp. to one block only
+  theta.settings = "pairperblock"  
+  # "pairperblock" => choose j corresp. to one pair of covariates for each block
   values.theta = 1
   linkage = "average"
   tol = 1e-4
@@ -135,17 +69,14 @@ res = foreach(
   scaling = TRUE
   
   # Population parameters
-  sigma_eps = 0.5
+  sigma_eps = 0.5 # 0.1, 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  SigmaWblock = matrix(cor_ij, p / 4, p / 4)
+  num.blocks = 10
+  SigmaWblock = matrix(cor_ij, p / num.blocks, p / num.blocks)
   for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
-  SigmaW0 = matrix(0, p / 4, p / 4)
-  SigmaW = cbind(
-    rbind(SigmaWblock, SigmaW0, SigmaW0, SigmaW0), 
-    rbind(SigmaW0, SigmaWblock, SigmaW0, SigmaW0), 
-    rbind(SigmaW0, SigmaW0, SigmaWblock, SigmaW0),  
-    rbind(SigmaW0, SigmaW0, SigmaW0, SigmaWblock)
-  )
+  SigmaW = as.matrix(bdiag(
+    SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, 
+    SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
   U = getU(btree = SigmaWtree) # transformation matrix
   # plot(SigmaWtree)
@@ -154,44 +85,18 @@ res = foreach(
   # theta settings
   if(theta.settings == "dense"){
     indices.theta = 1
-  } else if(theta.settings == "2blocks"){
+  } else if(theta.settings == "pairperblock"){
     SBP = sbp.fromHclust(SigmaWtree)
     # for each column (contrast), find which variables are included (1 or -1)
     contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
     # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
     #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / 2)
+    block.contrasts = which(sapply(contrast.vars, length) == p / num.blocks)
     # pick one such contrast
-    if(length(block.contrasts) == 1){
+    if(length(block.contrasts) == 10){
       indices.theta = unname(block.contrasts)
     } else{
-      indices.theta = unname(sample(x = block.contrasts, 1))
-    }
-  } else if(theta.settings == "1block"){
-    SBP = sbp.fromHclust(SigmaWtree)
-    # for each column (contrast), find which variables are included (1 or -1)
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
-    #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / 4)
-    # pick one such contrast
-    if(length(block.contrasts) == 1){
-      indices.theta = unname(block.contrasts)
-    } else{
-      indices.theta = unname(sample(x = block.contrasts, 1))
-    }
-  } else if(theta.settings == "2blocks2contrasts"){
-    SBP = sbp.fromHclust(SigmaWtree)
-    # for each column (contrast), find which variables are included (1 or -1)
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
-    #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / 4)
-    # pick one such contrast
-    if(length(block.contrasts) < 2){
-      stop("need at least 2 contrasts corresponding to two separate blocks")
-    } else{
-      indices.theta = unname(sample(x = block.contrasts, 2))
+      stop("there aren't 10 different contrasts corresponding to different pairs in each block!")
     }
   } else{
     stop("invalid theta.settings")
@@ -474,6 +379,85 @@ res = foreach(
     roc.for.coef.LR(a, beta, or.SBP))
   
   saveRDS(or.roc, file = paste0(output_dir, "/oracle_roc", b, file.end))
+  
+  ##############################################################################
+  # coat method
+  ##############################################################################
+  
+  # apply coat method, using CV to select lambda
+  # get coat tree and U
+  d_coat = 1 - coat(X)$corr
+  colnames(d_coat) = colnames(W)
+  coat.btree = hclust(as.dist(d_coat),method = linkage)
+  start.time = Sys.time()
+  coat = cvILR(y = Y, X = X, btree = coat.btree, nlam = nlam, 
+                 nfolds = K, intercept = intercept, standardize = scaling)
+  end.time = Sys.time()
+  coat.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+  # plot(coat.btree)
+  
+  # choose lambda
+  coat.lam.min.idx = which.min(coat$cvm)
+  coat.lam.min = coat$lambda[coat.lam.min.idx]
+  coat.a0 = coat$int[coat.lam.min.idx]
+  coat.thetahat = coat$bet[, coat.lam.min.idx]
+  coat.Uhat = getU(btree = coat.btree)
+  coat.betahat = getBeta(coat.thetahat, U = coat.Uhat)
+  
+  # evaluate model #
+  
+  # 1. prediction error #
+  # 1a. on training set #
+  coat.PE.train = getMSEyhat(
+    Y, n, coat.a0, coat.thetahat, computeBalances(X, coat.btree))
+  # 1b. on test set #
+  coat.PE.test = getMSEyhat(
+    Y.test, n, coat.a0, coat.thetahat, computeBalances(X.test, coat.btree))
+  
+  # 2. estimation accuracy #
+  # 2a. estimation of beta #
+  coat.EA = getEstimationAccuracy(beta, coat.betahat)
+  # 2b. estimation accuracy for active set
+  coat.EA.active = getEstimationAccuracy(beta[non0.beta], coat.betahat[non0.beta])
+  # 2c. estimation accuracy for inactive set
+  coat.EA.inactive = getEstimationAccuracy(beta[is0.beta], coat.betahat[is0.beta])
+  
+  # 3. selection accuracy #
+  # 3a. selection of beta #
+  ### using SBP matrix
+  coat.SBP = sbp.fromHclust(coat.btree)
+  coat.non0.thetahat = (coat.thetahat != 0)
+  coat.sel.cols.SBP = coat.SBP[, coat.non0.thetahat, drop = FALSE]
+  coat.non0.betahat = apply(coat.sel.cols.SBP, 1, function(row) any(row != 0))
+  coat.SA = getSelectionAccuracy(is0.beta, non0.beta, coat.non0.betahat)
+  
+  saveRDS(c(
+    "PEtr" = coat.PE.train, 
+    "PEte" = coat.PE.test, 
+    "EA1" = coat.EA$EA1, 
+    "EA2" = coat.EA$EA2, 
+    "EAInfty" = coat.EA$EAInfty, 
+    "EA1Active" = coat.EA.active$EA1, 
+    "EA2Active" = coat.EA.active$EA2, 
+    "EAInftyActive" = coat.EA.active$EAInfty, 
+    "EA1Inactive" = coat.EA.inactive$EA1, 
+    "EA2Inactive" = coat.EA.inactive$EA2, 
+    "EAInftyInactive" = coat.EA.inactive$EAInfty, 
+    "FP" = coat.SA$FP, 
+    "FN" = coat.SA$FN, 
+    "TPR" = coat.SA$TPR, 
+    "precision" = coat.SA$precision, 
+    "Fscore" = coat.SA$Fscore,
+    "timing" = coat.timing,
+    "betaSparsity" = bspars
+  ), 
+  file = paste0(output_dir, "/coat_metrics", b, file.end))
+  
+  # roc
+  coat.roc <- apply(coat$bet, 2, function(a) 
+    roc.for.coef.LR(a, beta, coat.SBP))
+  
+  saveRDS(coat.roc, file = paste0(output_dir, "/coat_roc", b, file.end))
   
   # ##############################################################################
   # # selbal

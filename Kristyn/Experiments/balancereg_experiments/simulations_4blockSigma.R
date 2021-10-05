@@ -51,71 +51,7 @@ res = foreach(
   source("Kristyn/Functions/supervisedlogratios.R")
   
   # helper functions
-  getMSEyhat = function(y, n, betahat0, betahat, predMat){
-    yhat = betahat0 + predMat %*% betahat
-    mse = as.vector(crossprod(y - yhat) / n)
-    return(mse)
-  }
-  getEstimationAccuracy = function(true.beta, betahat){
-    EA1 = sum(abs(betahat - true.beta))
-    EA2 = as.vector(sqrt(crossprod(betahat - true.beta)))
-    EAInfty = max(abs(betahat - true.beta))
-    return(list(
-      EA1 = EA1, 
-      EA2 = EA2, 
-      EAInfty = EAInfty
-    ))
-  }
-  getSelectionAccuracy = function(is0.true.beta, non0.true.beta, non0.betahat){
-    FP = sum(is0.true.beta & non0.betahat)
-    FN = sum((non0.true.beta != non0.betahat) & non0.true.beta)
-    TPR = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
-      sum(non0.true.beta)
-    # F-score = precision / recall
-    # precision = # true positive results / # of positive results
-    #   (including those not identified correctly)
-    precision = sum((non0.true.beta == non0.betahat) & non0.betahat) / 
-      sum(non0.betahat) 
-    # recall = sensitivity = TPR = # true positive results / # of true positives
-    Fscore = 2 * precision * TPR / (precision + TPR)
-    return(list(
-      FP = FP, 
-      FN = FN, 
-      TPR = TPR, 
-      precision = precision, 
-      Fscore = Fscore
-    ))
-  }
-  roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
-    TP = sum((abs(beta_hat) > eps) * (abs(beta) > eps))
-    FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
-    tpr <- TP/(TP + FN)
-    S_hat <- sum((abs(beta_hat) > eps))
-    out <- c(S_hat,tpr)
-    names(out) <- c('S_hat','tpr')
-    return(out)
-  }
-  roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
-    if (is.null(sbp)){
-      stop('A sequential binary partition tree is needed for roc evaluation!')
-    }
-    # first identify the variable at the LR scale
-    index <- which(abs(beta_hat) > eps)
-    # map to original variable
-    if (length(index)==0){
-      S_hat <- NULL
-    } else  if (length(index)==1){
-      S_hat <- names(which(abs(sbp[,index])>0))
-    } else {
-      S_hat <- names(which(rowSums(abs(sbp[,index]))>0))
-    }
-    S0 <- names(which((abs(beta) > eps)))
-    TP <- intersect(S_hat, S0)
-    tpr <- length(TP)/length(S0)
-    out <- c(length(S_hat),tpr)
-    names(out) <- c('S_hat','tpr')
-    return(out)
-  }
+  source("Kristyn/Functions/metrics.R")
   
   # Settings to toggle with
   sigma.settings = "4blockSigma"
@@ -139,15 +75,10 @@ res = foreach(
   # Population parameters
   sigma_eps = 0.5
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  SigmaWblock = matrix(cor_ij, p / 4, p / 4)
+  num.blocks = 4
+  SigmaWblock = matrix(cor_ij, p / num.blocks, p / num.blocks)
   for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
-  SigmaW0 = matrix(0, p / 4, p / 4)
-  SigmaW = cbind(
-    rbind(SigmaWblock, SigmaW0, SigmaW0, SigmaW0), 
-    rbind(SigmaW0, SigmaWblock, SigmaW0, SigmaW0), 
-    rbind(SigmaW0, SigmaW0, SigmaWblock, SigmaW0),  
-    rbind(SigmaW0, SigmaW0, SigmaW0, SigmaWblock)
-  )
+  SigmaW = as.matrix(bdiag(SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
   U = getU(btree = SigmaWtree) # transformation matrix
   # plot(SigmaWtree)
@@ -175,7 +106,7 @@ res = foreach(
     contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
     # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
     #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / 4)
+    block.contrasts = which(sapply(contrast.vars, length) == p / num.blocks)
     # pick one such contrast
     if(length(block.contrasts) == 1){
       indices.theta = unname(block.contrasts)
@@ -188,7 +119,7 @@ res = foreach(
     contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
     # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
     #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / 4)
+    block.contrasts = which(sapply(contrast.vars, length) == p / num.blocks)
     # pick one such contrast
     if(length(block.contrasts) < 2){
       stop("need at least 2 contrasts corresponding to two separate blocks")

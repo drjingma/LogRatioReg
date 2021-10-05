@@ -54,7 +54,7 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "lin14Sigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "sparse" 
+  theta.settings = "dense" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "sparse" => j = p - 1
   # "multsparse" = c(p - 3:1)

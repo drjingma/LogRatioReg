@@ -17,13 +17,13 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "pairperblock" # "dense", "sparse", "both", "multsparse"
+theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks", "1block", "2blocks2contrasts"
 # if "2blockSigma" then "dense"
 # if "10blockSigma", then "pairperblock"
-# if "lin14Sigma" then "sparse" or "dense"
+# if "lin14Sigma" then "sparse" or "dense" or "multsparse"
 linkage = "average"
 tol = 1e-4
 nlam = 200
@@ -34,7 +34,7 @@ p = 200
 rho = 0.2 # 0.2, 0.5
 cor_ij = 0.2 # 0.2, 0.5
 scaling = TRUE
-sigma_eps = 0.5 # 0.1, 0.5
+sigma_eps = 0.1  # 0.1, 0.5
 
 if(sigma.settings == "lin14Sigma"){
   file.end = paste0( # for old simulations
@@ -123,7 +123,7 @@ for(i in 1:numSims){
   if(has.coat){
     # coat
     coat.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/oracle_metrics", i, file.end
+      output_dir, "/coat_metrics", i, file.end
     ))))
     rownames(coat.sim.tmp) = NULL
     coat.sims.list[[i]] = data.table(coat.sim.tmp)
@@ -133,7 +133,7 @@ cl.sims = as.data.frame(rbindlist(cl.sims.list))
 slr.sims = as.data.frame(rbindlist(slr.sims.list))
 if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
 if(has.oracle) or.sims = as.data.frame(rbindlist(or.sims.list))
-if(has.oracle) coat.sims = as.data.frame(rbindlist(coat.sims.list))
+if(has.coat) coat.sims = as.data.frame(rbindlist(coat.sims.list))
 
 # summary stats for classo metrics
 cl.eval.means = apply(cl.sims, 2, mean)
@@ -303,6 +303,12 @@ if(has.oracle){
   or.TPR.mat = matrix(NA, nlam, numSims)
   or.S.hat.mat = matrix(NA, nlam, numSims)
 }
+if(has.oracle){
+  # coat
+  coat.roc.list = list()
+  coat.TPR.mat = matrix(NA, nlam, numSims)
+  coat.S.hat.mat = matrix(NA, nlam, numSims)
+}
 for(i in 1:numSims){
   # cl
   cl.sim.tmp = readRDS(paste0(
@@ -327,6 +333,15 @@ for(i in 1:numSims){
     or.TPR.mat[, i] = or.sim.tmp["tpr", ]
     or.S.hat.mat[, i] = or.sim.tmp["S_hat", ]
   }
+  if(has.coat){
+    # oracle
+    coat.sim.tmp = readRDS(paste0(
+      output_dir, "/coat_roc", i, file.end
+    ))
+    coat.roc.list[[i]] = coat.sim.tmp
+    coat.TPR.mat[, i] = coat.sim.tmp["tpr", ]
+    coat.S.hat.mat[, i] = coat.sim.tmp["S_hat", ]
+  }
 }
 
 # average over each possible S.hat value
@@ -339,16 +354,25 @@ if(has.oracle){
   or.TPR.vec = as.vector(or.TPR.mat)
   or.S.hat.vec = as.vector(or.S.hat.mat)
 }
+if(has.coat){
+  coat.TPR.vec = as.vector(coat.TPR.mat)
+  coat.S.hat.vec = as.vector(coat.S.hat.mat)
+}
 
 # get the averages
-if(has.oracle){
+S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec)))
+if(has.oracle & !has.coat){
   S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec, or.S.hat.vec)))
+} else if(has.oracle & has.coat){
+  S.hat.vals = sort(unique(c(
+    cl.S.hat.vec, slr.S.hat.vec, or.S.hat.vec, coat.S.hat.vec)))
 } else{
-  S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec)))
+  stop("!has.oracle & has.coat is true, but this case is missing")
 }
 cl.tpr.avg = rep(NA, length(S.hat.vals))
 slr.tpr.avg = rep(NA, length(S.hat.vals))
 if(has.oracle) or.tpr.avg = rep(NA, length(S.hat.vals))
+if(has.coat) coat.tpr.avg = rep(NA, length(S.hat.vals))
 for(i in 1:length(S.hat.vals)){
   val.tmp = S.hat.vals[i]
   # classo
@@ -357,9 +381,16 @@ for(i in 1:length(S.hat.vals)){
   # slr
   slr.which.idx.tmp = which(slr.S.hat.vec == val.tmp)
   slr.tpr.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp])
-  # oracle
-  or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
-  or.tpr.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
+  if(has.oracle){
+    # oracle
+    or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
+    or.tpr.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
+  }
+  if(has.coat){
+    # coat
+    coat.which.idx.tmp = which(coat.S.hat.vec == val.tmp)
+    coat.tpr.avg[i] = mean(coat.TPR.vec[coat.which.idx.tmp])
+  }
 }
 
 # plot
@@ -373,6 +404,11 @@ if(has.oracle){
   data.gg = rbind(
     data.gg, 
     data.frame(S_hat = S.hat.vals, TPR = or.tpr.avg, Method = "oracle"))
+}
+if(has.coat){
+  data.gg = rbind(
+    data.gg, 
+    data.frame(S_hat = S.hat.vals, TPR = coat.tpr.avg, Method = "coat"))
 }
 data.gg$Method = factor(data.gg$Method, levels = levels.gg)
 ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 

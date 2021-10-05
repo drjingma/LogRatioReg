@@ -1,7 +1,7 @@
 rm(list=ls())
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 09/23/2021
+# Date: 10/04/2021
 
 ################################################################################
 # libraries and settings
@@ -17,11 +17,12 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, lin14Sigma
+sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1block" # "dense", "sparse", "both", "multsparse"
+theta.settings = "pairperblock" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks", "1block", "2blocks2contrasts"
 # if "2blockSigma" then "dense"
+# if "10blockSigma", then "pairperblock"
 # if "lin14Sigma" then "sparse" or "dense"
 linkage = "average"
 tol = 1e-4
@@ -33,7 +34,7 @@ p = 200
 rho = 0.2 # 0.2, 0.5
 cor_ij = 0.2 # 0.2, 0.5
 scaling = TRUE
-sigma_eps = 0.5 # 0.01, 0.5
+sigma_eps = 0.5 # 0.1, 0.5
 
 if(sigma.settings == "lin14Sigma"){
   file.end = paste0( # for old simulations
@@ -62,9 +63,13 @@ if(sigma.settings == "lin14Sigma"){
 }
 
 has.selbal = FALSE
+has.coat = FALSE
 has.oracle = TRUE
 if(FALSE){
   has.selbal = TRUE
+}
+if(sigma.settings == "10blockSigma"){
+  has.coat = TRUE
 }
 # if(theta.settings %in% c("block", "pairblock")){
 #   has.oracle = TRUE
@@ -85,6 +90,7 @@ cl.sims.list = list()
 slr.sims.list = list()
 if(has.selbal) selbal.sims.list = list()
 if(has.oracle) or.sims.list = list()
+if(has.coat) coat.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
@@ -114,11 +120,20 @@ for(i in 1:numSims){
     rownames(or.sim.tmp) = NULL
     or.sims.list[[i]] = data.table(or.sim.tmp)
   }
+  if(has.coat){
+    # coat
+    coat.sim.tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/oracle_metrics", i, file.end
+    ))))
+    rownames(coat.sim.tmp) = NULL
+    coat.sims.list[[i]] = data.table(coat.sim.tmp)
+  }
 }
 cl.sims = as.data.frame(rbindlist(cl.sims.list))
 slr.sims = as.data.frame(rbindlist(slr.sims.list))
 if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
 if(has.oracle) or.sims = as.data.frame(rbindlist(or.sims.list))
+if(has.oracle) coat.sims = as.data.frame(rbindlist(coat.sims.list))
 
 # summary stats for classo metrics
 cl.eval.means = apply(cl.sims, 2, mean)
@@ -156,6 +171,16 @@ if(has.oracle){
   # print(or.summaries[metrics, c("mean", "se")])
 }
 
+if(has.coat){
+  # summary stats for oracle metrics
+  coat.eval.means = apply(coat.sims, 2, mean)
+  coat.eval.sds = apply(coat.sims, 2, sd)
+  coat.eval.ses = coat.eval.sds / sqrt(numSims)
+  coat.summaries = data.frame(
+    "mean" = coat.eval.means, "sd" = coat.eval.sds, "se" = coat.eval.ses)
+  # print(coat.summaries[metrics, c("mean", "se")])
+}
+
 # boxplots for the slr and classo metrics
 cl.sims.gg = reshape2::melt(cl.sims)
 cl.sims.gg$Method = "classo"
@@ -169,6 +194,10 @@ if(has.oracle){
   or.sims.gg = reshape2::melt(or.sims)
   or.sims.gg$Method = "oracle"
 }
+if(has.coat){
+  coat.sims.gg = reshape2::melt(coat.sims)
+  coat.sims.gg$Method = "coat"
+}
 data.gg = rbind(cl.sims.gg, slr.sims.gg)
 levels.gg = c("classo", "slr")
 if(has.oracle){
@@ -178,6 +207,10 @@ if(has.oracle){
 if(has.selbal){
   data.gg = rbind(data.gg, selbal.sims.gg)
   levels.gg = c(levels.gg, "selbal")
+}
+if(has.coat){
+  data.gg = rbind(data.gg, coat.sims.gg)
+  levels.gg = c(levels.gg, "coat")
 }
 
 if(!is.null(metric_names)){
@@ -199,7 +232,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 if(sigma.settings == "lin14Sigma"){
   ggsave(
     filename = paste0(
-      "20210927_", 
+      "20211004_", 
       sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_metrics.pdf"),
     plot = last_plot(),
@@ -208,8 +241,8 @@ if(sigma.settings == "lin14Sigma"){
 } else{
   ggsave(
     filename = paste0(
-      "20210927_", 
-      sigma.settings, "_noise", sigma_eps, "_cor", cor_ij,
+      "20211004_", 
+      sigma.settings, "_noise", sigma_eps,
       "_", theta.settings, "_metrics.pdf"),
     plot = last_plot(),
     width = 8, height = 5, units = c("in")
@@ -350,7 +383,7 @@ ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) +
 if(sigma.settings == "lin14Sigma"){
   ggsave(
     filename = paste0(
-      "20210927_", 
+      "20211004_", 
       sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_roc.pdf"),
     plot = last_plot(),
@@ -359,8 +392,8 @@ if(sigma.settings == "lin14Sigma"){
 } else{
   ggsave(
     filename = paste0(
-      "20210927_", 
-      sigma.settings, "_noise", sigma_eps, "_cor", cor_ij,
+      "20211004_", 
+      sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_roc.pdf"),
     plot = last_plot(),
     width = 8, height = 5, units = c("in")

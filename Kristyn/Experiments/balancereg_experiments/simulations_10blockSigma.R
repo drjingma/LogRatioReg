@@ -91,10 +91,20 @@ res = foreach(
     contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
     # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
     #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / num.blocks)
+    block.contrasts = which(sapply(contrast.vars, length) == 2)
     # pick one such contrast
-    if(length(block.contrasts) == 10){
-      indices.theta = unname(block.contrasts)
+    if(length(block.contrasts) >= num.blocks){
+      block.contrasts.pairs = do.call(rbind, contrast.vars[block.contrasts])
+      block.labels = cut(1:p, num.blocks)
+      indices.theta = rep(NA, num.blocks)
+      for(i in 1:num.blocks){
+        pairs.in.block.i = apply(
+          block.contrasts.pairs, 1, FUN = function(x) all(
+          as.numeric(x) %in% ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
+        contrasts.block.i = block.contrasts[pairs.in.block.i]
+        indices.theta[i] = sample(contrasts.block.i, 1)
+      }
+      # SBP[, indices.theta]
     } else{
       stop("there aren't 10 different contrasts corresponding to different pairs in each block!")
     }

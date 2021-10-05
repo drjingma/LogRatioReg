@@ -19,7 +19,7 @@ rng.seed = 123
 # Settings to toggle with
 sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
+theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks", "1block", "2blocks2contrasts"
 # if "2blockSigma" then "dense"
 # if "10blockSigma", then "pairperblock"
@@ -79,10 +79,12 @@ if(sigma.settings == "10blockSigma"){
 # plot metrics
 
 metric_names = NULL
-# metrics_names = c(
-#   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing", 
-#   "betaSparsity")
-# metrics_names = c(
+if(theta.settings == "dense"){
+  metric_names = c(
+    "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
+    "Fscore", "timing", "betaSparsity")
+}
+# metric_names = c(
 #   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing")
 
 # import metrics
@@ -214,7 +216,7 @@ if(has.coat){
 }
 
 if(!is.null(metric_names)){
-  data.gg = dplyr::filter(data.gg, variable %in% metrics_names)
+  data.gg = dplyr::filter(data.gg, variable %in% metric_names)
 }
 data.gg$Method = factor(data.gg$Method, levels = levels.gg)
 

@@ -1,7 +1,7 @@
 rm(list=ls())
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Date: 10/04/2021
+# Date: 10/11/2021
 
 ################################################################################
 # libraries and settings

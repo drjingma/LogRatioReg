@@ -38,8 +38,9 @@ roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
   FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
   tpr <- TP/(TP + FN)
   S_hat <- sum((abs(beta_hat) > eps))
-  out <- c(S_hat,tpr)
-  names(out) <- c('S_hat','tpr')
+  # out <- c(S_hat,tpr)
+  # names(out) <- c('S_hat','tpr')
+  out = c("S_hat" = S_hat, "tpr" = tpr, "TP" = TP)
   return(out)
 }
 roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
@@ -59,7 +60,8 @@ roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
   S0 <- names(which((abs(beta) > eps)))
   TP <- intersect(S_hat, S0)
   tpr <- length(TP)/length(S0)
-  out <- c(length(S_hat),tpr)
-  names(out) <- c('S_hat','tpr')
+  # out <- c(length(S_hat),tpr)
+  # names(out) <- c('S_hat','tpr')
+  out = c("S_hat" = S_hat, "tpr" = tpr, "TP" = TP)
   return(out)
 }

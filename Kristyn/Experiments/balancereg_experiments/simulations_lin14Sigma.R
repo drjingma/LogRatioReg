@@ -56,7 +56,7 @@ res = foreach(
   theta.settings = "multsparse" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "multsparse" = c(p - 3:1)
-  mu.settings = "matchbeta"
+  mu.settings = ""  # "matchbeta"
   # "matchbeta" => mu = log(p) for all j s.t. beta_j \neq 0, 0 o\w
   # otherwise, leave it at c(mu = rep(log(p), 5), rep(0, p - 5))
   values.theta = 1

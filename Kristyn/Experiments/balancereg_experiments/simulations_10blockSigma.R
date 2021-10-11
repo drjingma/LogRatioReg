@@ -55,7 +55,7 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "10blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "2blockpairs4halves"  
+  theta.settings = "1blockpair4halves"  
   # "pairperblock" => choose j corresp. to one pair of covariates for each block
   # "2blockpairs4halves" => 
   #   2 contrasts corresponding to 2 blocks each (accounts for 4 blocks so far), 
@@ -88,10 +88,8 @@ res = foreach(
   # sbp.fromHclust(SigmaWtree)
   
   # theta settings
-  if(theta.settings == "dense"){
-    indices.theta = 1
-  } else if(theta.settings == "pairperblock"){
-    SBP = sbp.fromHclust(SigmaWtree)
+  SBP = sbp.fromHclust(SigmaWtree)
+  if(theta.settings == "pairperblock"){
     # for each column (contrast), find which variables are included (1 or -1)
     contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
     # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
@@ -113,6 +111,24 @@ res = foreach(
     } else{
       stop("there aren't 10 different contrasts corresponding to different pairs in each block!")
     }
+  } else if(theta.settings == "1blockpair4halves"){
+    # "1blockpair4halves" => 
+    #   1 contrast corresponding to 2 blocks (accounts for 2 blocks so far), 
+    #   4 contrasts, each corresponding to half (or approx. half) of the vars 
+    #     in 4 different blocks (accounts for 8 blocks so far), and 
+    #   the other 4 blocks with inactive vars (i.e. not in any of the 
+    #     selected contrasts).
+    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
+    # get the 1 contrast corresponding to 2 blocks
+    block.contrasts.1blockpair = which(
+      sapply(contrast.vars, length) == 2 * (p / num.blocks))
+    indices.theta1 = unname(block.contrasts.1blockpair)
+    # get the 4 contrasts, each corresponding to half (or approx. half) of the 
+    #   vars in 4 different blocks
+    block.contrasts.halves = which(
+      sapply(contrast.vars, length) == 9) # 0.5 * (p / num.blocks))
+    indices.theta2 = unname(sample(block.contrasts.halves, 4))
+    indices.theta = c(indices.theta1, indices.theta2)
   } else{
     stop("invalid theta.settings")
   }

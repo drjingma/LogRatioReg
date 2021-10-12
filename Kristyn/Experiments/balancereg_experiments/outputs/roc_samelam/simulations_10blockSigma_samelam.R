@@ -233,12 +233,12 @@ res = foreach(
   }
   
   # lambda min and max values
-  cl.bounds = c(min(cl.lams.mat), max(cl.lams.mat))
-  slr.bounds = c(min(slr.lams.mat), max(slr.lams.mat))
-  # selbal.bounds = c(min(has.selbal), max(has.selbal))
-  or.bounds = c(min(or.lams.mat), max(or.lams.mat))
-  # coat.bounds = c(min(coat.lams), max(coat.lams))
-  pr.bounds = c(min(pr.lams.mat), max(pr.lams.mat))
+  cl.bounds = log(c(min(cl.lams.mat), max(cl.lams.mat)))
+  slr.bounds = log(c(min(slr.lams.mat), max(slr.lams.mat)))
+  # selbal.bounds = log(c(min(has.selbal), max(has.selbal)))
+  or.bounds = log(c(min(or.lams.mat), max(or.lams.mat)))
+  # coat.bounds = log(c(min(coat.lams), max(coat.lams)))
+  pr.bounds = log(c(min(pr.lams.mat), max(pr.lams.mat)))
   
   # new lambda sequences, one for each method
   cl.lambda.seq = exp(seq(max(cl.bounds), min(cl.bounds),length.out = nlam))

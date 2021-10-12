@@ -363,29 +363,29 @@ res = foreach(
   # oracle method
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/or_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/or_timing", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/oracle_model", b, file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/oracle_timing", b, file.end))){
     or.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
     start.time = Sys.time()
     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
                    nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(oracle, paste0(output_dir, "/models", "/or_model", b, file.end))
+    saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", b, file.end))
     
     # timing metric
     or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
     saveRDS(
       or.timing, 
-      paste0(output_dir, "/timing", "/or_timing", b, file.end))
+      paste0(output_dir, "/timing", "/oracle_timing", b, file.end))
   } else{
     or.model.already.existed = TRUE
-    oracle = readRDS(paste0(output_dir, "/models", "/or_model", b, file.end))
+    oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", b, file.end))
     or.timing = readRDS(paste0(
-      output_dir, "/timing", "/or_timing", b, file.end))
+      output_dir, "/timing", "/oracle_timing", b, file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/or_metrics", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/metrics", "/oracle_metrics", b, file.end)) | 
      or.model.already.existed == FALSE){
     
     # binary tree

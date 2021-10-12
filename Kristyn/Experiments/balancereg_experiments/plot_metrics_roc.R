@@ -20,11 +20,11 @@ rng.seed = 123
 sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
 theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
-# if "4blockSigma", then "2blocks", "1block", "2blocks2contrasts"
 # if "2blockSigma" then "dense"
-# if "10blockSigma", then "pairperblock"
+# if "4blockSigma", then "2blocks"
+# if "10blockSigma", then "pairperblock" or "1blockpair4halves"
 # if "lin14Sigma" then "sparse" or "dense" or "multsparse"
-mu.settings = "matchbeta"
+mu.settings = "" # matchbeta
 linkage = "average"
 tol = 1e-4
 nlam = 200
@@ -85,7 +85,7 @@ if(FALSE){
   has.selbal = TRUE
 }
 if(sigma.settings == "10blockSigma"){
-  has.coat = TRUE
+  has.coat = FALSE
 }
 # if(theta.settings %in% c("block", "pairblock")){
 #   has.oracle = TRUE
@@ -247,12 +247,12 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
   theme_bw() + 
   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
         axis.title.y = element_blank())
-if(sigma.settings == "lin14Sigma"){
+if(sigma.settings == "lin14Sigma" & mu.settings == "matchbeta"){
   ggsave(
     filename = paste0(
       "20211011_", 
       sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_metrics.pdf"),
+      "_", theta.settings, "_", mu.settings, "_metrics.pdf"),
     plot = last_plot(),
     width = 8, height = 5, units = c("in")
   )
@@ -339,6 +339,7 @@ for(i in 1:numSims){
   cl.roc.list[[i]] = cl.sim.tmp
   cl.TPR.mat[, i] = cl.sim.tmp["tpr", ]
   cl.S.hat.mat[, i] = cl.sim.tmp["S_hat", ]
+  cl.TP.mat[, i] = cl.sim.tmp["TP", ]
   # slr
   slr.sim.tmp = readRDS(paste0(
     output_dir, "/roccurves", "/slr_roc", i, file.end
@@ -346,6 +347,7 @@ for(i in 1:numSims){
   slr.roc.list[[i]] = slr.sim.tmp
   slr.TPR.mat[, i] = slr.sim.tmp["tpr", ]
   slr.S.hat.mat[, i] = slr.sim.tmp["S_hat", ]
+  slr.TP.mat[, i] = slr.sim.tmp["TP", ]
   if(has.oracle){
     # oracle
     or.sim.tmp = readRDS(paste0(
@@ -354,6 +356,7 @@ for(i in 1:numSims){
     or.roc.list[[i]] = or.sim.tmp
     or.TPR.mat[, i] = or.sim.tmp["tpr", ]
     or.S.hat.mat[, i] = or.sim.tmp["S_hat", ]
+    or.TP.mat[, i] = or.sim.tmp["TP", ]
   }
   if(has.coat){
     # oracle
@@ -363,22 +366,27 @@ for(i in 1:numSims){
     coat.roc.list[[i]] = coat.sim.tmp
     coat.TPR.mat[, i] = coat.sim.tmp["tpr", ]
     coat.S.hat.mat[, i] = coat.sim.tmp["S_hat", ]
+    coat.TP.mat[, i] = coat.sim.tmp["TP", ]
   }
 }
 
-# average over each possible S.hat value
+# average over each possible S.hat/TP value
 # stack columns so which() is more interpretable
 cl.TPR.vec = as.vector(cl.TPR.mat)
 cl.S.hat.vec = as.vector(cl.S.hat.mat)
+cl.TP.vec = as.vector(cl.TP.mat)
 slr.TPR.vec = as.vector(slr.TPR.mat)
 slr.S.hat.vec = as.vector(slr.S.hat.mat)
+slr.TP.vec = as.vector(slr.TP.mat)
 if(has.oracle){
   or.TPR.vec = as.vector(or.TPR.mat)
   or.S.hat.vec = as.vector(or.S.hat.mat)
+  or.TP.vec = as.vector(or.TP.mat)
 }
 if(has.coat){
   coat.TPR.vec = as.vector(coat.TPR.mat)
   coat.S.hat.vec = as.vector(coat.S.hat.mat)
+  coat.TP.vec = as.vector(coat.TP.mat)
 }
 
 # get the averages
@@ -391,59 +399,79 @@ if(has.oracle & !has.coat){
 } else{
   stop("!has.oracle & has.coat is true, but this case is missing")
 }
-cl.tpr.avg = rep(NA, length(S.hat.vals))
-slr.tpr.avg = rep(NA, length(S.hat.vals))
-if(has.oracle) or.tpr.avg = rep(NA, length(S.hat.vals))
-if(has.coat) coat.tpr.avg = rep(NA, length(S.hat.vals))
+cl.TPR.avg = rep(NA, length(S.hat.vals))
+cl.TP.avg = rep(NA, length(S.hat.vals))
+slr.TPR.avg = rep(NA, length(S.hat.vals))
+slr.TP.avg = rep(NA, length(S.hat.vals))
+if(has.oracle){
+  or.TPR.avg = rep(NA, length(S.hat.vals))
+  or.TP.avg = rep(NA, length(S.hat.vals))
+}
+if(has.coat){
+  coat.TPR.avg = rep(NA, length(S.hat.vals))
+  coat.TP.avg = rep(NA, length(S.hat.vals))
+}
 for(i in 1:length(S.hat.vals)){
   val.tmp = S.hat.vals[i]
   # classo
   cl.which.idx.tmp = which(cl.S.hat.vec == val.tmp)
-  cl.tpr.avg[i] = mean(cl.TPR.vec[cl.which.idx.tmp])
+  cl.TPR.avg[i] = mean(cl.TPR.vec[cl.which.idx.tmp])
+  cl.TP.avg[i] = mean(cl.TP.vec[cl.which.idx.tmp])
   # slr
   slr.which.idx.tmp = which(slr.S.hat.vec == val.tmp)
-  slr.tpr.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp])
+  slr.TPR.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp])
+  slr.TP.avg[i] = mean(slr.TP.vec[slr.which.idx.tmp])
   if(has.oracle){
     # oracle
     or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
-    or.tpr.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
+    or.TPR.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
+    or.TP.avg[i] = mean(or.TP.vec[or.which.idx.tmp])
   }
   if(has.coat){
     # coat
     coat.which.idx.tmp = which(coat.S.hat.vec == val.tmp)
-    coat.tpr.avg[i] = mean(coat.TPR.vec[coat.which.idx.tmp])
+    coat.TPR.avg[i] = mean(coat.TPR.vec[coat.which.idx.tmp])
+    coat.TP.avg[i] = mean(coat.TP.vec[coat.which.idx.tmp])
   }
 }
 
 # plot
-# plot(S.hat.vals, cl.tpr.avg, type = "l", col = 2)
-# lines(S.hat.vals, slr.tpr.avg, col = 3)
 data.gg = rbind(
-  data.frame(S_hat = S.hat.vals, TPR = cl.tpr.avg, Method = "classo"), 
-  data.frame(S_hat = S.hat.vals, TPR = slr.tpr.avg, Method = "slr")
+  data.frame(
+    S_hat = S.hat.vals, TPR = cl.TPR.avg, TP = cl.TP.avg, Method = "classo"), 
+  data.frame(
+    S_hat = S.hat.vals, TPR = slr.TPR.avg, TP = slr.TP.avg, Method = "slr")
 )
 if(has.oracle){
   data.gg = rbind(
     data.gg, 
-    data.frame(S_hat = S.hat.vals, TPR = or.tpr.avg, Method = "oracle"))
+    data.frame(
+      S_hat = S.hat.vals, TPR = or.TPR.avg, TP = or.TP.avg, Method = "oracle"))
 }
 if(has.coat){
   data.gg = rbind(
     data.gg, 
-    data.frame(S_hat = S.hat.vals, TPR = coat.tpr.avg, Method = "coat"))
+    data.frame(
+      S_hat = S.hat.vals, TPR = coat.TPR.avg, TP = coat.TP.avg, Method = "coat"))
 }
 data.gg$Method = factor(data.gg$Method, levels = levels.gg)
-ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
+tp_roc = ggplot(
+  data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TP, color = Method)) + 
   geom_line(alpha = 0.5, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) +
-  # xlim(0, 40) +
   theme_bw()
-if(sigma.settings == "lin14Sigma"){
+tpr_roc = ggplot(
+  data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
+  geom_line(alpha = 0.5, na.rm = TRUE) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  theme_bw()
+ggarrange(tp_roc, tpr_roc)
+if(sigma.settings == "lin14Sigma" & mu.settings == "matchbeta"){
   ggsave(
     filename = paste0(
       "20211011_", 
       sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_roc.pdf"),
+      "_", theta.settings, "_", mu.settings, "_rocs.pdf"),
     plot = last_plot(),
     width = 8, height = 5, units = c("in")
   )
@@ -452,7 +480,7 @@ if(sigma.settings == "lin14Sigma"){
     filename = paste0(
       "20211011_", 
       sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_roc.pdf"),
+      "_", theta.settings, "_rocs.pdf"),
     plot = last_plot(),
     width = 8, height = 5, units = c("in")
   )

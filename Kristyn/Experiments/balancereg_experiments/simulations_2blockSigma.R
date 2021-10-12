@@ -556,7 +556,7 @@ res = foreach(
     pr.roc <- apply(pr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, pr.SBP))
     
-    saveRDS(or.roc, paste0(output_dir, "/roccurves", "/propr_roc", b, file.end))
+    saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", b, file.end))
   }
 }
 

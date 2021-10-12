@@ -68,7 +68,7 @@ res = foreach(
   values.theta = 1
   linkage = "average"
   tol = 1e-4
-  nlam = 200
+  nlam = 100
   intercept = TRUE
   K = 10
   n = 100
@@ -167,15 +167,14 @@ res = foreach(
   muW = c(rep(log(p), 5), rep(0, p - 5))
   
   file.end = paste0(
-    "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
+    "_dim", n, "x", p, 
     "_noise", sigma_eps,
     "_cor", cor_ij, 
     "_int", intercept,
     "_scale", scaling,
-    "_K", K,
-    "_seed", rng.seed,
+    "_sim", b,
     ".rds")
   
   ##############################################################################
@@ -214,22 +213,22 @@ res = foreach(
     slr.lams.mat[, i] = readRDS(
       paste0(output_dir, "/models", "/slr_model", i, file.end
       ))$lambda
-      # # selbal
-      # selbal.lams.mat[, i] = readRDS(
-      #   paste0(output_dir, "/models", "/selbal_model", i, file.end
-      #   ))$lambda
-      # oracle
+    # # selbal
+    # selbal.lams.mat[, i] = readRDS(
+    #   paste0(output_dir, "/models", "/selbal_model", i, file.end
+    #   ))$lambda
+    # oracle
     or.lams.mat[, i] = readRDS(
-        paste0(output_dir, "/models", "/oracle_model", i, file.end
-        ))$lambda
-      # # coat
-      # coat.lams.mat[, i] = readRDS(
-      #   paste0(output_dir, "/models", "/coat_model", i, file.end
-      #   ))$lambda
-      # propr
-      pr.lams.mat[, i] = readRDS(
-        paste0(output_dir, "/models", "/propr_model", i, file.end
-        ))$lambda
+      paste0(output_dir, "/models", "/oracle_model", i, file.end
+      ))$lambda
+    # # coat
+    # coat.lams.mat[, i] = readRDS(
+    #   paste0(output_dir, "/models", "/coat_model", i, file.end
+    #   ))$lambda
+    # propr
+    pr.lams.mat[, i] = readRDS(
+      paste0(output_dir, "/models", "/propr_model", i, file.end
+      ))$lambda
   }
   
   # lambda min and max values
@@ -253,7 +252,7 @@ res = foreach(
   ##############################################################################
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/models_samelam", "/slr_model", b, file.end))){
+    output_dir, "/roc_samelam/models_samelam", "/slr_model", file.end))){
     slr.model.already.existed = FALSE
     # apply supervised log-ratios, using CV to select lambda
     slr = cvSLR(
@@ -262,18 +261,18 @@ res = foreach(
     saveRDS(
       slr, 
       paste0(
-        output_dir, "/roc_samelam/models_samelam", "/slr_model", b, file.end))
+        output_dir, "/roc_samelam/models_samelam", "/slr_model", file.end))
   } else{
     slr.model.already.existed = TRUE
     slr = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/slr_model", b, file.end))
+      output_dir, "/roc_samelam/models_samelam", "/slr_model", file.end))
   }
   
   slr.btree = slr$btree
   slr.SBP = sbp.fromHclust(slr.btree)
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", b, file.end)) |
+    output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", file.end)) |
     slr.model.already.existed == FALSE){
     # roc
     slr.roc <- apply(slr$bet, 2, function(a)
@@ -282,7 +281,7 @@ res = foreach(
     slr.roc$lambda = slr.lambda.seq
     
     saveRDS(slr.roc, paste0(
-      output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", b, file.end))
+      output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", file.end))
   }
   
   ##############################################################################
@@ -290,22 +289,22 @@ res = foreach(
   ##############################################################################
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/models_samelam", "/classo_model", b, file.end))){
+    output_dir, "/roc_samelam/models_samelam", "/classo_model", file.end))){
     cl.model.already.existed = FALSE
     # apply compositional lasso, using CV to select lambda
     classo = cv.func(
       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), lambda = cl.lambda.seq, 
       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
     saveRDS(classo, paste0(
-      output_dir, "/roc_samelam/models_samelam", "/classo_model", b, file.end))
+      output_dir, "/roc_samelam/models_samelam", "/classo_model", file.end))
   } else{
     cl.model.already.existed = TRUE
     classo = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/classo_model", b, file.end))
+      output_dir, "/roc_samelam/models_samelam", "/classo_model", file.end))
   }
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", b, file.end)) |
+    output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", file.end)) |
     cl.model.already.existed == FALSE){
     # roc
     cl.roc <- apply(classo$bet, 2, function(a)
@@ -314,7 +313,7 @@ res = foreach(
     cl.roc$lambda = cl.lambda.seq
     
     saveRDS(cl.roc, paste0(
-      output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", b, file.end))
+      output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", file.end))
   }
   
   ##############################################################################
@@ -322,17 +321,17 @@ res = foreach(
   ##############################################################################
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/models_samelam", "/oracle_model", b, file.end))){
+    output_dir, "/roc_samelam/models_samelam", "/oracle_model", file.end))){
     or.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, lambda = or.lambda.seq, 
                    nfolds = K, intercept = intercept, standardize = scaling)
     saveRDS(oracle, paste0(
-      output_dir, "/roc_samelam/models_samelam", "/oracle_model", b, file.end))
+      output_dir, "/roc_samelam/models_samelam", "/oracle_model", file.end))
   } else{
     or.model.already.existed = TRUE
     oracle = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/oracle_model", b, file.end))
+      output_dir, "/roc_samelam/models_samelam", "/oracle_model", file.end))
   }
   
   or.btree = SigmaWtree
@@ -340,7 +339,7 @@ res = foreach(
   row.names(or.SBP) = colnames(W)
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", b, file.end)) |
+    output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", file.end)) |
     or.model.already.existed == FALSE){
     # roc
     or.roc <- apply(oracle$bet, 2, function(a)
@@ -349,7 +348,7 @@ res = foreach(
     or.roc$lambda = or.lambda.seq
     
     saveRDS(or.roc, paste0(
-      output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", b, file.end))
+      output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", file.end))
   }
   
   ##############################################################################
@@ -357,7 +356,7 @@ res = foreach(
   ##############################################################################
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/models_samelam", "/propr_model", b, file.end))){
+    output_dir, "/roc_samelam/models_samelam", "/propr_model", file.end))){
     pr.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
     pr <- propr(X, metric = "phs")
@@ -365,18 +364,18 @@ res = foreach(
     pr = cvILR(y = Y, X = X, btree = pr.tree, lambda = pr.lambda.seq, 
                nfolds = K, intercept = intercept, standardize = scaling)
     saveRDS(pr, paste0(
-      output_dir, "/roc_samelam/models_samelam", "/propr_model", b, file.end))
+      output_dir, "/roc_samelam/models_samelam", "/propr_model", file.end))
   } else{
     pr.model.already.existed = TRUE
     pr = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/propr_model", b, file.end))
+      output_dir, "/roc_samelam/models_samelam", "/propr_model", file.end))
   }
   
   pr.btree = pr$btree
   pr.SBP = sbp.fromHclust(pr.btree)
   
   if(!file.exists(paste0(
-    output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", b, file.end)) |
+    output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end)) |
     pr.model.already.existed == FALSE){
     # roc
     pr.roc <- apply(pr$bet, 2, function(a)
@@ -385,15 +384,26 @@ res = foreach(
     pr.roc$lambda = pr.lambda.seq
     
     saveRDS(pr.roc, paste0(
-      output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", b, file.end))
+      output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end))
   }
+  
+  # if(!file.exists(paste0(
+  #   output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end)) | 
+  #    pr.model.already.existed == FALSE){
+  #   # roc
+  #   pr.roc <- apply(pr$bet, 2, function(a) 
+  #     roc.for.coef.LR(a, beta, pr.SBP))
+  #   
+  #   saveRDS(pr.roc, paste0(
+  #     output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end))
+  # }
   
   # ##############################################################################
   # # supervised log-ratios alpha = 0.5
   # ##############################################################################
   # 
   # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/models_samelam", "/slralpha0.5_model", b, file.end))){
+  #   output_dir, "/roc_samelam/models_samelam", "/slralpha0.5_model", file.end))){
   #   slr0.5.model.already.existed = FALSE
   #   # apply supervised log-ratios, using CV to select lambda
   #   alpha = 0.5
@@ -402,27 +412,26 @@ res = foreach(
   #     intercept = intercept, rho.type = rho.type, linkage = linkage, 
   #     scaling = scaling)
   #   saveRDS(slr0.5, paste0(
-  #     output_dir, "/roc_samelam/models_samelam", "/slralpha0.5_model", b, file.end))
+  #     output_dir, "/roc_samelam/models_samelam", "/slralpha0.5_model", file.end))
   # } else{
   #   slr0.5.model.already.existed = TRUE
   #   slr0.5 = readRDS(paste0(
-  #     output_dir, "/roc_samelam/models_samelam", "/slralpha0.5_model", b, file.end))
+  #     output_dir, "/roc_samelam/models_samelam", "/slralpha0.5_model", file.end))
   # }
   # 
   #   slr0.5.btree = slr0.5$btree
   #   slr0.5.SBP = sbp.fromHclust(slr0.5.btree)
   # 
   # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/roccurves_samelam", "/slralpha0.5_roc", b, file.end)) | 
+  #   output_dir, "/roc_samelam/roccurves_samelam", "/slralpha0.5_roc", file.end)) | 
   #    slr0.5.model.already.existed == FALSE){
   #   # roc
   #   slr0.5.roc <- apply(slr0.5$bet, 2, function(a) 
   #     roc.for.coef.LR(a, beta, slr0.5.SBP))
   #   
   #   saveRDS(slr0.5.roc, paste0(
-  #     output_dir, "/roc_samelam/roccurves_samelam", "/slralpha0.5_roc", b, file.end))
+  #     output_dir, "/roc_samelam/roccurves_samelam", "/slralpha0.5_roc", file.end))
   # }
-  
 }
 
 

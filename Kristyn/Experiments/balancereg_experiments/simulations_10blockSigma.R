@@ -68,7 +68,7 @@ res = foreach(
   values.theta = 1
   linkage = "average"
   tol = 1e-4
-  nlam = 200
+  nlam = 100
   intercept = TRUE
   K = 10
   n = 100
@@ -105,7 +105,7 @@ res = foreach(
       for(i in 1:num.blocks){
         pairs.in.block.i = apply(
           block.contrasts.pairs, 1, FUN = function(x) all(
-          as.numeric(x) %in% ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
+            as.numeric(x) %in% ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
         contrasts.block.i = block.contrasts[pairs.in.block.i]
         indices.theta[i] = sample(contrasts.block.i, 1)
       }
@@ -167,15 +167,14 @@ res = foreach(
   muW = c(rep(log(p), 5), rep(0, p - 5))
   
   file.end = paste0(
-    "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
+    "_dim", n, "x", p, 
     "_noise", sigma_eps,
     "_cor", cor_ij, 
     "_int", intercept,
     "_scale", scaling,
-    "_K", K,
-    "_seed", rng.seed,
+    "_sim", b,
     ".rds")
   
   ##############################################################################
@@ -199,8 +198,8 @@ res = foreach(
   # supervised log-ratios
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/slr_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/slr_timing", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/slr_model", file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/slr_timing", file.end))){
     slr.model.already.existed = FALSE
     # apply supervised log-ratios, using CV to select lambda
     start.time = Sys.time()
@@ -208,21 +207,21 @@ res = foreach(
       y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
       rho.type = rho.type, linkage = linkage, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(slr, paste0(output_dir, "/models", "/slr_model", b, file.end))
+    saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
     
     # timing metric
     slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
     saveRDS(
       slr.timing, 
-      paste0(output_dir, "/timing", "/slr_timing", b, file.end))
+      paste0(output_dir, "/timing", "/slr_timing", file.end))
   } else{
     slr.model.already.existed = TRUE
-    slr = readRDS(paste0(output_dir, "/models", "/slr_model", b, file.end))
+    slr = readRDS(paste0(output_dir, "/models", "/slr_model", file.end))
     slr.timing = readRDS(paste0(
-      output_dir, "/timing", "/slr_timing", b, file.end))
+      output_dir, "/timing", "/slr_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/slr_metrics", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/metrics", "/slr_metrics", file.end)) | 
      slr.model.already.existed == FALSE){
     
     # binary tree
@@ -283,27 +282,27 @@ res = foreach(
       "timing" = slr.timing,
       "betaSparsity" = bspars
     ), 
-    paste0(output_dir, "/metrics", "/slr_metrics", b, file.end))
+    paste0(output_dir, "/metrics", "/slr_metrics", file.end))
   } else{
     slr.btree = slr$btree
     slr.SBP = sbp.fromHclust(slr.btree)
   }
   
-  if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", file.end)) | 
      slr.model.already.existed == FALSE){
     # roc
     slr.roc <- apply(slr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, slr.SBP))
     
-    saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", b, file.end))
+    saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", file.end))
   }
   
   ##############################################################################
   # compositional lasso
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/classo_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/classo_timing", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/classo_model", file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/classo_timing", file.end))){
     cl.model.already.existed = FALSE
     # apply compositional lasso, using CV to select lambda
     start.time = Sys.time()
@@ -311,21 +310,21 @@ res = foreach(
       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
     end.time = Sys.time()
-    saveRDS(classo, paste0(output_dir, "/models", "/classo_model", b, file.end))
+    saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
     
     # timing metric
     cl.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
     saveRDS(
       cl.timing, 
-      paste0(output_dir, "/timing", "/classo_timing", b, file.end))
+      paste0(output_dir, "/timing", "/classo_timing", file.end))
   } else{
     cl.model.already.existed = TRUE
-    classo = readRDS(paste0(output_dir, "/models", "/classo_model", b, file.end))
+    classo = readRDS(paste0(output_dir, "/models", "/classo_model", file.end))
     cl.timing = readRDS(paste0(
-      output_dir, "/timing", "/classo_timing", b, file.end))
+      output_dir, "/timing", "/classo_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", file.end)) | 
      cl.model.already.existed == FALSE){
     
     # choose lambda
@@ -374,45 +373,45 @@ res = foreach(
       "timing" = cl.timing,
       "betaSparsity" = bspars
     ), 
-    paste0(output_dir, "/metrics", "/classo_metrics", b, file.end))
+    paste0(output_dir, "/metrics", "/classo_metrics", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/roccurves", "/classo_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roccurves", "/classo_roc", file.end)) | 
      cl.model.already.existed == FALSE){
     # roc
     cl.roc <- apply(classo$bet, 2, function(a) 
       roc.for.coef(a, beta))
     
-    saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", b, file.end))
+    saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", file.end))
   }
   
   ##############################################################################
   # oracle method
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/oracle_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/oracle_timing", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/oracle_model", file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/oracle_timing", file.end))){
     or.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
     start.time = Sys.time()
     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
                    nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", b, file.end))
+    saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
     
     # timing metric
     or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
     saveRDS(
       or.timing, 
-      paste0(output_dir, "/timing", "/oracle_timing", b, file.end))
+      paste0(output_dir, "/timing", "/oracle_timing", file.end))
   } else{
     or.model.already.existed = TRUE
-    oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", b, file.end))
+    oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", file.end))
     or.timing = readRDS(paste0(
-      output_dir, "/timing", "/oracle_timing", b, file.end))
+      output_dir, "/timing", "/oracle_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/oracle_metrics", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/metrics", "/oracle_metrics", file.end)) | 
      or.model.already.existed == FALSE){
     
     # binary tree
@@ -477,28 +476,28 @@ res = foreach(
       "timing" = or.timing,
       "betaSparsity" = bspars
     ), 
-    paste0(output_dir, "/metrics", "/oracle_metrics", b, file.end))
+    paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
   } else{
     or.btree = SigmaWtree
     or.SBP = sbp.fromHclust(or.btree)
     row.names(or.SBP) = colnames(W)
   }
   
-  if(!file.exists(paste0(output_dir, "/roccurves", "/oracle_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roccurves", "/oracle_roc", file.end)) | 
      or.model.already.existed == FALSE){
     # roc
     or.roc <- apply(oracle$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, or.SBP))
     
-    saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", b, file.end))
+    saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", file.end))
   }
   
   ##############################################################################
   # propr method
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/propr_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/propr_timing", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/propr_model", file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/propr_timing", file.end))){
     pr.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
     start.time = Sys.time()
@@ -507,21 +506,21 @@ res = foreach(
     pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
                nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(pr, paste0(output_dir, "/models", "/propr_model", b, file.end))
+    saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
     
     # timing metric
     pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
     saveRDS(
       pr.timing, 
-      paste0(output_dir, "/timing", "/propr_timing", b, file.end))
+      paste0(output_dir, "/timing", "/propr_timing", file.end))
   } else{
     pr.model.already.existed = TRUE
-    pr = readRDS(paste0(output_dir, "/models", "/propr_model", b, file.end))
+    pr = readRDS(paste0(output_dir, "/models", "/propr_model", file.end))
     pr.timing = readRDS(paste0(
-      output_dir, "/timing", "/propr_timing", b, file.end))
+      output_dir, "/timing", "/propr_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/propr_metrics", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/metrics", "/propr_metrics", file.end)) | 
      pr.model.already.existed == FALSE){
     
     # binary tree
@@ -585,125 +584,125 @@ res = foreach(
       "timing" = pr.timing,
       "betaSparsity" = bspars
     ), 
-    paste0(output_dir, "/metrics", "/propr_metrics", b, file.end))
+    paste0(output_dir, "/metrics", "/propr_metrics", file.end))
   } else{
     pr.btree = pr$btree
     pr.SBP = sbp.fromHclust(pr.btree)
   }
   
-  if(!file.exists(paste0(output_dir, "/roccurves", "/propr_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roccurves", "/propr_roc", file.end)) | 
      pr.model.already.existed == FALSE){
     # roc
     pr.roc <- apply(pr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, pr.SBP))
     
-    saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", b, file.end))
+    saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", file.end))
   }
   
-  ##############################################################################
-  # supervised log-ratios alpha = 0.5
-  ##############################################################################
-  
-  if(!file.exists(paste0(output_dir, "/models", "/slralpha0.5_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/slralpha0.5_timing", b, file.end))){
-    slr0.5.model.already.existed = FALSE
-    # apply supervised log-ratios, using CV to select lambda
-    alpha = 0.5
-    start.time = Sys.time()
-    slr0.5 = cvSLRalpha(
-      y = Y, X = X, nlam = nlam, nfolds = K, alpha = alpha, 
-      intercept = intercept, rho.type = rho.type, linkage = linkage, 
-      scaling = scaling)
-    end.time = Sys.time()
-    saveRDS(slr0.5, paste0(output_dir, "/models", "/slralpha0.5_model", b, file.end))
-    
-    # timing metric
-    slr0.5.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      slr0.5.timing, 
-      paste0(output_dir, "/timing", "/slralpha0.5_timing", b, file.end))
-  } else{
-    slr0.5.model.already.existed = TRUE
-    slr0.5 = readRDS(paste0(output_dir, "/models", "/slralpha0.5_model", b, file.end))
-    slr0.5.timing = readRDS(paste0(
-      output_dir, "/timing", "/slralpha0.5_timing", b, file.end))
-  }
-  
-  if(!file.exists(paste0(output_dir, "/metrics", "/slralpha0.5_metrics", b, file.end)) | 
-     slr0.5.model.already.existed == FALSE){
-    
-    # binary tree
-    slr0.5.btree = slr0.5$btree
-    
-    # choose lambda
-    slr0.5.lam.min.idx = which.min(slr0.5$cvm)
-    slr0.5.lam.min = slr0.5$lambda[slr0.5.lam.min.idx]
-    slr0.5.a0 = slr0.5$int[slr0.5.lam.min.idx]
-    slr0.5.thetahat = slr0.5$bet[, slr0.5.lam.min.idx]
-    slr0.5.Uhat = getU(btree = slr0.5.btree)
-    slr0.5.betahat = getBeta(slr0.5.thetahat, U = slr0.5.Uhat)
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    slr0.5.PE.train = getMSEyhat(
-      Y, n, slr0.5.a0, slr0.5.thetahat, computeBalances(X, slr0.5.btree))
-    # 1b. on test set #
-    slr0.5.PE.test = getMSEyhat(
-      Y.test, n, slr0.5.a0, slr0.5.thetahat, computeBalances(X.test, slr0.5.btree))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    slr0.5.EA = getEstimationAccuracy(beta, slr0.5.betahat)
-    # 2b. estimation accuracy for active set
-    slr0.5.EA.active = getEstimationAccuracy(beta[non0.beta], slr0.5.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    slr0.5.EA.inactive = getEstimationAccuracy(beta[is0.beta], slr0.5.betahat[is0.beta])
-    
-    # 3. selection accuracy #
-    # 3a. selection of beta #
-    ### using SBP matrix
-    slr0.5.SBP = sbp.fromHclust(slr0.5.btree)
-    slr0.5.non0.thetahat = (slr0.5.thetahat != 0)
-    slr0.5.sel.cols.SBP = slr0.5.SBP[, slr0.5.non0.thetahat, drop = FALSE]
-    slr0.5.non0.betahat = apply(slr0.5.sel.cols.SBP, 1, function(row) any(row != 0))
-    slr0.5.SA = getSelectionAccuracy(is0.beta, non0.beta, slr0.5.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = slr0.5.PE.train, 
-      "PEte" = slr0.5.PE.test, 
-      "EA1" = slr0.5.EA$EA1, 
-      "EA2" = slr0.5.EA$EA2, 
-      "EAInfty" = slr0.5.EA$EAInfty, 
-      "EA1Active" = slr0.5.EA.active$EA1, 
-      "EA2Active" = slr0.5.EA.active$EA2, 
-      "EAInftyActive" = slr0.5.EA.active$EAInfty, 
-      "EA1Inactive" = slr0.5.EA.inactive$EA1, 
-      "EA2Inactive" = slr0.5.EA.inactive$EA2, 
-      "EAInftyInactive" = slr0.5.EA.inactive$EAInfty, 
-      "FP" = slr0.5.SA$FP, 
-      "FN" = slr0.5.SA$FN, 
-      "TPR" = slr0.5.SA$TPR, 
-      "precision" = slr0.5.SA$precision, 
-      "Fscore" = slr0.5.SA$Fscore,
-      "timing" = slr0.5.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/slralpha0.5_metrics", b, file.end))
-  } else{
-    slr0.5.btree = slr0.5$btree
-    slr0.5.SBP = sbp.fromHclust(slr0.5.btree)
-  }
-  
-  if(!file.exists(paste0(output_dir, "/roccurves", "/slralpha0.5_roc", b, file.end)) | 
-     slr0.5.model.already.existed == FALSE){
-    # roc
-    slr0.5.roc <- apply(slr0.5$bet, 2, function(a) 
-      roc.for.coef.LR(a, beta, slr0.5.SBP))
-    
-    saveRDS(slr0.5.roc, paste0(output_dir, "/roccurves", "/slralpha0.5_roc", b, file.end))
-  }
+  # ##############################################################################
+  # # supervised log-ratios alpha = 0.5
+  # ##############################################################################
+  # 
+  # if(!file.exists(paste0(output_dir, "/models", "/slralpha0.5_model", file.end)) |
+  #    !file.exists(paste0(output_dir, "/timing", "/slralpha0.5_timing", file.end))){
+  #   slr0.5.model.already.existed = FALSE
+  #   # apply supervised log-ratios, using CV to select lambda
+  #   alpha = 0.5
+  #   start.time = Sys.time()
+  #   slr0.5 = cvSLRalpha(
+  #     y = Y, X = X, nlam = nlam, nfolds = K, alpha = alpha, 
+  #     intercept = intercept, rho.type = rho.type, linkage = linkage, 
+  #     scaling = scaling)
+  #   end.time = Sys.time()
+  #   saveRDS(slr0.5, paste0(output_dir, "/models", "/slralpha0.5_model", file.end))
+  #   
+  #   # timing metric
+  #   slr0.5.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+  #   saveRDS(
+  #     slr0.5.timing, 
+  #     paste0(output_dir, "/timing", "/slralpha0.5_timing", file.end))
+  # } else{
+  #   slr0.5.model.already.existed = TRUE
+  #   slr0.5 = readRDS(paste0(output_dir, "/models", "/slralpha0.5_model", file.end))
+  #   slr0.5.timing = readRDS(paste0(
+  #     output_dir, "/timing", "/slralpha0.5_timing", file.end))
+  # }
+  # 
+  # if(!file.exists(paste0(output_dir, "/metrics", "/slralpha0.5_metrics", file.end)) | 
+  #    slr0.5.model.already.existed == FALSE){
+  #   
+  #   # binary tree
+  #   slr0.5.btree = slr0.5$btree
+  #   
+  #   # choose lambda
+  #   slr0.5.lam.min.idx = which.min(slr0.5$cvm)
+  #   slr0.5.lam.min = slr0.5$lambda[slr0.5.lam.min.idx]
+  #   slr0.5.a0 = slr0.5$int[slr0.5.lam.min.idx]
+  #   slr0.5.thetahat = slr0.5$bet[, slr0.5.lam.min.idx]
+  #   slr0.5.Uhat = getU(btree = slr0.5.btree)
+  #   slr0.5.betahat = getBeta(slr0.5.thetahat, U = slr0.5.Uhat)
+  #   
+  #   # evaluate model #
+  #   
+  #   # 1. prediction error #
+  #   # 1a. on training set #
+  #   slr0.5.PE.train = getMSEyhat(
+  #     Y, n, slr0.5.a0, slr0.5.thetahat, computeBalances(X, slr0.5.btree))
+  #   # 1b. on test set #
+  #   slr0.5.PE.test = getMSEyhat(
+  #     Y.test, n, slr0.5.a0, slr0.5.thetahat, computeBalances(X.test, slr0.5.btree))
+  #   
+  #   # 2. estimation accuracy #
+  #   # 2a. estimation of beta #
+  #   slr0.5.EA = getEstimationAccuracy(beta, slr0.5.betahat)
+  #   # 2b. estimation accuracy for active set
+  #   slr0.5.EA.active = getEstimationAccuracy(beta[non0.beta], slr0.5.betahat[non0.beta])
+  #   # 2c. estimation accuracy for inactive set
+  #   slr0.5.EA.inactive = getEstimationAccuracy(beta[is0.beta], slr0.5.betahat[is0.beta])
+  #   
+  #   # 3. selection accuracy #
+  #   # 3a. selection of beta #
+  #   ### using SBP matrix
+  #   slr0.5.SBP = sbp.fromHclust(slr0.5.btree)
+  #   slr0.5.non0.thetahat = (slr0.5.thetahat != 0)
+  #   slr0.5.sel.cols.SBP = slr0.5.SBP[, slr0.5.non0.thetahat, drop = FALSE]
+  #   slr0.5.non0.betahat = apply(slr0.5.sel.cols.SBP, 1, function(row) any(row != 0))
+  #   slr0.5.SA = getSelectionAccuracy(is0.beta, non0.beta, slr0.5.non0.betahat)
+  #   
+  #   saveRDS(c(
+  #     "PEtr" = slr0.5.PE.train, 
+  #     "PEte" = slr0.5.PE.test, 
+  #     "EA1" = slr0.5.EA$EA1, 
+  #     "EA2" = slr0.5.EA$EA2, 
+  #     "EAInfty" = slr0.5.EA$EAInfty, 
+  #     "EA1Active" = slr0.5.EA.active$EA1, 
+  #     "EA2Active" = slr0.5.EA.active$EA2, 
+  #     "EAInftyActive" = slr0.5.EA.active$EAInfty, 
+  #     "EA1Inactive" = slr0.5.EA.inactive$EA1, 
+  #     "EA2Inactive" = slr0.5.EA.inactive$EA2, 
+  #     "EAInftyInactive" = slr0.5.EA.inactive$EAInfty, 
+  #     "FP" = slr0.5.SA$FP, 
+  #     "FN" = slr0.5.SA$FN, 
+  #     "TPR" = slr0.5.SA$TPR, 
+  #     "precision" = slr0.5.SA$precision, 
+  #     "Fscore" = slr0.5.SA$Fscore,
+  #     "timing" = slr0.5.timing,
+  #     "betaSparsity" = bspars
+  #   ), 
+  #   paste0(output_dir, "/metrics", "/slralpha0.5_metrics", file.end))
+  # } else{
+  #   slr0.5.btree = slr0.5$btree
+  #   slr0.5.SBP = sbp.fromHclust(slr0.5.btree)
+  # }
+  # 
+  # if(!file.exists(paste0(output_dir, "/roccurves", "/slralpha0.5_roc", file.end)) | 
+  #    slr0.5.model.already.existed == FALSE){
+  #   # roc
+  #   slr0.5.roc <- apply(slr0.5$bet, 2, function(a) 
+  #     roc.for.coef.LR(a, beta, slr0.5.SBP))
+  #   
+  #   saveRDS(slr0.5.roc, paste0(output_dir, "/roccurves", "/slralpha0.5_roc", file.end))
+  # }
   
   ##############################################################################
   # coat method

@@ -18,9 +18,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
+theta.settings = "1blockpair4halves" # "dense", "sparse", "both", "multsparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "2blocks"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -154,7 +154,7 @@ if(sigma.settings == "lin14Sigma" & mu.settings == "matchbeta"){
     filename = paste0(
       "20211011_", 
       sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_rocs.pdf"),
+      "_", theta.settings, "_rocs_samelam.pdf"),
     plot = last_plot(),
     width = 8, height = 5, units = c("in")
   )

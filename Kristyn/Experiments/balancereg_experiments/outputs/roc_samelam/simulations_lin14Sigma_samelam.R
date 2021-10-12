@@ -54,7 +54,7 @@ res = foreach(
   
   # Settings to toggle with
   sigma.settings = "lin14Sigma"
-  theta.settings = "multsparse" 
+  theta.settings = "dense" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "multsparse" = c(p - 3:1)
   mu.settings = ""  # "matchbeta"

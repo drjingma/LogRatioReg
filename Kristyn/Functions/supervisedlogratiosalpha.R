@@ -144,7 +144,7 @@ fitSLRalpha <- function(
   rho = 1e-2, eps1 = 1e-7, eps2 = 1e-7, maxite = 1e5, scaling = FALSE
 ){
   # scaling doesn't work rn.
-  browser()
+  # browser()
 
   if(is.null(btree)) btree = getSupervisedTree(y, X, linkage, rho.type)
   if(is.null(U)) U = getU(btree = btree, sbp = sbp)
@@ -263,7 +263,7 @@ fitSLRalpha <- function(
       # passed in the solver as arguments (which can be problematic when n or p is large).
       # 2. ADMM iterates at a fixed rho. If varying rho is adopted, E should be updated as well.
       
-      ret = fitAlphaNot1(
+      ret = fitSLRalphaNot1(
         y, X = X, A = A, U = U, btree = btree, linkage = linkage, 
         rho.type = rho.type, Q = Q, E = E, 
         intercept = FALSE, scaling = FALSE, # alrady done above
@@ -293,7 +293,7 @@ fitSLRalpha <- function(
 }
 
 fitSLRalpha1 <- function(
-  y, X, Xb, A = NULL, U = NULL, btree = NULL, sbp = NULL, linkage = "complete", 
+  y, X, Xb = NULL, A = NULL, U = NULL, btree = NULL, sbp = NULL, linkage = "complete", 
   rho.type = "squared", intercept = TRUE, lambda = NULL, nlam = 50, 
   lam.min.ratio = 1e-4, eps1 = 1e-7, eps2 = 1e-7, maxite = 1e5, 
   scaling = FALSE
@@ -386,13 +386,13 @@ fitSLRalphaNot1 <- function(
   
   if(is.null(btree)) btree = getSupervisedTree(y, X, linkage, rho.type)
   if(is.null(U)) U = getU(btree = btree, sbp = sbp)
-  if(is.null(Xb)) Xb = computeBalances(X, btree = btree, sbp = sbp, U = U)
+  # if(is.null(Xb)) Xb = computeBalances(X, btree = btree, sbp = sbp, U = U)
   
   if(is.null(A)){
     A = Matrix(U, sparse = TRUE)
   }
   
-  n <- nrow(Xb)
+  n <- nrow(X)
   p <- ncol(X)
   
   # Iterate solution paths along alpha

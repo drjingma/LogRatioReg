@@ -546,7 +546,7 @@ res = foreach(
     ), 
     paste0(output_dir, "/metrics", "/propr_metrics", b, file.end))
   } else{
-    pr.btree = SigmaWtree
+    pr.btree = pr$btree
     pr.SBP = sbp.fromHclust(pr.btree)
   }
   

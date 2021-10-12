@@ -17,9 +17,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair4halves" # "dense", "sparse", "both", "multsparse"
+theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "2blocks"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"

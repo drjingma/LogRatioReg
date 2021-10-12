@@ -48,6 +48,7 @@ res = foreach(
   library(propr)
   source("RCode/func_libs.R")
   source("Kristyn/Functions/supervisedlogratios.R")
+  source("Kristyn/Functions/supervisedlogratiosalpha.R")
   source("COAT-master/coat.R")
   
   # helper functions
@@ -504,7 +505,7 @@ res = foreach(
     pr <- propr(X, metric = "phs")
     pr.tree = hclust(as.dist(pr@matrix),method = linkage)
     pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
-                   nfolds = K, intercept = intercept, standardize = scaling)
+               nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
     saveRDS(pr, paste0(output_dir, "/models", "/propr_model", b, file.end))
     
@@ -586,7 +587,7 @@ res = foreach(
     ), 
     paste0(output_dir, "/metrics", "/propr_metrics", b, file.end))
   } else{
-    pr.btree = SigmaWtree
+    pr.btree = pr$btree
     pr.SBP = sbp.fromHclust(pr.btree)
   }
   

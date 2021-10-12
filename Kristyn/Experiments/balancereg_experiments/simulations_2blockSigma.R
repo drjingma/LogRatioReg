@@ -44,6 +44,7 @@ res = foreach(
   
   library(balance) # for sbp.fromHclust()
   library(selbal)
+  library(propr)
   source("RCode/func_libs.R")
   source("Kristyn/Functions/supervisedlogratios.R")
   

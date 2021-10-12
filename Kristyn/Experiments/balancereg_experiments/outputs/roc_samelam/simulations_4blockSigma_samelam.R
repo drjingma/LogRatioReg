@@ -265,16 +265,18 @@ res = foreach(
   slr.btree = slr$btree
   slr.SBP = sbp.fromHclust(slr.btree)
   
-  # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", b, file.end)) | 
-  #    slr.model.already.existed == FALSE){
-  #   # roc
-  #   slr.roc <- apply(slr$bet, 2, function(a) 
-  #     roc.for.coef.LR(a, beta, slr.SBP))
-  #   
-  #   saveRDS(slr.roc, paste0(
-  #     output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", b, file.end))
-  # }
+  if(!file.exists(paste0(
+    output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", b, file.end)) |
+    slr.model.already.existed == FALSE){
+    # roc
+    slr.roc <- apply(slr$bet, 2, function(a)
+      roc.for.coef.LR(a, beta, slr.SBP))
+    slr.roc = as.data.frame(t(slr.roc))
+    slr.roc$lambda = slr.lambda.seq
+    
+    saveRDS(slr.roc, paste0(
+      output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", b, file.end))
+  }
   
   ##############################################################################
   # compositional lasso
@@ -295,16 +297,18 @@ res = foreach(
       output_dir, "/roc_samelam/models_samelam", "/classo_model", b, file.end))
   }
   
-  # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", b, file.end)) | 
-  #    cl.model.already.existed == FALSE){
-  #   # roc
-  #   cl.roc <- apply(classo$bet, 2, function(a) 
-  #     roc.for.coef(a, beta))
-  #   
-  #   saveRDS(cl.roc, paste0(
-  #     output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", b, file.end))
-  # }
+  if(!file.exists(paste0(
+    output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", b, file.end)) |
+    cl.model.already.existed == FALSE){
+    # roc
+    cl.roc <- apply(classo$bet, 2, function(a)
+      roc.for.coef(a, beta))
+    cl.roc = as.data.frame(t(cl.roc))
+    cl.roc$lambda = cl.lambda.seq
+    
+    saveRDS(cl.roc, paste0(
+      output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", b, file.end))
+  }
   
   ##############################################################################
   # oracle method
@@ -328,16 +332,18 @@ res = foreach(
   or.SBP = sbp.fromHclust(or.btree)
   row.names(or.SBP) = colnames(W)
   
-  # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", b, file.end)) | 
-  #    or.model.already.existed == FALSE){
-  #   # roc
-  #   or.roc <- apply(oracle$bet, 2, function(a) 
-  #     roc.for.coef.LR(a, beta, or.SBP))
-  #   
-  #   saveRDS(or.roc, paste0(
-  #     output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", b, file.end))
-  # }
+  if(!file.exists(paste0(
+    output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", b, file.end)) |
+    or.model.already.existed == FALSE){
+    # roc
+    or.roc <- apply(oracle$bet, 2, function(a)
+      roc.for.coef.LR(a, beta, or.SBP))
+    or.roc = as.data.frame(t(or.roc))
+    or.roc$lambda = or.lambda.seq
+    
+    saveRDS(or.roc, paste0(
+      output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", b, file.end))
+  }
   
   ##############################################################################
   # propr method
@@ -362,16 +368,18 @@ res = foreach(
   pr.btree = pr$btree
   pr.SBP = sbp.fromHclust(pr.btree)
   
-  # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", b, file.end)) | 
-  #    pr.model.already.existed == FALSE){
-  #   # roc
-  #   pr.roc <- apply(pr$bet, 2, function(a) 
-  #     roc.for.coef.LR(a, beta, pr.SBP))
-  #   
-  #   saveRDS(pr.roc, paste0(
-  #     output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", b, file.end))
-  # }
+  if(!file.exists(paste0(
+    output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", b, file.end)) |
+    pr.model.already.existed == FALSE){
+    # roc
+    pr.roc <- apply(pr$bet, 2, function(a)
+      roc.for.coef.LR(a, beta, pr.SBP))
+    pr.roc = as.data.frame(t(pr.roc))
+    pr.roc$lambda = pr.lambda.seq
+    
+    saveRDS(pr.roc, paste0(
+      output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", b, file.end))
+  }
   
   # ##############################################################################
   # # supervised log-ratios alpha = 0.5

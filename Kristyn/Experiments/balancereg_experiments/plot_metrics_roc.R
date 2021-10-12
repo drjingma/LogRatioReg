@@ -19,11 +19,12 @@ rng.seed = 123
 # Settings to toggle with
 sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
+theta.settings = "multsparse" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks", "1block", "2blocks2contrasts"
 # if "2blockSigma" then "dense"
 # if "10blockSigma", then "pairperblock"
 # if "lin14Sigma" then "sparse" or "dense" or "multsparse"
+mu.settings = "matchbeta"
 linkage = "average"
 tol = 1e-4
 nlam = 200
@@ -37,17 +38,32 @@ scaling = TRUE
 sigma_eps = 0.1  # 0.1, 0.5
 
 if(sigma.settings == "lin14Sigma"){
-  file.end = paste0( # for old simulations
-    "_dim", n, "x", p,
-    "_", sigma.settings,
-    "_", theta.settings,
-    "_noise", sigma_eps,
-    "_rho", rho,
-    "_int", intercept,
-    "_scale", scaling,
-    "_K", K,
-    "_seed", rng.seed,
-    ".rds")
+  if(mu.settings == "matchbeta"){
+    file.end = paste0( # for old simulations
+      "_dim", n, "x", p,
+      "_", sigma.settings,
+      "_", theta.settings,
+      "_", mu.settings,
+      "_noise", sigma_eps,
+      "_rho", rho,
+      "_int", intercept,
+      "_scale", scaling,
+      "_K", K,
+      "_seed", rng.seed,
+      ".rds")
+  } else{
+    file.end = paste0( # for old simulations
+      "_dim", n, "x", p,
+      "_", sigma.settings,
+      "_", theta.settings,
+      "_noise", sigma_eps,
+      "_rho", rho,
+      "_int", intercept,
+      "_scale", scaling,
+      "_K", K,
+      "_seed", rng.seed,
+      ".rds")
+  }
 } else{ # for block-diagonal Sigma, either "2blockSigma" or "4blockSigma"
   file.end = paste0(
     "_dim", n, "x", p, 
@@ -96,20 +112,20 @@ if(has.coat) coat.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/classo_metrics", i, file.end
+    output_dir, "/metrics", "/classo_metrics", i, file.end
   ))))
   rownames(cl.sim.tmp) = NULL
   cl.sims.list[[i]] = data.table(cl.sim.tmp)
   # slr
   slr.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_metrics", i, file.end
+    output_dir, "/metrics", "/slr_metrics", i, file.end
   ))))
   rownames(slr.sim.tmp) = NULL
   slr.sims.list[[i]] = data.table(slr.sim.tmp)
   if(has.selbal){
     # selbal
     selbal.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/selbal_metrics", i, file.end
+      output_dir, "/metrics", "/selbal_metrics", i, file.end
     ))))
     rownames(selbal.sim.tmp) = NULL
     or.sims.list[[i]] = data.table(selbal.sim.tmp)
@@ -117,7 +133,7 @@ for(i in 1:numSims){
   if(has.oracle){
     # oracle
     or.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/oracle_metrics", i, file.end
+      output_dir, "/metrics", "/oracle_metrics", i, file.end
     ))))
     rownames(or.sim.tmp) = NULL
     or.sims.list[[i]] = data.table(or.sim.tmp)
@@ -125,7 +141,7 @@ for(i in 1:numSims){
   if(has.coat){
     # coat
     coat.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/coat_metrics", i, file.end
+      output_dir, "/metrics", "/coat_metrics", i, file.end
     ))))
     rownames(coat.sim.tmp) = NULL
     coat.sims.list[[i]] = data.table(coat.sim.tmp)
@@ -234,7 +250,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 if(sigma.settings == "lin14Sigma"){
   ggsave(
     filename = paste0(
-      "20211004_", 
+      "20211011_", 
       sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_metrics.pdf"),
     plot = last_plot(),
@@ -243,7 +259,7 @@ if(sigma.settings == "lin14Sigma"){
 } else{
   ggsave(
     filename = paste0(
-      "20211004_", 
+      "20211011_", 
       sigma.settings, "_noise", sigma_eps,
       "_", theta.settings, "_metrics.pdf"),
     plot = last_plot(),
@@ -295,33 +311,37 @@ cl.roc.list = list()
 # each column corresponds to a different simulation
 cl.TPR.mat = matrix(NA, nlam, numSims) 
 cl.S.hat.mat = matrix(NA, nlam, numSims)
+cl.TP.mat = matrix(NA, nlam, numSims)
 # slr
 slr.roc.list = list()
 slr.TPR.mat = matrix(NA, nlam, numSims)
 slr.S.hat.mat = matrix(NA, nlam, numSims)
+slr.TP.mat = matrix(NA, nlam, numSims)
 if(has.oracle){
   # oracle
   or.roc.list = list()
   or.TPR.mat = matrix(NA, nlam, numSims)
   or.S.hat.mat = matrix(NA, nlam, numSims)
+  or.TP.mat = matrix(NA, nlam, numSims)
 }
 if(has.oracle){
   # coat
   coat.roc.list = list()
   coat.TPR.mat = matrix(NA, nlam, numSims)
   coat.S.hat.mat = matrix(NA, nlam, numSims)
+  coat.TP.mat = matrix(NA, nlam, numSims)
 }
 for(i in 1:numSims){
   # cl
   cl.sim.tmp = readRDS(paste0(
-    output_dir, "/classo_roc", i, file.end
+    output_dir, "/roccurves", "/classo_roc", i, file.end
   ))
   cl.roc.list[[i]] = cl.sim.tmp
   cl.TPR.mat[, i] = cl.sim.tmp["tpr", ]
   cl.S.hat.mat[, i] = cl.sim.tmp["S_hat", ]
   # slr
   slr.sim.tmp = readRDS(paste0(
-    output_dir, "/slr_roc", i, file.end
+    output_dir, "/roccurves", "/slr_roc", i, file.end
   ))
   slr.roc.list[[i]] = slr.sim.tmp
   slr.TPR.mat[, i] = slr.sim.tmp["tpr", ]
@@ -329,7 +349,7 @@ for(i in 1:numSims){
   if(has.oracle){
     # oracle
     or.sim.tmp = readRDS(paste0(
-      output_dir, "/oracle_roc", i, file.end
+      output_dir, "/roccurves", "/oracle_roc", i, file.end
     ))
     or.roc.list[[i]] = or.sim.tmp
     or.TPR.mat[, i] = or.sim.tmp["tpr", ]
@@ -338,7 +358,7 @@ for(i in 1:numSims){
   if(has.coat){
     # oracle
     coat.sim.tmp = readRDS(paste0(
-      output_dir, "/coat_roc", i, file.end
+      output_dir, "/roccurves", "/coat_roc", i, file.end
     ))
     coat.roc.list[[i]] = coat.sim.tmp
     coat.TPR.mat[, i] = coat.sim.tmp["tpr", ]
@@ -421,7 +441,7 @@ ggplot(data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) +
 if(sigma.settings == "lin14Sigma"){
   ggsave(
     filename = paste0(
-      "20211004_", 
+      "20211011_", 
       sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_roc.pdf"),
     plot = last_plot(),
@@ -430,7 +450,7 @@ if(sigma.settings == "lin14Sigma"){
 } else{
   ggsave(
     filename = paste0(
-      "20211004_", 
+      "20211011_", 
       sigma.settings, "_noise", sigma_eps, 
       "_", theta.settings, "_roc.pdf"),
     plot = last_plot(),

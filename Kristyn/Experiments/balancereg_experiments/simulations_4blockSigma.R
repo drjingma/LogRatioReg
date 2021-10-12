@@ -191,7 +191,8 @@ res = foreach(
   # supervised log-ratios
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/slr_model", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/slr_model", b, file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/slr_timing", b, file.end))){
     slr.model.already.existed = FALSE
     # apply supervised log-ratios, using CV to select lambda
     start.time = Sys.time()
@@ -200,14 +201,23 @@ res = foreach(
       rho.type = rho.type, linkage = linkage, standardize = scaling)
     end.time = Sys.time()
     saveRDS(slr, paste0(output_dir, "/models", "/slr_model", b, file.end))
+    
+    # timing metric
+    slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+    saveRDS(
+      slr.timing, 
+      paste0(output_dir, "/timing", "/slr_timing", b, file.end))
   } else{
     slr.model.already.existed = TRUE
+    slr = readRDS(paste0(output_dir, "/models", "/slr_model", b, file.end))
+    slr.timing = readRDS(paste0(
+      output_dir, "/timing", "/slr_timing", b, file.end))
   }
   
   if(!file.exists(paste0(output_dir, "/metrics", "/slr_metrics", b, file.end)) | 
      slr.model.already.existed == FALSE){
-    # timing metric
-    slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+    
+    # binary tree
     slr.btree = slr$btree
     
     # choose lambda
@@ -266,6 +276,9 @@ res = foreach(
       "betaSparsity" = bspars
     ), 
     paste0(output_dir, "/metrics", "/slr_metrics", b, file.end))
+  } else{
+    slr.btree = slr$btree
+    slr.SBP = sbp.fromHclust(slr.btree)
   }
   
   if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", b, file.end)) | 
@@ -281,30 +294,37 @@ res = foreach(
   # compositional lasso
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/classo_model", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/classo_model", b, file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/classo_timing", b, file.end))){
     cl.model.already.existed = FALSE
     # apply compositional lasso, using CV to select lambda
     start.time = Sys.time()
-    complasso = cv.func(
+    classo = cv.func(
       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
     end.time = Sys.time()
-    saveRDS(complasso, paste0(output_dir, "/models", "/classo_model", b, file.end))
+    saveRDS(classo, paste0(output_dir, "/models", "/classo_model", b, file.end))
+    
+    # timing metric
+    cl.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+    saveRDS(
+      cl.timing, 
+      paste0(output_dir, "/timing", "/classo_timing", b, file.end))
   } else{
     cl.model.already.existed = TRUE
+    classo = readRDS(paste0(output_dir, "/models", "/classo_model", b, file.end))
+    cl.timing = readRDS(paste0(
+      output_dir, "/timing", "/classo_timing", b, file.end))
   }
   
   if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", b, file.end)) | 
      cl.model.already.existed == FALSE){
     
-    # timing metric
-    classo.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    
     # choose lambda
-    cl.lam.min.idx = which.min(complasso$cvm)
-    cl.lam.min = complasso$lambda[cl.lam.min.idx]
-    cl.a0 = complasso$int[cl.lam.min.idx]
-    cl.betahat = complasso$bet[, cl.lam.min.idx]
+    cl.lam.min.idx = which.min(classo$cvm)
+    cl.lam.min = classo$lambda[cl.lam.min.idx]
+    cl.a0 = classo$int[cl.lam.min.idx]
+    cl.betahat = classo$bet[, cl.lam.min.idx]
     
     # evaluate model #
     
@@ -343,7 +363,7 @@ res = foreach(
       "TPR" = cl.SA$TPR, 
       "precision" = cl.SA$precision, 
       "Fscore" = cl.SA$Fscore,
-      "timing" = classo.timing,
+      "timing" = cl.timing,
       "betaSparsity" = bspars
     ), 
     paste0(output_dir, "/metrics", "/classo_metrics", b, file.end))
@@ -352,7 +372,7 @@ res = foreach(
   if(!file.exists(paste0(output_dir, "/roccurves", "/classo_roc", b, file.end)) | 
      cl.model.already.existed == FALSE){
     # roc
-    cl.roc <- apply(complasso$bet, 2, function(a) 
+    cl.roc <- apply(classo$bet, 2, function(a) 
       roc.for.coef(a, beta))
     
     saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", b, file.end))
@@ -362,7 +382,8 @@ res = foreach(
   # oracle method
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/or_model", b, file.end))){
+  if(!file.exists(paste0(output_dir, "/models", "/or_model", b, file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/or_timing", b, file.end))){
     or.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
     start.time = Sys.time()
@@ -370,16 +391,27 @@ res = foreach(
                    nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
     saveRDS(oracle, paste0(output_dir, "/models", "/or_model", b, file.end))
+    
+    # timing metric
+    or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+    saveRDS(
+      or.timing, 
+      paste0(output_dir, "/timing", "/or_timing", b, file.end))
   } else{
     or.model.already.existed = TRUE
+    oracle = readRDS(paste0(output_dir, "/models", "/or_model", b, file.end))
+    or.timing = readRDS(paste0(
+      output_dir, "/timing", "/or_timing", b, file.end))
   }
   
   if(!file.exists(paste0(output_dir, "/metrics", "/or_metrics", b, file.end)) | 
      or.model.already.existed == FALSE){
     
+    # binary tree
+    or.btree = SigmaWtree
+    
     # timing metric
     or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    or.btree = SigmaWtree
     
     # choose lambda
     or.lam.min.idx = which.min(oracle$cvm)
@@ -438,9 +470,13 @@ res = foreach(
       "betaSparsity" = bspars
     ), 
     paste0(output_dir, "/metrics", "/oracle_metrics", b, file.end))
+  } else{
+    or.btree = SigmaWtree
+    or.SBP = sbp.fromHclust(or.btree)
+    row.names(or.SBP) = colnames(W)
   }
   
-  if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roccurves", "/oracle_roc", b, file.end)) | 
      or.model.already.existed == FALSE){
     # roc
     or.roc <- apply(oracle$bet, 2, function(a) 

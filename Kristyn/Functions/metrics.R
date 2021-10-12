@@ -62,6 +62,6 @@ roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
   tpr <- length(TP)/length(S0)
   # out <- c(length(S_hat),tpr)
   # names(out) <- c('S_hat','tpr')
-  out = c("S_hat" = S_hat, "tpr" = tpr, "TP" = TP)
+  out = c("S_hat" = length(S_hat), "tpr" = tpr, "TP" = length(TP))
   return(out)
 }

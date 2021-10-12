@@ -484,6 +484,113 @@ res = foreach(
     
     saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", b, file.end))
   }
+  
+  ##############################################################################
+  # propr method
+  ##############################################################################
+  
+  if(!file.exists(paste0(output_dir, "/models", "/propr_model", b, file.end)) |
+     !file.exists(paste0(output_dir, "/timing", "/propr_timing", b, file.end))){
+    pr.model.already.existed = FALSE
+    # apply oracle method, using CV to select lambda
+    start.time = Sys.time()
+    pr <- propr(X, metric = "phs")
+    pr.tree = hclust(as.dist(pr@matrix),method = linkage)
+    pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
+               nfolds = K, intercept = intercept, standardize = scaling)
+    end.time = Sys.time()
+    saveRDS(pr, paste0(output_dir, "/models", "/propr_model", b, file.end))
+    
+    # timing metric
+    pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+    saveRDS(
+      pr.timing, 
+      paste0(output_dir, "/timing", "/propr_timing", b, file.end))
+  } else{
+    pr.model.already.existed = TRUE
+    pr = readRDS(paste0(output_dir, "/models", "/propr_model", b, file.end))
+    pr.timing = readRDS(paste0(
+      output_dir, "/timing", "/propr_timing", b, file.end))
+  }
+  
+  if(!file.exists(paste0(output_dir, "/metrics", "/propr_metrics", b, file.end)) | 
+     pr.model.already.existed == FALSE){
+    
+    # binary tree
+    pr.btree = pr$btree
+    
+    # timing metric
+    pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+    
+    # choose lambda
+    pr.lam.min.idx = which.min(pr$cvm)
+    pr.lam.min = pr$lambda[pr.lam.min.idx]
+    pr.a0 = pr$int[pr.lam.min.idx]
+    pr.thetahat = pr$bet[, pr.lam.min.idx]
+    pr.Uhat = getU(btree = pr.btree)
+    pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
+    
+    # evaluate model #
+    
+    # 1. prediction error #
+    # 1a. on training set #
+    pr.PE.train = getMSEyhat(
+      Y, n, pr.a0, pr.thetahat, computeBalances(X, pr.btree))
+    # 1b. on test set #
+    pr.PE.test = getMSEyhat(
+      Y.test, n, pr.a0, pr.thetahat, computeBalances(X.test, pr.btree))
+    
+    # 2. estimation accuracy #
+    # 2a. estimation of beta #
+    pr.EA = getEstimationAccuracy(beta, pr.betahat)
+    # 2b. estimation accuracy for active set
+    pr.EA.active = getEstimationAccuracy(beta[non0.beta], pr.betahat[non0.beta])
+    # 2c. estimation accuracy for inactive set
+    pr.EA.inactive = getEstimationAccuracy(beta[is0.beta], pr.betahat[is0.beta])
+    
+    # 3. selection accuracy #
+    # 3a. selection of beta #
+    ### using SBP matrix
+    pr.SBP = sbp.fromHclust(pr.btree)
+    pr.non0.thetahat = (pr.thetahat != 0)
+    pr.sel.cols.SBP = pr.SBP[, pr.non0.thetahat, drop = FALSE]
+    pr.non0.betahat = apply(pr.sel.cols.SBP, 1, function(row) any(row != 0))
+    pr.SA = getSelectionAccuracy(is0.beta, non0.beta, pr.non0.betahat)
+    
+    saveRDS(c(
+      "PEtr" = pr.PE.train, 
+      "PEte" = pr.PE.test, 
+      "EA1" = pr.EA$EA1, 
+      "EA2" = pr.EA$EA2, 
+      "EAInfty" = pr.EA$EAInfty, 
+      "EA1Active" = pr.EA.active$EA1, 
+      "EA2Active" = pr.EA.active$EA2, 
+      "EAInftyActive" = pr.EA.active$EAInfty, 
+      "EA1Inactive" = pr.EA.inactive$EA1, 
+      "EA2Inactive" = pr.EA.inactive$EA2, 
+      "EAInftyInactive" = pr.EA.inactive$EAInfty, 
+      "FP" = pr.SA$FP, 
+      "FN" = pr.SA$FN, 
+      "TPR" = pr.SA$TPR, 
+      "precision" = pr.SA$precision, 
+      "Fscore" = pr.SA$Fscore,
+      "timing" = pr.timing,
+      "betaSparsity" = bspars
+    ), 
+    paste0(output_dir, "/metrics", "/propr_metrics", b, file.end))
+  } else{
+    pr.btree = SigmaWtree
+    pr.SBP = sbp.fromHclust(pr.btree)
+  }
+  
+  if(!file.exists(paste0(output_dir, "/roccurves", "/propr_roc", b, file.end)) | 
+     pr.model.already.existed == FALSE){
+    # roc
+    pr.roc <- apply(pr$bet, 2, function(a) 
+      roc.for.coef.LR(a, beta, pr.SBP))
+    
+    saveRDS(or.roc, paste0(output_dir, "/roccurves", "/propr_roc", b, file.end))
+  }
 }
 
 

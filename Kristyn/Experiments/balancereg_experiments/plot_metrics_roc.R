@@ -127,7 +127,7 @@ for(i in 1:numSims){
       output_dir, "/metrics", "/selbal_metrics", i, file.end
     ))))
     rownames(selbal.sim.tmp) = NULL
-    or.sims.list[[i]] = data.table(selbal.sim.tmp)
+    selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
   }
   if(has.oracle){
     # oracle

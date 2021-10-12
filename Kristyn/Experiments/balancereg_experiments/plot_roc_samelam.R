@@ -1,15 +1,183 @@
+rm(list=ls())
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
-# Note: Here, we simulate from a 10-block-diagonal Sigma and intend to:
-#   - have one active contrast pair within each block
-#   - compare slr to coat, where the latter captures correlated structure
-#       among covariates, but not whether the covariates are predicted
 # Date: 10/11/2021
 
 ################################################################################
 # libraries and settings
 
 output_dir = "Kristyn/Experiments/balancereg_experiments/outputs"
+
+library(ggplot2)
+library(ggpubr)
+library(data.table)
+library(reshape2)
+
+numSims = 100
+rng.seed = 123
+
+# Settings to toggle with
+sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+rho.type = "square" # 1 = "absolute value", 2 = "square"
+theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
+# if "2blockSigma" then "dense"
+# if "4blockSigma", then "2blocks"
+# if "10blockSigma", then "pairperblock" or "1blockpair4halves"
+# if "lin14Sigma" then "dense" or "multsparse"
+mu.settings = "" # matchbeta
+linkage = "average"
+tol = 1e-4
+nlam = 200
+intercept = TRUE
+K = 10
+n = 100
+p = 200
+rho = 0.2 # 0.2, 0.5
+cor_ij = 0.2 # 0.2, 0.5
+scaling = TRUE
+sigma_eps = 0.1  # 0.1, 0.5
+
+if(sigma.settings == "lin14Sigma"){
+  if(mu.settings == "matchbeta"){
+    file.end = paste0( # for old simulations
+      "_dim", n, "x", p,
+      "_", sigma.settings,
+      "_", theta.settings,
+      "_", mu.settings,
+      "_noise", sigma_eps,
+      "_rho", rho,
+      "_int", intercept,
+      "_scale", scaling,
+      "_K", K,
+      "_seed", rng.seed,
+      ".rds")
+  } else{
+    file.end = paste0( # for old simulations
+      "_dim", n, "x", p,
+      "_", sigma.settings,
+      "_", theta.settings,
+      "_noise", sigma_eps,
+      "_rho", rho,
+      "_int", intercept,
+      "_scale", scaling,
+      "_K", K,
+      "_seed", rng.seed,
+      ".rds")
+  }
+} else{ # for block-diagonal Sigma, either "2blockSigma" or "4blockSigma"
+  file.end = paste0(
+    "_dim", n, "x", p, 
+    "_", sigma.settings,
+    "_", theta.settings, 
+    "_noise", sigma_eps,
+    "_cor", cor_ij, 
+    "_int", intercept,
+    "_scale", scaling,
+    "_K", K,
+    "_seed", rng.seed,
+    ".rds")
+}
+
+has.selbal = FALSE
+has.coat = FALSE
+has.oracle = TRUE
+has.propr = TRUE
+if(FALSE){
+  has.selbal = TRUE
+}
+# if(sigma.settings == "10blockSigma"){
+#   has.coat = FALSE
+# }
+
+################################################################################
+# get lambda sequences
+
+# import lambdas
+cl.lams.list = list()
+slr.lams.list = list()
+if(has.selbal) selbal.lams.list = list()
+if(has.oracle) or.lams.list = list()
+if(has.coat) coat.lams.list = list()
+if(has.propr) pr.lams.list = list()
+for(i in 1:numSims){
+  # classo
+  cl.lam.tmp = readRDS(
+    paste0(output_dir, "/models", "/classo_model", i, file.end
+  ))$lambda
+  rownames(cl.lam.tmp) = NULL
+  cl.lams.list[[i]] = data.table(cl.lam.tmp)
+  # slr
+  slr.lam.tmp = readRDS(
+    paste0(output_dir, "/models", "/slr_model", i, file.end
+    ))$lambda
+  rownames(slr.lam.tmp) = NULL
+  slr.lams.list[[i]] = data.table(slr.lam.tmp)
+  if(has.selbal){
+    # selbal
+    selbal.lam.tmp = readRDS(
+      paste0(output_dir, "/models", "/selbal_model", i, file.end
+      ))$lambda
+    rownames(selbal.lam.tmp) = NULL
+    selbal.lams.list[[i]] = data.table(selbal.lam.tmp)
+  }
+  if(has.oracle){
+    # oracle
+    or.lam.tmp = readRDS(
+      paste0(output_dir, "/models", "/oracle_model", i, file.end
+      ))$lambda
+    rownames(or.lam.tmp) = NULL
+    or.lams.list[[i]] = data.table(or.lam.tmp)
+  }
+  if(has.coat){
+    # coat
+    coat.lam.tmp = readRDS(
+      paste0(output_dir, "/models", "/coat_model", i, file.end
+      ))$lambda
+    rownames(coat.lam.tmp) = NULL
+    coat.lams.list[[i]] = data.table(coat.lam.tmp)
+  }
+  if(has.propr){
+    # propr
+    pr.lam.tmp = readRDS(
+      paste0(output_dir, "/models", "/propr_model", i, file.end
+      ))$lambda
+    rownames(pr.lam.tmp) = NULL
+    pr.lams.list[[i]] = data.table(pr.lam.tmp)
+  }
+}
+cl.lams = as.matrix(do.call(cbind, cl.lams.list))
+slr.lams = as.matrix(do.call(cbind, slr.lams.list))
+if(has.selbal) selbal.lams = as.matrix(do.call(cbind, selbal.lams.list))
+if(has.oracle) or.lams = as.matrix(do.call(cbind, or.lams.list))
+if(has.coat) coat.lams = as.matrix(do.call(cbind, coat.lams.list))
+if(has.propr) pr.lams = as.matrix(do.call(cbind, pr.lams.list))
+
+# lambda min and max values
+cl.bounds = c(min(cl.lams), max(cl.lams))
+slr.bounds = c(min(slr.lams), max(slr.lams))
+if(has.selbal) selbal.bounds = c(min(has.selbal), max(has.selbal))
+if(has.oracle) or.bounds = c(min(has.oracle), max(has.oracle))
+if(has.coat) coat.bounds = c(min(coat.lams), max(coat.lams))
+if(has.propr) pr.bounds = c(min(pr.lams), max(pr.lams))
+
+# new lambda sequences, one for each method
+cl.lambda.seq = exp(seq(max(cl.bounds), min(cl.bounds),length.out = nlam))
+slr.lambda.seq = exp(seq(max(slr.bounds), min(slr.bounds),length.out = nlam))
+if(has.selbal){
+  selbal.lambda.seq = exp(seq(max(selbal.bounds), min(selbal.bounds),length.out = nlam))
+}
+if(has.oracle){
+  or.lambda.seq = exp(seq(max(or.bounds), min(or.bounds),length.out = nlam))
+}
+if(has.coat){
+  coat.lambda.seq = exp(seq(max(coat.bounds), min(coat.bounds),length.out = nlam))
+}
+if(has.propr){
+  pr.lambda.seq = exp(seq(max(pr.bounds), min(pr.bounds),length.out = nlam))
+}
+
+################################################################################
+# solution path calculations
 
 # set up parallelization
 library(foreach)
@@ -22,15 +190,7 @@ plan(multisession, workers = nworkers)
 
 library(rngtools)
 library(doRNG)
-rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
-
-# Other simulation settings
-numSims = 100
-
-################################################################################
-# Simulations #
-################################################################################
 
 registerDoRNG(rng.seed)
 res = foreach(
@@ -105,7 +265,7 @@ res = foreach(
       for(i in 1:num.blocks){
         pairs.in.block.i = apply(
           block.contrasts.pairs, 1, FUN = function(x) all(
-          as.numeric(x) %in% ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
+            as.numeric(x) %in% ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
         contrasts.block.i = block.contrasts[pairs.in.block.i]
         indices.theta[i] = sample(contrasts.block.i, 1)
       }
@@ -199,298 +359,84 @@ res = foreach(
   # supervised log-ratios
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/slr_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/slr_timing", b, file.end))){
+  if(!file.exists(paste0(
+    output_dir, "/roc_samelam", "/slr_model", b, file.end))){
     slr.model.already.existed = FALSE
     # apply supervised log-ratios, using CV to select lambda
-    start.time = Sys.time()
     slr = cvSLR(
       y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
       rho.type = rho.type, linkage = linkage, standardize = scaling)
-    end.time = Sys.time()
-    saveRDS(slr, paste0(output_dir, "/models", "/slr_model", b, file.end))
-    
-    # timing metric
-    slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      slr.timing, 
-      paste0(output_dir, "/timing", "/slr_timing", b, file.end))
+    saveRDS(slr, paste0(output_dir, "/roc_samelam", "/slr_model", b, file.end))
   } else{
     slr.model.already.existed = TRUE
-    slr = readRDS(paste0(output_dir, "/models", "/slr_model", b, file.end))
-    slr.timing = readRDS(paste0(
-      output_dir, "/timing", "/slr_timing", b, file.end))
+    slr = readRDS(paste0(output_dir, "/roc_samelam", "/slr_model", b, file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/slr_metrics", b, file.end)) | 
-     slr.model.already.existed == FALSE){
-    
-    # binary tree
-    slr.btree = slr$btree
-    
-    # choose lambda
-    slr.lam.min.idx = which.min(slr$cvm)
-    slr.lam.min = slr$lambda[slr.lam.min.idx]
-    slr.a0 = slr$int[slr.lam.min.idx]
-    slr.thetahat = slr$bet[, slr.lam.min.idx]
-    slr.Uhat = getU(btree = slr.btree)
-    slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    slr.PE.train = getMSEyhat(
-      Y, n, slr.a0, slr.thetahat, computeBalances(X, slr.btree))
-    # 1b. on test set #
-    slr.PE.test = getMSEyhat(
-      Y.test, n, slr.a0, slr.thetahat, computeBalances(X.test, slr.btree))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    slr.EA = getEstimationAccuracy(beta, slr.betahat)
-    # 2b. estimation accuracy for active set
-    slr.EA.active = getEstimationAccuracy(beta[non0.beta], slr.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    slr.EA.inactive = getEstimationAccuracy(beta[is0.beta], slr.betahat[is0.beta])
-    
-    # 3. selection accuracy #
-    # 3a. selection of beta #
-    ### using SBP matrix
-    slr.SBP = sbp.fromHclust(slr.btree)
-    slr.non0.thetahat = (slr.thetahat != 0)
-    slr.sel.cols.SBP = slr.SBP[, slr.non0.thetahat, drop = FALSE]
-    slr.non0.betahat = apply(slr.sel.cols.SBP, 1, function(row) any(row != 0))
-    slr.SA = getSelectionAccuracy(is0.beta, non0.beta, slr.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = slr.PE.train, 
-      "PEte" = slr.PE.test, 
-      "EA1" = slr.EA$EA1, 
-      "EA2" = slr.EA$EA2, 
-      "EAInfty" = slr.EA$EAInfty, 
-      "EA1Active" = slr.EA.active$EA1, 
-      "EA2Active" = slr.EA.active$EA2, 
-      "EAInftyActive" = slr.EA.active$EAInfty, 
-      "EA1Inactive" = slr.EA.inactive$EA1, 
-      "EA2Inactive" = slr.EA.inactive$EA2, 
-      "EAInftyInactive" = slr.EA.inactive$EAInfty, 
-      "FP" = slr.SA$FP, 
-      "FN" = slr.SA$FN, 
-      "TPR" = slr.SA$TPR, 
-      "precision" = slr.SA$precision, 
-      "Fscore" = slr.SA$Fscore,
-      "timing" = slr.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/slr_metrics", b, file.end))
-  } else{
     slr.btree = slr$btree
     slr.SBP = sbp.fromHclust(slr.btree)
-  }
   
-  if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roc_samelam", "/slr_roc", b, file.end)) | 
      slr.model.already.existed == FALSE){
     # roc
     slr.roc <- apply(slr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, slr.SBP))
     
-    saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", b, file.end))
+    saveRDS(slr.roc, paste0(output_dir, "/roc_samelam", "/slr_roc", b, file.end))
   }
   
   ##############################################################################
   # compositional lasso
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/classo_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/classo_timing", b, file.end))){
+  if(!file.exists(paste0(
+    output_dir, "/roc_samelam", "/classo_model", b, file.end))){
     cl.model.already.existed = FALSE
     # apply compositional lasso, using CV to select lambda
-    start.time = Sys.time()
     classo = cv.func(
       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
-    end.time = Sys.time()
-    saveRDS(classo, paste0(output_dir, "/models", "/classo_model", b, file.end))
-    
-    # timing metric
-    cl.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      cl.timing, 
-      paste0(output_dir, "/timing", "/classo_timing", b, file.end))
+    saveRDS(classo, paste0(output_dir, "/roc_samelam", "/classo_model", b, file.end))
   } else{
     cl.model.already.existed = TRUE
-    classo = readRDS(paste0(output_dir, "/models", "/classo_model", b, file.end))
-    cl.timing = readRDS(paste0(
-      output_dir, "/timing", "/classo_timing", b, file.end))
+    classo = readRDS(paste0(output_dir, "/roc_samelam", "/classo_model", b, file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", b, file.end)) | 
-     cl.model.already.existed == FALSE){
-    
-    # choose lambda
-    cl.lam.min.idx = which.min(classo$cvm)
-    cl.lam.min = classo$lambda[cl.lam.min.idx]
-    cl.a0 = classo$int[cl.lam.min.idx]
-    cl.betahat = classo$bet[, cl.lam.min.idx]
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    cl.PE.train = getMSEyhat(Y, n, cl.a0, cl.betahat, log(X))
-    # 1b. on test set #
-    cl.PE.test = getMSEyhat(Y.test, n, cl.a0, cl.betahat, log(X.test))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    cl.EA = getEstimationAccuracy(beta, cl.betahat)
-    # 2b. estimation accuracy for active set
-    cl.EA.active = getEstimationAccuracy(beta[non0.beta], cl.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    cl.EA.inactive = getEstimationAccuracy(beta[is0.beta], cl.betahat[is0.beta])
-    
-    # 3. selection accuracy (i.t.o. beta) #
-    cl.non0.betahat = abs(cl.betahat) > 10e-8
-    cl.SA = getSelectionAccuracy(is0.beta, non0.beta, cl.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = cl.PE.train, 
-      "PEte" = cl.PE.test, 
-      "EA1" = cl.EA$EA1, 
-      "EA2" = cl.EA$EA2, 
-      "EAInfty" = cl.EA$EAInfty, 
-      "EA1Active" = cl.EA.active$EA1, 
-      "EA2Active" = cl.EA.active$EA2, 
-      "EAInftyActive" = cl.EA.active$EAInfty, 
-      "EA1Inactive" = cl.EA.inactive$EA1, 
-      "EA2Inactive" = cl.EA.inactive$EA2, 
-      "EAInftyInactive" = cl.EA.inactive$EAInfty, 
-      "FP" = cl.SA$FP, 
-      "FN" = cl.SA$FN, 
-      "TPR" = cl.SA$TPR, 
-      "precision" = cl.SA$precision, 
-      "Fscore" = cl.SA$Fscore,
-      "timing" = cl.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/classo_metrics", b, file.end))
-  }
-  
-  if(!file.exists(paste0(output_dir, "/roccurves", "/classo_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roc_samelam", "/classo_roc", b, file.end)) | 
      cl.model.already.existed == FALSE){
     # roc
     cl.roc <- apply(classo$bet, 2, function(a) 
       roc.for.coef(a, beta))
     
-    saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", b, file.end))
+    saveRDS(cl.roc, paste0(output_dir, "/roc_samelam", "/classo_roc", b, file.end))
   }
   
   ##############################################################################
   # oracle method
   ##############################################################################
   
-  if(!file.exists(paste0(output_dir, "/models", "/oracle_model", b, file.end)) |
-     !file.exists(paste0(output_dir, "/timing", "/oracle_timing", b, file.end))){
+  if(!file.exists(paste0(
+    output_dir, "/roc_samelam", "/oracle_model", b, file.end))){
     or.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
-    start.time = Sys.time()
     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
                    nfolds = K, intercept = intercept, standardize = scaling)
-    end.time = Sys.time()
-    saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", b, file.end))
-    
-    # timing metric
-    or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      or.timing, 
-      paste0(output_dir, "/timing", "/oracle_timing", b, file.end))
+    saveRDS(oracle, paste0(output_dir, "/roc_samelam", "/oracle_model", b, file.end))
   } else{
     or.model.already.existed = TRUE
-    oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", b, file.end))
-    or.timing = readRDS(paste0(
-      output_dir, "/timing", "/oracle_timing", b, file.end))
+    oracle = readRDS(paste0(output_dir, "/roc_samelam", "/oracle_model", b, file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/oracle_metrics", b, file.end)) | 
-     or.model.already.existed == FALSE){
-    
-    # binary tree
-    or.btree = SigmaWtree
-    
-    # timing metric
-    or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    
-    # choose lambda
-    or.lam.min.idx = which.min(oracle$cvm)
-    or.lam.min = oracle$lambda[or.lam.min.idx]
-    or.a0 = oracle$int[or.lam.min.idx]
-    or.thetahat = oracle$bet[, or.lam.min.idx]
-    or.Uhat = getU(btree = or.btree)
-    or.betahat = getBeta(or.thetahat, U = or.Uhat)
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    or.PE.train = getMSEyhat(
-      Y, n, or.a0, or.thetahat, computeBalances(X, or.btree))
-    # 1b. on test set #
-    or.PE.test = getMSEyhat(
-      Y.test, n, or.a0, or.thetahat, computeBalances(X.test, or.btree))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    or.EA = getEstimationAccuracy(beta, or.betahat)
-    # 2b. estimation accuracy for active set
-    or.EA.active = getEstimationAccuracy(beta[non0.beta], or.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    or.EA.inactive = getEstimationAccuracy(beta[is0.beta], or.betahat[is0.beta])
-    
-    # 3. selection accuracy #
-    # 3a. selection of beta #
-    ### using SBP matrix
-    or.SBP = sbp.fromHclust(or.btree)
-    row.names(or.SBP) = colnames(W)
-    or.non0.thetahat = (or.thetahat != 0)
-    or.sel.cols.SBP = or.SBP[, or.non0.thetahat, drop = FALSE]
-    or.non0.betahat = apply(or.sel.cols.SBP, 1, function(row) any(row != 0))
-    or.SA = getSelectionAccuracy(is0.beta, non0.beta, or.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = or.PE.train, 
-      "PEte" = or.PE.test, 
-      "EA1" = or.EA$EA1, 
-      "EA2" = or.EA$EA2, 
-      "EAInfty" = or.EA$EAInfty, 
-      "EA1Active" = or.EA.active$EA1, 
-      "EA2Active" = or.EA.active$EA2, 
-      "EAInftyActive" = or.EA.active$EAInfty, 
-      "EA1Inactive" = or.EA.inactive$EA1, 
-      "EA2Inactive" = or.EA.inactive$EA2, 
-      "EAInftyInactive" = or.EA.inactive$EAInfty, 
-      "FP" = or.SA$FP, 
-      "FN" = or.SA$FN, 
-      "TPR" = or.SA$TPR, 
-      "precision" = or.SA$precision, 
-      "Fscore" = or.SA$Fscore,
-      "timing" = or.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/oracle_metrics", b, file.end))
-  } else{
     or.btree = SigmaWtree
     or.SBP = sbp.fromHclust(or.btree)
     row.names(or.SBP) = colnames(W)
-  }
   
-  if(!file.exists(paste0(output_dir, "/roccurves", "/oracle_roc", b, file.end)) | 
+  if(!file.exists(paste0(output_dir, "/roc_samelam", "/oracle_roc", b, file.end)) | 
      or.model.already.existed == FALSE){
     # roc
     or.roc <- apply(oracle$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, or.SBP))
     
-    saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", b, file.end))
+    saveRDS(or.roc, paste0(output_dir, "/roc_samelam", "/oracle_roc", b, file.end))
   }
   
   ##############################################################################
@@ -705,85 +651,229 @@ res = foreach(
     saveRDS(slr0.5.roc, paste0(output_dir, "/roccurves", "/slralpha0.5_roc", b, file.end))
   }
   
-  ##############################################################################
-  # coat method
-  ##############################################################################
-  
-  # # apply coat method, using CV to select lambda
-  # # get coat tree and U
-  # d_coat = 1 - coat(X)$corr
-  # colnames(d_coat) = colnames(W)
-  # coat.btree = hclust(as.dist(d_coat),method = linkage)
-  # start.time = Sys.time()
-  # coat = cvILR(y = Y, X = X, btree = coat.btree, nlam = nlam, 
-  #                nfolds = K, intercept = intercept, standardize = scaling)
-  # end.time = Sys.time()
-  # coat.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-  # # plot(coat.btree)
-  # 
-  # # choose lambda
-  # coat.lam.min.idx = which.min(coat$cvm)
-  # coat.lam.min = coat$lambda[coat.lam.min.idx]
-  # coat.a0 = coat$int[coat.lam.min.idx]
-  # coat.thetahat = coat$bet[, coat.lam.min.idx]
-  # coat.Uhat = getU(btree = coat.btree)
-  # coat.betahat = getBeta(coat.thetahat, U = coat.Uhat)
-  # 
-  # # evaluate model #
-  # 
-  # # 1. prediction error #
-  # # 1a. on training set #
-  # coat.PE.train = getMSEyhat(
-  #   Y, n, coat.a0, coat.thetahat, computeBalances(X, coat.btree))
-  # # 1b. on test set #
-  # coat.PE.test = getMSEyhat(
-  #   Y.test, n, coat.a0, coat.thetahat, computeBalances(X.test, coat.btree))
-  # 
-  # # 2. estimation accuracy #
-  # # 2a. estimation of beta #
-  # coat.EA = getEstimationAccuracy(beta, coat.betahat)
-  # # 2b. estimation accuracy for active set
-  # coat.EA.active = getEstimationAccuracy(beta[non0.beta], coat.betahat[non0.beta])
-  # # 2c. estimation accuracy for inactive set
-  # coat.EA.inactive = getEstimationAccuracy(beta[is0.beta], coat.betahat[is0.beta])
-  # 
-  # # 3. selection accuracy #
-  # # 3a. selection of beta #
-  # ### using SBP matrix
-  # coat.SBP = sbp.fromHclust(coat.btree)
-  # coat.non0.thetahat = (coat.thetahat != 0)
-  # coat.sel.cols.SBP = coat.SBP[, coat.non0.thetahat, drop = FALSE]
-  # coat.non0.betahat = apply(coat.sel.cols.SBP, 1, function(row) any(row != 0))
-  # coat.SA = getSelectionAccuracy(is0.beta, non0.beta, coat.non0.betahat)
-  # 
-  # saveRDS(c(
-  #   "PEtr" = coat.PE.train, 
-  #   "PEte" = coat.PE.test, 
-  #   "EA1" = coat.EA$EA1, 
-  #   "EA2" = coat.EA$EA2, 
-  #   "EAInfty" = coat.EA$EAInfty, 
-  #   "EA1Active" = coat.EA.active$EA1, 
-  #   "EA2Active" = coat.EA.active$EA2, 
-  #   "EAInftyActive" = coat.EA.active$EAInfty, 
-  #   "EA1Inactive" = coat.EA.inactive$EA1, 
-  #   "EA2Inactive" = coat.EA.inactive$EA2, 
-  #   "EAInftyInactive" = coat.EA.inactive$EAInfty, 
-  #   "FP" = coat.SA$FP, 
-  #   "FN" = coat.SA$FN, 
-  #   "TPR" = coat.SA$TPR, 
-  #   "precision" = coat.SA$precision, 
-  #   "Fscore" = coat.SA$Fscore,
-  #   "timing" = coat.timing,
-  #   "betaSparsity" = bspars
-  # ), 
-  # file = paste0(output_dir, "/coat_metrics", b, file.end))
-  # 
-  # # roc
-  # coat.roc <- apply(coat$bet, 2, function(a) 
-  #   roc.for.coef.LR(a, beta, coat.SBP))
-  # 
-  # saveRDS(coat.roc, file = paste0(output_dir, "/coat_roc", b, file.end))
-  
+}
+
+
+
+################################################################################
+# plot roc curves
+
+# import roc curves and organize TPR, S.hat, lambda information
+# cl
+cl.roc.list = list()
+# each row corresponds to a lambda in the lambda sequence (different in ea. sim)
+# each column corresponds to a different simulation
+cl.TPR.mat = matrix(NA, nlam, numSims) 
+cl.S.hat.mat = matrix(NA, nlam, numSims)
+cl.TP.mat = matrix(NA, nlam, numSims)
+# slr
+slr.roc.list = list()
+slr.TPR.mat = matrix(NA, nlam, numSims)
+slr.S.hat.mat = matrix(NA, nlam, numSims)
+slr.TP.mat = matrix(NA, nlam, numSims)
+if(has.oracle){
+  # oracle
+  or.roc.list = list()
+  or.TPR.mat = matrix(NA, nlam, numSims)
+  or.S.hat.mat = matrix(NA, nlam, numSims)
+  or.TP.mat = matrix(NA, nlam, numSims)
+}
+if(has.coat){
+  # coat
+  coat.roc.list = list()
+  coat.TPR.mat = matrix(NA, nlam, numSims)
+  coat.S.hat.mat = matrix(NA, nlam, numSims)
+  coat.TP.mat = matrix(NA, nlam, numSims)
+}
+if(has.propr){
+  # coat
+  pr.roc.list = list()
+  pr.TPR.mat = matrix(NA, nlam, numSims)
+  pr.S.hat.mat = matrix(NA, nlam, numSims)
+  pr.TP.mat = matrix(NA, nlam, numSims)
+}
+for(i in 1:numSims){
+  # cl
+  cl.sim.tmp = readRDS(paste0(
+    output_dir, "/roccurves", "/classo_roc", i, file.end
+  ))
+  cl.roc.list[[i]] = cl.sim.tmp
+  cl.TPR.mat[, i] = cl.sim.tmp["tpr", ]
+  cl.S.hat.mat[, i] = cl.sim.tmp["S_hat", ]
+  cl.TP.mat[, i] = cl.sim.tmp["TP", ]
+  # slr
+  slr.sim.tmp = readRDS(paste0(
+    output_dir, "/roccurves", "/slr_roc", i, file.end
+  ))
+  slr.roc.list[[i]] = slr.sim.tmp
+  slr.TPR.mat[, i] = slr.sim.tmp["tpr", ]
+  slr.S.hat.mat[, i] = slr.sim.tmp["S_hat", ]
+  slr.TP.mat[, i] = slr.sim.tmp["TP", ]
+  if(has.oracle){
+    # oracle
+    or.sim.tmp = readRDS(paste0(
+      output_dir, "/roccurves", "/oracle_roc", i, file.end
+    ))
+    or.roc.list[[i]] = or.sim.tmp
+    or.TPR.mat[, i] = or.sim.tmp["tpr", ]
+    or.S.hat.mat[, i] = or.sim.tmp["S_hat", ]
+    or.TP.mat[, i] = or.sim.tmp["TP", ]
+  }
+  if(has.coat){
+    # coat
+    coat.sim.tmp = readRDS(paste0(
+      output_dir, "/roccurves", "/coat_roc", i, file.end
+    ))
+    coat.roc.list[[i]] = coat.sim.tmp
+    coat.TPR.mat[, i] = coat.sim.tmp["tpr", ]
+    coat.S.hat.mat[, i] = coat.sim.tmp["S_hat", ]
+    coat.TP.mat[, i] = coat.sim.tmp["TP", ]
+  }
+  if(has.propr){
+    # oracle
+    pr.sim.tmp = readRDS(paste0(
+      output_dir, "/roccurves", "/propr_roc", i, file.end
+    ))
+    pr.roc.list[[i]] = pr.sim.tmp
+    pr.TPR.mat[, i] = pr.sim.tmp["tpr", ]
+    pr.S.hat.mat[, i] = pr.sim.tmp["S_hat", ]
+    pr.TP.mat[, i] = pr.sim.tmp["TP", ]
+  }
+}
+
+# average over each possible S.hat/TP value
+# stack columns so which() is more interpretable
+cl.TPR.vec = as.vector(cl.TPR.mat)
+cl.S.hat.vec = as.vector(cl.S.hat.mat)
+cl.TP.vec = as.vector(cl.TP.mat)
+slr.TPR.vec = as.vector(slr.TPR.mat)
+slr.S.hat.vec = as.vector(slr.S.hat.mat)
+slr.TP.vec = as.vector(slr.TP.mat)
+if(has.oracle){
+  or.TPR.vec = as.vector(or.TPR.mat)
+  or.S.hat.vec = as.vector(or.S.hat.mat)
+  or.TP.vec = as.vector(or.TP.mat)
+}
+if(has.coat){
+  coat.TPR.vec = as.vector(coat.TPR.mat)
+  coat.S.hat.vec = as.vector(coat.S.hat.mat)
+  coat.TP.vec = as.vector(coat.TP.mat)
+}
+if(has.propr){
+  pr.TPR.vec = as.vector(pr.TPR.mat)
+  pr.S.hat.vec = as.vector(pr.S.hat.mat)
+  pr.TP.vec = as.vector(pr.TP.mat)
+}
+
+# get the averages
+S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec)))
+if(has.oracle & !has.coat & !has.propr){
+  S.hat.vals = sort(unique(c(cl.S.hat.vec, slr.S.hat.vec, or.S.hat.vec)))
+} else if(has.oracle & !has.coat & has.propr){
+  S.hat.vals = sort(unique(c(
+    cl.S.hat.vec, slr.S.hat.vec, or.S.hat.vec, pr.S.hat.vec)))
+}
+cl.TPR.avg = rep(NA, length(S.hat.vals))
+cl.TP.avg = rep(NA, length(S.hat.vals))
+slr.TPR.avg = rep(NA, length(S.hat.vals))
+slr.TP.avg = rep(NA, length(S.hat.vals))
+if(has.oracle){
+  or.TPR.avg = rep(NA, length(S.hat.vals))
+  or.TP.avg = rep(NA, length(S.hat.vals))
+}
+if(has.coat){
+  coat.TPR.avg = rep(NA, length(S.hat.vals))
+  coat.TP.avg = rep(NA, length(S.hat.vals))
+}
+if(has.propr){
+  pr.TPR.avg = rep(NA, length(S.hat.vals))
+  pr.TP.avg = rep(NA, length(S.hat.vals))
+}
+for(i in 1:length(S.hat.vals)){
+  val.tmp = S.hat.vals[i]
+  # classo
+  cl.which.idx.tmp = which(cl.S.hat.vec == val.tmp)
+  cl.TPR.avg[i] = mean(cl.TPR.vec[cl.which.idx.tmp])
+  cl.TP.avg[i] = mean(cl.TP.vec[cl.which.idx.tmp])
+  # slr
+  slr.which.idx.tmp = which(slr.S.hat.vec == val.tmp)
+  slr.TPR.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp])
+  slr.TP.avg[i] = mean(slr.TP.vec[slr.which.idx.tmp])
+  if(has.oracle){
+    # oracle
+    or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
+    or.TPR.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
+    or.TP.avg[i] = mean(or.TP.vec[or.which.idx.tmp])
+  }
+  if(has.coat){
+    # coat
+    coat.which.idx.tmp = which(coat.S.hat.vec == val.tmp)
+    coat.TPR.avg[i] = mean(coat.TPR.vec[coat.which.idx.tmp])
+    coat.TP.avg[i] = mean(coat.TP.vec[coat.which.idx.tmp])
+  }
+  if(has.propr){
+    # propr
+    pr.which.idx.tmp = which(pr.S.hat.vec == val.tmp)
+    pr.TPR.avg[i] = mean(pr.TPR.vec[pr.which.idx.tmp])
+    pr.TP.avg[i] = mean(pr.TP.vec[pr.which.idx.tmp])
+  }
+}
+
+# plot
+data.gg = rbind(
+  data.frame(
+    S_hat = S.hat.vals, TPR = cl.TPR.avg, TP = cl.TP.avg, Method = "classo"), 
+  data.frame(
+    S_hat = S.hat.vals, TPR = slr.TPR.avg, TP = slr.TP.avg, Method = "slr")
+)
+if(has.oracle){
+  data.gg = rbind(
+    data.gg, 
+    data.frame(
+      S_hat = S.hat.vals, TPR = or.TPR.avg, TP = or.TP.avg, Method = "oracle"))
+}
+if(has.coat){
+  data.gg = rbind(
+    data.gg, 
+    data.frame(
+      S_hat = S.hat.vals, TPR = coat.TPR.avg, TP = coat.TP.avg, Method = "coat"))
+}
+if(has.propr){
+  data.gg = rbind(
+    data.gg, 
+    data.frame(
+      S_hat = S.hat.vals, TPR = pr.TPR.avg, TP = pr.TP.avg, Method = "propr"))
+}
+data.gg$Method = factor(data.gg$Method, levels = levels.gg)
+tp_roc = ggplot(
+  data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TP, color = Method)) + 
+  geom_line(alpha = 0.5, na.rm = TRUE) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  theme_bw()
+tpr_roc = ggplot(
+  data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
+  geom_line(alpha = 0.5, na.rm = TRUE) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  theme_bw()
+ggarrange(tp_roc, tpr_roc)
+if(sigma.settings == "lin14Sigma" & mu.settings == "matchbeta"){
+  ggsave(
+    filename = paste0(
+      "20211011_", 
+      sigma.settings, "_noise", sigma_eps, 
+      "_", theta.settings, "_", mu.settings, "_rocs.pdf"),
+    plot = last_plot(),
+    width = 8, height = 5, units = c("in")
+  )
+} else{
+  ggsave(
+    filename = paste0(
+      "20211011_", 
+      sigma.settings, "_noise", sigma_eps, 
+      "_", theta.settings, "_rocs.pdf"),
+    plot = last_plot(),
+    width = 8, height = 5, units = c("in")
+  )
 }
 
 

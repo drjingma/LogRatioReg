@@ -227,13 +227,18 @@ fitSLRalpha <- function(
       
       # Centering and scaling #####
       Z_use <- Z <- as.matrix(Z) # X to-be-used for model fit
+      Xb_use <- Xb <- as.matrix(Xb) # X to-be-used for model fit
       y_use <- as.vector(y) # y to-be-used for model fit
       # Center X and y if intercept is to be included
       if (intercept) {
         Z_mu = colMeans(Z_use)
         y_mu = mean(y_use)
+        Xb_mu = colMeans(Xb_use)
+        
         Z_use <- Z - matrix(rep(1, times = n), ncol = 1) %*% 
           matrix(Z_mu, nrow = 1)
+        Xb_use <- Xb - matrix(rep(1, times = n), ncol = 1) %*% 
+          matrix(Xb_mu, nrow = 1)
         y_use <- y - y_mu
       }
       # scale Z if scaling = TRUE #####
@@ -242,6 +247,7 @@ fitSLRalpha <- function(
         Z_sd = apply(Z_use, 2, function(x) sqrt(sum(x^2) / n))
         Xb_sd = apply(Xb_use, 2, function(x) sqrt(sum(x^2) / n))
         Z_use = apply(Z_use, 2, function(x) x / sqrt(sum(x^2) / n))
+        Xb_use = apply(Xb_use, 2, function(x) x / sqrt(sum(x^2) / n))
       }
       #####
       

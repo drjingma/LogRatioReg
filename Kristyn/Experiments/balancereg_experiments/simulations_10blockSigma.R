@@ -91,24 +91,26 @@ res = foreach(
   
   # theta settings
   SBP = sbp.fromHclust(SigmaWtree)
+  # for each column (contrast), find which variables are included (1 or -1)
+  contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
   if(theta.settings == "pairperblock"){
-    # for each column (contrast), find which variables are included (1 or -1)
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
-    #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == 2)
+    # get the contrasts with length 2 (pairs)
+    which.pairs = which(sapply(contrast.vars, length) == 2)
     # pick one such contrast
-    if(length(block.contrasts) >= num.blocks){
-      block.contrasts.pairs = do.call(rbind, contrast.vars[block.contrasts])
-      block.labels = cut(1:p, num.blocks)
+    if(length(which.pairs) >= num.blocks){
+      vars.in.each.pair = do.call(rbind, contrast.vars[which.pairs])
       indices.theta = rep(NA, num.blocks)
+      blocks.pairs = list()
       for(i in 1:num.blocks){
         pairs.in.block.i = apply(
-          block.contrasts.pairs, 1, FUN = function(x) all(
-            as.numeric(x) %in% ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
-        contrasts.block.i = block.contrasts[pairs.in.block.i]
-        indices.theta[i] = sample(contrasts.block.i, 1)
+          vars.in.each.pair, 1, FUN = function(x) all(
+            as.numeric(x) %in% 
+              ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
+        contrasts.block.i = which.pairs[pairs.in.block.i]
+        blocks.pairs[[i]] = contrasts.block.i
       }
+      theta.indices = sapply(blocks.pairs, function(x) x[1])
+      print(theta.indices)
       # SBP[, indices.theta]
     } else{
       stop("there aren't 10 different contrasts corresponding to different pairs in each block!")
@@ -120,7 +122,6 @@ res = foreach(
     #     in 4 different blocks (accounts for 8 blocks so far), and 
     #   the other 4 blocks with inactive vars (i.e. not in any of the 
     #     selected contrasts).
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
     # get the 1 contrast corresponding to 2 blocks
     block.contrasts.1blockpair = which(
       sapply(contrast.vars, length) == 2 * (p / num.blocks))
@@ -129,8 +130,9 @@ res = foreach(
     #   vars in 4 different blocks
     block.contrasts.halves = which(
       sapply(contrast.vars, length) == 9) # 0.5 * (p / num.blocks))
-    indices.theta2 = unname(sample(block.contrasts.halves, 4))
+    indices.theta2 = unname(block.contrasts.halves[1:4])
     indices.theta = c(indices.theta1, indices.theta2)
+    print(indices.theta)
   } else{
     stop("invalid theta.settings")
   }

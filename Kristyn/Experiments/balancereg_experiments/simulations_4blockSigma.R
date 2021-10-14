@@ -160,6 +160,7 @@ res = foreach(
   # supervised log-ratios
   ##############################################################################
   
+  # fit model ##################################################################
   if(!file.exists(paste0(output_dir, "/models", "/slr_model", file.end)) |
      !file.exists(paste0(output_dir, "/timing", "/slr_timing", file.end))){
     slr.model.already.existed = FALSE
@@ -183,73 +184,150 @@ res = foreach(
       output_dir, "/timing", "/slr_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/slr_metrics", file.end)) | 
-     slr.model.already.existed == FALSE){
+  # select tuning parameter and calculate metrics ##############################
+  if(!file.exists(paste0(
+    output_dir, "/metrics", "/slr_metrics", file.end)) | 
+    !file.exists(paste0(
+      output_dir, "/metrics", "/slr_bic_metrics", file.end)) | 
+    slr.model.already.existed == FALSE){
     
     # binary tree
     slr.btree = slr$btree
     
-    # choose lambda
-    slr.lam.min.idx = which.min(slr$cvm)
-    slr.lam.min = slr$lambda[slr.lam.min.idx]
-    slr.a0 = slr$int[slr.lam.min.idx]
-    slr.thetahat = slr$bet[, slr.lam.min.idx]
-    slr.Uhat = getU(btree = slr.btree)
-    slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    slr.PE.train = getMSEyhat(
-      Y, n, slr.a0, slr.thetahat, computeBalances(X, slr.btree))
-    # 1b. on test set #
-    slr.PE.test = getMSEyhat(
-      Y.test, n, slr.a0, slr.thetahat, computeBalances(X.test, slr.btree))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    slr.EA = getEstimationAccuracy(beta, slr.betahat)
-    # 2b. estimation accuracy for active set
-    slr.EA.active = getEstimationAccuracy(beta[non0.beta], slr.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    slr.EA.inactive = getEstimationAccuracy(beta[is0.beta], slr.betahat[is0.beta])
-    
-    # 3. selection accuracy #
-    # 3a. selection of beta #
-    ### using SBP matrix
-    slr.SBP = sbp.fromHclust(slr.btree)
-    slr.non0.thetahat = (slr.thetahat != 0)
-    slr.sel.cols.SBP = slr.SBP[, slr.non0.thetahat, drop = FALSE]
-    slr.non0.betahat = apply(slr.sel.cols.SBP, 1, function(row) any(row != 0))
-    slr.SA = getSelectionAccuracy(is0.beta, non0.beta, slr.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = slr.PE.train, 
-      "PEte" = slr.PE.test, 
-      "EA1" = slr.EA$EA1, 
-      "EA2" = slr.EA$EA2, 
-      "EAInfty" = slr.EA$EAInfty, 
-      "EA1Active" = slr.EA.active$EA1, 
-      "EA2Active" = slr.EA.active$EA2, 
-      "EAInftyActive" = slr.EA.active$EAInfty, 
-      "EA1Inactive" = slr.EA.inactive$EA1, 
-      "EA2Inactive" = slr.EA.inactive$EA2, 
-      "EAInftyInactive" = slr.EA.inactive$EAInfty, 
-      "FP" = slr.SA$FP, 
-      "FN" = slr.SA$FN, 
-      "TPR" = slr.SA$TPR, 
-      "precision" = slr.SA$precision, 
-      "Fscore" = slr.SA$Fscore,
-      "timing" = slr.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/slr_metrics", file.end))
+    # choose lambda using cross-validated mse ##################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/slr_metrics", file.end))){
+      slr.lam.min.idx = which.min(slr$cvm)
+      slr.lam.min = slr$lambda[slr.lam.min.idx]
+      slr.a0 = slr$int[slr.lam.min.idx]
+      slr.thetahat = slr$bet[, slr.lam.min.idx]
+      slr.Uhat = getU(btree = slr.btree)
+      slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      slr.PE.train = getMSEyhat(
+        Y, n, slr.a0, slr.thetahat, computeBalances(X, slr.btree))
+      # 1b. on test set #
+      slr.PE.test = getMSEyhat(
+        Y.test, n, slr.a0, slr.thetahat, computeBalances(X.test, slr.btree))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      slr.EA = getEstimationAccuracy(beta, slr.betahat)
+      # 2b. estimation accuracy for active set
+      slr.EA.active = getEstimationAccuracy(beta[non0.beta], slr.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      slr.EA.inactive = getEstimationAccuracy(beta[is0.beta], slr.betahat[is0.beta])
+      
+      # 3. selection accuracy #
+      # 3a. selection of beta #
+      ### using SBP matrix
+      slr.SBP = sbp.fromHclust(slr.btree)
+      slr.non0.thetahat = (slr.thetahat != 0)
+      slr.sel.cols.SBP = slr.SBP[, slr.non0.thetahat, drop = FALSE]
+      slr.non0.betahat = apply(slr.sel.cols.SBP, 1, function(row) any(row != 0))
+      slr.SA = getSelectionAccuracy(is0.beta, non0.beta, slr.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = slr.PE.train, 
+        "PEte" = slr.PE.test, 
+        "EA1" = slr.EA$EA1, 
+        "EA2" = slr.EA$EA2, 
+        "EAInfty" = slr.EA$EAInfty, 
+        "EA1Active" = slr.EA.active$EA1, 
+        "EA2Active" = slr.EA.active$EA2, 
+        "EAInftyActive" = slr.EA.active$EAInfty, 
+        "EA1Inactive" = slr.EA.inactive$EA1, 
+        "EA2Inactive" = slr.EA.inactive$EA2, 
+        "EAInftyInactive" = slr.EA.inactive$EAInfty, 
+        "FP" = slr.SA$FP, 
+        "FN" = slr.SA$FN, 
+        "TPR" = slr.SA$TPR, 
+        "precision" = slr.SA$precision, 
+        "Fscore" = slr.SA$Fscore,
+        "timing" = slr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/slr_metrics", file.end))
+    }
+    # choose lambda using bic ##################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/slr_bic_metrics", file.end))){
+      ilrX = computeBalances(X, slr.btree)
+      slr.bic = rep(NA, nlam)
+      for(i in 1:nlam){
+        if(length(slr$int) != nlam) stop("length(slr$int) != nlam")
+        a0.i = slr$int[i]
+        bet.i = slr$bet[, i]
+        yhat.i = a0.i + ilrX %*% bet.i
+        resid.i = Y - yhat.i
+        num.params.i = sum(abs(bet.i) > 10e-8)
+        slr.bic[i] = getBIC(num.params.i, resid.i)
+      }
+      slr.lam.min.idx = which.min(slr.bic)
+      slr.lam.min = slr$lambda[slr.lam.min.idx]
+      slr.a0 = slr$int[slr.lam.min.idx]
+      slr.thetahat = slr$bet[, slr.lam.min.idx]
+      slr.Uhat = getU(btree = slr.btree)
+      slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      slr.PE.train = getMSEyhat(Y, n, slr.a0, slr.thetahat, ilrX)
+      # 1b. on test set #
+      slr.PE.test = getMSEyhat(
+        Y.test, n, slr.a0, slr.thetahat, computeBalances(X.test, slr.btree))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      slr.EA = getEstimationAccuracy(beta, slr.betahat)
+      # 2b. estimation accuracy for active set
+      slr.EA.active = getEstimationAccuracy(beta[non0.beta], slr.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      slr.EA.inactive = getEstimationAccuracy(beta[is0.beta], slr.betahat[is0.beta])
+      
+      # 3. selection accuracy #
+      # 3a. selection of beta #
+      ### using SBP matrix
+      slr.SBP = sbp.fromHclust(slr.btree)
+      slr.non0.thetahat = (slr.thetahat != 0)
+      slr.sel.cols.SBP = slr.SBP[, slr.non0.thetahat, drop = FALSE]
+      slr.non0.betahat = apply(slr.sel.cols.SBP, 1, function(row) any(row != 0))
+      slr.SA = getSelectionAccuracy(is0.beta, non0.beta, slr.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = slr.PE.train, 
+        "PEte" = slr.PE.test, 
+        "EA1" = slr.EA$EA1, 
+        "EA2" = slr.EA$EA2, 
+        "EAInfty" = slr.EA$EAInfty, 
+        "EA1Active" = slr.EA.active$EA1, 
+        "EA2Active" = slr.EA.active$EA2, 
+        "EAInftyActive" = slr.EA.active$EAInfty, 
+        "EA1Inactive" = slr.EA.inactive$EA1, 
+        "EA2Inactive" = slr.EA.inactive$EA2, 
+        "EAInftyInactive" = slr.EA.inactive$EAInfty, 
+        "FP" = slr.SA$FP, 
+        "FN" = slr.SA$FN, 
+        "TPR" = slr.SA$TPR, 
+        "precision" = slr.SA$precision, 
+        "Fscore" = slr.SA$Fscore,
+        "timing" = slr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/slr_bic_metrics", file.end))
+    }
   } else{
     slr.btree = slr$btree
     slr.SBP = sbp.fromHclust(slr.btree)
   }
   
+  # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", file.end)) | 
      slr.model.already.existed == FALSE){
     # roc
@@ -263,6 +341,7 @@ res = foreach(
   # compositional lasso
   ##############################################################################
   
+  # fit model ##################################################################
   if(!file.exists(paste0(output_dir, "/models", "/classo_model", file.end)) |
      !file.exists(paste0(output_dir, "/timing", "/classo_timing", file.end))){
     cl.model.already.existed = FALSE
@@ -286,58 +365,126 @@ res = foreach(
       output_dir, "/timing", "/classo_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", file.end)) | 
-     cl.model.already.existed == FALSE){
+  # select tuning parameter and calculate metrics ##############################
+  if(!file.exists(paste0(
+    output_dir, "/metrics", "/classo_metrics", file.end)) | 
+    !file.exists(paste0(
+      output_dir, "/metrics", "/classo_bic_metrics", file.end)) |
+    cl.model.already.existed == FALSE){
     
-    # choose lambda
-    cl.lam.min.idx = which.min(classo$cvm)
-    cl.lam.min = classo$lambda[cl.lam.min.idx]
-    cl.a0 = classo$int[cl.lam.min.idx]
-    cl.betahat = classo$bet[, cl.lam.min.idx]
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    cl.PE.train = getMSEyhat(Y, n, cl.a0, cl.betahat, log(X))
-    # 1b. on test set #
-    cl.PE.test = getMSEyhat(Y.test, n, cl.a0, cl.betahat, log(X.test))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    cl.EA = getEstimationAccuracy(beta, cl.betahat)
-    # 2b. estimation accuracy for active set
-    cl.EA.active = getEstimationAccuracy(beta[non0.beta], cl.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    cl.EA.inactive = getEstimationAccuracy(beta[is0.beta], cl.betahat[is0.beta])
-    
-    # 3. selection accuracy (i.t.o. beta) #
-    cl.non0.betahat = abs(cl.betahat) > 10e-8
-    cl.SA = getSelectionAccuracy(is0.beta, non0.beta, cl.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = cl.PE.train, 
-      "PEte" = cl.PE.test, 
-      "EA1" = cl.EA$EA1, 
-      "EA2" = cl.EA$EA2, 
-      "EAInfty" = cl.EA$EAInfty, 
-      "EA1Active" = cl.EA.active$EA1, 
-      "EA2Active" = cl.EA.active$EA2, 
-      "EAInftyActive" = cl.EA.active$EAInfty, 
-      "EA1Inactive" = cl.EA.inactive$EA1, 
-      "EA2Inactive" = cl.EA.inactive$EA2, 
-      "EAInftyInactive" = cl.EA.inactive$EAInfty, 
-      "FP" = cl.SA$FP, 
-      "FN" = cl.SA$FN, 
-      "TPR" = cl.SA$TPR, 
-      "precision" = cl.SA$precision, 
-      "Fscore" = cl.SA$Fscore,
-      "timing" = cl.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/classo_metrics", file.end))
+    # choose lambda using cross-validated mse ##################################
+    if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", file.end))){
+      cl.lam.min.idx = which.min(classo$cvm)
+      cl.lam.min = classo$lambda[cl.lam.min.idx]
+      cl.a0 = classo$int[cl.lam.min.idx]
+      cl.betahat = classo$bet[, cl.lam.min.idx]
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      cl.PE.train = getMSEyhat(Y, n, cl.a0, cl.betahat, log(X))
+      # 1b. on test set #
+      cl.PE.test = getMSEyhat(Y.test, n, cl.a0, cl.betahat, log(X.test))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      cl.EA = getEstimationAccuracy(beta, cl.betahat)
+      # 2b. estimation accuracy for active set
+      cl.EA.active = getEstimationAccuracy(beta[non0.beta], cl.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      cl.EA.inactive = getEstimationAccuracy(beta[is0.beta], cl.betahat[is0.beta])
+      
+      # 3. selection accuracy (i.t.o. beta) #
+      cl.non0.betahat = abs(cl.betahat) > 10e-8
+      cl.SA = getSelectionAccuracy(is0.beta, non0.beta, cl.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = cl.PE.train, 
+        "PEte" = cl.PE.test, 
+        "EA1" = cl.EA$EA1, 
+        "EA2" = cl.EA$EA2, 
+        "EAInfty" = cl.EA$EAInfty, 
+        "EA1Active" = cl.EA.active$EA1, 
+        "EA2Active" = cl.EA.active$EA2, 
+        "EAInftyActive" = cl.EA.active$EAInfty, 
+        "EA1Inactive" = cl.EA.inactive$EA1, 
+        "EA2Inactive" = cl.EA.inactive$EA2, 
+        "EAInftyInactive" = cl.EA.inactive$EAInfty, 
+        "FP" = cl.SA$FP, 
+        "FN" = cl.SA$FN, 
+        "TPR" = cl.SA$TPR, 
+        "precision" = cl.SA$precision, 
+        "Fscore" = cl.SA$Fscore,
+        "timing" = cl.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/classo_metrics", file.end))
+    }
+    # choose lambda using bic ##################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/classo_bic_metrics", file.end))){
+      logX = log(X)
+      cl.bic = rep(NA, nlam)
+      for(i in 1:nlam){
+        if(length(classo$int) != nlam) stop("length(classo$int) != nlam")
+        a0.i = classo$int[i]
+        bet.i = classo$bet[, i]
+        yhat.i = a0.i + logX %*% bet.i
+        resid.i = Y - yhat.i
+        num.params.i = sum(abs(bet.i) > 10e-8)
+        cl.bic[i] = getBIC(num.params.i, resid.i)
+      }
+      cl.lam.min.idx = which.min(cl.bic)
+      cl.lam.min = classo$lambda[cl.lam.min.idx]
+      cl.a0 = classo$int[cl.lam.min.idx]
+      cl.betahat = classo$bet[, cl.lam.min.idx]
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      cl.PE.train = getMSEyhat(Y, n, cl.a0, cl.betahat, log(X))
+      # 1b. on test set #
+      cl.PE.test = getMSEyhat(Y.test, n, cl.a0, cl.betahat, log(X.test))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      cl.EA = getEstimationAccuracy(beta, cl.betahat)
+      # 2b. estimation accuracy for active set
+      cl.EA.active = getEstimationAccuracy(beta[non0.beta], cl.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      cl.EA.inactive = getEstimationAccuracy(beta[is0.beta], cl.betahat[is0.beta])
+      
+      # 3. selection accuracy (i.t.o. beta) #
+      cl.non0.betahat = abs(cl.betahat) > 10e-8
+      cl.SA = getSelectionAccuracy(is0.beta, non0.beta, cl.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = cl.PE.train, 
+        "PEte" = cl.PE.test, 
+        "EA1" = cl.EA$EA1, 
+        "EA2" = cl.EA$EA2, 
+        "EAInfty" = cl.EA$EAInfty, 
+        "EA1Active" = cl.EA.active$EA1, 
+        "EA2Active" = cl.EA.active$EA2, 
+        "EAInftyActive" = cl.EA.active$EAInfty, 
+        "EA1Inactive" = cl.EA.inactive$EA1, 
+        "EA2Inactive" = cl.EA.inactive$EA2, 
+        "EAInftyInactive" = cl.EA.inactive$EAInfty, 
+        "FP" = cl.SA$FP, 
+        "FN" = cl.SA$FN, 
+        "TPR" = cl.SA$TPR, 
+        "precision" = cl.SA$precision, 
+        "Fscore" = cl.SA$Fscore,
+        "timing" = cl.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/classo_bic_metrics", file.end))
+    }
   }
   
+  # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/classo_roc", file.end)) | 
      cl.model.already.existed == FALSE){
     # roc
@@ -351,6 +498,7 @@ res = foreach(
   # oracle method
   ##############################################################################
   
+  # fit model ##################################################################
   if(!file.exists(paste0(output_dir, "/models", "/oracle_model", file.end)) |
      !file.exists(paste0(output_dir, "/timing", "/oracle_timing", file.end))){
     or.model.already.existed = FALSE
@@ -373,78 +521,154 @@ res = foreach(
       output_dir, "/timing", "/oracle_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/oracle_metrics", file.end)) | 
-     or.model.already.existed == FALSE){
+  # select tuning parameter and calculate metrics ##############################
+  if(!file.exists(paste0(
+    output_dir, "/metrics", "/oracle_metrics", file.end)) | 
+    !file.exists(paste0(
+      output_dir, "/metrics", "/oracle_bic_metrics", file.end)) |
+    or.model.already.existed == FALSE){
     
     # binary tree
     or.btree = SigmaWtree
     
-    # timing metric
-    or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    
-    # choose lambda
-    or.lam.min.idx = which.min(oracle$cvm)
-    or.lam.min = oracle$lambda[or.lam.min.idx]
-    or.a0 = oracle$int[or.lam.min.idx]
-    or.thetahat = oracle$bet[, or.lam.min.idx]
-    or.Uhat = getU(btree = or.btree)
-    or.betahat = getBeta(or.thetahat, U = or.Uhat)
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    or.PE.train = getMSEyhat(
-      Y, n, or.a0, or.thetahat, computeBalances(X, or.btree))
-    # 1b. on test set #
-    or.PE.test = getMSEyhat(
-      Y.test, n, or.a0, or.thetahat, computeBalances(X.test, or.btree))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    or.EA = getEstimationAccuracy(beta, or.betahat)
-    # 2b. estimation accuracy for active set
-    or.EA.active = getEstimationAccuracy(beta[non0.beta], or.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    or.EA.inactive = getEstimationAccuracy(beta[is0.beta], or.betahat[is0.beta])
-    
-    # 3. selection accuracy #
-    # 3a. selection of beta #
-    ### using SBP matrix
-    or.SBP = sbp.fromHclust(or.btree)
-    row.names(or.SBP) = colnames(W)
-    or.non0.thetahat = (or.thetahat != 0)
-    or.sel.cols.SBP = or.SBP[, or.non0.thetahat, drop = FALSE]
-    or.non0.betahat = apply(or.sel.cols.SBP, 1, function(row) any(row != 0))
-    or.SA = getSelectionAccuracy(is0.beta, non0.beta, or.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = or.PE.train, 
-      "PEte" = or.PE.test, 
-      "EA1" = or.EA$EA1, 
-      "EA2" = or.EA$EA2, 
-      "EAInfty" = or.EA$EAInfty, 
-      "EA1Active" = or.EA.active$EA1, 
-      "EA2Active" = or.EA.active$EA2, 
-      "EAInftyActive" = or.EA.active$EAInfty, 
-      "EA1Inactive" = or.EA.inactive$EA1, 
-      "EA2Inactive" = or.EA.inactive$EA2, 
-      "EAInftyInactive" = or.EA.inactive$EAInfty, 
-      "FP" = or.SA$FP, 
-      "FN" = or.SA$FN, 
-      "TPR" = or.SA$TPR, 
-      "precision" = or.SA$precision, 
-      "Fscore" = or.SA$Fscore,
-      "timing" = or.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
+    # choose lambda using cross-validated mse ##################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/oracle_metrics", file.end))){
+      or.lam.min.idx = which.min(oracle$cvm)
+      or.lam.min = oracle$lambda[or.lam.min.idx]
+      or.a0 = oracle$int[or.lam.min.idx]
+      or.thetahat = oracle$bet[, or.lam.min.idx]
+      or.Uhat = getU(btree = or.btree)
+      or.betahat = getBeta(or.thetahat, U = or.Uhat)
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      or.PE.train = getMSEyhat(
+        Y, n, or.a0, or.thetahat, computeBalances(X, or.btree))
+      # 1b. on test set #
+      or.PE.test = getMSEyhat(
+        Y.test, n, or.a0, or.thetahat, computeBalances(X.test, or.btree))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      or.EA = getEstimationAccuracy(beta, or.betahat)
+      # 2b. estimation accuracy for active set
+      or.EA.active = getEstimationAccuracy(beta[non0.beta], or.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      or.EA.inactive = getEstimationAccuracy(beta[is0.beta], or.betahat[is0.beta])
+      
+      # 3. selection accuracy #
+      # 3a. selection of beta #
+      ### using SBP matrix
+      or.SBP = sbp.fromHclust(or.btree)
+      row.names(or.SBP) = colnames(W)
+      or.non0.thetahat = (or.thetahat != 0)
+      or.sel.cols.SBP = or.SBP[, or.non0.thetahat, drop = FALSE]
+      or.non0.betahat = apply(or.sel.cols.SBP, 1, function(row) any(row != 0))
+      or.SA = getSelectionAccuracy(is0.beta, non0.beta, or.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = or.PE.train, 
+        "PEte" = or.PE.test, 
+        "EA1" = or.EA$EA1, 
+        "EA2" = or.EA$EA2, 
+        "EAInfty" = or.EA$EAInfty, 
+        "EA1Active" = or.EA.active$EA1, 
+        "EA2Active" = or.EA.active$EA2, 
+        "EAInftyActive" = or.EA.active$EAInfty, 
+        "EA1Inactive" = or.EA.inactive$EA1, 
+        "EA2Inactive" = or.EA.inactive$EA2, 
+        "EAInftyInactive" = or.EA.inactive$EAInfty, 
+        "FP" = or.SA$FP, 
+        "FN" = or.SA$FN, 
+        "TPR" = or.SA$TPR, 
+        "precision" = or.SA$precision, 
+        "Fscore" = or.SA$Fscore,
+        "timing" = or.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
+    }
+    # choose lambda using bic ##################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/oracle_bic_metrics", file.end))){
+      ilrX = computeBalances(X, or.btree)
+      or.bic = rep(NA, nlam)
+      for(i in 1:nlam){
+        if(length(oracle$int) != nlam) stop("length(oracle$int) != nlam")
+        a0.i = oracle$int[i]
+        bet.i = oracle$bet[, i]
+        yhat.i = a0.i + ilrX %*% bet.i
+        resid.i = Y - yhat.i
+        num.params.i = sum(abs(bet.i) > 10e-8)
+        or.bic[i] = getBIC(num.params.i, resid.i)
+      }
+      or.lam.min.idx = which.min(or.bic)
+      or.lam.min = oracle$lambda[or.lam.min.idx]
+      or.a0 = oracle$int[or.lam.min.idx]
+      or.thetahat = oracle$bet[, or.lam.min.idx]
+      or.Uhat = getU(btree = or.btree)
+      or.betahat = getBeta(or.thetahat, U = or.Uhat)
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      or.PE.train = getMSEyhat(
+        Y, n, or.a0, or.thetahat, ilrX)
+      # 1b. on test set #
+      or.PE.test = getMSEyhat(
+        Y.test, n, or.a0, or.thetahat, computeBalances(X.test, or.btree))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      or.EA = getEstimationAccuracy(beta, or.betahat)
+      # 2b. estimation accuracy for active set
+      or.EA.active = getEstimationAccuracy(beta[non0.beta], or.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      or.EA.inactive = getEstimationAccuracy(beta[is0.beta], or.betahat[is0.beta])
+      
+      # 3. selection accuracy #
+      # 3a. selection of beta #
+      ### using SBP matrix
+      or.SBP = sbp.fromHclust(or.btree)
+      row.names(or.SBP) = colnames(W)
+      or.non0.thetahat = (or.thetahat != 0)
+      or.sel.cols.SBP = or.SBP[, or.non0.thetahat, drop = FALSE]
+      or.non0.betahat = apply(or.sel.cols.SBP, 1, function(row) any(row != 0))
+      or.SA = getSelectionAccuracy(is0.beta, non0.beta, or.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = or.PE.train, 
+        "PEte" = or.PE.test, 
+        "EA1" = or.EA$EA1, 
+        "EA2" = or.EA$EA2, 
+        "EAInfty" = or.EA$EAInfty, 
+        "EA1Active" = or.EA.active$EA1, 
+        "EA2Active" = or.EA.active$EA2, 
+        "EAInftyActive" = or.EA.active$EAInfty, 
+        "EA1Inactive" = or.EA.inactive$EA1, 
+        "EA2Inactive" = or.EA.inactive$EA2, 
+        "EAInftyInactive" = or.EA.inactive$EAInfty, 
+        "FP" = or.SA$FP, 
+        "FN" = or.SA$FN, 
+        "TPR" = or.SA$TPR, 
+        "precision" = or.SA$precision, 
+        "Fscore" = or.SA$Fscore,
+        "timing" = or.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/oracle_bic_metrics", file.end))
+    }
   } else{
     or.btree = SigmaWtree
     or.SBP = sbp.fromHclust(or.btree)
     row.names(or.SBP) = colnames(W)
   }
   
+  # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/oracle_roc", file.end)) | 
      or.model.already.existed == FALSE){
     # roc
@@ -458,6 +682,7 @@ res = foreach(
   # propr method
   ##############################################################################
   
+  # fit model ##################################################################
   if(!file.exists(paste0(output_dir, "/models", "/propr_model", file.end)) |
      !file.exists(paste0(output_dir, "/timing", "/propr_timing", file.end))){
     pr.model.already.existed = FALSE
@@ -482,76 +707,151 @@ res = foreach(
       output_dir, "/timing", "/propr_timing", file.end))
   }
   
-  if(!file.exists(paste0(output_dir, "/metrics", "/propr_metrics", file.end)) | 
-     pr.model.already.existed == FALSE){
+  # select tuning parameter and calculate metrics ##############################
+  if(!file.exists(paste0(
+    output_dir, "/metrics", "/propr_metrics", file.end)) | 
+    !file.exists(paste0(
+      output_dir, "/metrics", "/propr_bic_metrics", file.end)) |
+    pr.model.already.existed == FALSE){
     
     # binary tree
     pr.btree = pr$btree
     
-    # timing metric
-    pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    
-    # choose lambda
-    pr.lam.min.idx = which.min(pr$cvm)
-    pr.lam.min = pr$lambda[pr.lam.min.idx]
-    pr.a0 = pr$int[pr.lam.min.idx]
-    pr.thetahat = pr$bet[, pr.lam.min.idx]
-    pr.Uhat = getU(btree = pr.btree)
-    pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
-    
-    # evaluate model #
-    
-    # 1. prediction error #
-    # 1a. on training set #
-    pr.PE.train = getMSEyhat(
-      Y, n, pr.a0, pr.thetahat, computeBalances(X, pr.btree))
-    # 1b. on test set #
-    pr.PE.test = getMSEyhat(
-      Y.test, n, pr.a0, pr.thetahat, computeBalances(X.test, pr.btree))
-    
-    # 2. estimation accuracy #
-    # 2a. estimation of beta #
-    pr.EA = getEstimationAccuracy(beta, pr.betahat)
-    # 2b. estimation accuracy for active set
-    pr.EA.active = getEstimationAccuracy(beta[non0.beta], pr.betahat[non0.beta])
-    # 2c. estimation accuracy for inactive set
-    pr.EA.inactive = getEstimationAccuracy(beta[is0.beta], pr.betahat[is0.beta])
-    
-    # 3. selection accuracy #
-    # 3a. selection of beta #
-    ### using SBP matrix
-    pr.SBP = sbp.fromHclust(pr.btree)
-    pr.non0.thetahat = (pr.thetahat != 0)
-    pr.sel.cols.SBP = pr.SBP[, pr.non0.thetahat, drop = FALSE]
-    pr.non0.betahat = apply(pr.sel.cols.SBP, 1, function(row) any(row != 0))
-    pr.SA = getSelectionAccuracy(is0.beta, non0.beta, pr.non0.betahat)
-    
-    saveRDS(c(
-      "PEtr" = pr.PE.train, 
-      "PEte" = pr.PE.test, 
-      "EA1" = pr.EA$EA1, 
-      "EA2" = pr.EA$EA2, 
-      "EAInfty" = pr.EA$EAInfty, 
-      "EA1Active" = pr.EA.active$EA1, 
-      "EA2Active" = pr.EA.active$EA2, 
-      "EAInftyActive" = pr.EA.active$EAInfty, 
-      "EA1Inactive" = pr.EA.inactive$EA1, 
-      "EA2Inactive" = pr.EA.inactive$EA2, 
-      "EAInftyInactive" = pr.EA.inactive$EAInfty, 
-      "FP" = pr.SA$FP, 
-      "FN" = pr.SA$FN, 
-      "TPR" = pr.SA$TPR, 
-      "precision" = pr.SA$precision, 
-      "Fscore" = pr.SA$Fscore,
-      "timing" = pr.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/propr_metrics", file.end))
+    # choose lambda using cross-validated mse ##################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/propr_metrics", file.end))){
+      pr.lam.min.idx = which.min(pr$cvm)
+      pr.lam.min = pr$lambda[pr.lam.min.idx]
+      pr.a0 = pr$int[pr.lam.min.idx]
+      pr.thetahat = pr$bet[, pr.lam.min.idx]
+      pr.Uhat = getU(btree = pr.btree)
+      pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      pr.PE.train = getMSEyhat(
+        Y, n, pr.a0, pr.thetahat, computeBalances(X, pr.btree))
+      # 1b. on test set #
+      pr.PE.test = getMSEyhat(
+        Y.test, n, pr.a0, pr.thetahat, computeBalances(X.test, pr.btree))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      pr.EA = getEstimationAccuracy(beta, pr.betahat)
+      # 2b. estimation accuracy for active set
+      pr.EA.active = getEstimationAccuracy(beta[non0.beta], pr.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      pr.EA.inactive = getEstimationAccuracy(beta[is0.beta], pr.betahat[is0.beta])
+      
+      # 3. selection accuracy #
+      # 3a. selection of beta #
+      ### using SBP matrix
+      pr.SBP = sbp.fromHclust(pr.btree)
+      pr.non0.thetahat = (pr.thetahat != 0)
+      pr.sel.cols.SBP = pr.SBP[, pr.non0.thetahat, drop = FALSE]
+      pr.non0.betahat = apply(pr.sel.cols.SBP, 1, function(row) any(row != 0))
+      pr.SA = getSelectionAccuracy(is0.beta, non0.beta, pr.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = pr.PE.train, 
+        "PEte" = pr.PE.test, 
+        "EA1" = pr.EA$EA1, 
+        "EA2" = pr.EA$EA2, 
+        "EAInfty" = pr.EA$EAInfty, 
+        "EA1Active" = pr.EA.active$EA1, 
+        "EA2Active" = pr.EA.active$EA2, 
+        "EAInftyActive" = pr.EA.active$EAInfty, 
+        "EA1Inactive" = pr.EA.inactive$EA1, 
+        "EA2Inactive" = pr.EA.inactive$EA2, 
+        "EAInftyInactive" = pr.EA.inactive$EAInfty, 
+        "FP" = pr.SA$FP, 
+        "FN" = pr.SA$FN, 
+        "TPR" = pr.SA$TPR, 
+        "precision" = pr.SA$precision, 
+        "Fscore" = pr.SA$Fscore,
+        "timing" = pr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/propr_metrics", file.end))
+    }
+    # choose lambda using bic ##################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/propr_bic_metrics", file.end))){
+      ilrX = computeBalances(X, pr.btree)
+      pr.bic = rep(NA, nlam)
+      for(i in 1:nlam){
+        if(length(pr$int) != nlam) stop("length(pr$int) != nlam")
+        a0.i = pr$int[i]
+        bet.i = pr$bet[, i]
+        yhat.i = a0.i + ilrX %*% bet.i
+        resid.i = Y - yhat.i
+        num.params.i = sum(abs(bet.i) > 10e-8)
+        pr.bic[i] = getBIC(num.params.i, resid.i)
+      }
+      pr.lam.min.idx = which.min(pr.bic)
+      pr.lam.min = pr$lambda[pr.lam.min.idx]
+      pr.a0 = pr$int[pr.lam.min.idx]
+      pr.thetahat = pr$bet[, pr.lam.min.idx]
+      pr.Uhat = getU(btree = pr.btree)
+      pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
+      
+      # evaluate model #
+      
+      # 1. prediction error #
+      # 1a. on training set #
+      pr.PE.train = getMSEyhat(
+        Y, n, pr.a0, pr.thetahat, ilrX)
+      # 1b. on test set #
+      pr.PE.test = getMSEyhat(
+        Y.test, n, pr.a0, pr.thetahat, computeBalances(X.test, pr.btree))
+      
+      # 2. estimation accuracy #
+      # 2a. estimation of beta #
+      pr.EA = getEstimationAccuracy(beta, pr.betahat)
+      # 2b. estimation accuracy for active set
+      pr.EA.active = getEstimationAccuracy(beta[non0.beta], pr.betahat[non0.beta])
+      # 2c. estimation accuracy for inactive set
+      pr.EA.inactive = getEstimationAccuracy(beta[is0.beta], pr.betahat[is0.beta])
+      
+      # 3. selection accuracy #
+      # 3a. selection of beta #
+      ### using SBP matrix
+      pr.SBP = sbp.fromHclust(pr.btree)
+      pr.non0.thetahat = (pr.thetahat != 0)
+      pr.sel.cols.SBP = pr.SBP[, pr.non0.thetahat, drop = FALSE]
+      pr.non0.betahat = apply(pr.sel.cols.SBP, 1, function(row) any(row != 0))
+      pr.SA = getSelectionAccuracy(is0.beta, non0.beta, pr.non0.betahat)
+      
+      saveRDS(c(
+        "PEtr" = pr.PE.train, 
+        "PEte" = pr.PE.test, 
+        "EA1" = pr.EA$EA1, 
+        "EA2" = pr.EA$EA2, 
+        "EAInfty" = pr.EA$EAInfty, 
+        "EA1Active" = pr.EA.active$EA1, 
+        "EA2Active" = pr.EA.active$EA2, 
+        "EAInftyActive" = pr.EA.active$EAInfty, 
+        "EA1Inactive" = pr.EA.inactive$EA1, 
+        "EA2Inactive" = pr.EA.inactive$EA2, 
+        "EAInftyInactive" = pr.EA.inactive$EAInfty, 
+        "FP" = pr.SA$FP, 
+        "FN" = pr.SA$FN, 
+        "TPR" = pr.SA$TPR, 
+        "precision" = pr.SA$precision, 
+        "Fscore" = pr.SA$Fscore,
+        "timing" = pr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(output_dir, "/metrics", "/propr_bic_metrics", file.end))
+    }
   } else{
     pr.btree = pr$btree
     pr.SBP = sbp.fromHclust(pr.btree)
   }
   
+  # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/propr_roc", file.end)) | 
      pr.model.already.existed == FALSE){
     # roc
@@ -559,6 +859,64 @@ res = foreach(
       roc.for.coef.LR(a, beta, pr.SBP))
     
     saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", file.end))
+  }
+  
+  ##############################################################################
+  # full linear log-contrast model
+  ##############################################################################
+  # went with linear log-contrast model, because then I don't have to decide
+  #   which U transformation matrix to use for a balance regression model
+  
+  if(!file.exists(paste0(
+    output_dir, "/metrics", "/full_metrics", file.end))){
+    logX = log(X)
+    Q = as.matrix(rep(1, p))
+    Q2 = rbind(0, Q)
+    full = lsei(A = cbind(1, logX), B = Y, E = t(Q2), F = 0)
+    full.a0 = full$X[1]
+    full.betahat = full$X[-1]
+    
+    # evaluate model #
+    
+    # 1. prediction error #
+    # 1a. on training set #
+    full.PE.train = getMSEyhat(Y, n, full.a0, full.betahat, log(X))
+    # 1b. on test set #
+    full.PE.test = getMSEyhat(Y.test, n, full.a0, full.betahat, log(X.test))
+    
+    # 2. estimation accuracy #
+    # 2a. estimation of beta #
+    full.EA = getEstimationAccuracy(beta, full.betahat)
+    # 2b. estimation accuracy for active set
+    full.EA.active = getEstimationAccuracy(beta[non0.beta], full.betahat[non0.beta])
+    # 2c. estimation accuracy for inactive set
+    full.EA.inactive = getEstimationAccuracy(beta[is0.beta], full.betahat[is0.beta])
+    
+    # 3. selection accuracy (i.t.o. beta) #
+    full.non0.betahat = abs(full.betahat) > 10e-8
+    full.SA = getSelectionAccuracy(is0.beta, non0.beta, full.non0.betahat)
+    
+    saveRDS(c(
+      "PEtr" = full.PE.train, 
+      "PEte" = full.PE.test, 
+      "EA1" = full.EA$EA1, 
+      "EA2" = full.EA$EA2, 
+      "EAInfty" = full.EA$EAInfty, 
+      "EA1Active" = full.EA.active$EA1, 
+      "EA2Active" = full.EA.active$EA2, 
+      "EAInftyActive" = full.EA.active$EAInfty, 
+      "EA1Inactive" = full.EA.inactive$EA1, 
+      "EA2Inactive" = full.EA.inactive$EA2, 
+      "EAInftyInactive" = full.EA.inactive$EAInfty, 
+      "FP" = full.SA$FP, 
+      "FN" = full.SA$FN, 
+      "TPR" = full.SA$TPR, 
+      "precision" = full.SA$precision, 
+      "Fscore" = full.SA$Fscore,
+      "timing" = NA,
+      "betaSparsity" = bspars
+    ), 
+    paste0(output_dir, "/metrics", "/full_metrics", file.end))
   }
 }
 

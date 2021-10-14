@@ -56,10 +56,7 @@ res = foreach(
   sigma.settings = "lin14Sigma"
   theta.settings = "dense" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
-  # "multsparse" = c(p - 3:1)
-  mu.settings = ""  # "matchbeta"
-  # "matchbeta" => mu = log(p) for all j s.t. beta_j \neq 0, 0 o\w
-  # otherwise, leave it at c(mu = rep(log(p), 5), rep(0, p - 5))
+  # "sparse" = c(p - 3:1)
   values.theta = 1
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   linkage = "average"

@@ -83,50 +83,19 @@ res = foreach(
   # sbp.fromHclust(SigmaWtree)
   
   # theta settings
-  if(theta.settings == "dense"){
-    indices.theta = 1
-  } else if(theta.settings == "2blocks"){
-    SBP = sbp.fromHclust(SigmaWtree)
-    # for each column (contrast), find which variables are included (1 or -1)
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
+  SBP = sbp.fromHclust(SigmaWtree)
+  # for each column (contrast), find which variables are included (1 or -1)
+  contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
+  if(theta.settings == "1blockpair"){
     # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
     #   not necessary, but may save on unnecessary computation in the next step
     block.contrasts = which(sapply(contrast.vars, length) == p / 2)
     # pick one such contrast
-    if(length(block.contrasts) == 1){
-      indices.theta = unname(block.contrasts)
-    } else{
-      indices.theta = unname(sample(x = block.contrasts, 1))
-    }
-  } else if(theta.settings == "1block"){
-    SBP = sbp.fromHclust(SigmaWtree)
-    # for each column (contrast), find which variables are included (1 or -1)
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
-    #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / num.blocks)
-    # pick one such contrast
-    if(length(block.contrasts) == 1){
-      indices.theta = unname(block.contrasts)
-    } else{
-      indices.theta = unname(sample(x = block.contrasts, 1))
-    }
-  } else if(theta.settings == "2blocks2contrasts"){
-    SBP = sbp.fromHclust(SigmaWtree)
-    # for each column (contrast), find which variables are included (1 or -1)
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
-    #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / num.blocks)
-    # pick one such contrast
-    if(length(block.contrasts) < 2){
-      stop("need at least 2 contrasts corresponding to two separate blocks")
-    } else{
-      indices.theta = unname(sample(x = block.contrasts, 2))
-    }
+    indices.theta = unname(block.contrasts)
   } else{
     stop("invalid theta.settings")
   }
+  print(indices.theta)
   # error checking indices.theta found based on theta.settings argument
   if(is.null(indices.theta)){
     stop("invalid indices.theta")

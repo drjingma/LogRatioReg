@@ -82,14 +82,6 @@ res = foreach(
   # theta settings
   if(theta.settings == "dense"){
     indices.theta = 1
-  } else if(theta.settings == "block2"){
-    SBP = sbp.fromHclust(SigmaWtree)
-    # for each column (contrast), find which variables are included (1 or -1)
-    contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-    # get the contrasts with length p / 2 -- there are 2 of them
-    indices.theta = unname(which(sapply(
-      contrast.vars, length) == p / num.blocks)[1])
-    ###
   } else{
     stop("invalid theta.settings")
   }

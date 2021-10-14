@@ -54,7 +54,7 @@ res = foreach(
   
   # Settings to toggle with
   sigma.settings = "lin14Sigma"
-  theta.settings = "dense" 
+  theta.settings = "sparse" 
   # "dense" => j = 1 (of theta = theta_1, ..., theta_j, ..., theta_{p-1})
   # "sparse" = c(p - 3:1)
   values.theta = 1

@@ -24,7 +24,6 @@ theta.settings = "1blockpair4halves" # "dense", "sparse", "both", "multsparse"
 # if "4blockSigma", then "2blocks"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
 # if "lin14Sigma" then "dense" or "multsparse"
-mu.settings = "" # matchbeta
 linkage = "average"
 tol = 1e-4
 nlam = 200
@@ -38,44 +37,25 @@ scaling = TRUE
 sigma_eps = 0.1  # 0.1, 0.5
 
 if(sigma.settings == "lin14Sigma"){
-  if(mu.settings == "matchbeta"){
-    file.end = paste0( # for old simulations
-      "_dim", n, "x", p,
-      "_", sigma.settings,
-      "_", theta.settings,
-      "_", mu.settings,
-      "_noise", sigma_eps,
-      "_rho", rho,
-      "_int", intercept,
-      "_scale", scaling,
-      "_K", K,
-      "_seed", rng.seed,
-      ".rds")
-  } else{
-    file.end = paste0( # for old simulations
-      "_dim", n, "x", p,
-      "_", sigma.settings,
-      "_", theta.settings,
-      "_noise", sigma_eps,
-      "_rho", rho,
-      "_int", intercept,
-      "_scale", scaling,
-      "_K", K,
-      "_seed", rng.seed,
-      ".rds")
-  }
-} else{ # for block-diagonal Sigma, either "2blockSigma" or "4blockSigma"
   file.end = paste0(
-    "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
+    "_dim", n, "x", p, 
+    "_noise", sigma_eps,
+    "_rho", rho, 
+    "_int", intercept,
+    "_scale", scaling
+  )
+} else{ # for block-diagonal Sigma, either "2blockSigma" or "4blockSigma"
+  file.end = paste0(
+    "_", sigma.settings,
+    "_", theta.settings, 
+    "_dim", n, "x", p, 
     "_noise", sigma_eps,
     "_cor", cor_ij, 
     "_int", intercept,
-    "_scale", scaling,
-    "_K", K,
-    "_seed", rng.seed,
-    ".rds")
+    "_scale", scaling
+  )
 }
 
 has.selbal = FALSE
@@ -111,20 +91,20 @@ if(has.propr) pr.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/classo_metrics", i, file.end
+    output_dir, "/metrics", "/classo_metrics", file.end, "_sim", i, ".rds"
   ))))
   rownames(cl.sim.tmp) = NULL
   cl.sims.list[[i]] = data.table(cl.sim.tmp)
   # slr
   slr.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_metrics", i, file.end
+    output_dir, "/metrics", "/slr_metrics", file.end, "_sim", i, ".rds"
   ))))
   rownames(slr.sim.tmp) = NULL
   slr.sims.list[[i]] = data.table(slr.sim.tmp)
   if(has.selbal){
     # selbal
     selbal.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/selbal_metrics", i, file.end
+      output_dir, "/metrics", "/selbal_metrics", file.end, "_sim", i, ".rds"
     ))))
     rownames(selbal.sim.tmp) = NULL
     selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
@@ -132,7 +112,7 @@ for(i in 1:numSims){
   if(has.oracle){
     # oracle
     or.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/oracle_metrics", i, file.end
+      output_dir, "/metrics", "/oracle_metrics", file.end, "_sim", i, ".rds"
     ))))
     rownames(or.sim.tmp) = NULL
     or.sims.list[[i]] = data.table(or.sim.tmp)
@@ -140,7 +120,7 @@ for(i in 1:numSims){
   if(has.coat){
     # coat
     coat.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/coat_metrics", i, file.end
+      output_dir, "/metrics", "/coat_metrics", file.end, "_sim", i, ".rds"
     ))))
     rownames(coat.sim.tmp) = NULL
     coat.sims.list[[i]] = data.table(coat.sim.tmp)
@@ -148,7 +128,7 @@ for(i in 1:numSims){
   if(has.propr){
     # propr
     pr.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/propr_metrics", i, file.end
+      output_dir, "/metrics", "/propr_metrics", file.end, "_sim", i, ".rds"
     ))))
     rownames(pr.sim.tmp) = NULL
     pr.sims.list[[i]] = data.table(pr.sim.tmp)
@@ -367,7 +347,7 @@ if(has.propr){
 for(i in 1:numSims){
   # cl
   cl.sim.tmp = readRDS(paste0(
-    output_dir, "/roccurves", "/classo_roc", i, file.end
+    output_dir, "/roccurves", "/classo_roc", file.end, "_sim", i, ".rds"
   ))
   cl.roc.list[[i]] = cl.sim.tmp
   cl.TPR.mat[, i] = cl.sim.tmp["tpr", ]
@@ -375,7 +355,7 @@ for(i in 1:numSims){
   cl.TP.mat[, i] = cl.sim.tmp["TP", ]
   # slr
   slr.sim.tmp = readRDS(paste0(
-    output_dir, "/roccurves", "/slr_roc", i, file.end
+    output_dir, "/roccurves", "/slr_roc", file.end, "_sim", i, ".rds"
   ))
   slr.roc.list[[i]] = slr.sim.tmp
   slr.TPR.mat[, i] = slr.sim.tmp["tpr", ]
@@ -384,7 +364,7 @@ for(i in 1:numSims){
   if(has.oracle){
     # oracle
     or.sim.tmp = readRDS(paste0(
-      output_dir, "/roccurves", "/oracle_roc", i, file.end
+      output_dir, "/roccurves", "/oracle_roc", file.end, "_sim", i, ".rds"
     ))
     or.roc.list[[i]] = or.sim.tmp
     or.TPR.mat[, i] = or.sim.tmp["tpr", ]
@@ -394,7 +374,7 @@ for(i in 1:numSims){
   if(has.coat){
     # coat
     coat.sim.tmp = readRDS(paste0(
-      output_dir, "/roccurves", "/coat_roc", i, file.end
+      output_dir, "/roccurves", "/coat_roc", file.end, "_sim", i, ".rds"
     ))
     coat.roc.list[[i]] = coat.sim.tmp
     coat.TPR.mat[, i] = coat.sim.tmp["tpr", ]
@@ -404,7 +384,7 @@ for(i in 1:numSims){
   if(has.propr){
     # oracle
     pr.sim.tmp = readRDS(paste0(
-      output_dir, "/roccurves", "/propr_roc", i, file.end
+      output_dir, "/roccurves", "/propr_roc", file.end, "_sim", i, ".rds"
     ))
     pr.roc.list[[i]] = pr.sim.tmp
     pr.TPR.mat[, i] = pr.sim.tmp["tpr", ]

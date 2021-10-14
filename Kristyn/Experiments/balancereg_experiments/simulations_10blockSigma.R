@@ -93,29 +93,7 @@ res = foreach(
   SBP = sbp.fromHclust(SigmaWtree)
   # for each column (contrast), find which variables are included (1 or -1)
   contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-  if(theta.settings == "pairperblock"){
-    # get the contrasts with length 2 (pairs)
-    which.pairs = which(sapply(contrast.vars, length) == 2)
-    # pick one such contrast
-    if(length(which.pairs) >= num.blocks){
-      vars.in.each.pair = do.call(rbind, contrast.vars[which.pairs])
-      indices.theta = rep(NA, num.blocks)
-      blocks.pairs = list()
-      for(i in 1:num.blocks){
-        pairs.in.block.i = apply(
-          vars.in.each.pair, 1, FUN = function(x) all(
-            as.numeric(x) %in% 
-              ((i - 1) * (p / num.blocks) + (1:(p / num.blocks)))))
-        contrasts.block.i = which.pairs[pairs.in.block.i]
-        blocks.pairs[[i]] = contrasts.block.i
-      }
-      theta.indices = sapply(blocks.pairs, function(x) x[1])
-      print(theta.indices)
-      # SBP[, indices.theta]
-    } else{
-      stop("there aren't 10 different contrasts corresponding to different pairs in each block!")
-    }
-  } else if(theta.settings == "1blockpair4halves"){
+  if(theta.settings == "1blockpair4halves"){
     # "1blockpair4halves" => 
     #   1 contrast corresponding to 2 blocks (accounts for 2 blocks so far), 
     #   4 contrasts, each corresponding to half (or approx. half) of the vars 
@@ -132,10 +110,10 @@ res = foreach(
       sapply(contrast.vars, length) == 9) # 0.5 * (p / num.blocks))
     indices.theta2 = unname(block.contrasts.halves[1:4])
     indices.theta = c(indices.theta1, indices.theta2)
-    print(indices.theta)
   } else{
     stop("invalid theta.settings")
   }
+  print(indices.theta)
   # error checking indices.theta found based on theta.settings argument
   if(is.null(indices.theta)){
     stop("invalid indices.theta")

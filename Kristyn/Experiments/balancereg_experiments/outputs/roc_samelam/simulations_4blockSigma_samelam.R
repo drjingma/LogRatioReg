@@ -169,27 +169,27 @@ res = foreach(
   for(i in 1:numSims){
     # classo
     cl.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/classo_model", i, file.end
+      paste0(output_dir, "/models", "/classo_model", file.end
       ))$lambda
     # slr
     slr.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/slr_model", i, file.end
+      paste0(output_dir, "/models", "/slr_model", file.end
       ))$lambda
     # # selbal
     # selbal.lams.mat[, i] = readRDS(
-    #   paste0(output_dir, "/models", "/selbal_model", i, file.end
+    #   paste0(output_dir, "/models", "/selbal_model", file.end
     #   ))$lambda
     # oracle
     or.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/oracle_model", i, file.end
+      paste0(output_dir, "/models", "/oracle_model", file.end
       ))$lambda
     # # coat
     # coat.lams.mat[, i] = readRDS(
-    #   paste0(output_dir, "/models", "/coat_model", i, file.end
+    #   paste0(output_dir, "/models", "/coat_model", file.end
     #   ))$lambda
     # propr
     pr.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/propr_model", i, file.end
+      paste0(output_dir, "/models", "/propr_model", file.end
       ))$lambda
   }
   

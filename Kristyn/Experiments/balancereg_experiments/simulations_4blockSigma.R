@@ -53,6 +53,24 @@ res = foreach(
   
   # helper functions
   source("Kristyn/Functions/metrics.R")
+  getLogLik = function(residuals, n = NULL, weights = NULL){
+    if(is.null(n)) n = length(residuals)
+    if(is.null(weights)) weights = rep(1, n)
+    ll = 0.5 * (
+      sum(log(weights)) - 
+        n * (log(2 * pi) + 1 - log(n) + log(sum(weights * residuals^2)))
+    )
+    return(ll)
+  }
+  getBIC = function(num.parameters, residuals, n = NULL, weights = NULL){
+    # https://stackoverflow.com/questions/35131450/calculating-bic-manually-for-lm-object
+    if(is.null(n)) n = length(residuals)
+    if(is.null(weights)) weights = rep(1, n)
+    df.ll = num.parameters + 1
+    ll = getLogLik(residuals = residuals, n = n, weights = weights)
+    bic = -2 * ll + log(n) * df.ll
+    return(bic)
+  }
   
   # Settings to toggle with
   sigma.settings = "4blockSigma"

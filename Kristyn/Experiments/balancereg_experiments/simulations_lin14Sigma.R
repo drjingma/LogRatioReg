@@ -467,7 +467,7 @@ res = foreach(
     pr.model.already.existed = FALSE
     # apply oracle method, using CV to select lambda
     start.time = Sys.time()
-    pr <- propr(X, metric = "phs")
+    pr <- suppressMessages(propr(X, metric = "phs"))
     pr.tree = hclust(as.dist(pr@matrix),method = linkage)
     pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
                nfolds = K, intercept = intercept, standardize = scaling)

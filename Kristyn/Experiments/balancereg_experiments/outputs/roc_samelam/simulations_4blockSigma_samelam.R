@@ -58,8 +58,8 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "4blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "2blocks"  
-  # "2blocks" => choose j corresp. to two blocks
+  theta.settings = "1blockpair"  
+  # "1blockpair" => choose j corresp. to two blocks
   #   (one block w/-1, other w/1 in a single contrast)
   values.theta = 1
   linkage = "average"

@@ -285,7 +285,7 @@ res = foreach(
   
   or.btree = SigmaWtree
   or.SBP = sbp.fromHclust(or.btree)
-  row.names(or.SBP) = colnames(W)
+  row.names(or.SBP) = names(beta)
   
   if(!file.exists(paste0(
     output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", file.end)) |

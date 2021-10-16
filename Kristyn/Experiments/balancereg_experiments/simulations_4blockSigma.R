@@ -457,7 +457,7 @@ res = foreach(
   } else{
     or.btree = SigmaWtree
     or.SBP = sbp.fromHclust(or.btree)
-    row.names(or.SBP) = colnames(W)
+    row.names(or.SBP) = names(beta)
   }
   
   # roc curves #################################################################

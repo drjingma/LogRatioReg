@@ -20,9 +20,8 @@ getBIC = function(num.parameters, residuals, n = NULL, weights = NULL){
 getBICseq = function(
   y, predMat, betahat0.vec, betahat.mat
 ){
-  bics = rep(NA, nlam)
-  for(i in 1:nlam){
-    if(length(betahat0.vec) != nlam) stop("length(betahat0.vec) != nlam")
+  bics = rep(NA, length(betahat0.vec))
+  for(i in 1:length(betahat0.vec)){
     a0.i = betahat0.vec[i]
     bet.i = betahat.mat[, i]
     yhat.i = a0.i + predMat %*% bet.i

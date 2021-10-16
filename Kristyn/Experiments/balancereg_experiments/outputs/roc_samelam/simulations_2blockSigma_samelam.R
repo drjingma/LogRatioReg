@@ -50,6 +50,7 @@ res = foreach(
   
   # helper functions
   source("Kristyn/Functions/metrics.R")
+  source("Kristyn/Functions/simulatedata.R")
   
   # Settings to toggle with
   sigma.settings = "2blockSigma"
@@ -116,6 +117,7 @@ res = foreach(
   
   # Population parameters, continued
   muW = c(rep(log(p), 5), rep(0, p - 5))
+  names(muW) = names(beta)
   
   file.end = paste0(
     "_", sigma.settings,
@@ -130,20 +132,16 @@ res = foreach(
   
   ##############################################################################
   # simulate data
-  logW <- mvrnorm(n = n * 2, mu = muW, Sigma = SigmaW) 
-  W <- exp(logW)
-  rownames(W) <- colnames(W) <- names(beta)
-  XAll <- sweep(W, 1, rowSums(W), FUN='/')
-  ilrXAll = computeBalances(XAll, U = U)
-  
-  # generate Y
-  yAll = ilrXAll %*% theta + rnorm(n) * sigma_eps
+  fake.data = simulateBalanceReg(
+    mu = muW, Sigma = SigmaW, U = U, n = 2 * n, theta = theta, 
+    sigma.noise = sigma_eps)
+  colnames(fake.data$X) = names(beta)
   
   # subset out training and test sets
-  X = XAll[1:n, ]
-  X.test = XAll[-(1:n), ]
-  Y <- yAll[1:n, , drop = TRUE]
-  Y.test <- yAll[-(1:n), , drop = TRUE]
+  X = fake.data$X[1:n, ]
+  X.test = fake.data$X[-(1:n), ]
+  Y <- fake.data$y[1:n, , drop = TRUE]
+  Y.test <- fake.data$y[-(1:n), , drop = TRUE]
   
   ##############################################################################
   # get lamda sequences

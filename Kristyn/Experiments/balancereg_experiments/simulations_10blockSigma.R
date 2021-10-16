@@ -162,7 +162,9 @@ res = foreach(
   
   ##############################################################################
   # simulate data
-  fake.data = simulateBalanceReg(mu = muW, Sigma = SigmaW, U = U, n = 2 * n)
+  fake.data = simulateBalanceReg(
+    mu = muW, Sigma = SigmaW, U = U, n = 2 * n, theta = theta, 
+    sigma.noise = sigma_eps)
   colnames(fake.data$X) = names(beta)
   
   # subset out training and test sets

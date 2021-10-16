@@ -1,4 +1,4 @@
-simulateBalanceReg = function(mu, Sigma, U, n){
+simulateBalanceReg = function(mu, Sigma, U, n, theta, sigma.noise){
   # make X
   logW <- mvrnorm(n = n, mu = mu, Sigma = Sigma) 
   W <- exp(logW)
@@ -6,7 +6,7 @@ simulateBalanceReg = function(mu, Sigma, U, n){
   ilrX = computeBalances(X, U = U)
   
   # generate y
-  y = ilrX %*% theta + rnorm(n) * sigma_eps
+  y = ilrX %*% theta + rnorm(n) * sigma.noise
   
   return(list("X" = X, "ilrX" = ilrX, "y" = y))
 }

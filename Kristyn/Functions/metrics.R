@@ -1,3 +1,4 @@
+# metrics
 getMSEyhat = function(y, n, betahat0, betahat, predMat){
   yhat = betahat0 + predMat %*% betahat
   mse = as.vector(crossprod(y - yhat) / n)
@@ -33,6 +34,114 @@ getSelectionAccuracy = function(is0.true.beta, non0.true.beta, non0.betahat){
     Fscore = Fscore
   ))
 }
+# package metrics
+getMetricsBalanceReg = function(
+  y.train, y.test, ilrX.train, ilrX.test, n.train, n.test, 
+  thetahat0, thetahat, betahat, sbp, 
+  true.beta, is0.true.beta, non0.true.beta
+){
+  # 1. prediction error #
+  # 1a. on training set #
+  PE.train = getMSEyhat(
+    y = y.train, n = n, betahat0 = thetahat0, betahat = thetahat, 
+    predMat = ilrX.train)
+  # 1b. on test set #
+  PE.test = getMSEyhat(
+    y = y.test, n = n.test, betahat0 = thetahat0, betahat = thetahat, 
+    predMat = ilrX.test)
+  
+  # 2. estimation accuracy #
+  # 2a. estimation of beta #
+  EA = getEstimationAccuracy(true.beta = true.beta, betahat = betahat)
+  # 2b. estimation accuracy for active set
+  EA.active = getEstimationAccuracy(
+    true.beta = true.beta[non0.true.beta], betahat = betahat[non0.true.beta])
+  # 2c. estimation accuracy for inactive set
+  EA.inactive = getEstimationAccuracy(
+    true.beta = true.beta[is0.true.beta], betahat = betahat[is0.true.beta])
+  
+  # 3. selection accuracy #
+  non0.thetahat = (thetahat != 0)
+  sel.cols.SBP = sbp[, non0.thetahat, drop = FALSE]
+  non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
+  SA = getSelectionAccuracy(
+    is0.true.beta = is0.true.beta, non0.true.beta = non0.true.beta, 
+    non0.betahat = non0.betahat)
+  
+  return(
+    c(
+      "PEtr" = PE.train, 
+      "PEte" = PE.test, 
+      "EA1" = EA$EA1, 
+      "EA2" = EA$EA2, 
+      "EAInfty" = EA$EAInfty, 
+      "EA1Active" = EA.active$EA1, 
+      "EA2Active" = EA.active$EA2, 
+      "EAInftyActive" = EA.active$EAInfty, 
+      "EA1Inactive" = EA.inactive$EA1, 
+      "EA2Inactive" = EA.inactive$EA2, 
+      "EAInftyInactive" = EA.inactive$EAInfty, 
+      "FP" = SA$FP, 
+      "FN" = SA$FN, 
+      "TPR" = SA$TPR, 
+      "precision" = SA$precision, 
+      "Fscore" = SA$Fscore
+    )
+  )
+}
+getMetricsLLC = function(
+  y.train, y.test, logX.train, logX.test, n.train, n.test, 
+  betahat0, betahat, true.beta, is0.true.beta, non0.true.beta
+){
+  # 1. prediction error #
+  # 1a. on training set #
+  PE.train = getMSEyhat(
+    y = y.train, n = n, betahat0 = betahat0, betahat = betahat, 
+    predMat = logX.train)
+  # 1b. on test set #
+  PE.test = getMSEyhat(
+    y = y.test, n = n.test, betahat0 = betahat0, betahat = betahat, 
+    predMat = logX.test)
+  
+  # 2. estimation accuracy #
+  # 2a. estimation of beta #
+  EA = getEstimationAccuracy(true.beta = true.beta, betahat = betahat)
+  # 2b. estimation accuracy for active set
+  EA.active = getEstimationAccuracy(
+    true.beta = true.beta[non0.true.beta], betahat = betahat[non0.true.beta])
+  # 2c. estimation accuracy for inactive set
+  EA.inactive = getEstimationAccuracy(
+    true.beta = true.beta[is0.true.beta], betahat = betahat[is0.true.beta])
+  
+  # 3. selection accuracy #
+  non0.betahat = abs(betahat) > 10e-8
+  SA = getSelectionAccuracy(
+    is0.true.beta = is0.true.beta, non0.true.beta = non0.true.beta, 
+    non0.betahat = non0.betahat)
+  
+  return(
+    c(
+      "PEtr" = PE.train, 
+      "PEte" = PE.test, 
+      "EA1" = EA$EA1, 
+      "EA2" = EA$EA2, 
+      "EAInfty" = EA$EAInfty, 
+      "EA1Active" = EA.active$EA1, 
+      "EA2Active" = EA.active$EA2, 
+      "EAInftyActive" = EA.active$EAInfty, 
+      "EA1Inactive" = EA.inactive$EA1, 
+      "EA2Inactive" = EA.inactive$EA2, 
+      "EAInftyInactive" = EA.inactive$EAInfty, 
+      "FP" = SA$FP, 
+      "FN" = SA$FN, 
+      "TPR" = SA$TPR, 
+      "precision" = SA$precision, 
+      "Fscore" = SA$Fscore
+    )
+  )
+}
+
+# solution paths
 roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
   TP = sum((abs(beta_hat) > eps) * (abs(beta) > eps))
   FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
@@ -59,7 +168,7 @@ roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
   }
   S0 <- names(which((abs(beta) > eps)))
   TP <- intersect(S_hat, S0)
-  tpr <- length(TP)/length(S_hat)
+  tpr <- length(TP)/length(S0) # prob that an actual positive will test positive
   # out <- c(length(S_hat),tpr)
   # names(out) <- c('S_hat','tpr')
   out = c("S_hat" = length(S_hat), "tpr" = tpr, "TP" = length(TP))

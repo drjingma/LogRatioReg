@@ -17,13 +17,13 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "2blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair4halves" # "dense", "sparse", "both", "multsparse"
+theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "2blocks"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
-# if "lin14Sigma" then "dense" or "multsparse"
+# if "lin14Sigma" then "dense" or "sparse"
 linkage = "average"
 tol = 1e-4
 nlam = 200
@@ -253,25 +253,15 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
   theme_bw() + 
   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
         axis.title.y = element_blank())
-if(sigma.settings == "lin14Sigma" & mu.settings == "matchbeta"){
-  ggsave(
-    filename = paste0(
-      "20211011_", 
-      sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_", mu.settings, "_metrics.pdf"),
-    plot = last_plot(),
-    width = 8, height = 5, units = c("in")
-  )
-} else{
-  ggsave(
-    filename = paste0(
-      "20211011_", 
-      sigma.settings, "_noise", sigma_eps,
-      "_", theta.settings, "_metrics.pdf"),
-    plot = last_plot(),
-    width = 8, height = 5, units = c("in")
-  )
-}
+
+ggsave(
+  filename = paste0(
+    "20211015_", 
+    sigma.settings, "_noise", sigma_eps,
+    "_", theta.settings, "_metrics.pdf"),
+  plot = last_plot(),
+  width = 8, height = 5, units = c("in")
+)
 
 # zoom in to PEtr, PEte
 # plot PEtr
@@ -445,29 +435,29 @@ for(i in 1:length(S.hat.vals)){
   val.tmp = S.hat.vals[i]
   # classo
   cl.which.idx.tmp = which(cl.S.hat.vec == val.tmp)
-  cl.TPR.avg[i] = mean(cl.TPR.vec[cl.which.idx.tmp])
-  cl.TP.avg[i] = mean(cl.TP.vec[cl.which.idx.tmp])
+  cl.TPR.avg[i] = mean(cl.TPR.vec[cl.which.idx.tmp], na.rm = TRUE)
+  cl.TP.avg[i] = mean(cl.TP.vec[cl.which.idx.tmp], na.rm = TRUE)
   # slr
   slr.which.idx.tmp = which(slr.S.hat.vec == val.tmp)
-  slr.TPR.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp])
-  slr.TP.avg[i] = mean(slr.TP.vec[slr.which.idx.tmp])
+  slr.TPR.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp], na.rm = TRUE)
+  slr.TP.avg[i] = mean(slr.TP.vec[slr.which.idx.tmp], na.rm = TRUE)
   if(has.oracle){
     # oracle
     or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
-    or.TPR.avg[i] = mean(or.TPR.vec[or.which.idx.tmp])
-    or.TP.avg[i] = mean(or.TP.vec[or.which.idx.tmp])
+    or.TPR.avg[i] = mean(or.TPR.vec[or.which.idx.tmp], na.rm = TRUE)
+    or.TP.avg[i] = mean(or.TP.vec[or.which.idx.tmp], na.rm = TRUE)
   }
   if(has.coat){
     # coat
     coat.which.idx.tmp = which(coat.S.hat.vec == val.tmp)
-    coat.TPR.avg[i] = mean(coat.TPR.vec[coat.which.idx.tmp])
-    coat.TP.avg[i] = mean(coat.TP.vec[coat.which.idx.tmp])
+    coat.TPR.avg[i] = mean(coat.TPR.vec[coat.which.idx.tmp], na.rm = TRUE)
+    coat.TP.avg[i] = mean(coat.TP.vec[coat.which.idx.tmp], na.rm = TRUE)
   }
   if(has.propr){
     # propr
     pr.which.idx.tmp = which(pr.S.hat.vec == val.tmp)
-    pr.TPR.avg[i] = mean(pr.TPR.vec[pr.which.idx.tmp])
-    pr.TP.avg[i] = mean(pr.TP.vec[pr.which.idx.tmp])
+    pr.TPR.avg[i] = mean(pr.TPR.vec[pr.which.idx.tmp], na.rm = TRUE)
+    pr.TP.avg[i] = mean(pr.TP.vec[pr.which.idx.tmp], na.rm = TRUE)
   }
 }
 
@@ -508,24 +498,14 @@ tpr_roc = ggplot(
   geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
 ggarrange(tp_roc, tpr_roc)
-if(sigma.settings == "lin14Sigma" & mu.settings == "matchbeta"){
-  ggsave(
-    filename = paste0(
-      "20211011_", 
-      sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_", mu.settings, "_rocs.pdf"),
-    plot = last_plot(),
-    width = 8, height = 5, units = c("in")
-  )
-} else{
-  ggsave(
-    filename = paste0(
-      "20211011_", 
-      sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_rocs.pdf"),
-    plot = last_plot(),
-    width = 8, height = 5, units = c("in")
-  )
-}
+
+ggsave(
+  filename = paste0(
+    "20211015_", 
+    sigma.settings, "_noise", sigma_eps, 
+    "_", theta.settings, "_rocs.pdf"),
+  plot = last_plot(),
+  width = 8, height = 5, units = c("in")
+)
 
 

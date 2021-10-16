@@ -116,6 +116,7 @@ res = foreach(
   
   # Population parameters, continued
   muW = c(rep(log(p), 5), rep(0, p - 5))
+  names(muW) = names(beta)
   
   file.end = paste0(
     "_", sigma.settings,

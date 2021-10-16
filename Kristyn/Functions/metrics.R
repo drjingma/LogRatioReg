@@ -43,7 +43,7 @@ getMetricsBalanceReg = function(
   # 1. prediction error #
   # 1a. on training set #
   PE.train = getMSEyhat(
-    y = y.train, n = n, betahat0 = thetahat0, betahat = thetahat, 
+    y = y.train, n = n.train, betahat0 = thetahat0, betahat = thetahat, 
     predMat = ilrX.train)
   # 1b. on test set #
   PE.test = getMSEyhat(
@@ -96,7 +96,7 @@ getMetricsLLC = function(
   # 1. prediction error #
   # 1a. on training set #
   PE.train = getMSEyhat(
-    y = y.train, n = n, betahat0 = betahat0, betahat = betahat, 
+    y = y.train, n = n.train, betahat0 = betahat0, betahat = betahat, 
     predMat = logX.train)
   # 1b. on test set #
   PE.test = getMSEyhat(

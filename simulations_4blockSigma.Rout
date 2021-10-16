@@ -1,0 +1,4896 @@
+
+R version 4.0.5 (2021-03-31) -- "Shake and Throw"
+Copyright (C) 2021 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Purpose: Simulate data from balance regression model to compare
+> #   compositional lasso and supervised log-ratios methods
+> # Note: Here, we simulate from a 2-block-diagonal Sigma and intend to:
+> #   - have one active contrast corresponding to 2 of the 4 blocks, so that 
+> #       slr correctly specifies the log-ratio formed by the 2 blocks --
+> #       compare this to the results from simulations_2blockSigma.R with the 
+> #       dense setting, which has the same structure (1 contrast containing 2 
+> #       active blocks), but no inactive set.
+> # Date: 10/11/2021
+> 
+> ################################################################################
+> # libraries and settings
+> 
+> output_dir = "Kristyn/Experiments/balancereg_experiments/outputs"
+> 
+> # set up parallelization
+> library(foreach)
+> library(future)
+> library(doFuture)
+> library(parallel)
+> registerDoFuture()
+> nworkers = detectCores()
+> plan(multisession, workers = nworkers)
+> 
+> library(rngtools)
+> library(doRNG)
+> rng.seed = 123 # 123, 345
+> registerDoRNG(rng.seed)
+> 
+> # Other simulation settings
+> numSims = 100
+> 
+> ################################################################################
+> # Simulations #
+> ################################################################################
+> 
+> registerDoRNG(rng.seed)
+> res = foreach(
++   b = 1:numSims
++ ) %dorng% {
++   library(limSolve)
++   library(mvtnorm)
++   library(Matrix)
++   library(glmnet)
++   library(compositions)
++   library(stats)
++   
++   library(balance) # for sbp.fromHclust()
++   library(selbal)
++   library(propr)
++   source("RCode/func_libs.R")
++   source("Kristyn/Functions/supervisedlogratios.R")
++   
++   # helper functions
++   source("Kristyn/Functions/metrics.R")
++   source("Kristyn/Functions/simulatedata.R")
++   source("Kristyn/Functions/bic.R")
++   
++   # Settings to toggle with
++   sigma.settings = "4blockSigma"
++   rho.type = "square" # 1 = "absolute value", 2 = "square"
++   theta.settings = "1blockpair"  
++   # "1blockpair" => choose j corresp. to two blocks
++   #   (one block w/-1, other w/1 in a single contrast)
++   values.theta = 1
++   linkage = "average"
++   tol = 1e-4
++   nlam = 100
++   intercept = TRUE
++   K = 10
++   n = 100
++   p = 200
++   cor_ij = 0.2 # 0.2, 0.5
++   scaling = TRUE
++   
++   # Population parameters
++   sigma_eps = 0.1 # 0.1, 0.5
++   num.blocks = 4
++   SigmaWblock = matrix(cor_ij, p / num.blocks, p / num.blocks)
++   for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
++   SigmaW = as.matrix(bdiag(SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
++   SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
++   U = getU(btree = SigmaWtree) # transformation matrix
++   # plot(SigmaWtree)
++   # sbp.fromHclust(SigmaWtree)
++   
++   # theta settings
++   SBP = sbp.fromHclust(SigmaWtree)
++   # for each column (contrast), find which variables are included (1 or -1)
++   contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
++   if(theta.settings == "1blockpair"){
++     # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
++     #   not necessary, but may save on unnecessary computation in the next step
++     block.contrasts = which(sapply(contrast.vars, length) == p / 2)
++     # pick one such contrast
++     indices.theta = unname(block.contrasts)
++   } else{
++     stop("invalid theta.settings")
++   }
++   print(indices.theta)
++   # error checking indices.theta found based on theta.settings argument
++   if(is.null(indices.theta)){
++     stop("invalid indices.theta")
++   }
++   
++   # get theta
++   theta = rep(0, p - 1)
++   if(is.null(values.theta)){
++     # assume values.theta = 1
++     values.theta = 1
++   }
++   if(length(values.theta) == 1){
++     # if values.theta = 1, assume it's the same value for all nonzero indices
++     values.theta = rep(values.theta, length(indices.theta))
++   } else if(length(values.theta) != length(indices.theta)){
++     # when 1 < length(values.theta) < total # of nonzero values
++     stop("indices.theta does not have same length as values.theta")
++   }
++   theta[indices.theta] = values.theta
++   theta = as.matrix(theta)
++   
++   # about beta
++   beta = as.vector(getBeta(theta, U = U))
++   names(beta) <- paste0('s', 1:p)
++   non0.beta = (beta != 0)
++   slr.non0.beta = abs(beta) > 10e-8
++   is0.beta = abs(beta) <= 10e-8
++   bspars = sum(non0.beta)
++   
++   # Population parameters, continued
++   muW = c(rep(log(p), 5), rep(0, p - 5))
++   names(muW) = names(beta)
++   
++   file.end = paste0(
++     "_", sigma.settings,
++     "_", theta.settings, 
++     "_dim", n, "x", p, 
++     "_noise", sigma_eps,
++     "_cor", cor_ij, 
++     "_int", intercept,
++     "_scale", scaling,
++     "_sim", b,
++     ".rds")
++   
++   ##############################################################################
++   # simulate data
++   fake.data = simulateBalanceReg(
++     mu = muW, Sigma = SigmaW, U = U, n = 2 * n, theta = theta, 
++     sigma.noise = sigma_eps)
++   colnames(fake.data$X) = names(beta)
++   
++   # subset out training and test sets
++   X = fake.data$X[1:n, ]
++   X.test = fake.data$X[-(1:n), ]
++   Y <- fake.data$y[1:n, , drop = TRUE]
++   Y.test <- fake.data$y[-(1:n), , drop = TRUE]
++   
++   ##############################################################################
++   # supervised log-ratios (a balance regression method)
++   ##############################################################################
++   
++   # fit model ##################################################################
++   if(!file.exists(paste0(output_dir, "/models", "/slr_model", file.end)) |
++      !file.exists(paste0(output_dir, "/timing", "/slr_timing", file.end))){
++     slr.model.already.existed = FALSE
++     # apply supervised log-ratios, using CV to select lambda
++     start.time = Sys.time()
++     slr = cvSLR(
++       y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
++       rho.type = rho.type, linkage = linkage, standardize = scaling)
++     end.time = Sys.time()
++     saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
++     
++     # timing metric
++     slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
++     saveRDS(
++       slr.timing, 
++       paste0(output_dir, "/timing", "/slr_timing", file.end))
++   } else{
++     slr.model.already.existed = TRUE
++     slr = readRDS(paste0(output_dir, "/models", "/slr_model", file.end))
++     slr.timing = readRDS(paste0(
++       output_dir, "/timing", "/slr_timing", file.end))
++   }
++   
++   # select tuning parameter and calculate metrics ##############################
++   if(!file.exists(paste0(
++     output_dir, "/metrics", "/slr_metrics", file.end)) | 
++     !file.exists(paste0(
++       output_dir, "/metrics", "/slr_bic_metrics", file.end)) | 
++     slr.model.already.existed == FALSE){
++     
++     # binary tree
++     slr.btree = slr$btree
++     
++     # choose lambda using cross-validated mse ##################################
++     if(!file.exists(paste0(
++       output_dir, "/metrics", "/slr_metrics", file.end))){
++       slr.lam.min.idx = which.min(slr$cvm)
++       slr.a0 = slr$int[slr.lam.min.idx]
++       slr.thetahat = slr$bet[, slr.lam.min.idx]
++       slr.Uhat = getU(btree = slr.btree)
++       slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
++       
++       # compute metrics on the selected model #
++       slr.SBP = sbp.fromHclust(slr.btree)
++       slr.metrics = getMetricsBalanceReg(
++         y.train = Y, y.test = Y.test, 
++         ilrX.train = computeBalances(X, slr.btree), 
++         ilrX.test = computeBalances(X.test, slr.btree), 
++         n.train = n, n.test = n, 
++         thetahat0 = slr.a0, thetahat = slr.thetahat, betahat = slr.betahat, 
++         sbp = slr.SBP, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         slr.metrics, 
++         "timing" = slr.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/slr_metrics", file.end))
++     }
++     # choose lambda using bic ##################################################
++     if(!file.exists(paste0(
++       output_dir, "/metrics", "/slr_bic_metrics", file.end))){
++       slr.bic = getBICseq(
++         y = Y, predMat = computeBalances(X, slr.btree), 
++         betahat0.vec = slr$int, betahat.mat = slr$bet)
++       slr.lam.min.idx = which.min(slr.bic)
++       slr.a0 = slr$int[slr.lam.min.idx]
++       slr.thetahat = slr$bet[, slr.lam.min.idx]
++       slr.Uhat = getU(btree = slr.btree)
++       slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
++       
++       # compute metrics on the selected model #
++       slr.SBP = sbp.fromHclust(slr.btree)
++       slr.metrics = getMetricsBalanceReg(
++         y.train = Y, y.test = Y.test, 
++         ilrX.train = computeBalances(X, slr.btree), 
++         ilrX.test = computeBalances(X.test, slr.btree), 
++         n.train = n, n.test = n, 
++         thetahat0 = slr.a0, thetahat = slr.thetahat, betahat = slr.betahat, 
++         sbp = slr.SBP, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         slr.metrics, 
++         "timing" = slr.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/slr_bic_metrics", file.end))
++     }
++   } else{
++     slr.btree = slr$btree
++     slr.SBP = sbp.fromHclust(slr.btree)
++   }
++   
++   # roc curves #################################################################
++   if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", file.end)) | 
++      slr.model.already.existed == FALSE){
++     # roc
++     slr.roc <- apply(slr$bet, 2, function(a) 
++       roc.for.coef.LR(a, beta, slr.SBP))
++     
++     saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", file.end))
++   }
++   
++   ##############################################################################
++   # compositional lasso (a linear log contrast method)
++   ##############################################################################
++   
++   # fit model ##################################################################
++   if(!file.exists(paste0(output_dir, "/models", "/classo_model", file.end)) |
++      !file.exists(paste0(output_dir, "/timing", "/classo_timing", file.end))){
++     cl.model.already.existed = FALSE
++     # apply compositional lasso, using CV to select lambda
++     start.time = Sys.time()
++     classo = cv.func(
++       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
++       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
++     end.time = Sys.time()
++     saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
++     
++     # timing metric
++     cl.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
++     saveRDS(
++       cl.timing, 
++       paste0(output_dir, "/timing", "/classo_timing", file.end))
++   } else{
++     cl.model.already.existed = TRUE
++     classo = readRDS(paste0(output_dir, "/models", "/classo_model", file.end))
++     cl.timing = readRDS(paste0(
++       output_dir, "/timing", "/classo_timing", file.end))
++   }
++   
++   # select tuning parameter and calculate metrics ##############################
++   if(!file.exists(paste0(
++     output_dir, "/metrics", "/classo_metrics", file.end)) | 
++     !file.exists(paste0(
++       output_dir, "/metrics", "/classo_bic_metrics", file.end)) |
++     cl.model.already.existed == FALSE){
++     
++     # choose lambda using cross-validated mse ##################################
++     if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", file.end))){
++       cl.lam.min.idx = which.min(classo$cvm)
++       cl.a0 = classo$int[cl.lam.min.idx]
++       cl.betahat = classo$bet[, cl.lam.min.idx]
++       
++       # compute metrics on the selected model #
++       cl.metrics = getMetricsLLC(
++         y.train = Y, y.test = Y.test, 
++         logX.train = log(X), 
++         logX.test = log(X.test), 
++         n.train = n, n.test = n, 
++         betahat0 = cl.a0, betahat = cl.betahat, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         cl.metrics, 
++         "timing" = cl.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/classo_metrics", file.end))
++     }
++     # choose lambda using bic ##################################################
++     if(!file.exists(paste0(
++       output_dir, "/metrics", "/classo_bic_metrics", file.end))){
++       cl.bic = getBICseq(
++         y = Y, predMat = log(X), 
++         betahat0.vec = classo$int, betahat.mat = classo$bet)
++       cl.lam.min.idx = which.min(cl.bic)
++       cl.a0 = classo$int[cl.lam.min.idx]
++       cl.betahat = classo$bet[, cl.lam.min.idx]
++       
++       # compute metrics on the selected model #
++       cl.metrics = getMetricsLLC(
++         y.train = Y, y.test = Y.test, 
++         logX.train = log(X), 
++         logX.test = log(X.test), 
++         n.train = n, n.test = n, 
++         betahat0 = cl.a0, betahat = cl.betahat, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         cl.metrics, 
++         "timing" = cl.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/classo_bic_metrics", file.end))
++     }
++   }
++   
++   # roc curves #################################################################
++   if(!file.exists(paste0(output_dir, "/roccurves", "/classo_roc", file.end)) | 
++      cl.model.already.existed == FALSE){
++     # roc
++     cl.roc <- apply(classo$bet, 2, function(a) 
++       roc.for.coef(a, beta))
++     
++     saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", file.end))
++   }
++   
++   ##############################################################################
++   # oracle method (a balance regression method)
++   ##############################################################################
++   
++   # fit model ##################################################################
++   if(!file.exists(paste0(output_dir, "/models", "/oracle_model", file.end)) |
++      !file.exists(paste0(output_dir, "/timing", "/oracle_timing", file.end))){
++     or.model.already.existed = FALSE
++     # apply oracle method, using CV to select lambda
++     start.time = Sys.time()
++     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
++                    nfolds = K, intercept = intercept, standardize = scaling)
++     end.time = Sys.time()
++     saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
++     
++     # timing metric
++     or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
++     saveRDS(
++       or.timing, 
++       paste0(output_dir, "/timing", "/oracle_timing", file.end))
++   } else{
++     or.model.already.existed = TRUE
++     oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", file.end))
++     or.timing = readRDS(paste0(
++       output_dir, "/timing", "/oracle_timing", file.end))
++   }
++   
++   # select tuning parameter and calculate metrics ##############################
++   if(!file.exists(paste0(
++     output_dir, "/metrics", "/oracle_metrics", file.end)) | 
++     !file.exists(paste0(
++       output_dir, "/metrics", "/oracle_bic_metrics", file.end)) |
++     or.model.already.existed == FALSE){
++     
++     # binary tree
++     or.btree = SigmaWtree
++     
++     # choose lambda using cross-validated mse ##################################
++     if(!file.exists(paste0(
++       output_dir, "/metrics", "/oracle_metrics", file.end))){
++       or.lam.min.idx = which.min(oracle$cvm)
++       or.a0 = oracle$int[or.lam.min.idx]
++       or.thetahat = oracle$bet[, or.lam.min.idx]
++       or.Uhat = getU(btree = or.btree)
++       or.betahat = getBeta(or.thetahat, U = or.Uhat)
++       
++       # compute metrics on the selected model #
++       or.SBP = sbp.fromHclust(or.btree)
++       or.metrics = getMetricsBalanceReg(
++         y.train = Y, y.test = Y.test, 
++         ilrX.train = computeBalances(X, or.btree), 
++         ilrX.test = computeBalances(X.test, or.btree), 
++         n.train = n, n.test = n, 
++         thetahat0 = or.a0, thetahat = or.thetahat, betahat = or.betahat, 
++         sbp = or.SBP, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         or.metrics, 
++         "timing" = or.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
++     }
++     # choose lambda using bic ##################################################
++     if(!file.exists(paste0(
++       output_dir, "/metrics", "/oracle_bic_metrics", file.end))){
++       or.bic = getBICseq(
++         y = Y, predMat = computeBalances(X, or.btree), 
++         betahat0.vec = oracle$int, betahat.mat = oracle$bet)
++       or.lam.min.idx = which.min(or.bic)
++       or.a0 = oracle$int[or.lam.min.idx]
++       or.thetahat = oracle$bet[, or.lam.min.idx]
++       or.Uhat = getU(btree = or.btree)
++       or.betahat = getBeta(or.thetahat, U = or.Uhat)
++       
++       # compute metrics on the selected model #
++       or.SBP = sbp.fromHclust(or.btree)
++       or.metrics = getMetricsBalanceReg(
++         y.train = Y, y.test = Y.test, 
++         ilrX.train = computeBalances(X, or.btree), 
++         ilrX.test = computeBalances(X.test, or.btree), 
++         n.train = n, n.test = n, 
++         thetahat0 = or.a0, thetahat = or.thetahat, betahat = or.betahat, 
++         sbp = or.SBP, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         or.metrics, 
++         "timing" = or.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/oracle_bic_metrics", file.end))
++     }
++   } else{
++     or.btree = SigmaWtree
++     or.SBP = sbp.fromHclust(or.btree)
++     row.names(or.SBP) = colnames(W)
++   }
++   
++   # roc curves #################################################################
++   if(!file.exists(paste0(output_dir, "/roccurves", "/oracle_roc", file.end)) | 
++      or.model.already.existed == FALSE){
++     # roc
++     or.roc <- apply(oracle$bet, 2, function(a) 
++       roc.for.coef.LR(a, beta, or.SBP))
++     
++     saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", file.end))
++   }
++   
++   ##############################################################################
++   # propr method (a balance regression method)
++   ##############################################################################
++   
++   # fit model ##################################################################
++   if(!file.exists(paste0(output_dir, "/models", "/propr_model", file.end)) |
++      !file.exists(paste0(output_dir, "/timing", "/propr_timing", file.end))){
++     pr.model.already.existed = FALSE
++     # apply oracle method, using CV to select lambda
++     start.time = Sys.time()
++     pr <- suppressMessages(propr(X, metric = "phs"))
++     pr.tree = hclust(as.dist(pr@matrix),method = linkage)
++     pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
++                nfolds = K, intercept = intercept, standardize = scaling)
++     end.time = Sys.time()
++     saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
++     
++     # timing metric
++     pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
++     saveRDS(
++       pr.timing, 
++       paste0(output_dir, "/timing", "/propr_timing", file.end))
++   } else{
++     pr.model.already.existed = TRUE
++     pr = readRDS(paste0(output_dir, "/models", "/propr_model", file.end))
++     pr.timing = readRDS(paste0(
++       output_dir, "/timing", "/propr_timing", file.end))
++   }
++   
++   # select tuning parameter and calculate metrics ##############################
++   if(!file.exists(paste0(
++     output_dir, "/metrics", "/propr_metrics", file.end)) | 
++     !file.exists(paste0(
++       output_dir, "/metrics", "/propr_bic_metrics", file.end)) |
++     pr.model.already.existed == FALSE){
++     
++     # binary tree
++     pr.btree = pr$btree
++     
++     # choose lambda using cross-validated mse ##################################
++     if(!file.exists(paste0(
++       output_dir, "/metrics", "/propr_metrics", file.end))){
++       pr.lam.min.idx = which.min(pr$cvm)
++       pr.a0 = pr$int[pr.lam.min.idx]
++       pr.thetahat = pr$bet[, pr.lam.min.idx]
++       pr.Uhat = getU(btree = pr.btree)
++       pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
++       
++       # compute metrics on the selected model #
++       pr.SBP = sbp.fromHclust(pr.btree)
++       pr.metrics = getMetricsBalanceReg(
++         y.train = Y, y.test = Y.test, 
++         ilrX.train = computeBalances(X, pr.btree), 
++         ilrX.test = computeBalances(X.test, pr.btree), 
++         n.train = n, n.test = n, 
++         thetahat0 = pr.a0, thetahat = pr.thetahat, betahat = pr.betahat, 
++         sbp = pr.SBP, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         pr.metrics, 
++         "timing" = pr.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/propr_metrics", file.end))
++     }
++     # choose lambda using bic ##################################################
++     if(!file.exists(paste0(
++       output_dir, "/metrics", "/propr_bic_metrics", file.end))){
++       pr.bic = getBICseq(
++         y = Y, predMat = computeBalances(X, pr.btree), 
++         betahat0.vec = pr$int, betahat.mat = pr$bet)
++       pr.lam.min.idx = which.min(pr.bic)
++       pr.a0 = pr$int[pr.lam.min.idx]
++       pr.thetahat = pr$bet[, pr.lam.min.idx]
++       pr.Uhat = getU(btree = pr.btree)
++       pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
++       
++       # compute metrics on the selected model #
++       pr.SBP = sbp.fromHclust(pr.btree)
++       pr.metrics = getMetricsBalanceReg(
++         y.train = Y, y.test = Y.test, 
++         ilrX.train = computeBalances(X, pr.btree), 
++         ilrX.test = computeBalances(X.test, pr.btree), 
++         n.train = n, n.test = n, 
++         thetahat0 = pr.a0, thetahat = pr.thetahat, betahat = pr.betahat, 
++         sbp = pr.SBP, 
++         true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++       
++       saveRDS(c(
++         pr.metrics, 
++         "timing" = pr.timing,
++         "betaSparsity" = bspars
++       ), 
++       paste0(output_dir, "/metrics", "/propr_bic_metrics", file.end))
++     }
++   } else{
++     pr.btree = pr$btree
++     pr.SBP = sbp.fromHclust(pr.btree)
++   }
++   
++   # roc curves #################################################################
++   if(!file.exists(paste0(output_dir, "/roccurves", "/propr_roc", file.end)) | 
++      pr.model.already.existed == FALSE){
++     # roc
++     pr.roc <- apply(pr$bet, 2, function(a) 
++       roc.for.coef.LR(a, beta, pr.SBP))
++     
++     saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", file.end))
++   }
++   
++   ##############################################################################
++   # full linear log-contrast model
++   ##############################################################################
++   # went with linear log-contrast model, because then I don't have to decide
++   #   which U transformation matrix to use for a balance regression model
++   
++   if(!file.exists(paste0(
++     output_dir, "/metrics", "/full_metrics", file.end))){
++     Q = as.matrix(rep(1, p))
++     Q2 = rbind(0, Q)
++     full = lsei(A = cbind(1, log(X)), B = Y, E = t(Q2), F = 0)
++     full.a0 = full$X[1]
++     full.betahat = full$X[-1]
++     
++     # compute metrics on the selected model #
++     full.metrics = getMetricsLLC(
++       y.train = Y, y.test = Y.test, 
++       logX.train = log(X), 
++       logX.test = log(X.test), 
++       n.train = n, n.test = n, 
++       betahat0 = full.a0, betahat = full.betahat, 
++       true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
++     
++     saveRDS(c(
++       full.metrics, 
++       "timing" = cl.timing,
++       "betaSparsity" = bspars
++     ), 
++     paste0(output_dir, "/metrics", "/full_metrics", file.end))
++   }
++ }
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filed77e352f42b3.o] Error 4
+virtual memory exhausted: Cannot allocate memory
+make: *** [file13d2e53fb17.o] Error 1
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filed82a33e68a30.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filed8736dc9ac3e.o] Error 4
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filed8c424fa3c04.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filed9637ba5106e.o] Error 4
+virtual memory exhausted: Cannot allocate memory
+make: *** [filedd323e0714ba.o] Error 1
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filed9121afc7d91.o] Error 4
+virtual memory exhausted: Cannot allocate memory
+virtual memory exhausted: Cannot allocate memory
+virtual memory exhausted: Cannot allocate memory
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: make: *** [file81836776fe2.o] Error 1*** [filed9b163e9da0b.o] Error 4
+
+make: *** [file3df483a5b45.o] Error 1
+make: *** [file2dc4b584b07.o] Error 1
+virtual memory exhausted: Cannot allocate memory
+make: *** [file6459191eb8.o] Error 1
+Warning message:
+In q("no", status = (status != 0), runLast = FALSE) :
+  system call failed: Cannot allocate memory
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [fileda024d21a145.o] Error 4
+Warning message:
+In q("no", status = (status != 0), runLast = FALSE) :
+  system call failed: Cannot allocate memory
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filedce1e49a912.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filedc402831dde3.o] Error 4
+Error: .onLoad failed in loadNamespace() for 'utils', details:
+  call: system(paste(which, shQuote(names[i])), intern = TRUE, ignore.stderr = TRUE)
+  error: cannot popen '/usr/bin/which 'uname' 2>/dev/null', probable reason 'Cannot allocate memory'
+Execution halted
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filedec4722c4d2e.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [file3345f712814.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [file68b3e1cfbb6.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filedaf859d7eccc.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [file23824d95370.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [file6d719ff929d.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filedb9d78cf4f40.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [file4e4167efb7d.o] Error 4
+g++: internal compiler error: Killed (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <http://bugzilla.redhat.com/bugzilla> for instructions.
+make: *** [filedc9276f23a58.o] Error 4
+virtual memory exhausted: Cannot allocate memory
+virtual memory exhausted: Cannot allocate memory
+make: make: *** [filed8c424fa3c04.o] Error 1
+*** [file3df483a5b45.o] Error 1
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/Rtmp7dc7Ze/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed77e352f42b3.cpp -o filed77e352f42b3.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpS348Ed/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed82a33e68a30.cpp -o filed82a33e68a30.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/Rtmp6QT6o9/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed8736dc9ac3e.cpp -o filed8736dc9ac3e.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpG8ygqP/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed8c424fa3c04.cpp -o filed8c424fa3c04.o
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpG8ygqP/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed8c424fa3c04.cpp -o filed8c424fa3c04.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/Rtmpf3LgOz/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed9121afc7d91.cpp -o filed9121afc7d91.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/Rtmp98RXjg/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed9637ba5106e.cpp -o filed9637ba5106e.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+
+WARNING: The tools required to build C++ code for R were not found.
+
+Please install GNU development tools including a C++ compiler.
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmplUOFK9/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filed9b163e9da0b.cpp -o filed9b163e9da0b.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpG0R0HJ/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c fileda024d21a145.cpp -o fileda024d21a145.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+
+WARNING: The tools required to build C++ code for R were not found.
+
+Please install GNU development tools including a C++ compiler.
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/Rtmp5DTcLj/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filedaf859d7eccc.cpp -o filedaf859d7eccc.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpsqDh7Z/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filedb9d78cf4f40.cpp -o filedb9d78cf4f40.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpmvnOeF/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filedc402831dde3.cpp -o filedc402831dde3.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpcIUe0f/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filedc9276f23a58.cpp -o filedc9276f23a58.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/Rtmp6rJenW/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filedce1e49a912.cpp -o filedce1e49a912.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpazsGfs/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filedd323e0714ba.cpp -o filedd323e0714ba.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpZ9M9id/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c filedec4722c4d2e.cpp -o filedec4722c4d2e.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+
+WARNING: The tools required to build C++ code for R were not found.
+
+Please install GNU development tools including a C++ compiler.
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpH639aB/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file13d2e53fb17.cpp -o file13d2e53fb17.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpWkauex/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file23824d95370.cpp -o file23824d95370.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpNAeKRF/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file2dc4b584b07.cpp -o file2dc4b584b07.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+
+WARNING: The tools required to build C++ code for R were not found.
+
+Please install GNU development tools including a C++ compiler.
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpxWez67/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file3345f712814.cpp -o file3345f712814.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpBNMUxg/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file3df483a5b45.cpp -o file3df483a5b45.o
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpBNMUxg/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file3df483a5b45.cpp -o file3df483a5b45.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+
+WARNING: The tools required to build C++ code for R were not found.
+
+Please install GNU development tools including a C++ compiler.
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpjN6IOQ/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file4e4167efb7d.cpp -o file4e4167efb7d.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpHtKuU2/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file6459191eb8.cpp -o file6459191eb8.o
+
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+
+WARNING: The tools required to build C++ code for R were not found.
+
+Please install GNU development tools including a C++ compiler.
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpBbURYq/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file68b3e1cfbb6.cpp -o file68b3e1cfbb6.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/Rtmp3l6ii3/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file6d719ff929d.cpp -o file6d719ff929d.o
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+g++ -std=gnu++11 -I"/usr/local/R/4.0.5/lib64/R/include" -DNDEBUG   -I"/home/kristynp/R/x86_64-pc-linux-gnu-library/4.0/Rcpp/include" -I"/tmp/RtmpOTNWSt/sourceCpp-x86_64-pc-linux-gnu-1.0.5" -I/usr/local/include   -fpic  -O3 -fopenmp -m64 -I/usr/local/intel/compilers_and_libraries_2019.4.243/linux/mkl/include  -c file81836776fe2.cpp -o file81836776fe2.o
+[1] 3
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.0-2
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+
+Attaching package: ‘balance’
+
+The following object is masked from ‘package:compositions’:
+
+    balance
+
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+
+WARNING: The tools required to build C++ code for R were not found.
+
+Please install GNU development tools including a C++ compiler.
+
+Error in { : 
+  task 12 failed - "cannot popen '/usr/local/R/4.0.5/lib64/R/bin/R CMD SHLIB foo.c 2>/dev/null', probable reason 'Cannot allocate memory'"
+Calls: %dorng% -> do.call -> %dopar% -> <Anonymous>
+In addition: Warning messages:
+1: In file(filename, "r", encoding = encoding) :
+  cannot open file 'RCode/func_libs.R': No such file or directory
+2: In file(filename, "r", encoding = encoding) :
+  cannot open file 'RCode/func_libs.R': No such file or directory
+3: In file(filename, "r", encoding = encoding) :
+  cannot open file 'RCode/func_libs.R': No such file or directory
+4: In file(filename, "r", encoding = encoding) :
+  cannot open file 'RCode/func_libs.R': No such file or directory
+5: In file(filename, "r", encoding = encoding) :
+  cannot open file 'RCode/func_libs.R': No such file or directory
+Execution halted

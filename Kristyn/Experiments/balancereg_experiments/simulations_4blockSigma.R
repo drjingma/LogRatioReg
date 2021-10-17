@@ -178,9 +178,6 @@ res = foreach(
       paste0(output_dir, "/timing", "/slr_timing", file.end))
   } else{
     slr.model.already.existed = TRUE
-    slr = readRDS(paste0(output_dir, "/models", "/slr_model", file.end))
-    slr.timing = readRDS(paste0(
-      output_dir, "/timing", "/slr_timing", file.end))
   }
   
   # select tuning parameter and calculate metrics ##############################
@@ -190,8 +187,13 @@ res = foreach(
       output_dir, "/metrics", "/slr_bic_metrics", file.end)) | 
     slr.model.already.existed == FALSE){
     
-    # binary tree
+    # import model and timing metric
+    slr = readRDS(paste0(output_dir, "/models", "/slr_model", file.end))
+    slr.timing = readRDS(paste0(
+      output_dir, "/timing", "/slr_timing", file.end))
     slr.btree = slr$btree
+    slr.btree = slr$btree
+    slr.SBP = sbp.fromHclust(slr.btree)
     
     # choose lambda using cross-validated mse ##################################
     if(!file.exists(paste0(
@@ -203,7 +205,6 @@ res = foreach(
       slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
       
       # compute metrics on the selected model #
-      slr.SBP = sbp.fromHclust(slr.btree)
       slr.metrics = getMetricsBalanceReg(
         y.train = Y, y.test = Y.test, 
         ilrX.train = computeBalances(X, slr.btree), 
@@ -233,7 +234,6 @@ res = foreach(
       slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
       
       # compute metrics on the selected model #
-      slr.SBP = sbp.fromHclust(slr.btree)
       slr.metrics = getMetricsBalanceReg(
         y.train = Y, y.test = Y.test, 
         ilrX.train = computeBalances(X, slr.btree), 
@@ -250,14 +250,18 @@ res = foreach(
       ), 
       paste0(output_dir, "/metrics", "/slr_bic_metrics", file.end))
     }
-  } else{
-    slr.btree = slr$btree
-    slr.SBP = sbp.fromHclust(slr.btree)
   }
   
   # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/slr_roc", file.end)) | 
      slr.model.already.existed == FALSE){
+    
+    # import model
+    slr = readRDS(paste0(output_dir, "/models", "/slr_model", file.end))
+    slr.btree = slr$btree
+    slr.btree = slr$btree
+    slr.SBP = sbp.fromHclust(slr.btree)
+    
     # roc
     slr.roc <- apply(slr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, slr.SBP))
@@ -288,9 +292,6 @@ res = foreach(
       paste0(output_dir, "/timing", "/classo_timing", file.end))
   } else{
     cl.model.already.existed = TRUE
-    classo = readRDS(paste0(output_dir, "/models", "/classo_model", file.end))
-    cl.timing = readRDS(paste0(
-      output_dir, "/timing", "/classo_timing", file.end))
   }
   
   # select tuning parameter and calculate metrics ##############################
@@ -299,6 +300,11 @@ res = foreach(
     !file.exists(paste0(
       output_dir, "/metrics", "/classo_bic_metrics", file.end)) |
     cl.model.already.existed == FALSE){
+    
+    # import model and timing metric
+    classo = readRDS(paste0(output_dir, "/models", "/classo_model", file.end))
+    cl.timing = readRDS(paste0(
+      output_dir, "/timing", "/classo_timing", file.end))
     
     # choose lambda using cross-validated mse ##################################
     if(!file.exists(paste0(output_dir, "/metrics", "/classo_metrics", file.end))){
@@ -353,6 +359,10 @@ res = foreach(
   # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/classo_roc", file.end)) | 
      cl.model.already.existed == FALSE){
+    
+    # import model
+    classo = readRDS(paste0(output_dir, "/models", "/classo_model", file.end))
+    
     # roc
     cl.roc <- apply(classo$bet, 2, function(a) 
       roc.for.coef(a, beta))
@@ -382,9 +392,6 @@ res = foreach(
       paste0(output_dir, "/timing", "/oracle_timing", file.end))
   } else{
     or.model.already.existed = TRUE
-    oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", file.end))
-    or.timing = readRDS(paste0(
-      output_dir, "/timing", "/oracle_timing", file.end))
   }
   
   # select tuning parameter and calculate metrics ##############################
@@ -394,8 +401,13 @@ res = foreach(
       output_dir, "/metrics", "/oracle_bic_metrics", file.end)) |
     or.model.already.existed == FALSE){
     
-    # binary tree
+    # import model and timing metric
+    oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", file.end))
+    or.timing = readRDS(paste0(
+      output_dir, "/timing", "/oracle_timing", file.end))
     or.btree = SigmaWtree
+    or.SBP = sbp.fromHclust(or.btree)
+    rownames(or.SBP) = names(beta)
     
     # choose lambda using cross-validated mse ##################################
     if(!file.exists(paste0(
@@ -407,7 +419,6 @@ res = foreach(
       or.betahat = getBeta(or.thetahat, U = or.Uhat)
       
       # compute metrics on the selected model #
-      or.SBP = sbp.fromHclust(or.btree)
       or.metrics = getMetricsBalanceReg(
         y.train = Y, y.test = Y.test, 
         ilrX.train = computeBalances(X, or.btree), 
@@ -437,7 +448,6 @@ res = foreach(
       or.betahat = getBeta(or.thetahat, U = or.Uhat)
       
       # compute metrics on the selected model #
-      or.SBP = sbp.fromHclust(or.btree)
       or.metrics = getMetricsBalanceReg(
         y.train = Y, y.test = Y.test, 
         ilrX.train = computeBalances(X, or.btree), 
@@ -454,15 +464,18 @@ res = foreach(
       ), 
       paste0(output_dir, "/metrics", "/oracle_bic_metrics", file.end))
     }
-  } else{
-    or.btree = SigmaWtree
-    or.SBP = sbp.fromHclust(or.btree)
-    rownames(or.SBP) = names(beta)
-  }
+  } 
   
   # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/oracle_roc", file.end)) | 
      or.model.already.existed == FALSE){
+    
+    # import model
+    oracle = readRDS(paste0(output_dir, "/models", "/oracle_model", file.end))
+    or.btree = SigmaWtree
+    or.SBP = sbp.fromHclust(or.btree)
+    rownames(or.SBP) = names(beta)
+    
     # roc
     or.roc <- apply(oracle$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, or.SBP))
@@ -494,9 +507,6 @@ res = foreach(
       paste0(output_dir, "/timing", "/propr_timing", file.end))
   } else{
     pr.model.already.existed = TRUE
-    pr = readRDS(paste0(output_dir, "/models", "/propr_model", file.end))
-    pr.timing = readRDS(paste0(
-      output_dir, "/timing", "/propr_timing", file.end))
   }
   
   # select tuning parameter and calculate metrics ##############################
@@ -506,8 +516,12 @@ res = foreach(
       output_dir, "/metrics", "/propr_bic_metrics", file.end)) |
     pr.model.already.existed == FALSE){
     
-    # binary tree
+    # import model and timing metric
+    pr = readRDS(paste0(output_dir, "/models", "/propr_model", file.end))
+    pr.timing = readRDS(paste0(
+      output_dir, "/timing", "/propr_timing", file.end))
     pr.btree = pr$btree
+    pr.SBP = sbp.fromHclust(pr.btree)
     
     # choose lambda using cross-validated mse ##################################
     if(!file.exists(paste0(
@@ -519,7 +533,6 @@ res = foreach(
       pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
       
       # compute metrics on the selected model #
-      pr.SBP = sbp.fromHclust(pr.btree)
       pr.metrics = getMetricsBalanceReg(
         y.train = Y, y.test = Y.test, 
         ilrX.train = computeBalances(X, pr.btree), 
@@ -549,7 +562,6 @@ res = foreach(
       pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
       
       # compute metrics on the selected model #
-      pr.SBP = sbp.fromHclust(pr.btree)
       pr.metrics = getMetricsBalanceReg(
         y.train = Y, y.test = Y.test, 
         ilrX.train = computeBalances(X, pr.btree), 
@@ -566,14 +578,17 @@ res = foreach(
       ), 
       paste0(output_dir, "/metrics", "/propr_bic_metrics", file.end))
     }
-  } else{
-    pr.btree = pr$btree
-    pr.SBP = sbp.fromHclust(pr.btree)
   }
   
   # roc curves #################################################################
   if(!file.exists(paste0(output_dir, "/roccurves", "/propr_roc", file.end)) | 
      pr.model.already.existed == FALSE){
+    
+    # import model
+    pr = readRDS(paste0(output_dir, "/models", "/propr_model", file.end))
+    pr.btree = pr$btree
+    pr.SBP = sbp.fromHclust(pr.btree)
+    
     # roc
     pr.roc <- apply(pr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, pr.SBP))

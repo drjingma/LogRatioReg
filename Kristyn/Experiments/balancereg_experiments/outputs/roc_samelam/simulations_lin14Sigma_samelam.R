@@ -124,7 +124,7 @@ res = foreach(
     "_", theta.settings, 
     "_dim", n, "x", p, 
     "_noise", sigma_eps,
-    "_cor", cor_ij, 
+    "_rho", rho, 
     "_int", intercept,
     "_scale", scaling,
     "_sim")
@@ -134,7 +134,7 @@ res = foreach(
     "_", theta.settings, 
     "_dim", n, "x", p, 
     "_noise", sigma_eps,
-    "_cor", cor_ij, 
+    "_rho", rho, 
     "_int", intercept,
     "_scale", scaling,
     "_sim", b,

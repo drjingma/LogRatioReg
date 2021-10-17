@@ -234,16 +234,18 @@ res = foreach(
         output_dir, "/roc_samelam/models_samelam", "/slr_model", file.end))
   } else{
     slr.model.already.existed = TRUE
-    slr = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/slr_model", file.end))
   }
-  
-  slr.btree = slr$btree
-  slr.SBP = sbp.fromHclust(slr.btree)
   
   if(!file.exists(paste0(
     output_dir, "/roc_samelam/roccurves_samelam", "/slr_roc", file.end)) |
     slr.model.already.existed == FALSE){
+    
+    # import model
+    slr = readRDS(paste0(
+      output_dir, "/roc_samelam/models_samelam", "/slr_model", file.end))
+    slr.btree = slr$btree
+    slr.SBP = sbp.fromHclust(slr.btree)
+    
     # roc
     slr.roc <- apply(slr$bet, 2, function(a)
       roc.for.coef.LR(a, beta, slr.SBP))
@@ -269,13 +271,16 @@ res = foreach(
       output_dir, "/roc_samelam/models_samelam", "/classo_model", file.end))
   } else{
     cl.model.already.existed = TRUE
-    classo = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/classo_model", file.end))
   }
   
   if(!file.exists(paste0(
     output_dir, "/roc_samelam/roccurves_samelam", "/classo_roc", file.end)) |
     cl.model.already.existed == FALSE){
+    
+    # import model
+    classo = readRDS(paste0(
+      output_dir, "/roc_samelam/models_samelam", "/classo_model", file.end))
+    
     # roc
     cl.roc <- apply(classo$bet, 2, function(a)
       roc.for.coef(a, beta))
@@ -300,17 +305,19 @@ res = foreach(
       output_dir, "/roc_samelam/models_samelam", "/oracle_model", file.end))
   } else{
     or.model.already.existed = TRUE
-    oracle = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/oracle_model", file.end))
   }
-  
-  or.btree = SigmaWtree
-  or.SBP = sbp.fromHclust(or.btree)
-  row.names(or.SBP) = names(beta)
   
   if(!file.exists(paste0(
     output_dir, "/roc_samelam/roccurves_samelam", "/oracle_roc", file.end)) |
     or.model.already.existed == FALSE){
+    
+    # import model
+    oracle = readRDS(paste0(
+      output_dir, "/roc_samelam/models_samelam", "/oracle_model", file.end))
+    or.btree = SigmaWtree
+    or.SBP = sbp.fromHclust(or.btree)
+    rownames(or.SBP) = names(beta)
+    
     # roc
     or.roc <- apply(oracle$bet, 2, function(a)
       roc.for.coef.LR(a, beta, or.SBP))
@@ -337,16 +344,18 @@ res = foreach(
       output_dir, "/roc_samelam/models_samelam", "/propr_model", file.end))
   } else{
     pr.model.already.existed = TRUE
-    pr = readRDS(paste0(
-      output_dir, "/roc_samelam/models_samelam", "/propr_model", file.end))
   }
-  
-  pr.btree = pr$btree
-  pr.SBP = sbp.fromHclust(pr.btree)
   
   if(!file.exists(paste0(
     output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end)) |
     pr.model.already.existed == FALSE){
+    
+    # import model
+    pr = readRDS(paste0(
+      output_dir, "/roc_samelam/models_samelam", "/propr_model", file.end))
+    pr.btree = pr$btree
+    pr.SBP = sbp.fromHclust(pr.btree)
+    
     # roc
     pr.roc <- apply(pr$bet, 2, function(a)
       roc.for.coef.LR(a, beta, pr.SBP))
@@ -356,17 +365,6 @@ res = foreach(
     saveRDS(pr.roc, paste0(
       output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end))
   }
-  
-  # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end)) | 
-  #    pr.model.already.existed == FALSE){
-  #   # roc
-  #   pr.roc <- apply(pr$bet, 2, function(a) 
-  #     roc.for.coef.LR(a, beta, pr.SBP))
-  #   
-  #   saveRDS(pr.roc, paste0(
-  #     output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end))
-  # }
   
   # ##############################################################################
   # # supervised log-ratios alpha = 0.5

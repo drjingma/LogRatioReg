@@ -336,17 +336,6 @@ res = foreach(
       output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end))
   }
   
-  # if(!file.exists(paste0(
-  #   output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end)) | 
-  #    pr.model.already.existed == FALSE){
-  #   # roc
-  #   pr.roc <- apply(pr$bet, 2, function(a) 
-  #     roc.for.coef.LR(a, beta, pr.SBP))
-  #   
-  #   saveRDS(pr.roc, paste0(
-  #     output_dir, "/roc_samelam/roccurves_samelam", "/propr_roc", file.end))
-  # }
-  
   # ##############################################################################
   # # supervised log-ratios alpha = 0.5
   # ##############################################################################

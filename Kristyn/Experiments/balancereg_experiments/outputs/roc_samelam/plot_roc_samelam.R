@@ -39,44 +39,25 @@ scaling = TRUE
 sigma_eps = 0.1  # 0.1, 0.5
 
 if(sigma.settings == "lin14Sigma"){
-  if(mu.settings == "matchbeta"){
-    file.end = paste0( # for old simulations
-      "_dim", n, "x", p,
-      "_", sigma.settings,
-      "_", theta.settings,
-      "_", mu.settings,
-      "_noise", sigma_eps,
-      "_rho", rho,
-      "_int", intercept,
-      "_scale", scaling,
-      "_K", K,
-      "_seed", rng.seed,
-      ".rds")
-  } else{
-    file.end = paste0( # for old simulations
-      "_dim", n, "x", p,
-      "_", sigma.settings,
-      "_", theta.settings,
-      "_noise", sigma_eps,
-      "_rho", rho,
-      "_int", intercept,
-      "_scale", scaling,
-      "_K", K,
-      "_seed", rng.seed,
-      ".rds")
-  }
-} else{ # for block-diagonal Sigma, either "2blockSigma" or "4blockSigma"
   file.end = paste0(
-    "_dim", n, "x", p, 
     "_", sigma.settings,
     "_", theta.settings, 
+    "_dim", n, "x", p, 
+    "_noise", sigma_eps,
+    "_rho", rho, 
+    "_int", intercept,
+    "_scale", scaling,
+    "_sim")
+} else{ # for block-diagonal Sigma, either "2blockSigma" or "4blockSigma"
+  file.end = paste0(
+    "_", sigma.settings,
+    "_", theta.settings, 
+    "_dim", n, "x", p, 
     "_noise", sigma_eps,
     "_cor", cor_ij, 
     "_int", intercept,
-    "_scale", scaling,
-    "_K", K,
-    "_seed", rng.seed,
-    ".rds")
+    "_scale", scaling, 
+    "_sim")
 }
 
 has.selbal = FALSE
@@ -93,16 +74,18 @@ or.rocs = data.frame()
 pr.rocs = data.frame()
 rocs = data.frame()
 for(i in 1:numSims){
-  cl.roc.tmp = readRDS(paste0(output_dir, "/classo_roc", i, file.end))
+  cl.roc.tmp = readRDS(paste0(output_dir, "/classo_roc", file.end, i, ".rds"))
+  cl.roc.tmp$lambda
   cl.roc.tmp$sim = i
   cl.rocs = rbind(cl.rocs, cl.roc.tmp)
-  slr.roc.tmp = readRDS(paste0(output_dir, "/slr_roc", i, file.end))
+  slr.roc.tmp = readRDS(paste0(output_dir, "/slr_roc", file.end, i, ".rds"))
+  slr.roc.tmp$lambda
   slr.roc.tmp$sim = i
   slr.rocs = rbind(slr.rocs, slr.roc.tmp)
-  or.roc.tmp = readRDS(paste0(output_dir, "/oracle_roc", i, file.end))
+  or.roc.tmp = readRDS(paste0(output_dir, "/oracle_roc", file.end, i, ".rds"))
   or.roc.tmp$sim = i
   or.rocs = rbind(or.rocs, or.roc.tmp)
-  pr.roc.tmp = readRDS(paste0(output_dir, "/propr_roc", i, file.end))
+  pr.roc.tmp = readRDS(paste0(output_dir, "/propr_roc", file.end, i, ".rds"))
   pr.roc.tmp$sim = i
   pr.rocs = rbind(pr.rocs, pr.roc.tmp)
   
@@ -113,7 +96,15 @@ for(i in 1:numSims){
   rocs = rbind(rocs, cl.roc.tmp, slr.roc.tmp, or.roc.tmp, pr.roc.tmp)
 }
 
-rocs = rocs %>% 
+slr.rocs %>% 
+  group_by(lambda) %>% 
+  summarize(
+    S_hat = mean(S_hat),
+    tpr = mean(tpr),
+    TP = mean(TP)
+  ) 
+
+rocs %>% 
   group_by(Method, lambda) %>% 
   summarize(
     S_hat = mean(S_hat),
@@ -140,24 +131,15 @@ tpr_roc = ggplot(
   geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
 ggarrange(tp_roc, tpr_roc)
-if(sigma.settings == "lin14Sigma" & mu.settings == "matchbeta"){
-  ggsave(
-    filename = paste0(
-      "20211011_", 
-      sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_", mu.settings, "_rocs_samelam.pdf"),
-    plot = last_plot(),
-    width = 8, height = 5, units = c("in")
-  )
-} else{
-  ggsave(
-    filename = paste0(
-      "20211011_", 
-      sigma.settings, "_noise", sigma_eps, 
-      "_", theta.settings, "_rocs_samelam.pdf"),
-    plot = last_plot(),
-    width = 8, height = 5, units = c("in")
-  )
-}
+
+ggsave(
+  filename = paste0(
+    "20211011_", 
+    sigma.settings, "_noise", sigma_eps, 
+    "_", theta.settings, "_rocs_samelam.pdf"),
+  plot = last_plot(),
+  width = 8, height = 5, units = c("in")
+)
+
 
 

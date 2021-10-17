@@ -17,9 +17,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "2blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "dense" # "dense" or "sparse"
+theta.settings = "1blockpair" # "dense" or "sparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -256,7 +256,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20211016_", 
+    "20211017_", 
     sigma.settings, "_noise", sigma_eps,
     "_", theta.settings, "_metrics.pdf"),
   plot = last_plot(),
@@ -501,7 +501,7 @@ ggarrange(tp_roc, tpr_roc)
 
 ggsave(
   filename = paste0(
-    "20211016_", 
+    "20211017_", 
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, "_rocs.pdf"),
   plot = last_plot(),

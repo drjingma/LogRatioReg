@@ -130,6 +130,16 @@ res = foreach(
   muW = c(rep(log(p), 5), rep(0, p - 5))
   names(muW) = names(beta)
   
+  file.end0 = paste0(
+    "_", sigma.settings,
+    "_", theta.settings, 
+    "_dim", n, "x", p, 
+    "_noise", sigma_eps,
+    "_cor", cor_ij, 
+    "_int", intercept,
+    "_scale", scaling,
+    "_sim")
+  
   file.end = paste0(
     "_", sigma.settings,
     "_", theta.settings, 
@@ -167,27 +177,27 @@ res = foreach(
   for(i in 1:numSims){
     # classo
     cl.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/classo_model", file.end
+      paste0(output_dir, "/models", "/classo_model", file.end0, i, ".rds"
       ))$lambda
     # slr
     slr.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/slr_model", file.end
+      paste0(output_dir, "/models", "/slr_model", file.end0, i, ".rds"
       ))$lambda
     # # selbal
     # selbal.lams.mat[, i] = readRDS(
-    #   paste0(output_dir, "/models", "/selbal_model", file.end
+    #   paste0(output_dir, "/models", "/selbal_model", file.end0, i, ".rds"
     #   ))$lambda
     # oracle
     or.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/oracle_model", file.end
+      paste0(output_dir, "/models", "/oracle_model", file.end0, i, ".rds"
       ))$lambda
     # # coat
     # coat.lams.mat[, i] = readRDS(
-    #   paste0(output_dir, "/models", "/coat_model", file.end
+    #   paste0(output_dir, "/models", "/coat_model", file.end0, i, ".rds"
     #   ))$lambda
     # propr
     pr.lams.mat[, i] = readRDS(
-      paste0(output_dir, "/models", "/propr_model", file.end
+      paste0(output_dir, "/models", "/propr_model", file.end0, i, ".rds"
       ))$lambda
   }
   

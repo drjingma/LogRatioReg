@@ -149,6 +149,9 @@ res = foreach(
   muW = c(rep(log(p), 5), rep(0, p - 5))
   names(muW) = names(beta)
   
+  # pre-specified cardinality to choose lambda
+  prespecified.cardinality = bspars
+  
   file.end = paste0(
     "_", sigma.settings,
     "_", theta.settings, 
@@ -180,20 +183,23 @@ res = foreach(
   # fit model ##################################################################
   if(!file.exists(paste0(output_dir, "/models", "/slr_model", file.end)) |
      !file.exists(paste0(output_dir, "/timing", "/slr_timing", file.end))){
-    slr.model.already.existed = FALSE
+    slr.model.already.existed = FALSE # need to recalculate metrics, rocs, etc.
     # apply supervised log-ratios, using CV to select lambda
     start.time = Sys.time()
     slr = cvSLR(
       y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
       rho.type = rho.type, linkage = linkage, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
+    # saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
     
     # timing metric
     slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      slr.timing, 
-      paste0(output_dir, "/timing", "/slr_timing", file.end))
+    # saveRDS(
+    #   slr.timing, 
+    #   paste0(output_dir, "/timing", "/slr_timing", file.end))
+    
+    ###
+    stop("slr: I already have the model fits!")
   } else{
     slr.model.already.existed = TRUE
   }
@@ -203,6 +209,9 @@ res = foreach(
     output_dir, "/metrics", "/slr_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/slr_bic_metrics", file.end)) | 
+    !file.exists(paste0(
+      output_dir, "/metrics", "/slr", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     slr.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -268,6 +277,41 @@ res = foreach(
       ), 
       paste0(output_dir, "/metrics", "/slr_bic_metrics", file.end))
     }
+    
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/slr", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      slr.beta = apply(slr$bet, 2, function(theta) getBeta(theta, slr.btree))
+      slr.sizebeta = apply(
+        slr.beta, 2, function(beta) sum(abs(beta) > 1e-8))
+      slr.lam.min.idx = which.min(abs(slr.sizebeta - prespecified.cardinality))
+      slr.a0 = slr$int[slr.lam.min.idx]
+      slr.thetahat = slr$bet[, slr.lam.min.idx]
+      slr.Uhat = getU(btree = slr.btree)
+      # slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
+      slr.betahat = slr.beta[, slr.lam.min.idx]
+      
+      # compute metrics on the selected model #
+      slr.metrics = getMetricsBalanceReg(
+        y.train = Y, y.test = Y.test, 
+        ilrX.train = computeBalances(X, slr.btree), 
+        ilrX.test = computeBalances(X.test, slr.btree), 
+        n.train = n, n.test = n, 
+        thetahat0 = slr.a0, thetahat = slr.thetahat, betahat = slr.betahat, 
+        sbp = slr.SBP, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        slr.metrics, 
+        "timing" = slr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/slr", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   }
   
   # roc curves #################################################################
@@ -284,7 +328,7 @@ res = foreach(
     slr.roc <- apply(slr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, slr.SBP))
     
-    saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", file.end))
+    # saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", file.end))
   }
   
   ##############################################################################
@@ -301,13 +345,16 @@ res = foreach(
       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
     end.time = Sys.time()
-    saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
+    # saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
     
     # timing metric
     cl.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      cl.timing, 
-      paste0(output_dir, "/timing", "/classo_timing", file.end))
+    # saveRDS(
+    #   cl.timing, 
+    #   paste0(output_dir, "/timing", "/classo_timing", file.end))
+    
+    ###
+    stop("classo: I already have the model fits!")
   } else{
     cl.model.already.existed = TRUE
   }
@@ -317,6 +364,9 @@ res = foreach(
     output_dir, "/metrics", "/classo_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/classo_bic_metrics", file.end)) |
+    !file.exists(paste0(
+      output_dir, "/metrics", "/classo", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     cl.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -372,6 +422,36 @@ res = foreach(
       ), 
       paste0(output_dir, "/metrics", "/classo_bic_metrics", file.end))
     }
+    
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/classo", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      cl.sizebeta = apply(
+        classo$bet, 2, function(beta) sum(abs(beta) > 1e-8))
+      cl.lam.min.idx = which.min(abs(cl.sizebeta - prespecified.cardinality))
+      cl.a0 = classo$int[cl.lam.min.idx]
+      cl.betahat = classo$bet[, cl.lam.min.idx]
+      
+      # compute metrics on the selected model #
+      cl.metrics = getMetricsLLC(
+        y.train = Y, y.test = Y.test, 
+        logX.train = log(X), 
+        logX.test = log(X.test), 
+        n.train = n, n.test = n, 
+        betahat0 = cl.a0, betahat = cl.betahat, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        cl.metrics, 
+        "timing" = cl.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/classo", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   }
   
   # roc curves #################################################################
@@ -385,7 +465,7 @@ res = foreach(
     cl.roc <- apply(classo$bet, 2, function(a) 
       roc.for.coef(a, beta))
     
-    saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", file.end))
+    # saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", file.end))
   }
   
   ##############################################################################
@@ -401,13 +481,16 @@ res = foreach(
     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
                    nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
+    # saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
     
     # timing metric
     or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      or.timing, 
-      paste0(output_dir, "/timing", "/oracle_timing", file.end))
+    # saveRDS(
+    #   or.timing, 
+    #   paste0(output_dir, "/timing", "/oracle_timing", file.end))
+    
+    ###
+    stop("oracle: I already have the model fits!")
   } else{
     or.model.already.existed = TRUE
   }
@@ -417,6 +500,9 @@ res = foreach(
     output_dir, "/metrics", "/oracle_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/oracle_bic_metrics", file.end)) |
+    !file.exists(paste0(
+      output_dir, "/metrics", "/oracle", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     or.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -482,6 +568,40 @@ res = foreach(
       ), 
       paste0(output_dir, "/metrics", "/oracle_bic_metrics", file.end))
     }
+    
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/oracle", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      or.beta = apply(oracle$bet, 2, function(theta) getBeta(theta, or.btree))
+      or.sizebeta = apply(
+        or.beta, 2, function(beta) sum(abs(beta) > 1e-8))
+      or.lam.min.idx = which.min(abs(or.sizebeta - prespecified.cardinality))
+      or.a0 = oracle$int[or.lam.min.idx]
+      or.thetahat = oracle$bet[, or.lam.min.idx]
+      or.Uhat = getU(btree = or.btree)
+      or.betahat = getBeta(or.thetahat, U = or.Uhat)
+      
+      # compute metrics on the selected model #
+      or.metrics = getMetricsBalanceReg(
+        y.train = Y, y.test = Y.test, 
+        ilrX.train = computeBalances(X, or.btree), 
+        ilrX.test = computeBalances(X.test, or.btree), 
+        n.train = n, n.test = n, 
+        thetahat0 = or.a0, thetahat = or.thetahat, betahat = or.betahat, 
+        sbp = or.SBP, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        or.metrics, 
+        "timing" = or.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/oracle", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   } 
   
   # roc curves #################################################################
@@ -498,7 +618,7 @@ res = foreach(
     or.roc <- apply(oracle$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, or.SBP))
     
-    saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", file.end))
+    # saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", file.end))
   }
   
   ##############################################################################
@@ -516,13 +636,16 @@ res = foreach(
     pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
                nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
+    # saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
     
     # timing metric
     pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      pr.timing, 
-      paste0(output_dir, "/timing", "/propr_timing", file.end))
+    # saveRDS(
+    #   pr.timing, 
+    #   paste0(output_dir, "/timing", "/propr_timing", file.end))
+    
+    ###
+    stop("propr: I already have the model fits!")
   } else{
     pr.model.already.existed = TRUE
   }
@@ -532,6 +655,9 @@ res = foreach(
     output_dir, "/metrics", "/propr_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/propr_bic_metrics", file.end)) |
+    !file.exists(paste0(
+      output_dir, "/metrics", "/propr", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     pr.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -596,6 +722,40 @@ res = foreach(
       ), 
       paste0(output_dir, "/metrics", "/propr_bic_metrics", file.end))
     }
+    
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/propr", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      pr.beta = apply(pr$bet, 2, function(theta) getBeta(theta, pr.btree))
+      pr.sizebeta = apply(
+        pr.beta, 2, function(beta) sum(abs(beta) > 1e-8))
+      pr.lam.min.idx = which.min(abs(pr.sizebeta - prespecified.cardinality))
+      pr.a0 = pr$int[pr.lam.min.idx]
+      pr.thetahat = pr$bet[, pr.lam.min.idx]
+      pr.Uhat = getU(btree = pr.btree)
+      pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
+      
+      # compute metrics on the selected model #
+      pr.metrics = getMetricsBalanceReg(
+        y.train = Y, y.test = Y.test, 
+        ilrX.train = computeBalances(X, pr.btree), 
+        ilrX.test = computeBalances(X.test, pr.btree), 
+        n.train = n, n.test = n, 
+        thetahat0 = pr.a0, thetahat = pr.thetahat, betahat = pr.betahat, 
+        sbp = pr.SBP, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        pr.metrics, 
+        "timing" = pr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/propr", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   }
   
   # roc curves #################################################################
@@ -611,7 +771,7 @@ res = foreach(
     pr.roc <- apply(pr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, pr.SBP))
     
-    saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", file.end))
+    # saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", file.end))
   }
   
   ##############################################################################
@@ -642,13 +802,14 @@ res = foreach(
       betahat0 = full.a0, betahat = full.betahat, 
       true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
     
-    saveRDS(c(
-      full.metrics, 
-      "timing" = full.timing,
-      "betaSparsity" = bspars
-    ), 
-    paste0(output_dir, "/metrics", "/full_metrics", file.end))
+    # saveRDS(c(
+    #   full.metrics, 
+    #   "timing" = full.timing,
+    #   "betaSparsity" = bspars
+    # ), 
+    # paste0(output_dir, "/metrics", "/full_metrics", file.end))
   }
+  
 }
 
 

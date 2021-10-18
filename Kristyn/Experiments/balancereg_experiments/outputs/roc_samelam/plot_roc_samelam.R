@@ -18,11 +18,11 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair" # "dense", "sparse", "both", "multsparse"
+theta.settings = "sparse" # "dense", "sparse", "both", "multsparse"
 # if "2blockSigma" then "dense"
-# if "4blockSigma", then "2blocks"
+# if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
 # if "lin14Sigma" then "dense" or "multsparse"
 mu.settings = "" # matchbeta
@@ -96,15 +96,7 @@ for(i in 1:numSims){
   rocs = rbind(rocs, cl.roc.tmp, slr.roc.tmp, or.roc.tmp, pr.roc.tmp)
 }
 
-slr.rocs %>% 
-  group_by(lambda) %>% 
-  summarize(
-    S_hat = mean(S_hat),
-    tpr = mean(tpr),
-    TP = mean(TP)
-  ) 
-
-rocs %>% 
+rocs = rocs %>% 
   group_by(Method, lambda) %>% 
   summarize(
     S_hat = mean(S_hat),
@@ -130,11 +122,12 @@ tpr_roc = ggplot(
   geom_line(alpha = 0.5, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
-ggarrange(tp_roc, tpr_roc)
+tp_roc
+# ggarrange(tp_roc, tpr_roc)
 
 ggsave(
   filename = paste0(
-    "20211011_", 
+    "20211017_", 
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, "_rocs_samelam.pdf"),
   plot = last_plot(),

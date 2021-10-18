@@ -3,6 +3,8 @@ rm(list=ls())
 #   compositional lasso and supervised log-ratios methods
 # Date: 10/11/2021
 
+use.bic = FALSE
+
 ################################################################################
 # libraries and settings
 
@@ -17,9 +19,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair" # "dense" or "sparse"
+theta.settings = "sparse" # "dense" or "sparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -88,6 +90,7 @@ if(has.selbal) selbal.sims.list = list()
 if(has.oracle) or.sims.list = list()
 if(has.coat) coat.sims.list = list()
 if(has.propr) pr.sims.list = list()
+full.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
@@ -133,13 +136,21 @@ for(i in 1:numSims){
     rownames(pr.sim.tmp) = NULL
     pr.sims.list[[i]] = data.table(pr.sim.tmp)
   }
+  # full
+  full.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/full_metrics", file.end, "_sim", i, ".rds"
+  ))))
+  rownames(full.sim.tmp) = NULL
+  full.sims.list[[i]] = data.table(full.sim.tmp)
 }
+
 cl.sims = as.data.frame(rbindlist(cl.sims.list))
 slr.sims = as.data.frame(rbindlist(slr.sims.list))
 if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
 if(has.oracle) or.sims = as.data.frame(rbindlist(or.sims.list))
 if(has.coat) coat.sims = as.data.frame(rbindlist(coat.sims.list))
 if(has.propr) pr.sims = as.data.frame(rbindlist(pr.sims.list))
+full.sims = as.data.frame(rbindlist(full.sims.list))
 
 # summary stats for classo metrics
 cl.eval.means = apply(cl.sims, 2, mean)
@@ -197,6 +208,14 @@ if(has.propr){
   # print(pr.summaries[metrics, c("mean", "se")])
 }
 
+# summary stats for full model's metrics
+full.eval.means = apply(full.sims, 2, mean)
+full.eval.sds = apply(full.sims, 2, sd)
+full.eval.ses = full.eval.sds / sqrt(numSims)
+full.summaries = data.frame(
+  "mean" = full.eval.means, "sd" = full.eval.sds, "se" = full.eval.ses)
+# print(full.summaries[metrics, c("mean", "se")])
+
 # boxplots for the slr and classo metrics
 cl.sims.gg = reshape2::melt(cl.sims)
 cl.sims.gg$Method = "classo"
@@ -218,8 +237,10 @@ if(has.propr){
   pr.sims.gg = reshape2::melt(pr.sims)
   pr.sims.gg$Method = "propr"
 }
-data.gg = rbind(cl.sims.gg, slr.sims.gg)
-levels.gg = c("classo", "slr")
+full.sims.gg = reshape2::melt(full.sims)
+full.sims.gg$Method = "full"
+data.gg = rbind(cl.sims.gg, slr.sims.gg, full.sims.gg)
+levels.gg = c("classo", "slr", "full")
 if(has.oracle){
   data.gg = rbind(data.gg, or.sims.gg)
   levels.gg = c(levels.gg, "oracle")

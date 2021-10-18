@@ -622,11 +622,16 @@ res = foreach(
   
   if(!file.exists(paste0(
     output_dir, "/metrics", "/full_metrics", file.end))){
+    
+    # model + timing metric
+    start.time = Sys.time()
     Q = as.matrix(rep(1, p))
     Q2 = rbind(0, Q)
     full = lsei(A = cbind(1, log(X)), B = Y, E = t(Q2), F = 0)
     full.a0 = full$X[1]
     full.betahat = full$X[-1]
+    end.time = Sys.time()
+    full.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
     
     # compute metrics on the selected model #
     full.metrics = getMetricsLLC(
@@ -639,7 +644,7 @@ res = foreach(
     
     saveRDS(c(
       full.metrics, 
-      "timing" = cl.timing,
+      "timing" = full.timing,
       "betaSparsity" = bspars
     ), 
     paste0(output_dir, "/metrics", "/full_metrics", file.end))

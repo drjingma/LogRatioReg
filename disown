@@ -1,0 +1,46 @@
+
+R version 4.0.5 (2021-03-31) -- "Shake and Throw"
+Copyright (C) 2021 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Purpose: Simulate data from balance regression model to compare
+> #   compositional lasso and supervised log-ratios methods
+> # Note: Here, we simulate from a 2-block-diagonal Sigma and intend to:
+> #   - have one active contrast corresponding to 2 of the 4 blocks, so that 
+> #       slr correctly specifies the log-ratio formed by the 2 blocks --
+> #       compare this to the results from simulations_2blockSigma.R with the 
+> #       dense setting, which has the same structure (1 contrast containing 2 
+> #       active blocks), but no inactive set.
+> # Date: 10/11/2021
+> 
+> ################################################################################
+> # libraries and settings
+> 
+> output_dir = "Kristyn/Experiments/balancereg_experiments/outputs"
+> 
+> # set up parallelization
+> library(foreach)
+> library(future)
+> library(doFuture)
+> library(parallel)
+> registerDoFuture()
+> nworkers = detectCores()
+> plan(multisession, workers = nworkers)
+
+Execution halted
+
+Execution halted

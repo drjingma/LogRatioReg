@@ -1,3 +1,4 @@
+
 rm(list=ls())
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
@@ -19,9 +20,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "sparse" # "dense" or "sparse"
+theta.settings = "1blockpair4halves" # "dense" or "sparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -80,8 +81,11 @@ if(theta.settings == "dense"){
     "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
     "Fscore", "timing", "betaSparsity")
 }
-# metric_names = c(
-#   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "timing")
+if(use.bic){
+  metrics.file = "bic_metrics"
+} else{
+  metrics.file = "metrics"
+}
 
 # import metrics
 cl.sims.list = list()
@@ -94,20 +98,23 @@ full.sims.list = list()
 for(i in 1:numSims){
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/classo_metrics", file.end, "_sim", i, ".rds"
+    output_dir, "/metrics", "/classo_", metrics.file, file.end, 
+    "_sim", i, ".rds"
   ))))
   rownames(cl.sim.tmp) = NULL
   cl.sims.list[[i]] = data.table(cl.sim.tmp)
   # slr
   slr.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_metrics", file.end, "_sim", i, ".rds"
+    output_dir, "/metrics", "/slr_", metrics.file, file.end, 
+    "_sim", i, ".rds"
   ))))
   rownames(slr.sim.tmp) = NULL
   slr.sims.list[[i]] = data.table(slr.sim.tmp)
   if(has.selbal){
     # selbal
     selbal.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/selbal_metrics", file.end, "_sim", i, ".rds"
+      output_dir, "/metrics", "/selbal_", metrics.file, file.end, 
+      "_sim", i, ".rds"
     ))))
     rownames(selbal.sim.tmp) = NULL
     selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
@@ -115,7 +122,8 @@ for(i in 1:numSims){
   if(has.oracle){
     # oracle
     or.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/oracle_metrics", file.end, "_sim", i, ".rds"
+      output_dir, "/metrics", "/oracle_", metrics.file, file.end, 
+      "_sim", i, ".rds"
     ))))
     rownames(or.sim.tmp) = NULL
     or.sims.list[[i]] = data.table(or.sim.tmp)
@@ -123,7 +131,8 @@ for(i in 1:numSims){
   if(has.coat){
     # coat
     coat.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/coat_metrics", file.end, "_sim", i, ".rds"
+      output_dir, "/metrics", "/coat_", metrics.file, file.end, 
+      "_sim", i, ".rds"
     ))))
     rownames(coat.sim.tmp) = NULL
     coat.sims.list[[i]] = data.table(coat.sim.tmp)
@@ -131,7 +140,8 @@ for(i in 1:numSims){
   if(has.propr){
     # propr
     pr.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/propr_metrics", file.end, "_sim", i, ".rds"
+      output_dir, "/metrics", "/propr_", metrics.file, file.end, 
+      "_sim", i, ".rds"
     ))))
     rownames(pr.sim.tmp) = NULL
     pr.sims.list[[i]] = data.table(pr.sim.tmp)
@@ -279,42 +289,10 @@ ggsave(
   filename = paste0(
     "20211017_", 
     sigma.settings, "_noise", sigma_eps,
-    "_", theta.settings, "_metrics.pdf"),
+    "_", theta.settings,"_", metrics.file, ".pdf"),
   plot = last_plot(),
   width = 8, height = 5, units = c("in")
 )
-
-# zoom in to PEtr, PEte
-# plot PEtr
-PEtr.gg = data.gg[data.gg$variable == "PEtr", ]
-# PEtr.gg$value = log(PEtr.gg$value)
-plt.PEtr = ggplot(PEtr.gg, aes(x = type, y = value, color = type)) + 
-  geom_boxplot() +
-  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
-               geom = "errorbar", width = 0.75, 
-               linetype = "dashed") +
-  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
-               color = "red") +
-  theme_bw() + 
-  theme(axis.title.x = element_blank(), 
-        axis.title.y = element_blank(), 
-        legend.position = "none")
-# plot PEte
-PEte.gg = data.gg[data.gg$variable == "PEte", ]
-PEte.gg$value = log(PEte.gg$value)
-plt.PEte = ggplot(PEte.gg, aes(x = type, y = value, color = type)) + 
-  geom_boxplot() +
-  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
-               geom = "errorbar", width = 0.75, 
-               linetype = "dashed") +
-  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
-               color = "red") +
-  theme_bw() + 
-  theme(axis.title.x = element_blank(), 
-        axis.title.y = element_blank(), 
-        legend.position = "none")
-# plot both
-# ggarrange(plt.PEtr, plt.PEte)
 
 
 
@@ -526,7 +504,7 @@ ggsave(
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, "_rocs.pdf"),
   plot = last_plot(),
-  width = 8, height = 5, units = c("in")
+  width = 8, height = 3, units = c("in")
 )
 
 

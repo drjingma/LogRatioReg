@@ -145,11 +145,13 @@ getMetricsLLC = function(
 roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
   TP = sum((abs(beta_hat) > eps) * (abs(beta) > eps))
   FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
+  FP = sum((abs(beta_hat) > eps) * (abs(beta) <= eps))
   tpr <- TP/(TP + FN)
   S_hat <- sum((abs(beta_hat) > eps))
+  prec = TP/(TP + FP)
   # out <- c(S_hat,tpr)
   # names(out) <- c('S_hat','tpr')
-  out = c("S_hat" = S_hat, "tpr" = tpr, "TP" = TP)
+  out = c("S_hat" = S_hat, "tpr" = tpr, "TP" = TP, "precision" = prec)
   return(out)
 }
 roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
@@ -169,8 +171,11 @@ roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
   S0 <- names(which((abs(beta) > eps)))
   TP <- intersect(S_hat, S0)
   tpr <- length(TP)/length(S0) # prob that an actual positive will test positive
+  prec = length(TP)/length(S_hat)
   # out <- c(length(S_hat),tpr)
   # names(out) <- c('S_hat','tpr')
-  out = c("S_hat" = length(S_hat), "tpr" = tpr, "TP" = length(TP))
+  out = c(
+    "S_hat" = length(S_hat), "tpr" = tpr, "TP" = length(TP), 
+    "precision" = prec)
   return(out)
 }

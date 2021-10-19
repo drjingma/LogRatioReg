@@ -5,6 +5,7 @@ rm(list=ls())
 # Date: 10/11/2021
 
 use.bic = FALSE
+use.prespec.cardinality = TRUE
 
 ################################################################################
 # libraries and settings
@@ -20,9 +21,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair4halves" # "dense" or "sparse"
+theta.settings = "sparse" # "dense" or "sparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -83,6 +84,27 @@ if(theta.settings == "dense"){
 }
 if(use.bic){
   metrics.file = "bic_metrics"
+} else if(use.prespec.cardinality){
+  # if "2blockSigma" then "dense"
+  # if "4blockSigma", then "1blockpair"
+  # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
+  # if "lin14Sigma" then "dense" or "sparse"
+  if(sigma.settings == "lin14Sigma" & theta.settings == "dense"){
+    bspars = 200
+  }
+  if(sigma.settings == "lin14Sigma" & theta.settings == "sparse"){
+    bspars = 6
+  }
+  if(sigma.settings == "10blockSigma" & theta.settings == "1blockpair4halves"){
+    bspars = 76
+  }
+  if(sigma.settings == "4blockSigma" & theta.settings == "1blockpair"){
+    bspars = 100
+  }
+  if(sigma.settings == "2blockSigma" & theta.settings == "dense"){
+    bspars = 200
+  }
+  metrics.file = paste0("size", bspars, "_metrics")
 } else{
   metrics.file = "metrics"
 }

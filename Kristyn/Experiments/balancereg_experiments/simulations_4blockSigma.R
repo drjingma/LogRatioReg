@@ -59,7 +59,8 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "4blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "1blockpair"  
+  theta.settings = "1blockpair"
+  prespecified.cardinality = 150
   # "1blockpair" => choose j corresp. to two blocks
   #   (one block w/-1, other w/1 in a single contrast)
   values.theta = 1
@@ -132,7 +133,9 @@ res = foreach(
   names(muW) = names(beta)
   
   # pre-specified cardinality to choose lambda
-  prespecified.cardinality = bspars
+  if(is.null(prespecified.cardinality) | prespecified.cardinality == "bspars"){
+    prespecified.cardinality = bspars
+  }
   
   file.end = paste0(
     "_", sigma.settings,

@@ -299,7 +299,7 @@ res = foreach(
     slr.roc <- apply(slr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, slr.SBP))
     
-    # saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", file.end))
+    saveRDS(slr.roc, paste0(output_dir, "/roccurves", "/slr_roc", file.end))
   }
   
   ##############################################################################
@@ -436,7 +436,7 @@ res = foreach(
     cl.roc <- apply(classo$bet, 2, function(a) 
       roc.for.coef(a, beta))
     
-    # saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", file.end))
+    saveRDS(cl.roc, paste0(output_dir, "/roccurves", "/classo_roc", file.end))
   }
   
   ##############################################################################
@@ -589,7 +589,7 @@ res = foreach(
     or.roc <- apply(oracle$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, or.SBP))
     
-    # saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", file.end))
+    saveRDS(or.roc, paste0(output_dir, "/roccurves", "/oracle_roc", file.end))
   }
   
   ##############################################################################
@@ -742,7 +742,7 @@ res = foreach(
     pr.roc <- apply(pr$bet, 2, function(a) 
       roc.for.coef.LR(a, beta, pr.SBP))
     
-    # saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", file.end))
+    saveRDS(pr.roc, paste0(output_dir, "/roccurves", "/propr_roc", file.end))
   }
   
   ##############################################################################

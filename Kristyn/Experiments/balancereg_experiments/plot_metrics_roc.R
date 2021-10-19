@@ -5,7 +5,7 @@ rm(list=ls())
 # Date: 10/11/2021
 
 use.bic = FALSE
-use.prespec.cardinality = TRUE
+use.prespec.cardinality = FALSE
 
 ################################################################################
 # libraries and settings

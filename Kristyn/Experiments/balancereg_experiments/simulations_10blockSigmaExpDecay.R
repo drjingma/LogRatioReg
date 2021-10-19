@@ -98,17 +98,18 @@ res = foreach(
     # "1blockpair4halves" => 
     #   1 contrast corresponding to 2 blocks (accounts for 2 blocks so far), 
     #   4 contrasts, each corresponding to half (or approx. half) of the vars 
-    #     in 4 different blocks (accounts for 8 blocks so far), and 
+    #     in 4 different blocks (accounts for 8 blocks so far), and 45
     #   the other 4 blocks with inactive vars (i.e. not in any of the 
     #     selected contrasts).
     # get the 1 contrast corresponding to 2 blocks
+    contrast.vars.lengths = sapply(contrast.vars, length)
     block.contrasts.1blockpair = which(
-      sapply(contrast.vars, length) == 2 * (p / num.blocks))
+      contrast.vars.lengths == 2 * (p / num.blocks))
     indices.theta1 = unname(block.contrasts.1blockpair)
     # get the 4 contrasts, each corresponding to half (or approx. half) of the 
     #   vars in 4 different blocks
     block.contrasts.halves = which(
-      sapply(contrast.vars, length) == 9) # 0.5 * (p / num.blocks))
+      contrast.vars.lengths == 12) # 0.5 * (p / num.blocks))
     indices.theta2 = unname(block.contrasts.halves[1:4])
     indices.theta = c(indices.theta1, indices.theta2)
   } else{
@@ -217,7 +218,6 @@ res = foreach(
     slr = readRDS(paste0(output_dir, "/models", "/slr_model", file.end))
     slr.timing = readRDS(paste0(
       output_dir, "/timing", "/slr_timing", file.end))
-    slr.btree = slr$btree
     slr.btree = slr$btree
     slr.SBP = sbp.fromHclust(slr.btree)
     

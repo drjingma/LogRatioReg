@@ -5,7 +5,8 @@ rm(list=ls())
 # Date: 10/11/2021
 
 use.bic = FALSE
-use.prespec.cardinality = FALSE
+use.prespec.cardinality = TRUE
+prespecified.cardinality = 150 #"bspars"
 
 ################################################################################
 # libraries and settings
@@ -21,9 +22,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "sparse" # "dense" or "sparse"
+theta.settings = "1blockpair4halves" # "dense" or "sparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -76,245 +77,248 @@ if(FALSE){
 ################################################################################
 # plot metrics
 
-metric_names = NULL
-if(theta.settings == "dense"){
-  metric_names = c(
-    "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
-    "Fscore", "timing", "betaSparsity")
-}
-if(use.bic){
-  metrics.file = "bic_metrics"
-} else if(use.prespec.cardinality){
-  # if "2blockSigma" then "dense"
-  # if "4blockSigma", then "1blockpair"
-  # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
-  # if "lin14Sigma" then "dense" or "sparse"
-  if(sigma.settings == "lin14Sigma" & theta.settings == "dense"){
-    bspars = 200
-  }
-  if(sigma.settings == "lin14Sigma" & theta.settings == "sparse"){
-    bspars = 6
-  }
-  if(sigma.settings == "10blockSigma" & theta.settings == "1blockpair4halves"){
-    bspars = 76
-  }
-  if(sigma.settings == "4blockSigma" & theta.settings == "1blockpair"){
-    bspars = 100
-  }
-  if(sigma.settings == "2blockSigma" & theta.settings == "dense"){
-    bspars = 200
-  }
-  metrics.file = paste0("size", bspars, "_metrics")
-} else{
-  metrics.file = "metrics"
-}
-
-# import metrics
-cl.sims.list = list()
-slr.sims.list = list()
-if(has.selbal) selbal.sims.list = list()
-if(has.oracle) or.sims.list = list()
-if(has.coat) coat.sims.list = list()
-if(has.propr) pr.sims.list = list()
-full.sims.list = list()
-for(i in 1:numSims){
-  # classo
-  cl.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/classo_", metrics.file, file.end, 
-    "_sim", i, ".rds"
-  ))))
-  rownames(cl.sim.tmp) = NULL
-  cl.sims.list[[i]] = data.table(cl.sim.tmp)
-  # slr
-  slr.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_", metrics.file, file.end, 
-    "_sim", i, ".rds"
-  ))))
-  rownames(slr.sim.tmp) = NULL
-  slr.sims.list[[i]] = data.table(slr.sim.tmp)
-  if(has.selbal){
-    # selbal
-    selbal.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/selbal_", metrics.file, file.end, 
-      "_sim", i, ".rds"
-    ))))
-    rownames(selbal.sim.tmp) = NULL
-    selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
-  }
-  if(has.oracle){
-    # oracle
-    or.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/oracle_", metrics.file, file.end, 
-      "_sim", i, ".rds"
-    ))))
-    rownames(or.sim.tmp) = NULL
-    or.sims.list[[i]] = data.table(or.sim.tmp)
-  }
-  if(has.coat){
-    # coat
-    coat.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/coat_", metrics.file, file.end, 
-      "_sim", i, ".rds"
-    ))))
-    rownames(coat.sim.tmp) = NULL
-    coat.sims.list[[i]] = data.table(coat.sim.tmp)
-  }
-  if(has.propr){
-    # propr
-    pr.sim.tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/metrics", "/propr_", metrics.file, file.end, 
-      "_sim", i, ".rds"
-    ))))
-    rownames(pr.sim.tmp) = NULL
-    pr.sims.list[[i]] = data.table(pr.sim.tmp)
-  }
-  # full
-  full.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/full_metrics", file.end, "_sim", i, ".rds"
-  ))))
-  rownames(full.sim.tmp) = NULL
-  full.sims.list[[i]] = data.table(full.sim.tmp)
-}
-
-cl.sims = as.data.frame(rbindlist(cl.sims.list))
-slr.sims = as.data.frame(rbindlist(slr.sims.list))
-if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
-if(has.oracle) or.sims = as.data.frame(rbindlist(or.sims.list))
-if(has.coat) coat.sims = as.data.frame(rbindlist(coat.sims.list))
-if(has.propr) pr.sims = as.data.frame(rbindlist(pr.sims.list))
-full.sims = as.data.frame(rbindlist(full.sims.list))
-
-# summary stats for classo metrics
-cl.eval.means = apply(cl.sims, 2, mean)
-cl.eval.sds = apply(cl.sims, 2, sd)
-cl.eval.ses = cl.eval.sds / sqrt(numSims)
-cl.summaries = data.frame(
-  "mean" = cl.eval.means, "sd" = cl.eval.sds, "se" = cl.eval.ses)
-# print(cl.summaries[metrics, c("mean", "se")])
-
-# summary stats for slr metrics
-slr.eval.means = apply(slr.sims, 2, mean)
-slr.eval.sds = apply(slr.sims, 2, sd)
-slr.eval.ses = slr.eval.sds / sqrt(numSims)
-slr.summaries = data.frame(
-  "mean" = slr.eval.means, "sd" = slr.eval.sds, "se" = slr.eval.ses)
-# print(slr.summaries[metrics, c("mean", "se")])
-
-if(has.selbal){
-  # summary stats for selbal metrics
-  selbal.eval.means = apply(selbal.sims, 2, mean)
-  selbal.eval.sds = apply(selbal.sims, 2, sd)
-  selbal.eval.ses = selbal.eval.sds / sqrt(numSims)
-  selbal.summaries = data.frame(
-    "mean" = selbal.eval.means, "sd" = selbal.eval.sds, "se" = selbal.eval.ses)
-  # print(selbal.summaries[metrics, c("mean", "se")])
-}
-
-if(has.oracle){
-  # summary stats for oracle metrics
-  or.eval.means = apply(or.sims, 2, mean)
-  or.eval.sds = apply(or.sims, 2, sd)
-  or.eval.ses = or.eval.sds / sqrt(numSims)
-  or.summaries = data.frame(
-    "mean" = or.eval.means, "sd" = or.eval.sds, "se" = or.eval.ses)
-  # print(or.summaries[metrics, c("mean", "se")])
-}
-
-if(has.coat){
-  # summary stats for oracle metrics
-  coat.eval.means = apply(coat.sims, 2, mean)
-  coat.eval.sds = apply(coat.sims, 2, sd)
-  coat.eval.ses = coat.eval.sds / sqrt(numSims)
-  coat.summaries = data.frame(
-    "mean" = coat.eval.means, "sd" = coat.eval.sds, "se" = coat.eval.ses)
-  # print(coat.summaries[metrics, c("mean", "se")])
-}
-
-if(has.propr){
-  # summary stats for oracle metrics
-  pr.eval.means = apply(pr.sims, 2, mean)
-  pr.eval.sds = apply(pr.sims, 2, sd)
-  pr.eval.ses = pr.eval.sds / sqrt(numSims)
-  pr.summaries = data.frame(
-    "mean" = pr.eval.means, "sd" = pr.eval.sds, "se" = pr.eval.ses)
-  # print(pr.summaries[metrics, c("mean", "se")])
-}
-
-# summary stats for full model's metrics
-full.eval.means = apply(full.sims, 2, mean)
-full.eval.sds = apply(full.sims, 2, sd)
-full.eval.ses = full.eval.sds / sqrt(numSims)
-full.summaries = data.frame(
-  "mean" = full.eval.means, "sd" = full.eval.sds, "se" = full.eval.ses)
-# print(full.summaries[metrics, c("mean", "se")])
-
-# boxplots for the slr and classo metrics
-cl.sims.gg = reshape2::melt(cl.sims)
-cl.sims.gg$Method = "classo"
-slr.sims.gg = reshape2::melt(slr.sims)
-slr.sims.gg$Method = "slr"
-if(has.selbal){
-  selbal.sims.gg = reshape2::melt(selbal.sims)
-  selbal.sims.gg$Method = "selbal"
-}
-if(has.oracle){
-  or.sims.gg = reshape2::melt(or.sims)
-  or.sims.gg$Method = "oracle"
-}
-if(has.coat){
-  coat.sims.gg = reshape2::melt(coat.sims)
-  coat.sims.gg$Method = "coat"
-}
-if(has.propr){
-  pr.sims.gg = reshape2::melt(pr.sims)
-  pr.sims.gg$Method = "propr"
-}
-full.sims.gg = reshape2::melt(full.sims)
-full.sims.gg$Method = "full"
-data.gg = rbind(cl.sims.gg, slr.sims.gg, full.sims.gg)
-levels.gg = c("classo", "slr", "full")
-if(has.oracle){
-  data.gg = rbind(data.gg, or.sims.gg)
-  levels.gg = c(levels.gg, "oracle")
-}
-if(has.selbal){
-  data.gg = rbind(data.gg, selbal.sims.gg)
-  levels.gg = c(levels.gg, "selbal")
-}
-if(has.coat){
-  data.gg = rbind(data.gg, coat.sims.gg)
-  levels.gg = c(levels.gg, "coat")
-}
-if(has.propr){
-  data.gg = rbind(data.gg, pr.sims.gg)
-  levels.gg = c(levels.gg, "propr")
-}
-
-if(!is.null(metric_names)){
-  data.gg = dplyr::filter(data.gg, variable %in% metric_names)
-}
-data.gg$Method = factor(data.gg$Method, levels = levels.gg)
-
-ggplot(data.gg, aes(x = Method, y = value, color = Method)) + 
-  facet_wrap(vars(variable), scales = "free_y") + 
-  geom_boxplot() + 
-  stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
-               geom = "errorbar", width = 0.75, 
-               linetype = "dashed") +
-  stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
-               color = "red") +
-  theme_bw() + 
-  theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
-        axis.title.y = element_blank())
-
-ggsave(
-  filename = paste0(
-    "20211017_", 
-    sigma.settings, "_noise", sigma_eps,
-    "_", theta.settings,"_", metrics.file, ".pdf"),
-  plot = last_plot(),
-  width = 8, height = 5, units = c("in")
-)
+# metric_names = NULL
+# if(theta.settings == "dense"){
+#   metric_names = c(
+#     "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
+#     "Fscore", "timing", "betaSparsity")
+# }
+# if(use.bic){
+#   metrics.file = "bic_metrics"
+# } else if(use.prespec.cardinality){
+#   # if "2blockSigma" then "dense"
+#   # if "4blockSigma", then "1blockpair"
+#   # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
+#   # if "lin14Sigma" then "dense" or "sparse"
+#   if(sigma.settings == "lin14Sigma" & theta.settings == "dense"){
+#     bspars = 200
+#   }
+#   if(sigma.settings == "lin14Sigma" & theta.settings == "sparse"){
+#     bspars = 6
+#   }
+#   if(sigma.settings == "10blockSigma" & theta.settings == "1blockpair4halves"){
+#     bspars = 76
+#   }
+#   if(sigma.settings == "4blockSigma" & theta.settings == "1blockpair"){
+#     bspars = 100
+#   }
+#   if(sigma.settings == "2blockSigma" & theta.settings == "dense"){
+#     bspars = 200
+#   }
+#   if(prespecified.cardinality == "bspars"){
+#     prespecified.cardinality = bspars
+#   } 
+#   metrics.file = paste0("size", prespecified.cardinality, "_metrics")
+# } else{
+#   metrics.file = "metrics"
+# }
+# 
+# # import metrics
+# cl.sims.list = list()
+# slr.sims.list = list()
+# if(has.selbal) selbal.sims.list = list()
+# if(has.oracle) or.sims.list = list()
+# if(has.coat) coat.sims.list = list()
+# if(has.propr) pr.sims.list = list()
+# full.sims.list = list()
+# for(i in 1:numSims){
+#   # classo
+#   cl.sim.tmp = t(data.frame(readRDS(paste0(
+#     output_dir, "/metrics", "/classo_", metrics.file, file.end, 
+#     "_sim", i, ".rds"
+#   ))))
+#   rownames(cl.sim.tmp) = NULL
+#   cl.sims.list[[i]] = data.table(cl.sim.tmp)
+#   # slr
+#   slr.sim.tmp = t(data.frame(readRDS(paste0(
+#     output_dir, "/metrics", "/slr_", metrics.file, file.end, 
+#     "_sim", i, ".rds"
+#   ))))
+#   rownames(slr.sim.tmp) = NULL
+#   slr.sims.list[[i]] = data.table(slr.sim.tmp)
+#   if(has.selbal){
+#     # selbal
+#     selbal.sim.tmp = t(data.frame(readRDS(paste0(
+#       output_dir, "/metrics", "/selbal_", metrics.file, file.end, 
+#       "_sim", i, ".rds"
+#     ))))
+#     rownames(selbal.sim.tmp) = NULL
+#     selbal.sims.list[[i]] = data.table(selbal.sim.tmp)
+#   }
+#   if(has.oracle){
+#     # oracle
+#     or.sim.tmp = t(data.frame(readRDS(paste0(
+#       output_dir, "/metrics", "/oracle_", metrics.file, file.end, 
+#       "_sim", i, ".rds"
+#     ))))
+#     rownames(or.sim.tmp) = NULL
+#     or.sims.list[[i]] = data.table(or.sim.tmp)
+#   }
+#   if(has.coat){
+#     # coat
+#     coat.sim.tmp = t(data.frame(readRDS(paste0(
+#       output_dir, "/metrics", "/coat_", metrics.file, file.end, 
+#       "_sim", i, ".rds"
+#     ))))
+#     rownames(coat.sim.tmp) = NULL
+#     coat.sims.list[[i]] = data.table(coat.sim.tmp)
+#   }
+#   if(has.propr){
+#     # propr
+#     pr.sim.tmp = t(data.frame(readRDS(paste0(
+#       output_dir, "/metrics", "/propr_", metrics.file, file.end, 
+#       "_sim", i, ".rds"
+#     ))))
+#     rownames(pr.sim.tmp) = NULL
+#     pr.sims.list[[i]] = data.table(pr.sim.tmp)
+#   }
+#   # full
+#   full.sim.tmp = t(data.frame(readRDS(paste0(
+#     output_dir, "/metrics", "/full_metrics", file.end, "_sim", i, ".rds"
+#   ))))
+#   rownames(full.sim.tmp) = NULL
+#   full.sims.list[[i]] = data.table(full.sim.tmp)
+# }
+# 
+# cl.sims = as.data.frame(rbindlist(cl.sims.list))
+# slr.sims = as.data.frame(rbindlist(slr.sims.list))
+# if(has.selbal) selbal.sims = as.data.frame(rbindlist(selbal.sims.list))
+# if(has.oracle) or.sims = as.data.frame(rbindlist(or.sims.list))
+# if(has.coat) coat.sims = as.data.frame(rbindlist(coat.sims.list))
+# if(has.propr) pr.sims = as.data.frame(rbindlist(pr.sims.list))
+# full.sims = as.data.frame(rbindlist(full.sims.list))
+# 
+# # summary stats for classo metrics
+# cl.eval.means = apply(cl.sims, 2, mean)
+# cl.eval.sds = apply(cl.sims, 2, sd)
+# cl.eval.ses = cl.eval.sds / sqrt(numSims)
+# cl.summaries = data.frame(
+#   "mean" = cl.eval.means, "sd" = cl.eval.sds, "se" = cl.eval.ses)
+# # print(cl.summaries[metrics, c("mean", "se")])
+# 
+# # summary stats for slr metrics
+# slr.eval.means = apply(slr.sims, 2, mean)
+# slr.eval.sds = apply(slr.sims, 2, sd)
+# slr.eval.ses = slr.eval.sds / sqrt(numSims)
+# slr.summaries = data.frame(
+#   "mean" = slr.eval.means, "sd" = slr.eval.sds, "se" = slr.eval.ses)
+# # print(slr.summaries[metrics, c("mean", "se")])
+# 
+# if(has.selbal){
+#   # summary stats for selbal metrics
+#   selbal.eval.means = apply(selbal.sims, 2, mean)
+#   selbal.eval.sds = apply(selbal.sims, 2, sd)
+#   selbal.eval.ses = selbal.eval.sds / sqrt(numSims)
+#   selbal.summaries = data.frame(
+#     "mean" = selbal.eval.means, "sd" = selbal.eval.sds, "se" = selbal.eval.ses)
+#   # print(selbal.summaries[metrics, c("mean", "se")])
+# }
+# 
+# if(has.oracle){
+#   # summary stats for oracle metrics
+#   or.eval.means = apply(or.sims, 2, mean)
+#   or.eval.sds = apply(or.sims, 2, sd)
+#   or.eval.ses = or.eval.sds / sqrt(numSims)
+#   or.summaries = data.frame(
+#     "mean" = or.eval.means, "sd" = or.eval.sds, "se" = or.eval.ses)
+#   # print(or.summaries[metrics, c("mean", "se")])
+# }
+# 
+# if(has.coat){
+#   # summary stats for oracle metrics
+#   coat.eval.means = apply(coat.sims, 2, mean)
+#   coat.eval.sds = apply(coat.sims, 2, sd)
+#   coat.eval.ses = coat.eval.sds / sqrt(numSims)
+#   coat.summaries = data.frame(
+#     "mean" = coat.eval.means, "sd" = coat.eval.sds, "se" = coat.eval.ses)
+#   # print(coat.summaries[metrics, c("mean", "se")])
+# }
+# 
+# if(has.propr){
+#   # summary stats for oracle metrics
+#   pr.eval.means = apply(pr.sims, 2, mean)
+#   pr.eval.sds = apply(pr.sims, 2, sd)
+#   pr.eval.ses = pr.eval.sds / sqrt(numSims)
+#   pr.summaries = data.frame(
+#     "mean" = pr.eval.means, "sd" = pr.eval.sds, "se" = pr.eval.ses)
+#   # print(pr.summaries[metrics, c("mean", "se")])
+# }
+# 
+# # summary stats for full model's metrics
+# full.eval.means = apply(full.sims, 2, mean)
+# full.eval.sds = apply(full.sims, 2, sd)
+# full.eval.ses = full.eval.sds / sqrt(numSims)
+# full.summaries = data.frame(
+#   "mean" = full.eval.means, "sd" = full.eval.sds, "se" = full.eval.ses)
+# # print(full.summaries[metrics, c("mean", "se")])
+# 
+# # boxplots for the slr and classo metrics
+# cl.sims.gg = reshape2::melt(cl.sims)
+# cl.sims.gg$Method = "classo"
+# slr.sims.gg = reshape2::melt(slr.sims)
+# slr.sims.gg$Method = "slr"
+# if(has.selbal){
+#   selbal.sims.gg = reshape2::melt(selbal.sims)
+#   selbal.sims.gg$Method = "selbal"
+# }
+# if(has.oracle){
+#   or.sims.gg = reshape2::melt(or.sims)
+#   or.sims.gg$Method = "oracle"
+# }
+# if(has.coat){
+#   coat.sims.gg = reshape2::melt(coat.sims)
+#   coat.sims.gg$Method = "coat"
+# }
+# if(has.propr){
+#   pr.sims.gg = reshape2::melt(pr.sims)
+#   pr.sims.gg$Method = "propr"
+# }
+# full.sims.gg = reshape2::melt(full.sims)
+# full.sims.gg$Method = "full"
+# data.gg = rbind(cl.sims.gg, slr.sims.gg, full.sims.gg)
+# levels.gg = c("classo", "slr", "full")
+# if(has.oracle){
+#   data.gg = rbind(data.gg, or.sims.gg)
+#   levels.gg = c(levels.gg, "oracle")
+# }
+# if(has.selbal){
+#   data.gg = rbind(data.gg, selbal.sims.gg)
+#   levels.gg = c(levels.gg, "selbal")
+# }
+# if(has.coat){
+#   data.gg = rbind(data.gg, coat.sims.gg)
+#   levels.gg = c(levels.gg, "coat")
+# }
+# if(has.propr){
+#   data.gg = rbind(data.gg, pr.sims.gg)
+#   levels.gg = c(levels.gg, "propr")
+# }
+# 
+# if(!is.null(metric_names)){
+#   data.gg = dplyr::filter(data.gg, variable %in% metric_names)
+# }
+# data.gg$Method = factor(data.gg$Method, levels = levels.gg)
+# 
+# ggplot(data.gg, aes(x = Method, y = value, color = Method)) + 
+#   facet_wrap(vars(variable), scales = "free_y") + 
+#   geom_boxplot() + 
+#   stat_summary(fun = mean, fun.min = mean, fun.max = mean, 
+#                geom = "errorbar", width = 0.75, 
+#                linetype = "dashed") +
+#   stat_summary(fun = mean, geom = "point", shape = 17, size = 2, 
+#                color = "red") +
+#   theme_bw() + 
+#   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
+#         axis.title.y = element_blank())
+# 
+# ggsave(
+#   filename = paste0(
+#     "20211017_", 
+#     sigma.settings, "_noise", sigma_eps,
+#     "_", theta.settings,"_", metrics.file, ".pdf"),
+#   plot = last_plot(),
+#   width = 8, height = 5, units = c("in")
+# )
 
 
 
@@ -329,17 +333,20 @@ cl.roc.list = list()
 cl.TPR.mat = matrix(NA, nlam, numSims) 
 cl.S.hat.mat = matrix(NA, nlam, numSims)
 cl.TP.mat = matrix(NA, nlam, numSims)
+cl.prec.mat = matrix(NA, nlam, numSims)
 # slr
 slr.roc.list = list()
 slr.TPR.mat = matrix(NA, nlam, numSims)
 slr.S.hat.mat = matrix(NA, nlam, numSims)
 slr.TP.mat = matrix(NA, nlam, numSims)
+slr.prec.mat = matrix(NA, nlam, numSims)
 if(has.oracle){
   # oracle
   or.roc.list = list()
   or.TPR.mat = matrix(NA, nlam, numSims)
   or.S.hat.mat = matrix(NA, nlam, numSims)
   or.TP.mat = matrix(NA, nlam, numSims)
+  or.prec.mat = matrix(NA, nlam, numSims)
 }
 if(has.coat){
   # coat
@@ -347,6 +354,7 @@ if(has.coat){
   coat.TPR.mat = matrix(NA, nlam, numSims)
   coat.S.hat.mat = matrix(NA, nlam, numSims)
   coat.TP.mat = matrix(NA, nlam, numSims)
+  coat.prec.mat = matrix(NA, nlam, numSims)
 }
 if(has.propr){
   # coat
@@ -354,6 +362,7 @@ if(has.propr){
   pr.TPR.mat = matrix(NA, nlam, numSims)
   pr.S.hat.mat = matrix(NA, nlam, numSims)
   pr.TP.mat = matrix(NA, nlam, numSims)
+  pr.prec.mat = matrix(NA, nlam, numSims)
 }
 for(i in 1:numSims){
   # cl
@@ -364,6 +373,7 @@ for(i in 1:numSims){
   cl.TPR.mat[, i] = cl.sim.tmp["tpr", ]
   cl.S.hat.mat[, i] = cl.sim.tmp["S_hat", ]
   cl.TP.mat[, i] = cl.sim.tmp["TP", ]
+  cl.prec.mat[, i] = cl.sim.tmp["precision", ]
   # slr
   slr.sim.tmp = readRDS(paste0(
     output_dir, "/roccurves", "/slr_roc", file.end, "_sim", i, ".rds"
@@ -372,6 +382,7 @@ for(i in 1:numSims){
   slr.TPR.mat[, i] = slr.sim.tmp["tpr", ]
   slr.S.hat.mat[, i] = slr.sim.tmp["S_hat", ]
   slr.TP.mat[, i] = slr.sim.tmp["TP", ]
+  slr.prec.mat[, i] = slr.sim.tmp["precision", ]
   if(has.oracle){
     # oracle
     or.sim.tmp = readRDS(paste0(
@@ -381,6 +392,7 @@ for(i in 1:numSims){
     or.TPR.mat[, i] = or.sim.tmp["tpr", ]
     or.S.hat.mat[, i] = or.sim.tmp["S_hat", ]
     or.TP.mat[, i] = or.sim.tmp["TP", ]
+    or.prec.mat[, i] = or.sim.tmp["precision", ]
   }
   if(has.coat){
     # coat
@@ -391,6 +403,7 @@ for(i in 1:numSims){
     coat.TPR.mat[, i] = coat.sim.tmp["tpr", ]
     coat.S.hat.mat[, i] = coat.sim.tmp["S_hat", ]
     coat.TP.mat[, i] = coat.sim.tmp["TP", ]
+    coat.prec.mat[, i] = coat.sim.tmp["precision", ]
   }
   if(has.propr){
     # oracle
@@ -401,6 +414,7 @@ for(i in 1:numSims){
     pr.TPR.mat[, i] = pr.sim.tmp["tpr", ]
     pr.S.hat.mat[, i] = pr.sim.tmp["S_hat", ]
     pr.TP.mat[, i] = pr.sim.tmp["TP", ]
+    pr.prec.mat[, i] = pr.sim.tmp["precision", ]
   }
 }
 
@@ -409,23 +423,28 @@ for(i in 1:numSims){
 cl.TPR.vec = as.vector(cl.TPR.mat)
 cl.S.hat.vec = as.vector(cl.S.hat.mat)
 cl.TP.vec = as.vector(cl.TP.mat)
+cl.prec.vec = as.vector(cl.prec.mat)
 slr.TPR.vec = as.vector(slr.TPR.mat)
 slr.S.hat.vec = as.vector(slr.S.hat.mat)
 slr.TP.vec = as.vector(slr.TP.mat)
+slr.prec.vec = as.vector(slr.prec.mat)
 if(has.oracle){
   or.TPR.vec = as.vector(or.TPR.mat)
   or.S.hat.vec = as.vector(or.S.hat.mat)
   or.TP.vec = as.vector(or.TP.mat)
+  or.prec.vec = as.vector(or.prec.mat)
 }
 if(has.coat){
   coat.TPR.vec = as.vector(coat.TPR.mat)
   coat.S.hat.vec = as.vector(coat.S.hat.mat)
   coat.TP.vec = as.vector(coat.TP.mat)
+  coat.prec.vec = as.vector(coat.prec.mat)
 }
 if(has.propr){
   pr.TPR.vec = as.vector(pr.TPR.mat)
   pr.S.hat.vec = as.vector(pr.S.hat.mat)
   pr.TP.vec = as.vector(pr.TP.mat)
+  pr.prec.vec = as.vector(pr.prec.mat)
 }
 
 # get the averages
@@ -438,19 +457,24 @@ if(has.oracle & !has.coat & !has.propr){
 }
 cl.TPR.avg = rep(NA, length(S.hat.vals))
 cl.TP.avg = rep(NA, length(S.hat.vals))
+cl.prec.avg = rep(NA, length(S.hat.vals))
 slr.TPR.avg = rep(NA, length(S.hat.vals))
 slr.TP.avg = rep(NA, length(S.hat.vals))
+slr.prec.avg = rep(NA, length(S.hat.vals))
 if(has.oracle){
   or.TPR.avg = rep(NA, length(S.hat.vals))
   or.TP.avg = rep(NA, length(S.hat.vals))
+  or.prec.avg = rep(NA, length(S.hat.vals))
 }
 if(has.coat){
   coat.TPR.avg = rep(NA, length(S.hat.vals))
   coat.TP.avg = rep(NA, length(S.hat.vals))
+  coat.prec.avg = rep(NA, length(S.hat.vals))
 }
 if(has.propr){
   pr.TPR.avg = rep(NA, length(S.hat.vals))
   pr.TP.avg = rep(NA, length(S.hat.vals))
+  pr.prec.avg = rep(NA, length(S.hat.vals))
 }
 for(i in 1:length(S.hat.vals)){
   val.tmp = S.hat.vals[i]
@@ -458,67 +482,85 @@ for(i in 1:length(S.hat.vals)){
   cl.which.idx.tmp = which(cl.S.hat.vec == val.tmp)
   cl.TPR.avg[i] = mean(cl.TPR.vec[cl.which.idx.tmp], na.rm = TRUE)
   cl.TP.avg[i] = mean(cl.TP.vec[cl.which.idx.tmp], na.rm = TRUE)
+  cl.prec.avg[i] = mean(cl.prec.vec[cl.which.idx.tmp], na.rm = TRUE)
   # slr
   slr.which.idx.tmp = which(slr.S.hat.vec == val.tmp)
   slr.TPR.avg[i] = mean(slr.TPR.vec[slr.which.idx.tmp], na.rm = TRUE)
   slr.TP.avg[i] = mean(slr.TP.vec[slr.which.idx.tmp], na.rm = TRUE)
+  slr.prec.avg[i] = mean(slr.prec.vec[slr.which.idx.tmp], na.rm = TRUE)
   if(has.oracle){
     # oracle
     or.which.idx.tmp = which(or.S.hat.vec == val.tmp)
     or.TPR.avg[i] = mean(or.TPR.vec[or.which.idx.tmp], na.rm = TRUE)
     or.TP.avg[i] = mean(or.TP.vec[or.which.idx.tmp], na.rm = TRUE)
+    or.prec.avg[i] = mean(or.prec.vec[or.which.idx.tmp], na.rm = TRUE)
   }
   if(has.coat){
     # coat
     coat.which.idx.tmp = which(coat.S.hat.vec == val.tmp)
     coat.TPR.avg[i] = mean(coat.TPR.vec[coat.which.idx.tmp], na.rm = TRUE)
     coat.TP.avg[i] = mean(coat.TP.vec[coat.which.idx.tmp], na.rm = TRUE)
+    coat.prec.avg[i] = mean(coat.prec.vec[coat.which.idx.tmp], na.rm = TRUE)
   }
   if(has.propr){
     # propr
     pr.which.idx.tmp = which(pr.S.hat.vec == val.tmp)
     pr.TPR.avg[i] = mean(pr.TPR.vec[pr.which.idx.tmp], na.rm = TRUE)
     pr.TP.avg[i] = mean(pr.TP.vec[pr.which.idx.tmp], na.rm = TRUE)
+    pr.prec.avg[i] = mean(pr.prec.vec[pr.which.idx.tmp], na.rm = TRUE)
   }
 }
 
 # plot
 data.gg = rbind(
   data.frame(
-    S_hat = S.hat.vals, TPR = cl.TPR.avg, TP = cl.TP.avg, Method = "classo"), 
+    S_hat = S.hat.vals, TPR = cl.TPR.avg, TP = cl.TP.avg, 
+    precision = cl.prec.avg, Method = "classo"), 
   data.frame(
-    S_hat = S.hat.vals, TPR = slr.TPR.avg, TP = slr.TP.avg, Method = "slr")
+    S_hat = S.hat.vals, TPR = slr.TPR.avg, TP = slr.TP.avg, 
+    precision = slr.prec.avg, Method = "slr")
 )
 if(has.oracle){
   data.gg = rbind(
     data.gg, 
     data.frame(
-      S_hat = S.hat.vals, TPR = or.TPR.avg, TP = or.TP.avg, Method = "oracle"))
+      S_hat = S.hat.vals, TPR = or.TPR.avg, TP = or.TP.avg, 
+      precision = or.prec.avg, Method = "oracle"))
 }
 if(has.coat){
   data.gg = rbind(
     data.gg, 
     data.frame(
-      S_hat = S.hat.vals, TPR = coat.TPR.avg, TP = coat.TP.avg, Method = "coat"))
+      S_hat = S.hat.vals, TPR = coat.TPR.avg, TP = coat.TP.avg, 
+      precision = coat.prec.avg, Method = "coat"))
 }
 if(has.propr){
   data.gg = rbind(
     data.gg, 
     data.frame(
-      S_hat = S.hat.vals, TPR = pr.TPR.avg, TP = pr.TP.avg, Method = "propr"))
+      S_hat = S.hat.vals, TPR = pr.TPR.avg, TP = pr.TP.avg, 
+      precision = pr.prec.avg, Method = "propr"))
 }
 data.gg$Method = factor(data.gg$Method, levels = levels.gg)
 tp_roc = ggplot(
-  data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TP, color = Method)) + 
-  geom_line(alpha = 0.5, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) +
+  data.gg[!is.na(data.gg$TP),], 
+  aes(x = S_hat, y = TP, color = Method, linetype = Method)) + 
+  geom_line(alpha = 0.75, size = 1, na.rm = TRUE) +
+  # geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
 tpr_roc = ggplot(
-  data.gg[!is.na(data.gg$TPR),], aes(x = S_hat, y = TPR, color = Method)) + 
-  geom_line(alpha = 0.5, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) +
+  data.gg[!is.na(data.gg$TPR),], 
+  aes(x = S_hat, y = TPR, color = Method, linetype = Method)) + 
+  geom_line(alpha = 0.75, size = 1, na.rm = TRUE) +
+  # geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
-ggarrange(tp_roc, tpr_roc)
+prec_roc = ggplot(
+  data.gg[!is.na(data.gg$precision),], 
+  aes(x = S_hat, y = precision, color = Method, linetype = Method)) + 
+  geom_line(alpha = 0.75, size = 1, na.rm = TRUE) +
+  # geom_point(alpha = 0.5, na.rm = TRUE) +
+  theme_bw()
+ggarrange(tp_roc, tpr_roc, prec_roc, nrow = 1)
 
 ggsave(
   filename = paste0(
@@ -526,7 +568,7 @@ ggsave(
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, "_rocs.pdf"),
   plot = last_plot(),
-  width = 8, height = 3, units = c("in")
+  width = 8, height = 2, units = c("in")
 )
 
 

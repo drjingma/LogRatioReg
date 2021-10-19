@@ -1,3 +1,4 @@
+
 rm(list=ls())
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
@@ -18,9 +19,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "2blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "dense" # "dense", "sparse", "both", "multsparse"
+theta.settings = "1blockpair4halves" # "dense", "sparse", "both", "multsparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -99,9 +100,10 @@ for(i in 1:numSims){
 rocs = rocs %>% 
   group_by(Method, lambda) %>% 
   summarize(
-    S_hat = mean(S_hat),
-    tpr = mean(tpr),
-    TP = mean(TP)
+    S_hat = mean(S_hat, na.rm = TRUE),
+    tpr = mean(tpr, na.rm = TRUE),
+    TP = mean(TP, na.rm = TRUE), 
+    precision = mean(precision, na.rm = TRUE),
   ) %>% 
   ungroup()
 
@@ -113,17 +115,22 @@ rocs.gg = rocs
 levels.gg = c("classo", "slr", "oracle", "propr")
 rocs.gg$Method = factor(rocs.gg$Method, levels = levels.gg)
 tp_roc = ggplot(
-  rocs.gg, aes(x = S_hat, y = TP, color = Method)) + 
-  geom_line(alpha = 0.5, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) +
+  rocs.gg, aes(x = S_hat, y = TP, color = Method, linetype = Method)) + 
+  geom_line(alpha = 0.75, size = 1, na.rm = TRUE) +
+  # geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
 tpr_roc = ggplot(
-  rocs.gg, aes(x = S_hat, y = tpr, color = Method)) + 
-  geom_line(alpha = 0.5, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) +
+  rocs.gg, aes(x = S_hat, y = tpr, color = Method, linetype = Method)) + 
+  geom_line(alpha = 0.75, size = 1, na.rm = TRUE) +
+  # geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
-tp_roc
-# ggarrange(tp_roc, tpr_roc)
+prec_roc = ggplot(
+  rocs.gg, aes(x = S_hat, y = precision, color = Method, linetype = Method)) + 
+  geom_line(alpha = 0.75, size = 1, na.rm = TRUE) +
+  # geom_point(alpha = 0.5, na.rm = TRUE) +
+  theme_bw()
+# tp_roc
+ggarrange(tp_roc, tpr_roc, prec_roc, nrow = 1)
 
 ggsave(
   filename = paste0(
@@ -131,7 +138,7 @@ ggsave(
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, "_rocs_samelam.pdf"),
   plot = last_plot(),
-  width = 8, height = 5, units = c("in")
+  width = 8, height = 2, units = c("in")
 )
 
 

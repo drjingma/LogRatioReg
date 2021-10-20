@@ -199,7 +199,7 @@ res = foreach(
       paste0(output_dir, "/timing", "/slr_timing", file.end))
     
     ###
-    stop("slr: I already have the model fits!")
+    # stop("slr: I already have the model fits!")
   } else{
     slr.model.already.existed = TRUE
   }
@@ -319,7 +319,7 @@ res = foreach(
       paste0(output_dir, "/timing", "/classo_timing", file.end))
     
     ###
-    stop("classo: I already have the model fits!")
+    # stop("classo: I already have the model fits!")
   } else{
     cl.model.already.existed = TRUE
   }
@@ -426,7 +426,7 @@ res = foreach(
       paste0(output_dir, "/timing", "/oracle_timing", file.end))
     
     ###
-    stop("oracle: I already have the model fits!")
+    # stop("oracle: I already have the model fits!")
   } else{
     or.model.already.existed = TRUE
   }
@@ -548,7 +548,7 @@ res = foreach(
       paste0(output_dir, "/timing", "/propr_timing", file.end))
     
     ###
-    stop("propr: I already have the model fits!")
+    # stop("propr: I already have the model fits!")
   } else{
     pr.model.already.existed = TRUE
   }

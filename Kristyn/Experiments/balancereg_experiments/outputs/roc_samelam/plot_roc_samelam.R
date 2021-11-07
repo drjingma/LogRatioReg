@@ -19,9 +19,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "10blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "lin14Sigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair4halves" # "dense", "sparse", "both", "multsparse"
+theta.settings = "sparse" # "dense", "sparse", "both", "multsparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -39,7 +39,7 @@ cor_ij = 0.2 # 0.2, 0.5
 scaling = TRUE
 sigma_eps = 0.1  # 0.1, 0.5
 
-if(sigma.settings == "lin14Sigma"){
+if(sigma.settings %in% c("lin14Sigma", "10blockSigmaExpDecay")){
   file.end = paste0(
     "_", sigma.settings,
     "_", theta.settings, 
@@ -129,16 +129,16 @@ prec_roc = ggplot(
   geom_line(alpha = 0.75, size = 1, na.rm = TRUE) +
   # geom_point(alpha = 0.5, na.rm = TRUE) +
   theme_bw()
-# tp_roc
-ggarrange(tp_roc, tpr_roc, prec_roc, nrow = 1)
+tp_roc
+# ggarrange(tp_roc, tpr_roc, prec_roc, nrow = 1)
 
 ggsave(
   filename = paste0(
-    "20211017_", 
+    "20211026_", 
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, "_rocs_samelam.pdf"),
   plot = last_plot(),
-  width = 8, height = 2, units = c("in")
+  width = 4, height = 2, units = c("in")
 )
 
 

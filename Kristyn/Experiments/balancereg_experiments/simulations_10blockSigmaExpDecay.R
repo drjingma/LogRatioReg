@@ -67,7 +67,7 @@ res = foreach(
   #     in 4 different blocks (accounts for 8 blocks so far), and 
   #   the other two blocks with inactive variables (i.e. not in any of the 
   #     selected contrasts).
-  values.theta = 1
+  values.theta = 5
   linkage = "average"
   tol = 1e-4
   nlam = 100
@@ -141,9 +141,9 @@ res = foreach(
   beta = as.vector(getBeta(theta, U = U))
   names(beta) <- paste0('s', 1:p)
   non0.beta = (beta != 0)
-  slr.non0.beta = abs(beta) > 10e-8
   is0.beta = abs(beta) <= 10e-8
   bspars = sum(non0.beta)
+  as.numeric(beta[non0.beta])
   
   # Population parameters, continued
   muW = c(rep(log(p), 5), rep(0, p - 5))
@@ -155,6 +155,7 @@ res = foreach(
   file.end = paste0(
     "_", sigma.settings,
     "_", theta.settings, 
+    "_val", values.theta[1],
     "_dim", n, "x", p, 
     "_noise", sigma_eps,
     "_rho", rho, 

@@ -4,7 +4,8 @@ rm(list=ls())
 #   compositional lasso and supervised log-ratios methods
 # Date: 10/11/2021
 
-use.bic = TRUE
+use.bic = FALSE
+values.theta = 5 # NULL, 5
 
 ################################################################################
 # libraries and settings
@@ -20,9 +21,9 @@ numSims = 100
 rng.seed = 123
 
 # Settings to toggle with
-sigma.settings = "4blockSigma" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
+sigma.settings = "10blockSigmaExpDecay" # 2blockSigma, 4blockSigma, 10blockSigma, lin14Sigma
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair" # "dense" or "sparse"
+theta.settings = "1blockpair4halves" # "dense" or "sparse"
 # if "2blockSigma" then "dense"
 # if "4blockSigma", then "1blockpair"
 # if "10blockSigma", then "pairperblock" or "1blockpair4halves"
@@ -37,29 +38,28 @@ p = 200
 rho = 0.2 # 0.2, 0.5
 cor_ij = 0.2 # 0.2, 0.5
 scaling = TRUE
-sigma_eps = 0.1  # 0.1, 0.5
+sigma_eps = 0.01  # 0.01, 0.1, 0.5
 
-if(sigma.settings %in% c("lin14Sigma", "10blockSigmaExpDecay")){
-  file.end = paste0(
-    "_", sigma.settings,
-    "_", theta.settings, 
-    "_dim", n, "x", p, 
-    "_noise", sigma_eps,
-    "_rho", rho, 
-    "_int", intercept,
-    "_scale", scaling
-  )
-} else{ # for block-diagonal Sigma w/o exponential decay
-  file.end = paste0(
-    "_", sigma.settings,
-    "_", theta.settings, 
-    "_dim", n, "x", p, 
-    "_noise", sigma_eps,
-    "_cor", cor_ij, 
-    "_int", intercept,
-    "_scale", scaling
-  )
+if(!is.null(values.theta)){
+  theta.settings2 = paste0(theta.settings, "_val",values.theta)
+} else{
+  theta.settings2 = theta.settings
 }
+file.end0 = paste0(
+  "_", sigma.settings,
+  "_", theta.settings2, 
+  "_dim", n, "x", p, 
+  "_noise", sigma_eps)
+if(sigma.settings %in% c("lin14Sigma", "10blockSigmaExpDecay", "4blockSigmaExpDecay")){
+  file.end1 = paste0(file.end0,"_rho", rho)
+} else{ # for block-diagonal Sigma w/o exponential decay
+  file.end1 = paste0(file.end0,"_cor", cor_ij)
+}
+file.end = paste0(
+  file.end1, 
+  "_int", intercept,
+  "_scale", scaling
+)
 
 has.selbal = FALSE
 has.coat = FALSE

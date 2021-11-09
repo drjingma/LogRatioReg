@@ -190,16 +190,13 @@ res = foreach(
       y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
       rho.type = rho.type, linkage = linkage, standardize = scaling)
     end.time = Sys.time()
-    # saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
+    saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
     
     # timing metric
     slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    # saveRDS(
-    #   slr.timing, 
-    #   paste0(output_dir, "/timing", "/slr_timing", file.end))
-    
-    ###
-    stop("slr: I already have the model fits!")
+    saveRDS(
+      slr.timing,
+      paste0(output_dir, "/timing", "/slr_timing", file.end))
   } else{
     slr.model.already.existed = TRUE
   }
@@ -345,16 +342,13 @@ res = foreach(
       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
     end.time = Sys.time()
-    # saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
+    saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
     
     # timing metric
     cl.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    # saveRDS(
-    #   cl.timing, 
-    #   paste0(output_dir, "/timing", "/classo_timing", file.end))
-    
-    ###
-    stop("classo: I already have the model fits!")
+    saveRDS(
+      cl.timing,
+      paste0(output_dir, "/timing", "/classo_timing", file.end))
   } else{
     cl.model.already.existed = TRUE
   }
@@ -481,16 +475,13 @@ res = foreach(
     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
                    nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    # saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
+    saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
     
     # timing metric
     or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    # saveRDS(
-    #   or.timing, 
-    #   paste0(output_dir, "/timing", "/oracle_timing", file.end))
-    
-    ###
-    stop("oracle: I already have the model fits!")
+    saveRDS(
+      or.timing,
+      paste0(output_dir, "/timing", "/oracle_timing", file.end))
   } else{
     or.model.already.existed = TRUE
   }
@@ -636,16 +627,13 @@ res = foreach(
     pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
                nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    # saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
+    saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
     
     # timing metric
     pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    # saveRDS(
-    #   pr.timing, 
-    #   paste0(output_dir, "/timing", "/propr_timing", file.end))
-    
-    ###
-    stop("propr: I already have the model fits!")
+    saveRDS(
+      pr.timing,
+      paste0(output_dir, "/timing", "/propr_timing", file.end))
   } else{
     pr.model.already.existed = TRUE
   }

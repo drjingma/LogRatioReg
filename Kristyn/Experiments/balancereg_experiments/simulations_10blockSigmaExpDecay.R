@@ -67,7 +67,7 @@ res = foreach(
   #     in 4 different blocks (accounts for 8 blocks so far), and 
   #   the other two blocks with inactive variables (i.e. not in any of the 
   #     selected contrasts).
-  values.theta = 5
+  values.theta = 10
   linkage = "average"
   tol = 1e-4
   nlam = 100

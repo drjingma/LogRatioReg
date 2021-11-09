@@ -95,11 +95,6 @@ res = foreach(
   } else{
     stop("invalid theta.settings")
   }
-  print(indices.theta)
-  # error checking indices.theta found based on theta.settings argument
-  if(is.null(indices.theta)){
-    stop("invalid indices.theta")
-  }
   # print(indices.theta)
   # error checking indices.theta found based on theta.settings argument
   if(is.null(indices.theta)){

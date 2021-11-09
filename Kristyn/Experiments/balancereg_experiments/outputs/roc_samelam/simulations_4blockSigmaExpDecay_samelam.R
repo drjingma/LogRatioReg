@@ -86,28 +86,21 @@ res = foreach(
   SBP = sbp.fromHclust(SigmaWtree)
   # for each column (contrast), find which variables are included (1 or -1)
   contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-  if(theta.settings == "1blockpair4halves"){
-    # "1blockpair4halves" => 
-    #   1 contrast corresponding to 2 blocks (accounts for 2 blocks so far), 
-    #   4 contrasts, each corresponding to half (or approx. half) of the vars 
-    #     in 4 different blocks (accounts for 8 blocks so far), and 45
-    #   the other 4 blocks with inactive vars (i.e. not in any of the 
-    #     selected contrasts).
-    # get the 1 contrast corresponding to 2 blocks
-    contrast.vars.lengths = sapply(contrast.vars, length)
-    block.contrasts.1blockpair = which(
-      contrast.vars.lengths == 2 * (p / num.blocks))
-    indices.theta1 = unname(block.contrasts.1blockpair)
-    # get the 4 contrasts, each corresponding to half (or approx. half) of the 
-    #   vars in 4 different blocks
-    block.contrasts.halves = which(
-      contrast.vars.lengths == 12) # 0.5 * (p / num.blocks))
-    indices.theta2 = unname(block.contrasts.halves[1:4])
-    indices.theta = c(indices.theta1, indices.theta2)
+  if(theta.settings == "1blockpair"){
+    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
+    #   not necessary, but may save on unnecessary computation in the next step
+    block.contrasts = which(sapply(contrast.vars, length) == p / 2)
+    # pick one such contrast
+    indices.theta = unname(block.contrasts)
   } else{
     stop("invalid theta.settings")
   }
   print(indices.theta)
+  # error checking indices.theta found based on theta.settings argument
+  if(is.null(indices.theta)){
+    stop("invalid indices.theta")
+  }
+  # print(indices.theta)
   # error checking indices.theta found based on theta.settings argument
   if(is.null(indices.theta)){
     stop("invalid indices.theta")

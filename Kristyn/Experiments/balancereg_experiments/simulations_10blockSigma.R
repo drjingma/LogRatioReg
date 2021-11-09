@@ -79,7 +79,7 @@ res = foreach(
   scaling = TRUE
   
   # Population parameters
-  sigma_eps = 0.1 # 0.1, 0.5
+  sigma_eps = 0.01 # 0.1, 0.5
   num.blocks = 10
   SigmaWblock = matrix(cor_ij, p / num.blocks, p / num.blocks)
   for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1

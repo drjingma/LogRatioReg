@@ -83,8 +83,8 @@ getSimilarityMatrix = function(
 # hierClust from library sClust
 HSClust <- function(
   # dataFrame, 
-  W, 
-  levelMax = NULL, 
+  W, # similarity matrix
+  levelMax = NULL, # p - 1
   # clustFunction = ShiMalikSC, 
   # similarity = TRUE, 
   flagDiagZero = FALSE,
@@ -195,37 +195,6 @@ sbp.fromHSClust = function(levels_matrix){
       }
     }
   }
-  
-  # if(ncol(sbp) < p - 1){ # binary partition leaving out an observation from each cluster one at a time
-  #   # for(j in 1:ncol(sbp)){
-  #   #   sbp.tmp = sbp[, j, drop = FALSE]
-  #   sbp.last.tmp = sbp[, ncol(sbp), drop = FALSE]
-  #   if(sum(sbp.last.tmp == 1) > 1){
-  #     for(k in 1:(sum(sbp.last.tmp == 1) - 1)){
-  #       sbp.tmp = rep(NA, p)
-  #       sbp.tmp[sbp.last.tmp != 1] = 0
-  #       if(k > 1){
-  #         sbp.tmp[which(sbp.last.tmp == 1)[c(1:(k - 1))]] = 0
-  #       }
-  #       sbp.tmp[which(sbp.last.tmp == 1)[k]] = 1
-  #       sbp.tmp[which(sbp.last.tmp == 1)[-c(1:k)]] = -1
-  #       sbp = cbind(sbp, sbp.tmp)
-  #     }
-  #   }
-  #   if(sum(sbp.last.tmp == -1) > 1){
-  #     for(k in 1:(sum(sbp.last.tmp == -1) - 1)){
-  #       sbp.tmp = rep(NA, p)
-  #       sbp.tmp[sbp.last.tmp != -1] = 0
-  #       if(k > 1){
-  #         sbp.tmp[which(sbp.last.tmp == -1)[c(1:(k - 1))]] = 0
-  #       }
-  #       sbp.tmp[which(sbp.last.tmp == -1)[k]] = 1
-  #       sbp.tmp[which(sbp.last.tmp == -1)[-c(1:k)]] = -1
-  #       sbp = cbind(sbp, sbp.tmp)
-  #     }
-  #   }
-  #   # }
-  # }
 
   sbp[is.na(sbp)] = 0
   rownames(sbp) = colnames(sbp) = NULL

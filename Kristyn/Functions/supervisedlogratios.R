@@ -4,7 +4,7 @@
 
 # do hierarchical clustering with specified linkage 
 #   for compositional data X and y
-getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
+getSupervisedDistanceMatrix = function(y, X, rho.type){
   n = dim(X)[1]
   p = dim(X)[2]
   
@@ -39,6 +39,10 @@ getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
   
   # get dissimilarity matrix
   Gammamat = 1 - cormat
+  return(Gammamat)
+}
+getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
+  Gammamat = getSupervisedDistanceMatrix(y, X, rho.type)
   
   # get tree from hierarchical clustering
   btree_slr = hclust(as.dist(Gammamat), method = linkage)

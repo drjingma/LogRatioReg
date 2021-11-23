@@ -5,7 +5,7 @@ rm(list=ls())
 # Date: 10/11/2021
 
 use.bic = FALSE
-values.theta = 5 # NULL, 5
+values.theta = 10 # NULL, 5, 10
 
 ################################################################################
 # libraries and settings
@@ -263,9 +263,11 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20211026_",
+    "20211109_",
     sigma.settings, "_noise", sigma_eps,
-    "_", theta.settings,"_", metrics.file, ".pdf"),
+    "_", theta.settings, 
+    "_val", values.theta,
+    "_", metrics.file, ".pdf"),
   plot = last_plot(),
   width = 8, height = 5, units = c("in")
 )
@@ -534,7 +536,9 @@ ggsave(
   filename = paste0(
     "20211026_", 
     sigma.settings, "_noise", sigma_eps, 
-    "_", theta.settings, "_rocs.pdf"),
+    "_", theta.settings, 
+    "_val", values.theta,
+    "_rocs.pdf"),
   plot = last_plot(),
   width = 4, height = 2, units = c("in")
 )

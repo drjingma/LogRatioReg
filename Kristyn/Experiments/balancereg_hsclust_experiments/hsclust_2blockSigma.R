@@ -1,17 +1,14 @@
 # Purpose: Simulate data from balance regression model to compare
 #   compositional lasso and supervised log-ratios methods
 # Note: Here, we simulate from a 2-block-diagonal Sigma and intend to:
-#   - have one active contrast corresponding to 2 of the 4 blocks, so that 
-#       slr correctly specifies the log-ratio formed by the 2 blocks --
-#       compare this to the results from simulations_2blockSigma.R with the 
-#       dense setting, which has the same structure (1 contrast containing 2 
-#       active blocks), but no inactive set.
+#   - have one active contrast corresponding to the two blocks, so that 
+#       slr correctly specifies the log-ratio formed by the 2 blocks
 # Date: 10/11/2021
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/balancereg_experiments/outputs"
+output_dir = "Kristyn/Experiments/balancereg_hsclust_experiments/outputs"
 
 # set up parallelization
 library(foreach)
@@ -28,7 +25,7 @@ rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
 
 # Other simulation settings
-numSims = 100
+numSims = 10 #100
 
 ################################################################################
 # Simulations #
@@ -56,53 +53,42 @@ res = foreach(
   # helper functions
   source("Kristyn/Functions/metrics.R")
   source("Kristyn/Functions/simulatedata.R")
-  source("Kristyn/Functions/bic.R")
   
   # Settings to toggle with
-  sigma.settings = "4blockSigma"
+  sigma.settings = "2blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "1blockpair"
-  # "1blockpair" => choose j corresp. to two blocks
-  #   (one block w/-1, other w/1 in a single contrast)
+  theta.settings = "dense" # block, dense
+  # "block2" => choose j corresp. to block of correlated variables in block 2
+  # "dense" => j = 1
   values.theta = 1
   linkage = "average"
   tol = 1e-4
   nlam = 100
   intercept = TRUE
   K = 10
-  n = 20#100
-  p = 16#200
+  n = 15#100
+  p = 8#200
   cor_ij = 0.2 # 0.2, 0.5
   scaling = TRUE
   
   # Population parameters
   sigma_eps = 0.1 # 0.1, 0.5
-  num.blocks = 4
+  num.blocks = 2
   SigmaWblock = matrix(cor_ij, p / num.blocks, p / num.blocks)
   for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
-  SigmaW = as.matrix(bdiag(SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
-  hsclust.SigmaW = HSClust(W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), verbose = FALSE)
+  SigmaW = as.matrix(bdiag(SigmaWblock, SigmaWblock))
+  hsclust.SigmaW = HSClust(W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), verbose = FALSE, levelMax = p - 1)
   sbp.SigmaW = sbp.fromHSClust(levels_matrix = hsclust.SigmaW$allLevels)
   # SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
   U = getU(btree = SigmaWtree) # transformation matrix
-  # plot(SigmaWtree)
   # sbp.fromHclust(SigmaWtree)
-  all.equal(c(sbp.sort(sbp.fromHclust(SigmaWtree))), c(sbp.sort(sbp.SigmaW)))
   
   # theta settings
-  SBP = sbp.fromHclust(SigmaWtree)
-  # for each column (contrast), find which variables are included (1 or -1)
-  contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-  if(theta.settings == "1blockpair"){
-    # get the contrasts with length p / 2 -- have 2 blocks of correlated vars
-    #   not necessary, but may save on unnecessary computation in the next step
-    block.contrasts = which(sapply(contrast.vars, length) == p / 2)
-    # pick one such contrast
-    indices.theta = unname(block.contrasts)
+  if(theta.settings == "dense"){
+    indices.theta = 1
   } else{
     stop("invalid theta.settings")
   }
-  print(indices.theta)
   # error checking indices.theta found based on theta.settings argument
   if(is.null(indices.theta)){
     stop("invalid indices.theta")
@@ -135,6 +121,9 @@ res = foreach(
   # Population parameters, continued
   muW = c(rep(log(p), 5), rep(0, p - 5))
   names(muW) = names(beta)
+  
+  # pre-specified cardinality to choose lambda
+  prespecified.cardinality = bspars
   
   file.end = paste0(
     "_", sigma.settings,
@@ -174,13 +163,16 @@ res = foreach(
       y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
       rho.type = rho.type, linkage = linkage, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
+    # saveRDS(slr, paste0(output_dir, "/models", "/slr_model", file.end))
     
     # timing metric
     slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      slr.timing,
-      paste0(output_dir, "/timing", "/slr_timing", file.end))
+    # saveRDS(
+    #   slr.timing, 
+    #   paste0(output_dir, "/timing", "/slr_timing", file.end))
+    
+    ###
+    stop("slr: I already have the model fits!")
   } else{
     slr.model.already.existed = TRUE
   }
@@ -190,6 +182,9 @@ res = foreach(
     output_dir, "/metrics", "/slr_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/slr_bic_metrics", file.end)) | 
+    !file.exists(paste0(
+      output_dir, "/metrics", "/slr", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     slr.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -256,6 +251,40 @@ res = foreach(
       paste0(output_dir, "/metrics", "/slr_bic_metrics", file.end))
     }
     
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/slr", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      slr.beta = apply(slr$bet, 2, function(theta) getBeta(theta, slr.btree))
+      slr.sizebeta = apply(
+        slr.beta, 2, function(beta) sum(abs(beta) > 1e-8))
+      slr.lam.min.idx = which.min(abs(slr.sizebeta - prespecified.cardinality))
+      slr.a0 = slr$int[slr.lam.min.idx]
+      slr.thetahat = slr$bet[, slr.lam.min.idx]
+      slr.Uhat = getU(btree = slr.btree)
+      # slr.betahat = getBeta(slr.thetahat, U = slr.Uhat)
+      slr.betahat = slr.beta[, slr.lam.min.idx]
+      
+      # compute metrics on the selected model #
+      slr.metrics = getMetricsBalanceReg(
+        y.train = Y, y.test = Y.test, 
+        ilrX.train = computeBalances(X, slr.btree), 
+        ilrX.test = computeBalances(X.test, slr.btree), 
+        n.train = n, n.test = n, 
+        thetahat0 = slr.a0, thetahat = slr.thetahat, betahat = slr.betahat, 
+        sbp = slr.SBP, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        slr.metrics, 
+        "timing" = slr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/slr", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   }
   
   # roc curves #################################################################
@@ -289,13 +318,16 @@ res = foreach(
       method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam, 
       nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
     end.time = Sys.time()
-    saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
+    # saveRDS(classo, paste0(output_dir, "/models", "/classo_model", file.end))
     
     # timing metric
     cl.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      cl.timing,
-      paste0(output_dir, "/timing", "/classo_timing", file.end))
+    # saveRDS(
+    #   cl.timing, 
+    #   paste0(output_dir, "/timing", "/classo_timing", file.end))
+    
+    ###
+    stop("classo: I already have the model fits!")
   } else{
     cl.model.already.existed = TRUE
   }
@@ -305,6 +337,9 @@ res = foreach(
     output_dir, "/metrics", "/classo_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/classo_bic_metrics", file.end)) |
+    !file.exists(paste0(
+      output_dir, "/metrics", "/classo", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     cl.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -361,6 +396,35 @@ res = foreach(
       paste0(output_dir, "/metrics", "/classo_bic_metrics", file.end))
     }
     
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/classo", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      cl.sizebeta = apply(
+        classo$bet, 2, function(beta) sum(abs(beta) > 1e-8))
+      cl.lam.min.idx = which.min(abs(cl.sizebeta - prespecified.cardinality))
+      cl.a0 = classo$int[cl.lam.min.idx]
+      cl.betahat = classo$bet[, cl.lam.min.idx]
+      
+      # compute metrics on the selected model #
+      cl.metrics = getMetricsLLC(
+        y.train = Y, y.test = Y.test, 
+        logX.train = log(X), 
+        logX.test = log(X.test), 
+        n.train = n, n.test = n, 
+        betahat0 = cl.a0, betahat = cl.betahat, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        cl.metrics, 
+        "timing" = cl.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/classo", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   }
   
   # roc curves #################################################################
@@ -390,13 +454,16 @@ res = foreach(
     oracle = cvILR(y = Y, X = X, btree = SigmaWtree, U = U, nlam = nlam, 
                    nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
+    # saveRDS(oracle, paste0(output_dir, "/models", "/oracle_model", file.end))
     
     # timing metric
     or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      or.timing,
-      paste0(output_dir, "/timing", "/oracle_timing", file.end))
+    # saveRDS(
+    #   or.timing, 
+    #   paste0(output_dir, "/timing", "/oracle_timing", file.end))
+    
+    ###
+    stop("oracle: I already have the model fits!")
   } else{
     or.model.already.existed = TRUE
   }
@@ -406,6 +473,9 @@ res = foreach(
     output_dir, "/metrics", "/oracle_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/oracle_bic_metrics", file.end)) |
+    !file.exists(paste0(
+      output_dir, "/metrics", "/oracle", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     or.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -472,6 +542,39 @@ res = foreach(
       paste0(output_dir, "/metrics", "/oracle_bic_metrics", file.end))
     }
     
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/oracle", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      or.beta = apply(oracle$bet, 2, function(theta) getBeta(theta, or.btree))
+      or.sizebeta = apply(
+        or.beta, 2, function(beta) sum(abs(beta) > 1e-8))
+      or.lam.min.idx = which.min(abs(or.sizebeta - prespecified.cardinality))
+      or.a0 = oracle$int[or.lam.min.idx]
+      or.thetahat = oracle$bet[, or.lam.min.idx]
+      or.Uhat = getU(btree = or.btree)
+      or.betahat = getBeta(or.thetahat, U = or.Uhat)
+      
+      # compute metrics on the selected model #
+      or.metrics = getMetricsBalanceReg(
+        y.train = Y, y.test = Y.test, 
+        ilrX.train = computeBalances(X, or.btree), 
+        ilrX.test = computeBalances(X.test, or.btree), 
+        n.train = n, n.test = n, 
+        thetahat0 = or.a0, thetahat = or.thetahat, betahat = or.betahat, 
+        sbp = or.SBP, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        or.metrics, 
+        "timing" = or.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/oracle", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   } 
   
   # roc curves #################################################################
@@ -506,13 +609,16 @@ res = foreach(
     pr = cvILR(y = Y, X = X, btree = pr.tree, nlam = nlam, 
                nfolds = K, intercept = intercept, standardize = scaling)
     end.time = Sys.time()
-    saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
-
+    # saveRDS(pr, paste0(output_dir, "/models", "/propr_model", file.end))
+    
     # timing metric
     pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
-    saveRDS(
-      pr.timing,
-      paste0(output_dir, "/timing", "/propr_timing", file.end))
+    # saveRDS(
+    #   pr.timing, 
+    #   paste0(output_dir, "/timing", "/propr_timing", file.end))
+    
+    ###
+    stop("propr: I already have the model fits!")
   } else{
     pr.model.already.existed = TRUE
   }
@@ -522,6 +628,9 @@ res = foreach(
     output_dir, "/metrics", "/propr_metrics", file.end)) | 
     !file.exists(paste0(
       output_dir, "/metrics", "/propr_bic_metrics", file.end)) |
+    !file.exists(paste0(
+      output_dir, "/metrics", "/propr", "_size", prespecified.cardinality, 
+      "_metrics", file.end)) | 
     pr.model.already.existed == FALSE){
     
     # import model and timing metric
@@ -587,6 +696,39 @@ res = foreach(
       paste0(output_dir, "/metrics", "/propr_bic_metrics", file.end))
     }
     
+    # choose lambda to satisfy a pre-specified cardinality for beta's active set
+    ############################################################################
+    if(!file.exists(paste0(
+      output_dir, "/metrics", "/propr", "_size", prespecified.cardinality, 
+      "_metrics", file.end))){
+      pr.beta = apply(pr$bet, 2, function(theta) getBeta(theta, pr.btree))
+      pr.sizebeta = apply(
+        pr.beta, 2, function(beta) sum(abs(beta) > 1e-8))
+      pr.lam.min.idx = which.min(abs(pr.sizebeta - prespecified.cardinality))
+      pr.a0 = pr$int[pr.lam.min.idx]
+      pr.thetahat = pr$bet[, pr.lam.min.idx]
+      pr.Uhat = getU(btree = pr.btree)
+      pr.betahat = getBeta(pr.thetahat, U = pr.Uhat)
+      
+      # compute metrics on the selected model #
+      pr.metrics = getMetricsBalanceReg(
+        y.train = Y, y.test = Y.test, 
+        ilrX.train = computeBalances(X, pr.btree), 
+        ilrX.test = computeBalances(X.test, pr.btree), 
+        n.train = n, n.test = n, 
+        thetahat0 = pr.a0, thetahat = pr.thetahat, betahat = pr.betahat, 
+        sbp = pr.SBP, 
+        true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+      
+      saveRDS(c(
+        pr.metrics, 
+        "timing" = pr.timing,
+        "betaSparsity" = bspars
+      ), 
+      paste0(
+        output_dir, "/metrics", "/propr", "_size", prespecified.cardinality, 
+        "_metrics", file.end))
+    }
   }
   
   # roc curves #################################################################

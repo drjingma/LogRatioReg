@@ -137,19 +137,23 @@ HSClust <- function(
 
 sbp.fromHSClust = function(levels_matrix, row_names = NULL){
   p = nrow(levels_matrix)
+  levels_matrix_old = levels_matrix
   levels_matrix = levels_matrix[, -1, drop = FALSE]
   sbp = matrix(ifelse(levels_matrix[, 1] == "1", 1, -1)) # "1" = 1, "2" = -1
   if(ncol(levels_matrix) >= 2){
     for(j in 2:ncol(levels_matrix)){
-      col.tmp = levels_matrix[, j]
-      sbp.tmp0 = rep(NA, nrow(levels_matrix))
+      col.tmp = levels_matrix[, j] # get jth new cluster assignments (string)
       # check if any values are repeats from the previous column
+      #   -- then these values aren't in this col's contrast (assign value 0)
+      sbp.tmp0 = rep(NA, nrow(levels_matrix))
       col.prev.tmp = levels_matrix[, j - 1]
       sbp.tmp0[col.prev.tmp == col.tmp] = 0
       # separate strings by period
       levels = strsplit(col.tmp, split = "\\.")
       sbp.tmp = sbp.tmp0
-      for(i in 1:nrow(levels_matrix)){
+      # check each element in levels (there are p of them) to assign its 
+      #   corresponding contrast value to 1 or -1
+      for(i in 1:p){
         levels.tmp = levels[[i]]
         # check if previous levels have changed
         if(i > 1){
@@ -158,16 +162,19 @@ sbp.fromHSClust = function(levels_matrix, row_names = NULL){
              length(levels.prev.tmp[-length(levels.prev.tmp)])) || 
               (!all(levels.tmp[-length(levels.tmp)] == 
                    levels.prev.tmp[-length(levels.prev.tmp)]))){
+            # if this level is different from the last, then add sbp.tmp as col
             if(!all(na.omit(sbp.tmp) == 0)){
               sbp = cbind(sbp, sbp.tmp)
             }
             sbp.tmp = sbp.tmp0
           } 
         }
-        # assign 1, -1 for last level
+        # assign 1, -1 for first level or an unchanged level
         if(is.na(sbp.tmp0[i])){
           sbp.tmp[i] = ifelse(levels.tmp[j] == "1", 1, -1)
         }
+        # if it's the last level, add the column to the list if the contrast is 
+        #   not all 0's (i.e. nonempty)
         if(i == nrow(levels_matrix)){
           if(!all(na.omit(sbp.tmp) == 0)){
             sbp = cbind(sbp, sbp.tmp)
@@ -235,7 +242,9 @@ getEdgesFromSBP = function(sbp){
       right.tmp = inners[is.right.tmp]
     }
     to.tmp = c(left.tmp, right.tmp) # left & right children -- swap for ggraph
-    edges.df = rbind(edges.df, data.frame(from = from.tmp, to = to.tmp))
+    if(length(to.tmp) == 2 & length(from.tmp) == 2){
+      edges.df = rbind(edges.df, data.frame(from = from.tmp, to = to.tmp))
+    }
   }
   return(edges.df)
 }
@@ -248,13 +257,13 @@ plotSBP = function(sbp = NULL, edges = NULL){
   if(is.null(edges) & !is.null(sbp)){
     edges = getEdgesFromSBP(sbp)
   }
-  mygraph <- graph_from_data_frame(
-    d = edges, vertices = data.frame(labels = unique(unlist(edges))),
+  mygraph <- as_tbl_graph(graph_from_data_frame(
+    d = edges, vertices = data.frame(labels = unique(unlist(edges)))),
     directed = TRUE)
   plt = ggraph(mygraph, layout = 'igraph', algorithm = 'tree') +
     geom_edge_diagonal() +
     geom_node_point() +
-    # geom_node_label(aes(label = vertices)) + #c(edges$from[1], edges$to))) +
+    geom_node_label(aes(label = name)) + #c(edges$from[1], edges$to))) +
     theme_void()
   return(plt)
 }

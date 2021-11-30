@@ -194,7 +194,7 @@ res = foreach(
     #   rho.type = rho.type, linkage = linkage, standardize = scaling)
     slrMat = getSupervisedDistanceMatrix(y = Y, X = X, rho.type = rho.type)
     slr.hsclust = HSClust(
-      W = getSimilarityMatrix(unnormalized_similarity_matrix = slrMat), 
+      W = getSimilarityMatrix(unnormalized_distance_matrix = slrMat), 
       levelMax = p - 1)
     slr.SBP = sbp.fromHSClust(
       levels_matrix = slr.hsclust$allLevels, row_names = names(beta))
@@ -379,7 +379,6 @@ res = foreach(
     or.timing = readRDS(paste0(
       output_dir, "/timing", "/oracle_timing", file.end))
     or.SBP = oracle$sbp
-    rownames(or.SBP) = names(beta)
     
     # choose lambda using cross-validated mse ##################################
     if(!file.exists(paste0(
@@ -437,7 +436,7 @@ res = foreach(
     start.time = Sys.time()
     pr <- suppressMessages(propr(X, metric = "phs"))
     pr.hsclust = HSClust(
-      W = getSimilarityMatrix(unnormalized_similarity_matrix = pr@matrix), 
+      W = getSimilarityMatrix(unnormalized_distance_matrix = pr@matrix), 
       levelMax = p - 1)
     pr.SBP = sbp.fromHSClust(
       levels_matrix = pr.hsclust$allLevels, row_names = names(beta))

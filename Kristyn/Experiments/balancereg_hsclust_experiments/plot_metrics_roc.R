@@ -68,11 +68,7 @@ if(theta.settings == "dense"){
     "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision",
     "Fscore", "timing", "betaSparsity")
 }
-if(use.bic){
-  metrics.file = "bic_metrics"
-} else{
-  metrics.file = "metrics"
-}
+metrics.file = "metrics"
 
 # import metrics
 cl.sims.list = list()
@@ -256,7 +252,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20211129_",
+    "20211130_",
     sigma.settings, "_noise", sigma_eps,
     "_", theta.settings, 
     "_val", values.theta,
@@ -527,7 +523,7 @@ tpr_roc
 
 ggsave(
   filename = paste0(
-    "20211129_", 
+    "20211130_", 
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, 
     "_val", values.theta,

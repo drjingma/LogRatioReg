@@ -110,22 +110,47 @@ slr.hclust = fitSLR(
   y = Y, X = X, intercept = intercept, 
   rho.type = rho.type, linkage = linkage, standardize = scaling)
 slr.btree.hclust = slr.hclust$btree
+plot(slr.btree.hclust)
 slr.SBP.hclust = sbp.fromHclust(slr.btree.hclust)
-rownames(slr.SBP.hclust) = colnames(slr.SBP.hclust) = NULL
+# rownames(slr.SBP.hclust) = colnames(slr.SBP.hclust) = NULL
 
 # slr, using hierarchical spectral clustering
 slrMat = getSupervisedDistanceMatrix(y = Y, X = X, rho.type = rho.type)
 slr.hsclust = HSClust(
   W = getSimilarityMatrix(unnormalized_similarity_matrix = slrMat), 
   verbose = FALSE, levelMax = p - 1)
-slr.SBP.hsclust = sbp.fromHSClust(levels_matrix = slr.hsclust$allLevels)
+slr.SBP.hsclust = sbp.fromHSClust(levels_matrix = slr.hsclust$allLevels, row_names = names(beta))
 
 #inspect
 slr.SBP.hclust
 slr.SBP.hsclust
 
-library(ggraph)
-library(igraph)
+library(ggraph) # make dendrogram
+library(igraph) # transform dataframe to graph object: graph_from_data_frame()
 library(tidyverse)
+
+edges.hclust = getEdgesFromSBP(slr.SBP.hclust)
+plotSBP(edges = edges.hclust)
+plotSBP(sbp = slr.SBP.hsclust)
+
+
+tbl_vertices <- read.csv("~/Downloads/ggraph-hierarchical-vertices.csv", na.string = "NA")
+tbl_edges <- read.csv("~/Downloads/ggraph-hierarchical-edges.csv", na.string = "NA")
+graph <- graph_from_data_frame(tbl_edges, tbl_vertices, directed = TRUE)
+ggraph(graph, layout = 'igraph', algorithm = 'tree') + 
+  geom_edge_diagonal(edge_width = 0.5, alpha =.4) +
+  # geom_node_label(aes(label=node, fill= type), 
+  #                 col = "white", fontface = "bold", hjust = "inward") +
+  scale_color_brewer(palette="Set2") +
+  theme_void() +
+  coord_flip()
+
+
+require(tidygraph)
+gr <- create_notable('bull') %>%
+  mutate(class = sample(letters[1:3], n(), replace = TRUE))
+
+ggraph(gr, 'stress') +
+  geom_node_label(aes(label = class), repel = TRUE)
 
 

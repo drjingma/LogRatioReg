@@ -284,7 +284,9 @@ fitILR = function(
     bet = glmnet.fit$beta, 
     lambda = glmnet.fit$lambda,
     glmnet = glmnet.fit, 
-    btree = btree
+    btree = btree, 
+    sbp = sbp, 
+    U = U
   ))
 }
 
@@ -328,8 +330,10 @@ cvILR = function(
     lambda = cv_exact$lambda,
     cv.glmnet = cv_exact,
     glmnet = cv_exact$glmnet.fit,
+    cvm = cv_exact$cvm,
     btree = btree,
-    cvm = cv_exact$cvm
+    sbp = sbp, 
+    U = U
   ))
 }
 

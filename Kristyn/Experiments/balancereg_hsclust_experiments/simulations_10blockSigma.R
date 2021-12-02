@@ -4,7 +4,7 @@
 #   - have one active contrast pair within each block
 #   - compare slr to coat, where the latter captures correlated structure
 #       among covariates, but not whether the covariates are predicted
-# Date: 11/29/2021
+# Date: 12/02/2021
 
 ################################################################################
 # libraries and settings
@@ -76,29 +76,19 @@ res = foreach(
   intercept = TRUE
   K = 10
   n = 100
-  p = 200
+  p = 30
   rho = 0.2 # 0.2, 0.5
   scaling = TRUE
   
   # Population parameters
-  sigma_eps = 0.01 # 0.1, 0.5
+  sigma_eps = 0.0 # 0, 0.01, 0.1
   num.blocks = 10
   SigmaWblock = matrix(rho, p / num.blocks, p / num.blocks)
   for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
   SigmaW = as.matrix(bdiag(
     SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, 
     SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
-  # SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
-  # U = getU(btree = SigmaWtree) # transformation matrix
-  # plot(SigmaWtree)
   
-  # theta settings
-  SigmaW_hsclust = HSClust(
-    W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), 
-    levelMax = p - 1)
-  SBP = sbp.fromHSClust(
-    levels_matrix = SigmaW_hsclust$allLevels, row_names = names(beta))
-  U = getU(sbp = SBP)
   # for each column (contrast), find which variables are included (1 or -1)
   contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
   if(theta.settings == "1blockpair4halves"){
@@ -109,14 +99,68 @@ res = foreach(
     #   the other 4 blocks with inactive vars (i.e. not in any of the 
     #     selected contrasts).
     # get the 1 contrast corresponding to 2 blocks
-    block.contrasts.1blockpair = which(
-      sapply(contrast.vars, length) == 2 * (p / num.blocks))
-    indices.theta1 = unname(block.contrasts.1blockpair)
+    contrast_lengths = sapply(contrast.vars, length)
+    contrasts.blockpair = which(
+      contrast_lengths == 2 * (p / num.blocks))
+    indices.theta1 = unname(contrasts.blockpair[1])
+    blockpair.vars = contrast.vars[[contrasts.blockpair[1]]]
     # get the 4 contrasts, each corresponding to half (or approx. half) of the 
     #   vars in 4 different blocks
-    block.contrasts.halves = which(
-      sapply(contrast.vars, length) == 9) # 0.5 * (p / num.blocks))
-    indices.theta2 = unname(block.contrasts.halves[1:4])
+    num.closest.to.half = contrast_lengths[
+      which.min(contrast_lengths - (p / num.blocks / 2))]
+    contrasts.halves = which(
+      contrast_lengths == num.closest.to.half) # 0.5 * (p / num.blocks))
+    # identify the contrasts corresponding to half-blocks that aren't in
+    #   the already-selected two blocks and that aren't in the same blocks
+    contrasts.10blocks = which(contrast_lengths == (p / num.blocks))
+    contrasts.halves.selected = c()
+    for(i in 1:length(contrasts.halves)){
+      # current half and which of the 10 blocks it is in
+      contrast.half.tmp = contrasts.halves[i]
+      contrast.half.vars.tmp = contrast.vars[[contrast.half.tmp]]
+      contrast.half.block.tmp = NA
+      for(l in 1:length(contrasts.10blocks)){
+        contrast.block.tmp = contrasts.10blocks[l]
+        contrast.block.vars.tmp = contrast.vars[[contrast.block.tmp]]
+        if(any(contrast.half.vars.tmp %in% contrast.block.vars.tmp)){
+          contrast.half.block.tmp = contrasts.10blocks[l]
+          break
+        }
+      }
+      contrast.half.block.vars.tmp = contrast.vars[[contrast.half.block.tmp]]
+      # first check if the current half has any variables in the block-pair's set
+      if(!any(contrast.half.vars.tmp %in% blockpair.vars)){
+        # then check if it is any of the prev. selected halves' blocks
+        if(length(contrasts.halves.selected) > 0){
+          is.in.block = rep(FALSE, length(contrasts.halves.selected))
+          for(j in 1:length(contrasts.halves.selected)){
+            contrast.half.sel.tmp = contrasts.halves.selected[j]
+            contrast.half.sel.vars.tmp = contrast.vars[[contrast.half.sel.tmp]]
+            contrast.half.sel.block.tmp = NA
+            for(l in 1:length(contrasts.10blocks)){
+              contrast.block.tmp = contrasts.10blocks[l]
+              contrast.block.vars.tmp = contrast.vars[[contrast.block.tmp]]
+              if(any(contrast.half.sel.vars.tmp %in% contrast.block.vars.tmp)){
+                contrast.half.sel.block.tmp = contrasts.10blocks[l]
+                break
+              }
+            }
+            if(contrast.half.block.tmp == contrast.half.sel.block.tmp){
+              is.in.block[j] = TRUE
+            }
+          }
+          if(all(!is.in.block)){
+            contrasts.halves.selected = c(
+              contrasts.halves.selected, contrast.half.tmp)
+            if(length(contrasts.halves.selected) >= 4) break
+          }
+        } else{
+          contrasts.halves.selected = c(
+            contrasts.halves.selected, contrast.half.tmp)
+        }
+      }
+    }
+    indices.theta2 = unname(contrasts.halves.selected[1:4])
     indices.theta = c(indices.theta1, indices.theta2)
   } else{
     stop("invalid theta.settings")

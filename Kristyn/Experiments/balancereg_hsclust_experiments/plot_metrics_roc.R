@@ -252,7 +252,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20211130_",
+    "20211202_",
     sigma.settings, "_noise", sigma_eps,
     "_", theta.settings, 
     "_val", values.theta,
@@ -523,13 +523,13 @@ tpr_roc
 
 ggsave(
   filename = paste0(
-    "20211130_", 
+    "20211202_", 
     sigma.settings, "_noise", sigma_eps, 
     "_", theta.settings, 
     "_val", values.theta,
     "_rocs.pdf"),
   plot = last_plot(),
-  width = 4, height = 2, units = c("in")
+  width = 6, height = 5, units = c("in")
 )
 
 

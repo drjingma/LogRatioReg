@@ -35,7 +35,7 @@ getSupervisedDistanceMatrix = function(y, X, rho.type){
   }
   # give the rows and columns the names of taxa in X, for sbp.fromHclust()
   rownames(cormat) = colnames(X)
-  rownames(cormat) = colnames(X)
+  colnames(cormat) = colnames(X)
   
   # get dissimilarity matrix
   Gammamat = 1 - cormat

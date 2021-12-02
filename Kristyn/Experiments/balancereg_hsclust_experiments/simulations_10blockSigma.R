@@ -432,7 +432,7 @@ res = foreach(
   if(!file.exists(paste0(output_dir, "/models", "/propr_model", file.end)) |
      !file.exists(paste0(output_dir, "/timing", "/propr_timing", file.end))){
     pr.model.already.existed = FALSE
-    # apply oracle method, using CV to select lambda
+    # apply propr method, using CV to select lambda
     start.time = Sys.time()
     pr <- suppressMessages(propr(X, metric = "phs"))
     pr.hsclust = HSClust(

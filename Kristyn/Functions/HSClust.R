@@ -62,69 +62,74 @@ getSimilarityMatrix = function(
   }
 }
 
-# getNormalizedLaplacian = function(S){
-#   # S is similarity matrix (called A in TooManyCells)
-#   if(nrow(S) != ncol(S)) stop("S isn't pxp!")
-#   if(!isSymmetric(S)) stop("S isn't symmetric!")
-#   p = nrow(S)
-#   Dmat_diag = as.numeric(S %*% rep(1, p)) # assumed to be the matrix with degrees of nodes
-#   Dmat = diag(Dmat_diag)
-#   negsqrtD = diag(1 / sqrt(Dmat_diag))
-#   AdjMat = S # assume S is the adjacency matrix?
-#   normAdjMat = negsqrtD  %*% AdjMat %*% negsqrtD
-#   normLaplacMat = diag(p) - normAdjMat
-#   return(normLaplacMat)
-# }
+getNormalizedLaplacian = function(S){
+  # S is similarity matrix (called A in TooManyCells)
+  if(nrow(S) != ncol(S)) stop("S isn't pxp!")
+  if(!isSymmetric(S)) stop("S isn't symmetric!")
+  p = nrow(S)
+  Dmat_diag = as.numeric(S %*% rep(1, p)) # assumed to be the matrix with degrees of nodes
+  Dmat = diag(Dmat_diag)
+  negsqrtD = diag(1 / sqrt(Dmat_diag))
+  AdjMat = S # assume S is the adjacency matrix?
+  normAdjMat = negsqrtD  %*% AdjMat %*% negsqrtD
+  normLaplacMat = diag(p) - normAdjMat
+  return(normLaplacMat)
+}
 
 
-# hierarchical spectral clustering recursively using sClust
+# binary tree code is inspired by sClust::hierClust
 # https://mawenzi.univ-littoral.fr/sClust/software/
 # https://rdrr.io/cran/sClust/src/R/recursClust.R
-# hierClust from library sClust
 HSClust <- function(
-  # dataFrame, 
   W, # similarity matrix
-  levelMax = NULL, # p - 1
-  # clustFunction = ShiMalikSC, 
-  # similarity = TRUE, 
-  flagDiagZero = FALSE,
-  # biparted = FALSE, 
-  minPoint = 1
+  levelMax = NULL # p - 1 for full binary partition
 ){
-  similarity = FALSE
-  biparted = TRUE
   if(is.null(levelMax)) levelMax = nrow(W)
   
   stop <- FALSE
+  # level of the clustering, i.e. how many cluster partitions have already been 
+  #   made, plus 1
   level <- 1
+  # clusterToCut = set of clusters to be further partitioned into more clusters
   clusterToCut <- 1
+  # the clusters
   cl <- matrix(1, nrow = nrow(W), ncol = levelMax)
   
   while(!stop){
     newCluster <- c()
-    cl[,level+1] <- cl[,level]
-    sapply(clusterToCut, FUN = function(x){
-      indices = which(cl[,level]==x)
+    # get the previous cluster assignments (base = 1, ..., 1)
+    cl[,level + 1] <- cl[, level]
+    # iterate over clusterToCut to further partition the clusters in that set
+    for(i in 1:length(clusterToCut)){
+      x = clusterToCut[i]
+      indices = which(cl[, level] == x)
       Wprime = W[indices, indices]
-      if(length(indices) > minPoint){
+      if(length(indices) > 1){
+        # spectral clustering to partition into 2 clusters!
         invisible(capture.output(results <- ShiMalikSC(
-          W = Wprime, flagDiagZero = flagDiagZero, verbose = FALSE)))
+          W = Wprime, flagDiagZero = FALSE, verbose = FALSE)))
         groups <- results$cluster
-        #Changing the cluster if necessary
-        if(!is.null(groups) && length(unique(groups))>1){
-          if(level == 1 ){
-            cl[indices,level+1] <<- paste0(groups)
-            newCluster <<- c(newCluster, unique(paste0(groups)))
-          }else{
-            cl[indices,level+1] <<- paste0(cl[indices,level],".",groups)
-            newCluster <<- c(newCluster, unique(paste0(cl[indices,level],".",groups)))
+        # Changing the cluster if necessary
+        if(!is.null(groups) && length(unique(groups)) > 1){
+          if(level == 1){
+            cl[indices, level + 1] <- paste0(groups)
+            newCluster <- c(newCluster, unique(paste0(groups)))
+          } else{
+            cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
+            newCluster <- c(
+              newCluster, unique(paste0(cl[indices, level], ".", groups)))
           }
+        } else if(!is.null(groups) && length(unique(groups)) == 1 && 
+                  length(groups) == 2){ # artificially split them
+          groups = c(1, rep(2, length(groups) - 1))
+          cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
+          newCluster <- c(
+            newCluster, unique(paste0(cl[indices, level], ".", groups)))
         }
       }
-    })
-    
+    }
     clusterToCut <- newCluster
-    stop <- (level+1) >= levelMax
+    stop <- (level + 1) >= levelMax
     level <- level + 1
   }
   
@@ -250,20 +255,53 @@ getEdgesFromSBP = function(sbp){
 }
 
 # still need to figure out how to label!
-plotSBP = function(sbp = NULL, edges = NULL){
+plotSBP = function(
+  sbp = NULL, edges = NULL, title = NULL, 
+  nodes_types = NULL, 
+  # a data frame of the nodes/vertices (column = "name") labeled as 
+  #   "balance", "covariate", "significant covariate" (column = "type")
+  text_size = 2
+){
+  # get edges data frame, if one isn't given
   if(is.null(sbp) & is.null(edges)){
     stop("plotSBP: provide either sbp or edges arguments!!")
   }
   if(is.null(edges) & !is.null(sbp)){
     edges = getEdgesFromSBP(sbp)
   }
-  mygraph <- as_tbl_graph(graph_from_data_frame(
-    d = edges, vertices = data.frame(labels = unique(unlist(edges)))),
-    directed = TRUE)
+  
+  # make the graph input for ggraph plot
+  if(!is.null(nodes_types)){
+    # check nodes_types data frame
+    if(!all(unname(nodes_types[, 1]) %in% unique(unlist(edges))) ||
+       !all(unique(unlist(edges)) %in% unname(nodes_types[, 1]))){
+      stop("names of nodes in nodes_types data frame don't match the row names of sbp matrix")
+    } 
+    mygraph <- as_tbl_graph(graph_from_data_frame(
+      d = edges, 
+      vertices = nodes_types
+      ),
+      directed = TRUE)
+  } else{
+    mygraph <- as_tbl_graph(graph_from_data_frame(
+      d = edges, vertices = data.frame(nodes = unique(unlist(edges)))),
+      directed = TRUE)
+  }
+  
+  # make the plot
   plt = ggraph(mygraph, layout = 'igraph', algorithm = 'tree') +
     geom_edge_diagonal() +
-    geom_node_point() +
-    geom_node_label(aes(label = name)) + #c(edges$from[1], edges$to))) +
-    theme_void()
+    geom_node_point()
+  if(!is.null(title)){
+    plt = plt + ggtitle(title)
+  }
+  if(!is.null(nodes_types)){
+    plt = plt + 
+      geom_node_label(aes(label = name, fill = type), size = text_size)
+  } else{
+    plt = plt + 
+      geom_node_label(aes(label = name), size = text_size)
+  }
+  plt = plt + theme_void()
   return(plt)
 }

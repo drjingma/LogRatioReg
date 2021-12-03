@@ -62,19 +62,19 @@ getSimilarityMatrix = function(
   }
 }
 
-getNormalizedLaplacian = function(S){
-  # S is similarity matrix (called A in TooManyCells)
-  if(nrow(S) != ncol(S)) stop("S isn't pxp!")
-  if(!isSymmetric(S)) stop("S isn't symmetric!")
-  p = nrow(S)
-  Dmat_diag = as.numeric(S %*% rep(1, p)) # assumed to be the matrix with degrees of nodes
-  Dmat = diag(Dmat_diag)
-  negsqrtD = diag(1 / sqrt(Dmat_diag))
-  AdjMat = S # assume S is the adjacency matrix?
-  normAdjMat = negsqrtD  %*% AdjMat %*% negsqrtD
-  normLaplacMat = diag(p) - normAdjMat
-  return(normLaplacMat)
-}
+# getNormalizedLaplacian = function(S){
+#   # S is similarity matrix (called A in TooManyCells)
+#   if(nrow(S) != ncol(S)) stop("S isn't pxp!")
+#   if(!isSymmetric(S)) stop("S isn't symmetric!")
+#   p = nrow(S)
+#   Dmat_diag = as.numeric(S %*% rep(1, p)) # assumed to be the matrix with degrees of nodes
+#   Dmat = diag(Dmat_diag)
+#   negsqrtD = diag(1 / sqrt(Dmat_diag))
+#   AdjMat = S # assume S is the adjacency matrix?
+#   normAdjMat = negsqrtD  %*% AdjMat %*% negsqrtD
+#   normLaplacMat = diag(p) - normAdjMat
+#   return(normLaplacMat)
+# }
 
 
 # binary tree code is inspired by sClust::hierClust
@@ -82,7 +82,8 @@ getNormalizedLaplacian = function(S){
 # https://rdrr.io/cran/sClust/src/R/recursClust.R
 HSClust <- function(
   W, # similarity matrix
-  levelMax = NULL # p - 1 for full binary partition
+  levelMax = NULL, # p - 1 for full binary partition
+  force_levelMax = FALSE
 ){
   if(is.null(levelMax)) levelMax = nrow(W)
   
@@ -120,7 +121,7 @@ HSClust <- function(
               newCluster, unique(paste0(cl[indices, level], ".", groups)))
           }
         } else if(!is.null(groups) && length(unique(groups)) == 1 && 
-                  length(groups) == 2){ # artificially split them
+                  length(groups) == 2 && force_levelMax){ # artificially split them
           groups = c(1, rep(2, length(groups) - 1))
           cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
           newCluster <- c(

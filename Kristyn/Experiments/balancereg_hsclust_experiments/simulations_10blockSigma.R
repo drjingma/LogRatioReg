@@ -478,9 +478,9 @@ res = foreach(
     pr.model.already.existed = FALSE
     # apply propr method, using CV to select lambda
     start.time = Sys.time()
-    pr <- suppressMessages(propr(X, metric = "phs"))
+    pr_res <- suppressMessages(propr(X, metric = "phs"))
     pr.hsclust = HSClust(
-      W = getSimilarityMatrix(unnormalized_distance_matrix = pr@matrix), 
+      W = getSimilarityMatrix(unnormalized_distance_matrix = pr_res@matrix), 
       levelMax = p - 1)
     pr.SBP = sbp.fromHSClust(
       levels_matrix = pr.hsclust$allLevels, row_names = names(beta))

@@ -32,9 +32,9 @@ require(tidygraph)
 # Sigma with 10 blocks #########################################################
 
 # Settings to toggle with
-sigma.settings = "10blockSigma"
+sigma.settings = "diagSigma"
 rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "1blockpair4halves"  
+theta.settings = "pminus4"  
 # "pairperblock" => choose j corresp. to one pair of covariates for each block
 # "2blockpairs4halves" => 
 #   2 contrasts corresponding to 2 blocks each (accounts for 4 blocks so far), 
@@ -50,115 +50,29 @@ intercept = TRUE
 K = 10
 n = 100
 p = 30
-rho = 0.2 # 0.2, 0.5
+# rho = 0.2 # 0.2, 0.5
 scaling = TRUE
 
 # Population parameters
 sigma_eps = 0.0 # 0, 0.01 0.1
-num.blocks = 10
-SigmaWblock = matrix(rho, p / num.blocks, p / num.blocks)
-for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
-SigmaW = as.matrix(bdiag(
-  SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, 
-  SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
-# SigmaWtree = hclust(as.dist(1 - SigmaW), method = linkage)
-# U = getU(btree = SigmaWtree) # transformation matrix
-# plot(SigmaWtree)
+SigmaW = diag(p)
 
 # theta settings
-SigmaW_hsclust = HSClust(
-  W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), 
-  levelMax = p - 1)
-SBP = sbp.fromHSClust(levels_matrix = SigmaW_hsclust$allLevels)
+SigmaW_hclust = hclust(as.dist(1 - SigmaW), method = linkage)
+plot(SigmaW_hclust)
+SBP = sbp.fromHclust(SigmaW_hclust)
 U = getU(sbp = SBP)
 
 # a preliminary plot of the tree given by covariance matrix SigmaW
-SigmaW_hsclust_complete = HSClust(
-  W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), 
-  levelMax = p - 1, force_levelMax = TRUE)
-SBPcomplete = sbp.fromHSClust(levels_matrix = SigmaW_hsclust_complete$allLevels)
 nodes_types = data.frame(
-  name = c(colnames(SBPcomplete), rownames(SBPcomplete)),
-  type = c(rep("balance", ncol(SBPcomplete)), rep("covariate", nrow(SBPcomplete)))
+  name = c(colnames(SBP), rownames(SBP)),
+  type = c(rep("balance", ncol(SBP)), rep("covariate", nrow(SBP)))
 )
-plotSBP(SBPcomplete, title = "Sigma", nodes_types = nodes_types) 
+plotSBP(SBP, title = "Sigma", nodes_types = nodes_types) 
 
 # for each column (contrast), find which variables are included (1 or -1)
-contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
-if(theta.settings == "1blockpair4halves"){
-  # "1blockpair4halves" => 
-  #   1 contrast corresponding to 2 blocks (accounts for 2 blocks so far), 
-  #   4 contrasts, each corresponding to half (or approx. half) of the vars 
-  #     in 4 different blocks (accounts for 8 blocks so far), and 
-  #   the other 4 blocks with inactive vars (i.e. not in any of the 
-  #     selected contrasts).
-  # get the 1 contrast corresponding to 2 blocks
-  contrast_lengths = sapply(contrast.vars, length)
-  contrasts.blockpair = which(
-    contrast_lengths == 2 * (p / num.blocks))
-  indices.theta1 = unname(contrasts.blockpair[1])
-  blockpair.vars = contrast.vars[[contrasts.blockpair[1]]]
-  # get the 4 contrasts, each corresponding to half (or approx. half) of the 
-  #   vars in 4 different blocks
-  num.closest.to.half = contrast_lengths[
-    which.min(contrast_lengths - (p / num.blocks / 2))]
-  contrasts.halves = which(
-    contrast_lengths == num.closest.to.half) # 0.5 * (p / num.blocks))
-  # identify the contrasts corresponding to half-blocks that aren't in
-  #   the already-selected two blocks and that aren't in the same blocks
-  contrasts.10blocks = which(contrast_lengths == (p / num.blocks))
-  contrasts.halves.selected = c()
-  for(i in 1:length(contrasts.halves)){
-    # current half and which of the 10 blocks it is in
-    contrast.half.tmp = contrasts.halves[i]
-    contrast.half.vars.tmp = contrast.vars[[contrast.half.tmp]]
-    contrast.half.block.tmp = NA
-    for(l in 1:length(contrasts.10blocks)){
-      contrast.block.tmp = contrasts.10blocks[l]
-      contrast.block.vars.tmp = contrast.vars[[contrast.block.tmp]]
-      if(any(contrast.half.vars.tmp %in% contrast.block.vars.tmp)){
-        contrast.half.block.tmp = contrasts.10blocks[l]
-        break
-      }
-    }
-    contrast.half.block.vars.tmp = contrast.vars[[contrast.half.block.tmp]]
-    # first check if the current half has any variables in the block-pair's set
-    if(!any(contrast.half.vars.tmp %in% blockpair.vars)){
-      # then check if it is any of the prev. selected halves' blocks
-      if(length(contrasts.halves.selected) > 0){
-        is.in.block = rep(FALSE, length(contrasts.halves.selected))
-        for(j in 1:length(contrasts.halves.selected)){
-          contrast.half.sel.tmp = contrasts.halves.selected[j]
-          contrast.half.sel.vars.tmp = contrast.vars[[contrast.half.sel.tmp]]
-          contrast.half.sel.block.tmp = NA
-          for(l in 1:length(contrasts.10blocks)){
-            contrast.block.tmp = contrasts.10blocks[l]
-            contrast.block.vars.tmp = contrast.vars[[contrast.block.tmp]]
-            if(any(contrast.half.sel.vars.tmp %in% contrast.block.vars.tmp)){
-              contrast.half.sel.block.tmp = contrasts.10blocks[l]
-              break
-            }
-          }
-          if(contrast.half.block.tmp == contrast.half.sel.block.tmp){
-            is.in.block[j] = TRUE
-          }
-        }
-        if(all(!is.in.block)){
-          contrasts.halves.selected = c(
-            contrasts.halves.selected, contrast.half.tmp)
-          if(length(contrasts.halves.selected) >= 4) break
-        }
-      } else{
-        contrasts.halves.selected = c(
-          contrasts.halves.selected, contrast.half.tmp)
-      }
-    }
-  }
-  indices.theta2 = unname(contrasts.halves.selected[1:4])
-  indices.theta = c(indices.theta1, indices.theta2)
-} else{
-  stop("invalid theta.settings")
-}
+indices.theta = p - 4
+
 # print(indices.theta)
 # error checking indices.theta found based on theta.settings argument
 if(is.null(indices.theta)){
@@ -194,22 +108,22 @@ names(muW) = names(beta)
 
 # plot the tree given by covariance matrix SigmaW, indicating 
 #   significant covariates and balances (theta's)
-leaf_types = rep("insignif cov", nrow(SBPcomplete))
+leaf_types = rep("insignif cov", nrow(SBP))
 leaf_types[non0.beta] = "signif cov"
-balance_types = rep("insignif bal", ncol(SBPcomplete))
+balance_types = rep("insignif bal", ncol(SBP))
 balance_types[theta[, 1] != 0] = "signif bal"
 nodes_types = data.frame(
-  name = c(colnames(SBPcomplete), rownames(SBPcomplete)),
+  name = c(colnames(SBP), rownames(SBP)),
   type = c(balance_types, leaf_types)
 )
-plotSBP(SBPcomplete, title = "Sigma", nodes_types = nodes_types) 
+plotSBP(SBP, title = "Sigma", nodes_types = nodes_types) 
 # ggsave(
 #   filename = paste0(
 #     "20211202_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_SigmaWtree3_incomplete.pdf"),
+#     "_SigmaWtree3.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )
@@ -240,7 +154,7 @@ start.time = Sys.time()
 slrMat = getSupervisedDistanceMatrix(y = Y, X = X, rho.type = rho.type)
 slr.hsclust = HSClust(
   W = getSimilarityMatrix(unnormalized_distance_matrix = slrMat), 
-  levelMax = p - 1)
+  levelMax = p - 1, force_levelMax = TRUE)
 slr.SBP = sbp.fromHSClust(
   levels_matrix = slr.hsclust$allLevels, row_names = names(beta))
 slr = cvILR(y = Y, X = X, sbp = slr.SBP, nlam = nlam, 
@@ -248,18 +162,12 @@ slr = cvILR(y = Y, X = X, sbp = slr.SBP, nlam = nlam,
 end.time = Sys.time()
 
 # plot the tree given by slr
-dim(slr$sbp)
-slr.hsclust_complete = HSClust(
-  W = getSimilarityMatrix(unnormalized_distance_matrix = slrMat), 
-  levelMax = p - 1, force_levelMax = TRUE)
-slr.SBPcomplete = sbp.fromHSClust(
-  levels_matrix = slr.hsclust_complete$allLevels, row_names = names(beta))
 slr.nodestypes = data.frame(
-  name = c(colnames(slr.SBPcomplete), rownames(slr.SBPcomplete)),
-  type = c(rep("balance", ncol(slr.SBPcomplete)), rep("covariate", nrow(slr.SBPcomplete)))
+  name = c(colnames(slr.SBP), rownames(slr.SBP)),
+  type = c(rep("balance", ncol(slr.SBP)), rep("covariate", nrow(slr.SBP)))
 ) 
-slr.nodestypes$type[c(rep(FALSE, ncol(slr.SBPcomplete)), non0.beta)] = "nonzero covariate"
-plotSBP(slr.SBPcomplete, title = "supervised log-ratios", nodes_types = slr.nodestypes) 
+slr.nodestypes$type[c(rep(FALSE, ncol(slr.SBP)), non0.beta)] = "nonzero covariate"
+plotSBP(slr.SBP, title = "supervised log-ratios", nodes_types = slr.nodestypes) 
 
 # timing metric
 slr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
@@ -292,26 +200,26 @@ slr.is0.betahat = abs(slr.betahat[, 1]) <= 1e-8
 slr.non0.betahat = abs(slr.betahat[, 1]) > 1e-8
 slr.is0.thetahat = slr.thetahat == 0
 slr.non0.thetahat = !slr.is0.thetahat
-leaf_types = rep(NA, nrow(slr.SBPcomplete))
+leaf_types = rep(NA, nrow(slr.SBP))
 leaf_types[non0.beta & slr.non0.betahat] = "selected, signif cov"
 leaf_types[non0.beta & slr.is0.betahat] = "not-selected, signif cov"
 leaf_types[is0.beta & slr.non0.betahat] = "selected, insignif cov"
 leaf_types[is0.beta & slr.is0.betahat] = "not-selected, insignif cov"
-balance_types = rep(NA, ncol(slr.SBPcomplete))
+balance_types = rep(NA, ncol(slr.SBP))
 balance_types[slr.non0.thetahat] = "selected bal"
 balance_types[slr.is0.thetahat] = "not-selected bal"
 slr.nodestypes = data.frame(
-  name = c(colnames(slr.SBPcomplete), rownames(slr.SBPcomplete)),
+  name = c(colnames(slr.SBP), rownames(slr.SBP)),
   type = c(balance_types, leaf_types)
 )
-plotSBP(slr.SBPcomplete, title = "supervised log-ratios", nodes_types = slr.nodestypes) 
+plotSBP(slr.SBP, title = "supervised log-ratios", nodes_types = slr.nodestypes) 
 # ggsave(
 #   filename = paste0(
 #     "20211202_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_slrtree2_incomplete.pdf"),
+#     "_slrtree2.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )
@@ -368,28 +276,17 @@ cl.roc <- apply(classo$bet, 2, function(a)
 
 # apply oracle method, using CV to select lambda
 start.time = Sys.time()
-or.hsclust = HSClust(
-  W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), 
-  levelMax = p - 1)
-or.SBP = sbp.fromHSClust(
-  levels_matrix = or.hsclust$allLevels, row_names = names(beta))
-oracle = cvILR(y = Y, X = X, sbp = or.SBP, nlam = nlam, 
+oracle = cvILR(y = Y, X = X, sbp = SBP, nlam = nlam, 
                nfolds = K, intercept = intercept, standardize = scaling)
 end.time = Sys.time()
 
 # plot the tree given by the oracle matrix, i.e. the one corresponding to SigmaW
-dim(or.SBP)
-or.hsclust_complete = HSClust(
-  W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), 
-  levelMax = p - 1, force_levelMax = TRUE)
-or.SBPcomplete = sbp.fromHSClust(
-  levels_matrix = or.hsclust_complete$allLevels, row_names = names(beta))
 or.nodestypes = data.frame(
-  name = c(colnames(or.SBPcomplete), rownames(or.SBPcomplete)),
-  type = c(rep("balance", ncol(or.SBPcomplete)), rep("covariate", nrow(or.SBPcomplete)))
+  name = c(colnames(SBP), rownames(SBP)),
+  type = c(rep("balance", ncol(SBP)), rep("covariate", nrow(SBP)))
 ) 
-or.nodestypes$type[c(rep(FALSE, ncol(or.SBPcomplete)), non0.beta)] = "nonzero covariate"
-plotSBP(or.SBPcomplete, title = "Oracle (same as SigmaW)", nodes_types = or.nodestypes) 
+or.nodestypes$type[c(rep(FALSE, ncol(SBP)), non0.beta)] = "nonzero covariate"
+plotSBP(SBP, title = "Oracle (same as SigmaW)", nodes_types = or.nodestypes) 
 
 # timing metric
 or.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
@@ -422,26 +319,26 @@ or.is0.betahat = abs(or.betahat[, 1]) <= 1e-8
 or.non0.betahat = abs(or.betahat[, 1]) > 1e-8
 or.is0.thetahat = or.thetahat == 0
 or.non0.thetahat = !or.is0.thetahat
-leaf_types = rep(NA, nrow(or.SBPcomplete))
+leaf_types = rep(NA, nrow(SBP))
 leaf_types[non0.beta & or.non0.betahat] = "selected, signif cov"
 leaf_types[non0.beta & or.is0.betahat] = "not-selected, signif cov"
 leaf_types[is0.beta & or.non0.betahat] = "selected, insignif cov"
 leaf_types[is0.beta & or.is0.betahat] = "not-selected, insignif cov"
-balance_types = rep(NA, ncol(or.SBPcomplete))
+balance_types = rep(NA, ncol(SBP))
 balance_types[or.non0.thetahat] = "selected bal"
 balance_types[or.is0.thetahat] = "not-selected bal"
 or.nodestypes = data.frame(
-  name = c(colnames(or.SBPcomplete), rownames(or.SBPcomplete)),
+  name = c(colnames(SBP), rownames(SBP)),
   type = c(balance_types, leaf_types)
 )
-plotSBP(or.SBPcomplete, title = "oracle", nodes_types = or.nodestypes) 
+plotSBP(SBP, title = "oracle", nodes_types = or.nodestypes) 
 # ggsave(
 #   filename = paste0(
 #     "20211202_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_oracletree2_incomplete.pdf"),
+#     "_oracletree2.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )
@@ -461,25 +358,19 @@ start.time = Sys.time()
 pr_res <- suppressMessages(propr(X, metric = "phs"))
 pr.hsclust = HSClust(
   W = getSimilarityMatrix(unnormalized_distance_matrix = pr_res@matrix), 
-  levelMax = p - 1)
+  levelMax = p - 1, force_levelMax = TRUE)
 pr.SBP = sbp.fromHSClust(
   levels_matrix = pr.hsclust$allLevels, row_names = names(beta))
 pr = cvILR(y = Y, X = X, sbp = pr.SBP, nlam = nlam, 
            nfolds = K, intercept = intercept, standardize = scaling)
 end.time = Sys.time()
 # plot the tree given by the oracle matrix, i.e. the one corresponding to SigmaW
-dim(pr.SBP)
-pr.hsclust_complete = HSClust(
-  W = getSimilarityMatrix(unnormalized_distance_matrix = pr_res@matrix), 
-  levelMax = p - 1, force_levelMax = TRUE)
-pr.SBPcomplete = sbp.fromHSClust(
-  levels_matrix = pr.hsclust_complete$allLevels, row_names = names(beta))
 pr.nodestypes = data.frame(
-  name = c(colnames(pr.SBPcomplete), rownames(pr.SBPcomplete)),
-  type = c(rep("balance", ncol(pr.SBPcomplete)), rep("covariate", nrow(pr.SBPcomplete)))
+  name = c(colnames(pr.SBP), rownames(pr.SBP)),
+  type = c(rep("balance", ncol(pr.SBP)), rep("covariate", nrow(pr.SBP)))
 ) 
-pr.nodestypes$type[c(rep(FALSE, ncol(pr.SBPcomplete)), non0.beta)] = "nonzero covariate"
-plotSBP(pr.SBPcomplete, title = "propr", nodes_types = pr.nodestypes) 
+pr.nodestypes$type[c(rep(FALSE, ncol(pr.SBP)), non0.beta)] = "nonzero covariate"
+plotSBP(pr.SBP, title = "propr", nodes_types = pr.nodestypes) 
 
 # timing metric
 pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
@@ -512,26 +403,26 @@ pr.is0.betahat = abs(pr.betahat[, 1]) <= 1e-8
 pr.non0.betahat = abs(pr.betahat[, 1]) > 1e-8
 pr.is0.thetahat = pr.thetahat == 0
 pr.non0.thetahat = !pr.is0.thetahat
-leaf_types = rep(NA, nrow(pr.SBPcomplete))
+leaf_types = rep(NA, nrow(pr.SBP))
 leaf_types[non0.beta & pr.non0.betahat] = "selected, signif cov"
 leaf_types[non0.beta & pr.is0.betahat] = "not-selected, signif cov"
 leaf_types[is0.beta & pr.non0.betahat] = "selected, insignif cov"
 leaf_types[is0.beta & pr.is0.betahat] = "not-selected, insignif cov"
-balance_types = rep(NA, ncol(pr.SBPcomplete))
+balance_types = rep(NA, ncol(pr.SBP))
 balance_types[pr.non0.thetahat] = "selected bal"
 balance_types[pr.is0.thetahat] = "not-selected bal"
 pr.nodestypes = data.frame(
-  name = c(colnames(pr.SBPcomplete), rownames(pr.SBPcomplete)),
+  name = c(colnames(pr.SBP), rownames(pr.SBP)),
   type = c(balance_types, leaf_types)
 )
-plotSBP(pr.SBPcomplete, title = "propr", nodes_types = pr.nodestypes) 
+plotSBP(pr.SBP, title = "propr", nodes_types = pr.nodestypes) 
 # ggsave(
 #   filename = paste0(
 #     "20211202_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_proprtree2_incomplete.pdf"),
+#     "_proprtree2.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )
@@ -555,7 +446,7 @@ ggplot(
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_betahats_incomplete.pdf"),
+#     "_betahats.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )

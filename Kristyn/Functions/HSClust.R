@@ -132,7 +132,7 @@ graph.laplacian <- function(
 # https://rdrr.io/cran/sClust/src/R/recursClust.R
 HSClust <- function(
   W, # similarity matrix
-  levelMax = NULL, # p - 1 for full binary partition
+  levelMax = NULL, # p for full binary partition
   force_levelMax = FALSE, 
   method = "ShiMalik" # ShiMalik or kmeans
 ){
@@ -159,15 +159,17 @@ HSClust <- function(
       if(length(indices) > 1){
         # spectral clustering to partition into 2 clusters!
         if(method %in% c("ShiMalik", "shimalik", "sm", "SM")){
-          # invisible(capture.output(results <- ShiMalikSC(
-          #   W = Wprime, flagDiagZero = FALSE, verbose = FALSE)))
+          invisible(capture.output(results <- ShiMalikSC(
+            W = Wprime, flagDiagZero = FALSE, verbose = FALSE)))
           # groups <- results$cluster
           # # the above code might be choosing second largest instead of second 
           # #   smallest eigenvalue
-          NL = getNormalizedLaplacian(Wprime)
-          ei = eigen(NL, symmetric = TRUE)
-          second_smallest_idx = order(ei$values, decreasing = FALSE)[2]
-          groups = ifelse(ei$vectors[, second_smallest_idx], 2, 1)
+          # NL = getNormalizedLaplacian(Wprime)
+          # ei = eigen(NL, symmetric = TRUE)
+          # second_smallest_idx = order(ei$values, decreasing = FALSE)[2]
+          # groups = ifelse(ei$vectors[, second_smallest_idx] < 0, 1, 2)
+          second_smallest_idx = order(results$eigenVal, decreasing = FALSE)[2]
+          groups = ifelse(results$eigenVect[, second_smallest_idx] < 0, 1, 2)
         } else if(method %in% c("kmeans", "KMeans", "k", "K")){
           groups = spectral.clustering(W = Wprime, n_eig = 2)
         } else{

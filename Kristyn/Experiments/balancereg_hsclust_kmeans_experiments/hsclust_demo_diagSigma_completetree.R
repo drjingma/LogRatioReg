@@ -61,9 +61,9 @@ ggplot(data = reshape2::melt(SigmaW), aes(x = Var1, y = Var2, fill = value)) +
   geom_tile()
 
 # theta settings
-# SigmaW_hsclust = HSClust_kmeans(
-#   W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW), 
-#   levelMax = p - 1, force_levelMax = TRUE)
+# SigmaW_hsclust = HSClust(
+#   W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW),
+#   levelMax = p, force_levelMax = TRUE)
 # SBP = sbp.fromHSClust(levels_matrix = SigmaW_hsclust$allLevels)
 # U = getU(sbp = SBP)
 SigmaW_hclust = hclust(as.dist(1 - SigmaW), method = linkage)
@@ -160,16 +160,17 @@ start.time = Sys.time()
 #   y = Y, X = X, nlam = nlam, nfolds = K, intercept = intercept, 
 #   rho.type = rho.type, linkage = linkage, standardize = scaling)
 slrMat = getSupervisedDistanceMatrix(y = Y, X = X, rho.type = rho.type)
-fields::image.plot(getSimilarityMatrix(
-  unnormalized_distance_matrix = slrMat))
 slr.hsclust = HSClust(
   W = getSimilarityMatrix(unnormalized_distance_matrix = slrMat), 
-  levelMax = p - 1, force_levelMax = TRUE, method = "kmeans")
+  levelMax = p - 1, force_levelMax = TRUE)
 slr.SBP = sbp.fromHSClust(
   levels_matrix = slr.hsclust$allLevels, row_names = names(beta))
 slr = cvILR(y = Y, X = X, sbp = slr.SBP, nlam = nlam, 
             nfolds = K, intercept = intercept, standardize = scaling)
 end.time = Sys.time()
+
+fields::image.plot(getSimilarityMatrix(
+  unnormalized_distance_matrix = slrMat))
 
 ##############################################################################
 # first five rows and cols of slrMat
@@ -187,22 +188,28 @@ slr.SBP_sub = sbp.fromHSClust(
   levels_matrix = slr.hsclust_sub$allLevels)
 slr.nodestypes_sub = data.frame(
   name = c(colnames(slr.SBP_sub), rownames(slr.SBP_sub)),
-  type = c(rep("balance", ncol(slr.SBP_sub)), rep("covariate", nrow(slr.SBP_sub)))
+  type = c(
+    rep("balance", ncol(slr.SBP_sub)), rep("covariate", nrow(slr.SBP_sub)))
 )
-plotSBP(slr.SBP_sub, title = "supervised log-ratios, covariates 1:5 (shi-malik hs clust)", 
-        nodes_types = slr.nodestypes_sub) 
+plotSBP(
+  slr.SBP_sub, 
+  title = "supervised log-ratios, covariates 1:5 (shi-malik hs clust)", 
+  nodes_types = slr.nodestypes_sub) 
 
 # with K means hierarchical spectral clustering
-
-slr.hsclust_sub2 = HSClust(W = slr_similarityMat_sub, force_levelMax = TRUE, method = "kmeans")
+slr.hsclust_sub2 = HSClust(
+  W = slr_similarityMat_sub, force_levelMax = TRUE, method = "kmeans")
 slr.SBP_sub2 = sbp.fromHSClust(
   levels_matrix = slr.hsclust_sub2$allLevels)
 slr.nodestypes_sub2 = data.frame(
   name = c(colnames(slr.SBP_sub2), rownames(slr.SBP_sub2)),
-  type = c(rep("balance", ncol(slr.SBP_sub2)), rep("covariate", nrow(slr.SBP_sub2)))
+  type = c(
+    rep("balance", ncol(slr.SBP_sub2)), rep("covariate", nrow(slr.SBP_sub2)))
 )
-plotSBP(slr.SBP_sub2, title = "supervised log-ratios, covariates 1:5 (hsclust kmeans)", 
-        nodes_types = slr.nodestypes_sub2) 
+plotSBP(
+  slr.SBP_sub2, 
+  title = "supervised log-ratios, covariates 1:5 (hsclust kmeans)", 
+  nodes_types = slr.nodestypes_sub2) 
 
 ##############################################################################
 
@@ -485,7 +492,7 @@ pr.roc <- apply(pr$bet, 2, function(a)
 
 betahats = data.frame(
   index = 1:p, beta = beta, slr = slr.betahat, propr = pr.betahat)
-betahats.mlt = melt(betahats, id.vars = "index")
+betahats.mlt = reshape2::melt(betahats, id.vars = "index")
 ggplot(
   betahats.mlt, aes(x = index, y = value, color = variable, shape = variable)) +
   geom_point(size = 3, alpha = 0.5)

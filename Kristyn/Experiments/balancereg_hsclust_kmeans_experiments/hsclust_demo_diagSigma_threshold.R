@@ -188,26 +188,120 @@ fields::image.plot(slrMat)
 slr2 = cvILReta(
   y = Y, X = X, 
   W = slrMat, # normalized similarity matrix (all values between 0 & 1)
-  hsc_method = "shimalik", # "shimalik", "kmeans"
+  hsc_method = "kmeans", # "shimalik", "kmeans"
   force_levelMax = TRUE, 
   sbp = slr.SBP,
   lambda = NULL, nlam = nlam, 
-  eta = NULL, neta = 100,
+  eta = NULL, neta = 50,
   nfolds = K, foldid = NULL, 
-  intercept = intercept, standardize = scaling
+  intercept = intercept, 
+  standardize = scaling, 
+  seed = 123
 )
 
-slr2$eta
 slr2$min.idx
 slr2$theta0[[slr2$min.idx[2]]][slr2$min.idx[1]]
 slr2$theta[[slr2$min.idx[2]]][,slr2$min.idx[1]]
+slr2$num_covariates
 sum(slr2$meets_threshold[[slr2$min.idx[2]]])
 plotSBP(slr2$sbp_thresh[[slr2$min.idx[2]]])
 
-idx = 26
-View(slrMat)
-sum(slr2$meets_threshold[[idx]])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# why isn't there one that has 5 variables?
+t(matrix(slr2$num_covariates))
+slrMat_rowmaxs = t(matrix(rowMaxs(slrMat)))
+# we want a threshold that is between
+min_slrMat_5_rowmaxs = min(slrMat_rowmaxs[1:5])
+min_slrMat_5_rowmaxs
+# and 
+max(slrMat_rowmaxs[slrMat_rowmaxs < min_slrMat_5_rowmaxs])
+# the etas that we have are
+slr2$eta
+# look at 
+slr2$eta[22]
+# it should have had only 5 variables...
+idx = 22
+slr2$num_covariates[idx] # sum(slr2$meets_threshold[[idx]])
 plotSBP(slr2$sbp_thresh[[idx]])
+
+
+# cvILReta() testing ###
+y = Y
+W = slrMat
+hsc_method = "kmeans"
+force_levelMax = TRUE
+sbp = slr.SBP
+lambda = NULL
+eta = NULL
+neta = 50
+nfolds = K
+foldid = NULL
+standardize = scaling
+seed = 123
+###
+
+
+# ### try with a distanace matrix?
+# slrMat3 = getSupervisedMatrix(y = Y, X = X, rho.type = rho.type, type = "distance")
+# slr.hsclust3 = HSClust(
+#   W = slrMat3, 
+#   force_levelMax = TRUE, method = "kmeans")
+# slr.SBP3 = sbp.fromHSClust(
+#   levels_matrix = slr.hsclust3$allLevels, row_names = names(beta))
+# slr3 = cvILReta(
+#   y = Y, X = X, 
+#   W = slrMat3, 
+#   hsc_method = "kmeans", # "shimalik", "kmeans"
+#   force_levelMax = TRUE, 
+#   sbp = slr.SBP3,
+#   lambda = NULL, nlam = nlam, 
+#   eta = NULL, 
+#   neta = 100,
+#   nfolds = K, 
+#   foldid = NULL, 
+#   intercept = intercept, 
+#   standardize = scaling, 
+#   seed = 123
+# )
+# 
+# slr2$eta
+# slr2$min.idx
+# slr2$theta0[[slr2$min.idx[2]]][slr2$min.idx[1]]
+# slr2$theta[[slr2$min.idx[2]]][,slr2$min.idx[1]]
+# sum(slr2$meets_threshold[[slr2$min.idx[2]]])
+# plotSBP(slr2$sbp_thresh[[slr2$min.idx[2]]])
+# 
+# idx = 26
+# View(slrMat)
+# sum(slr2$meets_threshold[[idx]])
+# plotSBP(slr2$sbp_thresh[[idx]])
 
 ##############################################################################
 # first five rows and cols of slrMat

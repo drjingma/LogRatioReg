@@ -386,12 +386,16 @@ fitILReta = function(
   
   # thresholding with eta: Iterate solution paths along eta
   meets_threshold <- sbp_thresh <- theta0 <- theta <- list()
+  num_covariates = rep(NA, neta)
   for(i in 1:neta){
     # thresholding
-    meets_threshold_i = apply(W, 1, function(row) all(row < eta[i]))
+    meets_threshold_i = apply(W, 1, function(row) !all(row < eta[i]))
+    num_covariates[i] = sum(meets_threshold_i)
     if(sum(meets_threshold_i) <= 2){ # cannot cluster
       theta[[i]] = rep(NA, sum(meets_threshold_i))
       theta0[[i]] = NA
+      meets_threshold[[i]] = meets_threshold_i
+      sbp_thresh[[i]] = rep(NA, sum(meets_threshold_i))
     } else{
       W_thresh = W[meets_threshold_i, meets_threshold_i, drop = FALSE]
       X_thresh = X[, meets_threshold_i, drop = FALSE]
@@ -405,10 +409,10 @@ fitILReta = function(
         y = y, X = X_thresh, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
         nfolds = K, intercept = intercept, standardize = scaling)
       # save the model
-      meets_threshold[[i]] = meets_threshold_i
-      sbp_thresh[[i]] = SBP_thresh
       theta[[i]] = modelfit$bet
       theta0[[i]] = modelfit$int
+      meets_threshold[[i]] = meets_threshold_i
+      sbp_thresh[[i]] = SBP_thresh
     }
   }
   
@@ -417,6 +421,7 @@ fitILReta = function(
     theta = theta,
     meets_threshold = meets_threshold,
     sbp_thresh = sbp_thresh,
+    num_covariates = num_covariates, 
     lambda = lambda,
     eta = eta, 
     W = W,
@@ -432,13 +437,10 @@ cvILReta <- function(
   lambda = NULL, nlam = 20, 
   eta = NULL, neta = 5,
   nfolds = 10, foldid = NULL, 
-  intercept = TRUE, standardize = TRUE
-  # y, X, A = NULL, U = NULL, linkage = "complete", rho.type = "squared",
-  # Q = NULL, intercept = TRUE, lambda = NULL, 
-  # alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
-  # rho = 1e-2, eps1 = 1e-7, eps2 = 1e-7, maxite = 1e5, nfolds = 5, 
-  # foldid = NULL, scaling = FALSE
+  intercept = TRUE, standardize = TRUE,
+  seed = NULL
 ){
+  if(!is.null(seed)) set.seed(seed)
   n = dim(X)[1]
   p = dim(X)[2]
   
@@ -512,7 +514,7 @@ cvILReta <- function(
       lambda = lambda, nlam = nlam, eta = eta, neta = neta,
       intercept = intercept, standardize = standardize)
     pred_te <- lapply(1:neta, function(k) {
-      if(is.null(fit_cv$meets_threshold[[k]])){
+      if(all(is.na(fit_cv$sbp_thresh[[k]]))){
         matrix(NA, nrow = length(folds[[i]]), ncol = n)
       } else{
         if (intercept) {
@@ -546,6 +548,7 @@ cvILReta <- function(
     theta = fitObj$theta,
     meets_threshold = fitObj$meets_threshold,
     sbp_thresh = fitObj$sbp_thresh,
+    num_covariates = fitObj$num_covariates,
     lambda = fitObj$lambda,
     eta = eta, 
     fits = fitObj,

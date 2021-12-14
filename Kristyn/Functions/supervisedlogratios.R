@@ -4,7 +4,7 @@
 
 # do hierarchical clustering with specified linkage 
 #   for compositional data X and y
-getSupervisedDistanceMatrix = function(y, X, rho.type){
+getSupervisedMatrix = function(y, X, rho.type, type = "similarity"){
   n = dim(X)[1]
   p = dim(X)[2]
   
@@ -38,15 +38,17 @@ getSupervisedDistanceMatrix = function(y, X, rho.type){
   colnames(cormat) = colnames(X)
   
   # get dissimilarity matrix
-  Gammamat = 1 - cormat
-  return(Gammamat)
+  if(type != "similarity"){
+    cormat = 1 - cormat
+  } 
+  return(cormat)
 }
+
 getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
-  Gammamat = getSupervisedDistanceMatrix(y, X, rho.type)
-  
+  Gammamat = getSupervisedMatrix(
+    y = y, X = X, rho.type = rho.type, type = "distance")
   # get tree from hierarchical clustering
   btree_slr = hclust(as.dist(Gammamat), method = linkage)
-  
   return(btree_slr)
 }
 
@@ -338,6 +340,203 @@ cvILR = function(
 }
 
 
+fitILReta = function(
+  y, X, 
+  W, # normalized similarity matrix (all values between 0 & 1)
+  ilr_method = "oracle", # "oracle", "slr", "propr"
+  hsc_method = "shimalik", # "shimalik", "kmeans"
+  force_levelMax = FALSE, 
+  btree = NULL, sbp = NULL, U = NULL, 
+  lambda = NULL, nlam = 20, 
+  eta = NULL, neta = 20,
+  intercept = TRUE, standardize = TRUE
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  # checks
+  if(length(y) != n) stop("fitILReta : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+  # check if lambda is given, assign nlam accordingly
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
+  if(nrow(W) != p | ncol(W) != p) stop("fitILReta: W isn't pxp matrix")
+  
+  # get lambda (if not provided)
+  if(is.null(lambda)){
+    Xb = computeBalances(X, btree, sbp, U)
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+                        intercept = intercept, standardize = standardize)
+    lambda = glmnet.fit$lambda
+    # check lambda length -- if it doesn't have length nlam, rerun
+    if(nlam != length(lambda)){
+      log_lambda <- log(lambda)
+      lambda <- exp(seq(max(log_lambda), min(log_lambda),length.out = nlam))
+    }
+  }
+  
+  # get eta (if not provided)
+  if(null(eta)){
+    neta = 5
+    eta = seq(0, 1, length.out = neta + 1)[1:neta]
+  } else{
+    neta = length(eta)
+  }
+  
+  # thresholding with eta: Iterate solution paths along eta
+  theta0 <- theta <- list()
+  for(i in 1:neta){
+    # thresholding
+    meets_threshold = apply(W, 1, function(row) all(row < eta[i]))
+    W_thresh = W[meets_threshold, meets_threshold, drop = FALSE]
+    y_thresh = y[meets_threshold]
+    X_thresh = X[, meets_threshold, drop = FALSE]
+    # model fitting
+    hsclust_thresh = HSClust(
+      W = W_thresh, force_levelMax = force_levelMax, method = hsc_method
+    )
+    SBP_thresh = sbp.fromHSClust(
+      levels_matrix = hsclust_thresh$allLevels)
+    modelfit = cvILR(
+      y = Y, X = X, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
+      nfolds = K, intercept = intercept, standardize = scaling)
+    # save the model
+    theta[[i]] = modelfit$bet
+    theta0[[i]] = modelfit$int
+  }
+  
+  return(list(
+    theta0 = theta0,
+    theta = theta,
+    lambda = lambda,
+    eta = eta, 
+    W = W,
+    btree = btree, 
+    sbp = sbp, 
+    U = U
+  ))
+}
+cvILReta <- function(
+  y = NULL, X, 
+  W, # normalized similarity matrix (all values between 0 & 1)
+  ilr_method = "oracle", # "oracle", "slr", "propr"
+  hsc_method = "shimalik", # "shimalik", "kmeans"
+  force_levelMax = FALSE, 
+  btree = NULL, sbp = NULL, U = NULL, 
+  lambda = NULL, nlam = 20, 
+  eta = NULL, neta = 20,
+  nfolds = 10, foldid = NULL, 
+  intercept = TRUE, standardize = TRUE
+  # y, X, A = NULL, U = NULL, linkage = "complete", rho.type = "squared",
+  # Q = NULL, intercept = TRUE, lambda = NULL, 
+  # alpha = NULL, nlam = 50, lam.min.ratio = 1e-4, nalpha = 10,
+  # rho = 1e-2, eps1 = 1e-7, eps2 = 1e-7, maxite = 1e5, nfolds = 5, 
+  # foldid = NULL, scaling = FALSE
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  # checks
+  if(length(y) != n) stop("fitILReta : dimensions of y and X don't match")
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+  # check if lambda is given, assign nlam accordingly
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
+  if(nrow(W) != p | ncol(W) != p) stop("fitILReta: W isn't pxp matrix")
+  
+  # get lambda (if not provided)
+  if(is.null(lambda)){
+    Xb = computeBalances(X, btree, sbp, U)
+    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+                        intercept = intercept, standardize = standardize)
+    lambda = glmnet.fit$lambda
+    # check lambda length -- if it doesn't have length nlam, rerun
+    if(nlam != length(lambda)){
+      log_lambda <- log(lambda)
+      lambda <- exp(seq(max(log_lambda), min(log_lambda),length.out = nlam))
+    }
+  }
+  
+  # get eta (if not provided)
+  if(null(eta)){
+    neta = 5
+    eta = seq(0, 1, length.out = neta + 1)[1:neta]
+  } else{
+    neta = length(eta)
+  }
+  
+  # fit the models
+  fitObj = fitILReta(
+    y = y, X = X, W = W, ilr_method = ilr_method, hsc_method = hsc_method,
+    force_levelMax = force_levelMax, btree = btree, sbp = sbp, U = U, 
+    lambda = lambda, nlam = nlam, eta = eta, neta = neta,
+    intercept = intercept, standardize = standardize)
+  Xb = computeBalances(X, btree = btree, sbp = sbp, U = U)
+  
+  # nlam <- length(fitObj$lambda)
+  # nalpha <- length(fitObj$alpha)
+  errs <- array(NA, dim=c(nlam, nalpha, nfolds))
+  
+  # define error function
+  errfun <- function(est, truth) colMeans((est - truth)^2)
+  
+  # make folds, if necessary
+  if(is.null(foldid)){
+    sizes_equal <- round(n / nfolds)
+    sizes <- rep(sizes_equal, nfolds)
+    sizes[nfolds] <- sizes[nfolds] + n - sizes_equal * nfolds
+    endpoints <- c(0, cumsum(sizes))
+    perm <- sample(n)
+    folds <- list()
+    for (i in seq(nfolds)) folds[[i]] <- perm[
+      seq(endpoints[i] + 1, endpoints[i + 1])]
+  } else{
+    folds = list()
+    for(i in 1:nfolds) folds[[i]] = which(foldid == i)
+  }
+  
+  # Fit based on folds and compute error metric
+  for (i in seq(nfolds)) {
+    # fit model on all but the ith fold
+    fit_cv <- fitILReta(
+      y = y[-folds[[i]]], X = X[-folds[[i]], drop = FALSE], 
+      W = W[-folds[[i]], -folds[[i]], drop = FALSE], 
+      ilr_method = ilr_method, hsc_method = hsc_method,
+      force_levelMax = force_levelMax, btree = btree, sbp = sbp, U = U, 
+      lambda = lambda, nlam = nlam, eta = eta, neta = neta,
+      intercept = intercept, standardize = standardize)
+    pred_te <- lapply(seq(nalpha), function(k) {
+      if (intercept) {
+        Xb[folds[[i]], ] %*% fit_cv$theta[[k]] +
+          rep(fit_cv$theta0[[k]], each = length(folds[[i]]))
+      } else {
+        # X[folds[[i]], ] %*% fit_cv$beta[[k]]
+        Xb[folds[[i]], ] %*% fit_cv$theta[[k]]
+      }
+    })
+    for (k in seq(nalpha)) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
+    cat("##########################\n")
+    cat(sprintf("Finished model fits for fold[%s].\n", i))
+    cat("##########################\n")
+  }
+  m <- apply(errs, c(1, 2), mean)
+  se <- apply(errs, c(1, 2), stats::sd) / sqrt(nfolds)
+  ibest <- which(m == min(m), arr.ind = TRUE)[1, , drop = FALSE]
+  
+  return(list(
+    that0 = fitObj$theta0,
+    theta = fitObj$theta,
+    lambda = fitObj$lambda,
+    fits = fitObj,
+    btree = btree,
+    U = U,
+    cvm = m,
+    min.idx = ibest
+  ))
+}
+
 
 # Obtain beta (or betahat)
 #   by transforming from balance regression model's theta (or thetahat)
@@ -355,34 +554,34 @@ getBeta = function(
   return(beta)
 }
 
-getTPR = function(
-  type = "ilr", beta, thetahat = NULL, sbp = NULL, betahat = NULL
-){
-  if(is.null(beta)) stop("getTPR: can't compute TPR without beta!")
-  if(type == "ilr" | type == 1 | type == "balance"){
-    if(is.null(sbp)) stop("getTPR: for ilr model, need sbp matrix!")
-    if(is.null(thetahat)) stop("getTPR: for ilr model, need thethat!")
-    # betahat = getBeta(thetahat, btree.slr)
-    non0.beta = (beta != 0)
-    non0.thetahat = (thetahat != 0)
-    sel.cols.SBP = sbp[, non0.thetahat, drop = FALSE]
-    non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
-    # TPR & S.hat
-    TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat = sum(non0.betahat)
-  } else if(type == "llc" | type == 2 | type == "lc" | type == "logcontrast" | 
-            type == "linearlogcontrast"){
-    if(is.null(betahat)) stop("getTPR: for linear log contrast model, need betahat!")
-    # TPR
-    non0.beta = (beta != 0)
-    non0.betahat = (betahat != 0)
-    TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
-    S.hat = sum(non0.betahat)
-  } else{
-    stop("getTPR: invalid type -- can only be ilr model or linear log contrast model")
-  }
-  return(c("S.hat" = S.hat, "TPR" = TPR))
-}
+# getTPR = function(
+#   type = "ilr", beta, thetahat = NULL, sbp = NULL, betahat = NULL
+# ){
+#   if(is.null(beta)) stop("getTPR: can't compute TPR without beta!")
+#   if(type == "ilr" | type == 1 | type == "balance"){
+#     if(is.null(sbp)) stop("getTPR: for ilr model, need sbp matrix!")
+#     if(is.null(thetahat)) stop("getTPR: for ilr model, need thethat!")
+#     # betahat = getBeta(thetahat, btree.slr)
+#     non0.beta = (beta != 0)
+#     non0.thetahat = (thetahat != 0)
+#     sel.cols.SBP = sbp[, non0.thetahat, drop = FALSE]
+#     non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
+#     # TPR & S.hat
+#     TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
+#     S.hat = sum(non0.betahat)
+#   } else if(type == "llc" | type == 2 | type == "lc" | type == "logcontrast" | 
+#             type == "linearlogcontrast"){
+#     if(is.null(betahat)) stop("getTPR: for linear log contrast model, need betahat!")
+#     # TPR
+#     non0.beta = (beta != 0)
+#     non0.betahat = (betahat != 0)
+#     TPR = sum((non0.beta == non0.betahat) & non0.betahat) / sum(non0.beta)
+#     S.hat = sum(non0.betahat)
+#   } else{
+#     stop("getTPR: invalid type -- can only be ilr model or linear log contrast model")
+#   }
+#   return(c("S.hat" = S.hat, "TPR" = TPR))
+# }
 
 
 
@@ -487,7 +686,7 @@ fitSLR0 = function(
   if(nlam != length(glmnet.fit$lambda)){
     # if it's not nlam, refit to nlam lambdas
     lambda <- log(glmnet.fit$lambda)
-    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    lambda_new <- exp(seq(max(lambda), min(lambda), length.out = nlam))
     glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new, intercept = FALSE, 
                         standardize = FALSE)
   }
@@ -604,7 +803,6 @@ cvSLR0 = function(
   }
   m <- apply(errs, c(1, 2), mean)
   se <- apply(errs, c(1, 2), stats::sd) / sqrt(nfolds)
-  # ibest <- which(m == min(m), arr.ind = TRUE)[1, , drop = FALSE]
   
   return(list(
     int = fitObj$int,
@@ -612,7 +810,7 @@ cvSLR0 = function(
     lambda = fitObj$lambda,
     glmnet = fitObj$glmnet,
     btree = btree,
-    cvm = m#fit_exact$cvm
+    cvm = m
     , errs = errs
   ))
 }

@@ -198,7 +198,7 @@ fitSLRalpha <- function(
       }
       #####
       
-      # Generate lambda sequence
+      # Generate lambda sequence ### note: these lambda's arent the same??? #####################
       if(is.null(lambda)) {
         lambda <- max(abs(t(Z_use) %*% y_use))/n * 
           exp(seq(0, log(lam.min.ratio), len = nlam))
@@ -251,7 +251,7 @@ fitSLRalpha <- function(
       }
       #####
       
-      # Generate lambda sequence
+      # Generate lambda sequence ### note: these lambda's arent the same??? #####################
       if(is.null(lambda)) {
         lambda <- max(abs(t(Z_use) %*% y_use))/n * 
           exp(seq(0, log(lam.min.ratio), len = nlam))
@@ -294,7 +294,8 @@ fitSLRalpha <- function(
     theta0 = lapply(theta, function(th) y_mu - Z_mu %*% A %*% th)
   }
   list(beta0 = beta0, beta = beta, theta0 = theta0, theta = theta, 
-       lambda = lambda, alpha = alpha, A = A, Q = Q, intercept = intercept, 
+       lambda = lambda,  ### note: these lambda's arent the same??? #####################
+       alpha = alpha, A = A, Q = Q, intercept = intercept, 
        scaling = scaling, btree = btree, U = U)
 }
 

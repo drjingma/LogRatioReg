@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering 
-# Date: 12/02/2021
+# Date: 12/13/2021
 
 ################################################################################
 # libraries and settings
@@ -56,9 +56,7 @@ scaling = TRUE
 # Population parameters
 sigma_eps = 0.0 # 0, 0.01 0.1
 SigmaW = diag(p)
-# heatmap(SigmaW, Rowv = NA, Colv = NA)
-ggplot(data = reshape2::melt(SigmaW), aes(x = Var1, y = Var2, fill = value)) + 
-  geom_tile()
+fields::image.plot(SigmaW)
 
 # theta settings
 # SigmaW_hsclust = HSClust(
@@ -127,11 +125,11 @@ nodes_types = data.frame(
 plotSBP(SBP, title = "Sigma", nodes_types = nodes_types) 
 # ggsave(
 #   filename = paste0(
-#     "20211202_",
+#     "20211212_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_SigmaWtree3.pdf"),
+#     "_SigmaWtree_hclust.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )
@@ -162,15 +160,14 @@ start.time = Sys.time()
 slrMat = getSupervisedDistanceMatrix(y = Y, X = X, rho.type = rho.type)
 slr.hsclust = HSClust(
   W = getSimilarityMatrix(unnormalized_distance_matrix = slrMat), 
-  levelMax = p - 1, force_levelMax = TRUE)
+  levelMax = p - 1, force_levelMax = TRUE, method = "kmeans")
 slr.SBP = sbp.fromHSClust(
   levels_matrix = slr.hsclust$allLevels, row_names = names(beta))
 slr = cvILR(y = Y, X = X, sbp = slr.SBP, nlam = nlam, 
             nfolds = K, intercept = intercept, standardize = scaling)
 end.time = Sys.time()
 
-fields::image.plot(getSimilarityMatrix(
-  unnormalized_distance_matrix = slrMat))
+fields::image.plot(getSimilarityMatrix(unnormalized_distance_matrix = slrMat))
 
 ##############################################################################
 # first five rows and cols of slrMat
@@ -195,6 +192,16 @@ plotSBP(
   slr.SBP_sub, 
   title = "supervised log-ratios, covariates 1:5 (shi-malik hs clust)", 
   nodes_types = slr.nodestypes_sub) 
+# ggsave(
+#   filename = paste0(
+#     "20211212_",
+#     sigma.settings, "_noise", sigma_eps,
+#     "_", theta.settings,
+#     "_val", values.theta[1],
+#     "_slr5_shimalik.pdf"),
+#   plot = last_plot(),
+#   width = 8, height = 5, units = c("in")
+# )
 
 # with K means hierarchical spectral clustering
 slr.hsclust_sub2 = HSClust(
@@ -210,6 +217,16 @@ plotSBP(
   slr.SBP_sub2, 
   title = "supervised log-ratios, covariates 1:5 (hsclust kmeans)", 
   nodes_types = slr.nodestypes_sub2) 
+# ggsave(
+#   filename = paste0(
+#     "20211212_",
+#     sigma.settings, "_noise", sigma_eps,
+#     "_", theta.settings,
+#     "_val", values.theta[1],
+#     "_slr5_kmeans.pdf"),
+#   plot = last_plot(),
+#   width = 8, height = 5, units = c("in")
+# )
 
 ##############################################################################
 
@@ -267,11 +284,11 @@ slr.nodestypes = data.frame(
 plotSBP(slr.SBP, title = "supervised log-ratios", nodes_types = slr.nodestypes) 
 # ggsave(
 #   filename = paste0(
-#     "20211202_",
+#     "20211212_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_slrtree2.pdf"),
+#     "_slrtree.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )
@@ -408,28 +425,27 @@ or.roc <- apply(oracle$bet, 2, function(a)
 # apply propr method, using CV to select lambda
 start.time = Sys.time()
 pr_res <- suppressMessages(propr(X, metric = "phs"))
-ggplot(data = reshape2::melt(getSimilarityMatrix(
-  unnormalized_distance_matrix = pr_res@matrix)), 
-  aes(x = Var1, y = Var2, fill = value)) + 
-  geom_tile()
 pr.hsclust = HSClust(
-  W = getSimilarityMatrix(unnormalized_distance_matrix = pr_res@matrix), 
-  levelMax = p - 1, force_levelMax = TRUE)
+  W = getSimilarityMatrix(unnormalized_similarity_matrix = pr_res@matrix), 
+  force_levelMax = TRUE, method = "kmeans")
 pr.SBP = sbp.fromHSClust(
   levels_matrix = pr.hsclust$allLevels, row_names = names(beta))
 pr = cvILR(y = Y, X = X, sbp = pr.SBP, nlam = nlam, 
            nfolds = K, intercept = intercept, standardize = scaling)
 end.time = Sys.time()
-# plot the tree given by the oracle matrix, i.e. the one corresponding to SigmaW
-pr.nodestypes = data.frame(
-  name = c(colnames(pr.SBP), rownames(pr.SBP)),
-  type = c(rep("balance", ncol(pr.SBP)), rep("covariate", nrow(pr.SBP)))
-) 
-pr.nodestypes$type[c(rep(FALSE, ncol(pr.SBP)), non0.beta)] = "nonzero covariate"
-plotSBP(pr.SBP, title = "propr", nodes_types = pr.nodestypes) 
+# # plot the tree given by the oracle matrix, i.e. the one corresponding to SigmaW
+# pr.nodestypes = data.frame(
+#   name = c(colnames(pr.SBP), rownames(pr.SBP)),
+#   type = c(rep("balance", ncol(pr.SBP)), rep("covariate", nrow(pr.SBP)))
+# ) 
+# pr.nodestypes$type[c(rep(FALSE, ncol(pr.SBP)), non0.beta)] = "nonzero covariate"
+# plotSBP(pr.SBP, title = "propr", nodes_types = pr.nodestypes) 
 
 # timing metric
 pr.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+
+fields::image.plot(
+  getSimilarityMatrix(unnormalized_similarity_matrix = pr_res@matrix))
 
 # select tuning parameter and calculate metrics ##############################
 pr.lam.min.idx = which.min(pr$cvm)
@@ -474,11 +490,11 @@ pr.nodestypes = data.frame(
 plotSBP(pr.SBP, title = "propr", nodes_types = pr.nodestypes) 
 # ggsave(
 #   filename = paste0(
-#     "20211202_",
+#     "20211212_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],
-#     "_proprtree2.pdf"),
+#     "_proprtree.pdf"),
 #   plot = last_plot(),
 #   width = 8, height = 5, units = c("in")
 # )
@@ -498,7 +514,7 @@ ggplot(
   geom_point(size = 3, alpha = 0.5)
 # ggsave(
 #   filename = paste0(
-#     "20211202_",
+#     "20211212_",
 #     sigma.settings, "_noise", sigma_eps,
 #     "_", theta.settings,
 #     "_val", values.theta[1],

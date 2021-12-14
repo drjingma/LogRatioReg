@@ -210,69 +210,6 @@ HSClust <- function(
   )
 }
 
-# # Hierarchical spectral clustering using k means with K = 2
-# HSClust_kmeans <- function(
-#   W, # similarity matrix
-#   levelMax = NULL, # p - 1 for full binary partition
-#   force_levelMax = FALSE
-# ){
-#   if(is.null(levelMax)) levelMax = nrow(W)
-#   
-#   stop <- FALSE
-#   # level of the clustering, i.e. how many cluster partitions have already been 
-#   #   made, plus 1
-#   level <- 1
-#   # clusterToCut = set of clusters to be further partitioned into more clusters
-#   clusterToCut <- 1
-#   # the clusters
-#   cl <- matrix(1, nrow = nrow(W), ncol = levelMax)
-#   
-#   while(!stop){
-#     newCluster <- c()
-#     # get the previous cluster assignments (base = 1, ..., 1)
-#     cl[,level + 1] <- cl[, level]
-#     # iterate over clusterToCut to further partition the clusters in that set
-#     for(i in 1:length(clusterToCut)){
-#       x = clusterToCut[i]
-#       indices = which(cl[, level] == x)
-#       Wprime = W[indices, indices]
-#       if(length(indices) > 1){
-#         # spectral clustering to partition into 2 clusters!
-#         # invisible(capture.output(results <- ShiMalikSC(
-#         #   W = Wprime, flagDiagZero = FALSE, verbose = FALSE)))
-#         # groups <- results$cluster
-#         groups = spectral.clustering(W = Wprime, n_eig = 2)
-#         # Changing the cluster if necessary
-#         if(!is.null(groups) && length(unique(groups)) > 1){
-#           if(level == 1){
-#             cl[indices, level + 1] <- paste0(groups)
-#             newCluster <- c(newCluster, unique(paste0(groups)))
-#           } else{
-#             cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
-#             newCluster <- c(
-#               newCluster, unique(paste0(cl[indices, level], ".", groups)))
-#           }
-#         } else if(!is.null(groups) && length(unique(groups)) == 1 && 
-#                   length(groups) == 2 && force_levelMax){ # artificially split them
-#           groups = c(1, rep(2, length(groups) - 1))
-#           cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
-#           newCluster <- c(
-#             newCluster, unique(paste0(cl[indices, level], ".", groups)))
-#         }
-#       }
-#     }
-#     clusterToCut <- newCluster
-#     stop <- (level + 1) >= levelMax
-#     level <- level + 1
-#   }
-#   
-#   out <- list(
-#     cluster = cl[,level],
-#     allLevels = cl,
-#     nbLevels <- level
-#   )
-# }
-
 sbp.fromHSClust = function(levels_matrix, row_names = NULL){
   p = nrow(levels_matrix)
   levels_matrix_old = levels_matrix # levels_matrix = levels_matrix_old
@@ -362,64 +299,9 @@ sbp.fromHSClust = function(levels_matrix, row_names = NULL){
   return(sbp)
 }
 
-# sbp.fromHSClust_old = function(levels_matrix, row_names = NULL){
-#   p = nrow(levels_matrix)
-#   levels_matrix_old = levels_matrix
-#   levels_matrix = levels_matrix[, -1, drop = FALSE]
-#   sbp = matrix(ifelse(levels_matrix[, 1] == "1", 1, -1)) # "1" = 1, "2" = -1
-#   if(ncol(levels_matrix) >= 2){
-#     for(j in 2:ncol(levels_matrix)){
-#       col.tmp = levels_matrix[, j] # get jth new cluster assignments (string)
-#       # check if any values are repeats from the previous column
-#       #   -- then these values aren't in this col's contrast (assign value 0)
-#       sbp.tmp0 = rep(NA, nrow(levels_matrix))
-#       col.prev.tmp = levels_matrix[, j - 1]
-#       sbp.tmp0[col.prev.tmp == col.tmp] = 0
-#       # separate strings by period
-#       levels = strsplit(col.tmp, split = "\\.")
-#       sbp.tmp = sbp.tmp0
-#       # check each element in levels (there are p of them) to assign its
-#       #   corresponding contrast value to 1 or -1
-#       for(i in 1:p){
-#         levels.tmp = levels[[i]]
-#         # check if previous levels have changed
-#         if(i > 1){
-#           levels.prev.tmp = levels[[i - 1]]
-#           if((length(levels.tmp[-length(levels.tmp)]) !=
-#               length(levels.prev.tmp[-length(levels.prev.tmp)])) ||
-#              (!all(levels.tmp[-length(levels.tmp)] ==
-#                    levels.prev.tmp[-length(levels.prev.tmp)]))){
-#             # if this level is different from the last, then add sbp.tmp as col
-#             if(!all(na.omit(sbp.tmp) == 0)){
-#               sbp = cbind(sbp, sbp.tmp)
-#             }
-#             sbp.tmp = sbp.tmp0
-#           }
-#         }
-#         # assign 1, -1 for first level or an unchanged level
-#         if(is.na(sbp.tmp0[i])){
-#           sbp.tmp[i] = ifelse(levels.tmp[j] == "1", 1, -1)
-#         }
-#         # if it's the last level, add the column to the list if the contrast is
-#         #   not all 0's (i.e. nonempty)
-#         if(i == nrow(levels_matrix)){
-#           if(!all(na.omit(sbp.tmp) == 0)){
-#             sbp = cbind(sbp, sbp.tmp)
-#           }
-#         }
-#       }
-#     }
-#   }
-# 
-#   sbp[is.na(sbp)] = 0
-#   if(!is.null(row_names)){
-#     rownames(sbp) = row_names
-#   } else{
-#     rownames(sbp) = paste("s", 1:nrow(sbp), sep = "")
-#   }
-#   colnames(sbp) = paste("z", 1:ncol(sbp), sep = "")
-#   return(sbp)
-# }
+
+
+
 
 
 

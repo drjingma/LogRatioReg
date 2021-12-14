@@ -133,7 +133,7 @@ graph.laplacian <- function(
 HSClust <- function(
   W, # similarity matrix
   levelMax = NULL, # p for full binary partition
-  force_levelMax = FALSE, 
+  force_levelMax = TRUE, 
   method = "ShiMalik" # ShiMalik or kmeans
 ){
   if(is.null(levelMax)) levelMax = nrow(W)

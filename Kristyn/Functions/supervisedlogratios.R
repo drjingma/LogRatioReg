@@ -343,10 +343,9 @@ cvILR = function(
 fitILReta = function(
   y, X, 
   W, # normalized similarity matrix (all values between 0 & 1)
-  ilr_method = "oracle", # "oracle", "slr", "propr"
+  sbp,
   hsc_method = "shimalik", # "shimalik", "kmeans"
   force_levelMax = FALSE, 
-  btree = NULL, sbp = NULL, U = NULL, 
   lambda = NULL, nlam = 20, 
   eta = NULL, neta = 20,
   intercept = TRUE, standardize = TRUE
@@ -364,10 +363,11 @@ fitILReta = function(
   if(nrow(W) != p | ncol(W) != p) stop("fitILReta: W isn't pxp matrix")
   
   # get lambda (if not provided)
-  if(is.null(lambda)){
-    Xb = computeBalances(X, btree, sbp, U)
-    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                        intercept = intercept, standardize = standardize)
+  if(is.null(lambda) | is.null(nlam)){
+    glmnet.fit = glmnet(
+      x = computeBalances(X, sbp = sbp), y = y, 
+      lambda = lambda, nlambda = nlam,
+      intercept = intercept, standardize = standardize)
     lambda = glmnet.fit$lambda
     # check lambda length -- if it doesn't have length nlam, rerun
     if(nlam != length(lambda)){
@@ -377,55 +377,60 @@ fitILReta = function(
   }
   
   # get eta (if not provided)
-  if(null(eta)){
-    neta = 5
-    eta = seq(0, 1, length.out = neta + 1)[1:neta]
+  if(is.null(eta) | is.null(neta)){
+    if(is.null(neta)) neta = 5
+    eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
   } else{
-    neta = length(eta)
+    if(neta != length(eta)) stop("neta != length(eta)")
   }
   
   # thresholding with eta: Iterate solution paths along eta
-  theta0 <- theta <- list()
+  meets_threshold <- sbp_thresh <- theta0 <- theta <- list()
   for(i in 1:neta){
     # thresholding
-    meets_threshold = apply(W, 1, function(row) all(row < eta[i]))
-    W_thresh = W[meets_threshold, meets_threshold, drop = FALSE]
-    y_thresh = y[meets_threshold]
-    X_thresh = X[, meets_threshold, drop = FALSE]
-    # model fitting
-    hsclust_thresh = HSClust(
-      W = W_thresh, force_levelMax = force_levelMax, method = hsc_method
-    )
-    SBP_thresh = sbp.fromHSClust(
-      levels_matrix = hsclust_thresh$allLevels)
-    modelfit = cvILR(
-      y = Y, X = X, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
-      nfolds = K, intercept = intercept, standardize = scaling)
-    # save the model
-    theta[[i]] = modelfit$bet
-    theta0[[i]] = modelfit$int
+    meets_threshold_i = apply(W, 1, function(row) all(row < eta[i]))
+    if(sum(meets_threshold_i) <= 2){ # cannot cluster
+      theta[[i]] = rep(NA, sum(meets_threshold_i))
+      theta0[[i]] = NA
+    } else{
+      W_thresh = W[meets_threshold_i, meets_threshold_i, drop = FALSE]
+      X_thresh = X[, meets_threshold_i, drop = FALSE]
+      # model fitting
+      hsclust_thresh = HSClust(
+        W = W_thresh, force_levelMax = force_levelMax, method = hsc_method
+      )
+      SBP_thresh = sbp.fromHSClust(
+        levels_matrix = hsclust_thresh$allLevels)
+      modelfit = cvILR(
+        y = y, X = X_thresh, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
+        nfolds = K, intercept = intercept, standardize = scaling)
+      # save the model
+      meets_threshold[[i]] = meets_threshold_i
+      sbp_thresh[[i]] = SBP_thresh
+      theta[[i]] = modelfit$bet
+      theta0[[i]] = modelfit$int
+    }
   }
   
   return(list(
     theta0 = theta0,
     theta = theta,
+    meets_threshold = meets_threshold,
+    sbp_thresh = sbp_thresh,
     lambda = lambda,
     eta = eta, 
     W = W,
-    btree = btree, 
-    sbp = sbp, 
-    U = U
+    sbp = sbp
   ))
 }
 cvILReta <- function(
-  y = NULL, X, 
+  y, X,
   W, # normalized similarity matrix (all values between 0 & 1)
-  ilr_method = "oracle", # "oracle", "slr", "propr"
+  sbp,
   hsc_method = "shimalik", # "shimalik", "kmeans"
-  force_levelMax = FALSE, 
-  btree = NULL, sbp = NULL, U = NULL, 
+  force_levelMax = TRUE, 
   lambda = NULL, nlam = 20, 
-  eta = NULL, neta = 20,
+  eta = NULL, neta = 5,
   nfolds = 10, foldid = NULL, 
   intercept = TRUE, standardize = TRUE
   # y, X, A = NULL, U = NULL, linkage = "complete", rho.type = "squared",
@@ -438,19 +443,20 @@ cvILReta <- function(
   p = dim(X)[2]
   
   # checks
-  if(length(y) != n) stop("fitILReta : dimensions of y and X don't match")
+  if(length(y) != n) stop("cvILReta : dimensions of y and X don't match")
   if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
   # check if lambda is given, assign nlam accordingly
   if(!is.null(lambda)){ # lambda is given
     nlam = length(lambda)
   }
-  if(nrow(W) != p | ncol(W) != p) stop("fitILReta: W isn't pxp matrix")
+  if(nrow(W) != p | ncol(W) != p) stop("cvILReta: W isn't pxp matrix")
   
   # get lambda (if not provided)
-  if(is.null(lambda)){
-    Xb = computeBalances(X, btree, sbp, U)
-    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                        intercept = intercept, standardize = standardize)
+  if(is.null(lambda) | is.null(nlam)){
+    glmnet.fit = glmnet(
+      x = computeBalances(X, sbp = sbp), y = y, 
+      lambda = lambda, nlambda = nlam,
+      intercept = intercept, standardize = standardize)
     lambda = glmnet.fit$lambda
     # check lambda length -- if it doesn't have length nlam, rerun
     if(nlam != length(lambda)){
@@ -460,27 +466,26 @@ cvILReta <- function(
   }
   
   # get eta (if not provided)
-  if(null(eta)){
-    neta = 5
-    eta = seq(0, 1, length.out = neta + 1)[1:neta]
+  if(is.null(eta) | is.null(neta)){
+    if(is.null(neta)) neta = 5
+    eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
   } else{
-    neta = length(eta)
+    if(neta != length(eta)) stop("neta != length(eta)")
   }
   
   # fit the models
   fitObj = fitILReta(
-    y = y, X = X, W = W, ilr_method = ilr_method, hsc_method = hsc_method,
-    force_levelMax = force_levelMax, btree = btree, sbp = sbp, U = U, 
+    y = y, X = X, W = W, hsc_method = hsc_method,
+    force_levelMax = force_levelMax, sbp = sbp, 
     lambda = lambda, nlam = nlam, eta = eta, neta = neta,
     intercept = intercept, standardize = standardize)
-  Xb = computeBalances(X, btree = btree, sbp = sbp, U = U)
   
   # nlam <- length(fitObj$lambda)
   # nalpha <- length(fitObj$alpha)
-  errs <- array(NA, dim=c(nlam, nalpha, nfolds))
+  errs <- array(NA, dim=c(nlam, neta, nfolds))
   
   # define error function
-  errfun <- function(est, truth) colMeans((est - truth)^2)
+  errfun <- function(est, truth) colMeans((est - truth)^2, na.rm = TRUE)
   
   # make folds, if necessary
   if(is.null(foldid)){
@@ -490,7 +495,7 @@ cvILReta <- function(
     endpoints <- c(0, cumsum(sizes))
     perm <- sample(n)
     folds <- list()
-    for (i in seq(nfolds)) folds[[i]] <- perm[
+    for (i in 1:nfolds) folds[[i]] <- perm[
       seq(endpoints[i] + 1, endpoints[i + 1])]
   } else{
     folds = list()
@@ -498,40 +503,53 @@ cvILReta <- function(
   }
   
   # Fit based on folds and compute error metric
-  for (i in seq(nfolds)) {
+  for (i in 1:nfolds) {
     # fit model on all but the ith fold
     fit_cv <- fitILReta(
-      y = y[-folds[[i]]], X = X[-folds[[i]], drop = FALSE], 
-      W = W[-folds[[i]], -folds[[i]], drop = FALSE], 
-      ilr_method = ilr_method, hsc_method = hsc_method,
-      force_levelMax = force_levelMax, btree = btree, sbp = sbp, U = U, 
+      y = y[-folds[[i]]], X = X[-folds[[i]], , drop = FALSE], W = W, sbp = sbp,
+      hsc_method = hsc_method,
+      force_levelMax = force_levelMax,
       lambda = lambda, nlam = nlam, eta = eta, neta = neta,
       intercept = intercept, standardize = standardize)
-    pred_te <- lapply(seq(nalpha), function(k) {
-      if (intercept) {
-        Xb[folds[[i]], ] %*% fit_cv$theta[[k]] +
-          rep(fit_cv$theta0[[k]], each = length(folds[[i]]))
-      } else {
-        # X[folds[[i]], ] %*% fit_cv$beta[[k]]
-        Xb[folds[[i]], ] %*% fit_cv$theta[[k]]
+    pred_te <- lapply(1:neta, function(k) {
+      if(is.null(fit_cv$meets_threshold[[k]])){
+        matrix(NA, nrow = length(folds[[i]]), ncol = n)
+      } else{
+        if (intercept) {
+          # Xb[folds[[i]], fit_cv$meets_threshold[[k]], drop = FALSE] %*% 
+          computeBalances(
+            X[folds[[i]], fit_cv$meets_threshold[[k]], drop = FALSE], 
+            sbp = fit_cv$sbp_thresh[[k]]) %*%
+            fit_cv$theta[[k]] +
+            rep(fit_cv$theta0[[k]], each = length(folds[[i]]))
+        } else {
+          # X[folds[[i]], ] %*% fit_cv$beta[[k]]
+          # Xb[folds[[i]], fit_cv$meets_threshold[[k]]]
+          computeBalances(
+            X[folds[[i]], fit_cv$meets_threshold[[k]], drop = FALSE], 
+            sbp = fit_cv$sbp_thresh[[k]]) %*% 
+            fit_cv$theta[[k]]
+        }
       }
     })
-    for (k in seq(nalpha)) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
+    for (k in 1:neta) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
     cat("##########################\n")
     cat(sprintf("Finished model fits for fold[%s].\n", i))
     cat("##########################\n")
   }
-  m <- apply(errs, c(1, 2), mean)
-  se <- apply(errs, c(1, 2), stats::sd) / sqrt(nfolds)
-  ibest <- which(m == min(m), arr.ind = TRUE)[1, , drop = FALSE]
+  m <- apply(errs, c(1, 2), function(x) mean(x, na.rm = TRUE))
+  # se <- apply(errs, c(1, 2), function(x) stats::sd(x, na.rm = TRUE)) / sqrt(nfolds)
+  ibest <- which(m == min(m, na.rm = TRUE), arr.ind = TRUE)[1, , drop = FALSE]
   
   return(list(
-    that0 = fitObj$theta0,
+    theta0 = fitObj$theta0,
     theta = fitObj$theta,
+    meets_threshold = fitObj$meets_threshold,
+    sbp_thresh = fitObj$sbp_thresh,
     lambda = fitObj$lambda,
+    eta = eta, 
     fits = fitObj,
-    btree = btree,
-    U = U,
+    sbp = sbp,
     cvm = m,
     min.idx = ibest
   ))

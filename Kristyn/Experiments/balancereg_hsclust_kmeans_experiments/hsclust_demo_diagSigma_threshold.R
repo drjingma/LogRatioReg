@@ -67,7 +67,7 @@ fields::image.plot(SigmaW)
 SigmaW_hclust = hclust(as.dist(1 - SigmaW), method = linkage)
 plot(SigmaW_hclust)
 SBP = sbp.fromHclust(SigmaW_hclust)
-U = getU(sbp = SBP)
+# U = getU(sbp = SBP)
 
 # a preliminary plot of the tree given by covariance matrix SigmaW
 nodes_types = data.frame(
@@ -102,7 +102,7 @@ theta[indices.theta] = values.theta
 theta = as.matrix(theta)
 
 # about beta
-beta = as.vector(getBeta(theta, U = U))
+beta = as.vector(getBeta(theta, sbp = SBP))
 names(beta) <- paste0('s', 1:p)
 non0.beta = (beta != 0)
 is0.beta = abs(beta) <= 10e-8
@@ -138,7 +138,7 @@ plotSBP(SBP, title = "Sigma", nodes_types = nodes_types)
 # simulate data
 set.seed(123)
 fake.data = simulateBalanceReg(
-  mu = muW, Sigma = SigmaW, U = U, n = 2 * n, theta = theta, 
+  mu = muW, Sigma = SigmaW, U = getU(sbp = SBP), n = 2 * n, theta = theta, 
   sigma.noise = sigma_eps)
 colnames(fake.data$X) = names(beta)
 
@@ -185,6 +185,29 @@ slr = cvILR(y = Y, X = X, sbp = slr.SBP, nlam = nlam,
 end.time = Sys.time()
 
 fields::image.plot(slrMat)
+slr2 = cvILReta(
+  y = Y, X = X, 
+  W = slrMat, # normalized similarity matrix (all values between 0 & 1)
+  hsc_method = "shimalik", # "shimalik", "kmeans"
+  force_levelMax = TRUE, 
+  sbp = slr.SBP,
+  lambda = NULL, nlam = nlam, 
+  eta = NULL, neta = 100,
+  nfolds = K, foldid = NULL, 
+  intercept = intercept, standardize = scaling
+)
+
+slr2$eta
+slr2$min.idx
+slr2$theta0[[slr2$min.idx[2]]][slr2$min.idx[1]]
+slr2$theta[[slr2$min.idx[2]]][,slr2$min.idx[1]]
+sum(slr2$meets_threshold[[slr2$min.idx[2]]])
+plotSBP(slr2$sbp_thresh[[slr2$min.idx[2]]])
+
+idx = 26
+View(slrMat)
+sum(slr2$meets_threshold[[idx]])
+plotSBP(slr2$sbp_thresh[[idx]])
 
 ##############################################################################
 # first five rows and cols of slrMat

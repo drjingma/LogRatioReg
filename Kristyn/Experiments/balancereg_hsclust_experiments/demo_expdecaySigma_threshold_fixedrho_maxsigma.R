@@ -24,6 +24,7 @@ registerDoRNG(rng.seed)
 # numSims = 100
 
 # > max(abs(beta)) / 2 # 4.472136
+rho = 0.2
 sigma_eps_seq = seq(0, 4.5, by = 0.1)
 
 ################################################################################
@@ -34,6 +35,7 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:length(sigma_eps_seq)
 ) %dorng% {
+  rho = 0.2
   sigma_eps_seq = seq(0, 4.5, by = 0.1)
   
   library(mvtnorm)
@@ -54,7 +56,7 @@ res = foreach(
   library(igraph) # transform dataframe to graph object: graph_from_data_frame()
   library(tidygraph)
   
-  # diagonal Sigma #############################################################
+  # expdecay Sigma #############################################################
   
   # Settings to toggle with
   sigma.settings = "diagSigma"
@@ -74,7 +76,7 @@ res = foreach(
   
   # Population parameters
   sigma_eps =sigma_eps_seq[b]
-  SigmaW = diag(p)
+  SigmaW = rgExpDecay(p, rho)$Sigma
   # fields::image.plot(SigmaW)
   
   # theta settings
@@ -190,7 +192,8 @@ saveRDS(
   res, 
   file = paste0(
     output_dir, 
-    "/diagSigma_threshold_maxsigma",
+    "/diagSigma_threshold_fixedrho_maxsigma",
+    "_rho", rho, 
     "_", theta.settings,
     "_", n, "x", p, 
     "_nlam", nlam, 

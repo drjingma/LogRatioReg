@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 12/13/2021
+# Date: 12/19/2021
 
 ################################################################################
 # libraries and settings
@@ -24,7 +24,7 @@ registerDoRNG(rng.seed)
 # numSims = 100
 
 # > max(abs(beta)) / 2 # 4.472136
-sigma_eps_seq = seq(0, 4.5, by = 0.1)
+rho_seq = seq(0, 1, by = 0.1)
 
 ################################################################################
 # Simulations #
@@ -32,9 +32,9 @@ sigma_eps_seq = seq(0, 4.5, by = 0.1)
 
 registerDoRNG(rng.seed)
 res = foreach(
-  b = 1:length(sigma_eps_seq)
+  b = 1:length(rho_seq)
 ) %dorng% {
-  sigma_eps_seq = seq(0, 4.5, by = 0.1)
+  rho_seq = seq(0, 1, by = 0.1)
   
   library(mvtnorm)
   
@@ -54,10 +54,10 @@ res = foreach(
   library(igraph) # transform dataframe to graph object: graph_from_data_frame()
   library(tidygraph)
   
-  # diagonal Sigma #############################################################
+  # expdecay Sigma #############################################################
   
   # Settings to toggle with
-  sigma.settings = "diagSigma"
+  sigma.settings = "expdecaySigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   theta.settings = "pminus4"
   values.theta = 10
@@ -69,12 +69,12 @@ res = foreach(
   K = 10
   n = 100
   p = 30
-  # rho = 0.2 # 0.2, 0.5
+  rho = rho_seq[b] 
   scaling = TRUE
   
   # Population parameters
-  sigma_eps =sigma_eps_seq[b]
-  SigmaW = diag(p)
+  sigma_eps = 0 ###################
+  SigmaW = rgExpDecay(p, rho)$Sigma
   # fields::image.plot(SigmaW)
   
   # theta settings
@@ -157,15 +157,12 @@ res = foreach(
   
   # apply supervised log-ratios, using CV to select threshold and also lambda
   slrMat = getSupervisedMatrix(y = Y, X = X, rho.type = rho.type)
-  print("checkpoint 1: SLR matrix ########################################################")
   # fields::image.plot(slrMat)
   slr.hsclust = HSClust(
     W = slrMat, 
     force_levelMax = TRUE, method = "kmeans")
-  print("checkpoint 2: SLR hsclust ########################################################")
   slr.SBP = sbp.fromHSClust(
     levels_matrix = slr.hsclust$allLevels, row_names = names(beta))
-  print("checkpoint 3: SLR sbp matrix ########################################################")
   slr = cvILReta(
     y = Y, X = X, 
     W = slrMat, # normalized similarity matrix (all values between 0 & 1)
@@ -178,11 +175,10 @@ res = foreach(
     intercept = intercept, 
     standardize = scaling
   )
-  print("checkpoint 4: SLR threshold ########################################################")
   
   plt = plotSBP(
     slr$sbp_thresh[[slr$min.idx[2]]], 
-    title = paste0("sigma_eps = ", sigma_eps))
+    title = paste0("rho = ", rho, ", sigma_eps = ", sigma_eps))
   return(plt)
 }
 
@@ -190,7 +186,8 @@ saveRDS(
   res, 
   file = paste0(
     output_dir, 
-    "/diagSigma_threshold_maxsigma",
+    "/expdecaySigma_threshold_maxrho",
+    "_sigmaeps", sigma_eps,
     "_", theta.settings,
     "_", n, "x", p, 
     "_nlam", nlam, 

@@ -35,7 +35,9 @@ res = foreach(
   b = 1:length(rho_seq)
 ) %dorng% {
   rho_seq = seq(0, 1, by = 0.1) ############# adjust according to settings above
-  
+ 
+  print(b)
+ 
   library(mvtnorm)
   
   library(Matrix)

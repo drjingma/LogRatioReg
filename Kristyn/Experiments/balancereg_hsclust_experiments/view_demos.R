@@ -30,11 +30,19 @@ diagSigma_sigmaeps = readRDS(paste0(
   "/diagSigma_threshold_maxsigma",
   ".rds"
 ))
-diagSigma_sigmaeps
+length(diagSigma_sigmaeps)
+idx = 10
+diagSigma_sigmaeps[[idx]]$true_tree
+diagSigma_sigmaeps[[idx]]$slr_tree
 
 expdecaySigma_rho = readRDS(paste0(
   output_dir, 
   "/expdecaySigma_threshold_maxrho",
   ".rds"
 ))
+
+length(expdecaySigma_rho)
+idx = 10
+expdecaySigma_rho[[idx]]$true_tree
+expdecaySigma_rho[[idx]]$slr_tree
 

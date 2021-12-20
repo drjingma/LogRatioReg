@@ -130,15 +130,16 @@ res = foreach(
   
   # plot the tree given by covariance matrix SigmaW, indicating 
   #   significant covariates and balances (theta's)
-  # leaf_types = rep("insignif cov", nrow(SBP))
-  # leaf_types[non0.beta] = "signif cov"
-  # balance_types = rep("insignif bal", ncol(SBP))
-  # balance_types[theta[, 1] != 0] = "signif bal"
-  # nodes_types = data.frame(
-  #   name = c(colnames(SBP), rownames(SBP)),
-  #   type = c(balance_types, leaf_types)
-  # )
-  # plotSBP(SBP, title = "Sigma", nodes_types = nodes_types) 
+  leaf_types = rep("insignif cov", nrow(SBP))
+  leaf_types[non0.beta] = "signif cov"
+  balance_types = rep("insignif bal", ncol(SBP))
+  balance_types[theta[, 1] != 0] = "signif bal"
+  nodes_types = data.frame(
+    name = c(colnames(SBP), rownames(SBP)),
+    type = c(balance_types, leaf_types)
+  )
+  plt1 = plotSBP(
+    SBP, title = "Sigma", nodes_types = nodes_types) # ...
   
   ##############################################################################
   # generate data
@@ -178,10 +179,28 @@ res = foreach(
     standardize = scaling
   )
   
-  plt = plotSBP(
-    slr$sbp_thresh[[slr$min.idx[2]]], 
-    title = paste0("rho = ", rho, ", sigma_eps = ", sigma_eps))
-  return(plt)
+  slr_sbp = slr$sbp_thresh[[slr$min.idx[2]]]
+  # plt2 = plotSBP(
+  #   slr_sbp, 
+  #   title = paste0("rho = ", rho, ", sigma_eps = ", sigma_eps))
+  slr_thetahat = slr$theta[[slr$min.idx[2]]][, slr$min.idx[[1]]]
+  slr_betahat = getBeta(theta = slr_thetahat, sbp = slr_sbp)[, 1]
+  slr_leaf_types = rep("not-selected cov", nrow(slr_sbp))
+  slr_leaf_types[slr_betahat != 0] = "selected cov"
+  slr_balance_types = rep("not-selected bal", ncol(slr_sbp))
+  slr_balance_types[slr_thetahat != 0] = "selected bal"
+  slr_nodes_types = data.frame(
+    name = c(colnames(slr_sbp), rownames(slr_sbp)),
+    type = c(slr_balance_types, slr_leaf_types)
+  )
+  plt2 = plotSBP(
+    slr_sbp, title = "Sigma", nodes_types = slr_nodes_types) # ...
+  
+  plt1and2 = list(
+    true_tree = plt1, 
+    slr_tree = plt2
+  )
+  return(plt1and2)
 }
 
 saveRDS(

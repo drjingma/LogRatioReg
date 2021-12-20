@@ -35,8 +35,8 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:length(sigma_eps_seq)
 ) %dorng% {
-  rho = 0.2
-  sigma_eps_seq = seq(0, 4.5, by = 0.1)
+  rho = 0.2 ################################# adjust according to settings above
+  sigma_eps_seq = seq(0, 4.5, by = 0.1) ##### adjust according to settings above
   
   library(mvtnorm)
   
@@ -59,7 +59,7 @@ res = foreach(
   # expdecay Sigma #############################################################
   
   # Settings to toggle with
-  sigma.settings = "diagSigma"
+  sigma.settings = "expdecaySigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
   theta.settings = "pminus4"
   values.theta = 10
@@ -193,11 +193,5 @@ saveRDS(
   file = paste0(
     output_dir, 
     "/diagSigma_threshold_fixedrho_maxsigma",
-    "_rho", rho, 
-    "_", theta.settings,
-    "_", n, "x", p, 
-    "_nlam", nlam, 
-    "_neta", neta,
-    "_K", K,
     ".rds"
   ))

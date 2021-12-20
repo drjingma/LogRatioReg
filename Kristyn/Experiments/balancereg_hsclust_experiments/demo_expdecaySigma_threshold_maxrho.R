@@ -34,7 +34,7 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:length(rho_seq)
 ) %dorng% {
-  rho_seq = seq(0, 1, by = 0.1)
+  rho_seq = seq(0, 1, by = 0.1) ############# adjust according to settings above
   
   library(mvtnorm)
   
@@ -187,11 +187,5 @@ saveRDS(
   file = paste0(
     output_dir, 
     "/expdecaySigma_threshold_maxrho",
-    "_sigmaeps", sigma_eps,
-    "_", theta.settings,
-    "_", n, "x", p, 
-    "_nlam", nlam, 
-    "_neta", neta,
-    "_K", K,
     ".rds"
   ))

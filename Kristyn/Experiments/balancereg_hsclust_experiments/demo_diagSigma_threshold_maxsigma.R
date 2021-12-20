@@ -34,7 +34,7 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:length(sigma_eps_seq)
 ) %dorng% {
-  sigma_eps_seq = seq(0, 4.5, by = 0.1)
+  sigma_eps_seq = seq(0, 4.5, by = 0.1) ##### adjust according to settings above
   
   library(mvtnorm)
   
@@ -191,10 +191,5 @@ saveRDS(
   file = paste0(
     output_dir, 
     "/diagSigma_threshold_maxsigma",
-    "_", theta.settings,
-    "_", n, "x", p, 
-    "_nlam", nlam, 
-    "_neta", neta,
-    "_K", K,
     ".rds"
   ))

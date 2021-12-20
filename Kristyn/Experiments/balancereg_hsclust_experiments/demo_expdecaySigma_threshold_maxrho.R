@@ -25,6 +25,7 @@ registerDoRNG(rng.seed)
 
 # > max(abs(beta)) / 2 # 4.472136
 rho_seq = seq(0, 1, by = 0.1)
+rho_seq = rho_seq[-length(rho_seq)]
 
 ################################################################################
 # Simulations #
@@ -35,9 +36,8 @@ res = foreach(
   b = 1:length(rho_seq)
 ) %dorng% {
   rho_seq = seq(0, 1, by = 0.1) ############# adjust according to settings above
- 
-  print(b)
- 
+  rho_seq = rho_seq[-length(rho_seq)]
+  
   library(mvtnorm)
   
   library(Matrix)

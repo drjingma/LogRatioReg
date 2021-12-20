@@ -348,6 +348,7 @@ fitILReta = function(
   force_levelMax = FALSE, 
   lambda = NULL, nlam = 20, 
   eta = NULL, neta = 20,
+  nfolds = 5,
   intercept = TRUE, standardize = TRUE
 ){
   n = dim(X)[1]
@@ -361,6 +362,7 @@ fitILReta = function(
     nlam = length(lambda)
   }
   if(nrow(W) != p | ncol(W) != p) stop("fitILReta: W isn't pxp matrix")
+  if(is.null(rownames(sbp))) warning("sbp matrix doesn't have named rows")
   
   # get lambda (if not provided)
   if(is.null(lambda) | is.null(nlam)){
@@ -404,10 +406,11 @@ fitILReta = function(
         W = W_thresh, force_levelMax = force_levelMax, method = hsc_method
       )
       SBP_thresh = sbp.fromHSClust(
-        levels_matrix = hsclust_thresh$allLevels)
+        levels_matrix = hsclust_thresh$allLevels, 
+        row_names = rownames(sbp)[meets_threshold_i])
       modelfit = cvILR(
         y = y, X = X_thresh, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
-        nfolds = K, intercept = intercept, standardize = scaling)
+        nfolds = nfolds, intercept = intercept, standardize = standardize)
       # save the model
       theta[[i]] = modelfit$bet
       theta0[[i]] = modelfit$int
@@ -452,6 +455,7 @@ cvILReta <- function(
     nlam = length(lambda)
   }
   if(nrow(W) != p | ncol(W) != p) stop("cvILReta: W isn't pxp matrix")
+  if(is.null(rownames(sbp))) warning("sbp matrix doesn't have named rows")
   
   # get lambda (if not provided)
   if(is.null(lambda) | is.null(nlam)){
@@ -470,7 +474,7 @@ cvILReta <- function(
   # get eta (if not provided)
   if(is.null(eta) | is.null(neta)){
     if(is.null(neta)) neta = 5
-    eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
+    eta = seq(0, max(W), length.out = neta + 1)[2:(neta + 1)]
   } else{
     if(neta != length(eta)) stop("neta != length(eta)")
   }
@@ -479,7 +483,7 @@ cvILReta <- function(
   fitObj = fitILReta(
     y = y, X = X, W = W, hsc_method = hsc_method,
     force_levelMax = force_levelMax, sbp = sbp, 
-    lambda = lambda, nlam = nlam, eta = eta, neta = neta,
+    lambda = lambda, nlam = nlam, eta = eta, neta = neta, nfolds = nfolds,
     intercept = intercept, standardize = standardize)
   
   # nlam <- length(fitObj$lambda)
@@ -511,11 +515,11 @@ cvILReta <- function(
       y = y[-folds[[i]]], X = X[-folds[[i]], , drop = FALSE], W = W, sbp = sbp,
       hsc_method = hsc_method,
       force_levelMax = force_levelMax,
-      lambda = lambda, nlam = nlam, eta = eta, neta = neta,
+      lambda = lambda, nlam = nlam, eta = eta, neta = neta, nfolds = nfolds,
       intercept = intercept, standardize = standardize)
     pred_te <- lapply(1:neta, function(k) {
       if(all(is.na(fit_cv$sbp_thresh[[k]]))){
-        matrix(NA, nrow = length(folds[[i]]), ncol = n)
+        matrix(NA, nrow = length(folds[[i]]), ncol = neta)
       } else{
         if (intercept) {
           # Xb[folds[[i]], fit_cv$meets_threshold[[k]], drop = FALSE] %*% 
@@ -660,178 +664,178 @@ getBeta = function(
 
 
 
-# Fit supervised log-ratios model to compositional data X and response y
-fitSLR0 = function(
-  y, X, Xb = NULL, btree = NULL, sbp = NULL, U = NULL, linkage = "complete", 
-  lambda = NULL, nlam = 20, intercept = TRUE, scaling = TRUE, rho.type = "squared"
-){
-  # browser()
-  
-  n = dim(X)[1]
-  p = dim(X)[2]
-  
-  # checks
-  if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
-  # check if lambda is given, assign nlam accordingly
-  if(!is.null(lambda)){ # lambda is given
-    nlam = length(lambda)
-  }
-  
-  # compute balances
-  if(is.null(btree)) btree = getSupervisedTree(y, X, linkage, rho.type)
-  if(is.null(U)) U = getU(btree = btree, sbp = sbp)
-  if(is.null(Xb)) Xb = computeBalances(X, btree = btree, sbp = sbp, U = U)
-  
-  # Centering and scaling
-  old_Xb = Xb
-  Xb_mu = colMeans(Xb)
-  old_y = y
-  y_mu = mean(y)
-  # Center Xb and y if intercept is to be included
-  if (intercept) {
-    Xb <- Xb - matrix(rep(1, times = n), ncol = 1) %*%
-      matrix(Xb_mu, nrow = 1)
-    y <- y - y_mu
-  }
-  # scale Xb if scaling = TRUE
-  # note: only scale if also centering
-  if(scaling) {
-    Xb_sd = apply(Xb, 2, function(x) sqrt(sum(x^2) / n))
-    Xb = apply(Xb, 2, function(x) x / sqrt(sum(x^2) / n))
-  }
-  # run glmnet
-  glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-                      intercept = FALSE, standardize = FALSE)
-  # check lambda length
-  if(nlam != length(glmnet.fit$lambda)){
-    # if it's not nlam, refit to nlam lambdas
-    lambda <- log(glmnet.fit$lambda)
-    lambda_new <- exp(seq(max(lambda), min(lambda), length.out = nlam))
-    glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new, intercept = FALSE, 
-                        standardize = FALSE)
-  }
-  beta = glmnet.fit$beta
-  # back-scale
-  if(scaling){ # scale back
-    beta <- diag(1 / Xb_sd) %*% beta
-  }
-  # Take care of intercept
-  if (intercept) {
-    beta0 <- y_mu - Xb_mu %*% beta
-  }
-  return(list(
-    int = beta0, 
-    bet = beta, 
-    lambda = glmnet.fit$lambda,
-    glmnet = glmnet.fit, 
-    btree = btree
-  ))
-}
+# # Fit supervised log-ratios model to compositional data X and response y
+# fitSLR0 = function(
+#   y, X, Xb = NULL, btree = NULL, sbp = NULL, U = NULL, linkage = "complete", 
+#   lambda = NULL, nlam = 20, intercept = TRUE, scaling = TRUE, rho.type = "squared"
+# ){
+#   # browser()
+#   
+#   n = dim(X)[1]
+#   p = dim(X)[2]
+#   
+#   # checks
+#   if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
+#   if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+#   # check if lambda is given, assign nlam accordingly
+#   if(!is.null(lambda)){ # lambda is given
+#     nlam = length(lambda)
+#   }
+#   
+#   # compute balances
+#   if(is.null(btree)) btree = getSupervisedTree(y, X, linkage, rho.type)
+#   if(is.null(U)) U = getU(btree = btree, sbp = sbp)
+#   if(is.null(Xb)) Xb = computeBalances(X, btree = btree, sbp = sbp, U = U)
+#   
+#   # Centering and scaling
+#   old_Xb = Xb
+#   Xb_mu = colMeans(Xb)
+#   old_y = y
+#   y_mu = mean(y)
+#   # Center Xb and y if intercept is to be included
+#   if (intercept) {
+#     Xb <- Xb - matrix(rep(1, times = n), ncol = 1) %*%
+#       matrix(Xb_mu, nrow = 1)
+#     y <- y - y_mu
+#   }
+#   # scale Xb if scaling = TRUE
+#   # note: only scale if also centering
+#   if(scaling) {
+#     Xb_sd = apply(Xb, 2, function(x) sqrt(sum(x^2) / n))
+#     Xb = apply(Xb, 2, function(x) x / sqrt(sum(x^2) / n))
+#   }
+#   # run glmnet
+#   glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+#                       intercept = FALSE, standardize = FALSE)
+#   # check lambda length
+#   if(nlam != length(glmnet.fit$lambda)){
+#     # if it's not nlam, refit to nlam lambdas
+#     lambda <- log(glmnet.fit$lambda)
+#     lambda_new <- exp(seq(max(lambda), min(lambda), length.out = nlam))
+#     glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda_new, intercept = FALSE, 
+#                         standardize = FALSE)
+#   }
+#   beta = glmnet.fit$beta
+#   # back-scale
+#   if(scaling){ # scale back
+#     beta <- diag(1 / Xb_sd) %*% beta
+#   }
+#   # Take care of intercept
+#   if (intercept) {
+#     beta0 <- y_mu - Xb_mu %*% beta
+#   }
+#   return(list(
+#     int = beta0, 
+#     bet = beta, 
+#     lambda = glmnet.fit$lambda,
+#     glmnet = glmnet.fit, 
+#     btree = btree
+#   ))
+# }
 
-cvSLR0 = function(
-  y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
-  foldid = NULL, intercept = TRUE, scaling = TRUE, rho.type = "squared"
-){
-  # browser()
-  
-  n = dim(X)[1]
-  p = dim(X)[2]
-  
-  # checks
-  if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
-  # check if lambda is given, assign nlam accordingly
-  if(!is.null(lambda)){ # lambda is given
-    nlam = length(lambda)
-  }
-  
-  # compute balances
-  btree = getSupervisedTree(y, X, linkage, rho.type)
-  Xb = computeBalances(X, btree)
-  
-  # # run cv.glmnet
-  # cv_exact = cv.glmnet(
-  #   x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
-  #   foldid = foldid, intercept = intercept, type.measure = c("mse"))
-  
-  # fit the models
-  ##### directly #####
-  # run glmnet
-  # fit_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
-  #                     intercept = intercept)
-  # # check lambda length
-  # if(nlam != length(fit_exact$lambda)){
-  #   # if it's not nlam, refit to nlam lambdas
-  #   lambda <- log(fit_exact$lambda)
-  #   lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-  #   fit_exact = glmnet(x = Xb, y = y, lambda = lambda_new)
-  # }
-  ##### calling fitSLR0 #####
-  fitObj = fitSLR0(
-    y = y, 
-    X = X,
-    # Xb = Xb, 
-    btree = btree,
-    linkage = "complete", lambda = lambda, 
-    nlam = nlam, intercept = intercept, scaling = scaling,
-    rho.type = "squared")
-  
-  # make folds, if necessary
-  if(is.null(foldid)){
-    nn <- round(n / nfolds)
-    sizes <- rep(nn, nfolds)
-    sizes[nfolds] <- sizes[nfolds] + n - nn * nfolds
-    b <- c(0, cumsum(sizes))
-    # set.seed(100) # set.seed for random number generator
-    ii <- sample(n)
-    folds <- list()
-    for (i in seq(nfolds)) folds[[i]] <- ii[seq(b[i] + 1, b[i + 1])]
-  } else{
-    folds = list()
-    for(i in 1:nfolds) folds[[i]] = which(foldid == i)
-  }
-  
-  errs <- array(NA, dim=c(nlam, 1, nfolds))
-  errs2 = matrix(NA, nrow = )
-  
-  # define error function
-  errfun <- function(est, truth) colMeans((est - truth)^2)
-  
-  # Fit based on folds and compute error metric
-  for (i in seq(nfolds)) {
-    # fit model on all but the ith fold
-    ##### directly #####
-    # fit_cv <- glmnet(x = Xb[-folds[[i]], ], y = y[-folds[[i]]], 
-    #                  lambda = fit_exact$lambda, nlambda = nlam, 
-    #                  intercept = intercept)
-    ##### calling fitSLR0 #####
-    fit_cv = fitSLR0(
-      y = y[-folds[[i]]], 
-      X = X[-folds[[i]], ],
-      # Xb = Xb[-folds[[i]], ], 
-      btree = btree,
-      linkage = "complete", lambda = fitObj$lambda, nlam = nlam, 
-      intercept = intercept, scaling = scaling, rho.type = "squared")
-    pred_te <- lapply(seq(1), function(k) {
-      Xb[folds[[i]], ] %*% fit_cv$bet + 
-          rep(fit_cv$int, each = length(folds[[i]]))
-    })
-    for (k in 1) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
-    cat("##########################\n")
-    cat(sprintf("Finished model fits for fold[%s].\n", i))
-    cat("##########################\n")
-  }
-  m <- apply(errs, c(1, 2), mean)
-  se <- apply(errs, c(1, 2), stats::sd) / sqrt(nfolds)
-  
-  return(list(
-    int = fitObj$int,
-    bet = fitObj$bet,
-    lambda = fitObj$lambda,
-    glmnet = fitObj$glmnet,
-    btree = btree,
-    cvm = m
-    , errs = errs
-  ))
-}
+# cvSLR0 = function(
+#   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
+#   foldid = NULL, intercept = TRUE, scaling = TRUE, rho.type = "squared"
+# ){
+#   # browser()
+#   
+#   n = dim(X)[1]
+#   p = dim(X)[2]
+#   
+#   # checks
+#   if(length(y) != n) stop("fitSLR : dimensions of y and X don't match")
+#   if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+#   # check if lambda is given, assign nlam accordingly
+#   if(!is.null(lambda)){ # lambda is given
+#     nlam = length(lambda)
+#   }
+#   
+#   # compute balances
+#   btree = getSupervisedTree(y, X, linkage, rho.type)
+#   Xb = computeBalances(X, btree)
+#   
+#   # # run cv.glmnet
+#   # cv_exact = cv.glmnet(
+#   #   x = Xb, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+#   #   foldid = foldid, intercept = intercept, type.measure = c("mse"))
+#   
+#   # fit the models
+#   ##### directly #####
+#   # run glmnet
+#   # fit_exact = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
+#   #                     intercept = intercept)
+#   # # check lambda length
+#   # if(nlam != length(fit_exact$lambda)){
+#   #   # if it's not nlam, refit to nlam lambdas
+#   #   lambda <- log(fit_exact$lambda)
+#   #   lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+#   #   fit_exact = glmnet(x = Xb, y = y, lambda = lambda_new)
+#   # }
+#   ##### calling fitSLR0 #####
+#   fitObj = fitSLR0(
+#     y = y, 
+#     X = X,
+#     # Xb = Xb, 
+#     btree = btree,
+#     linkage = "complete", lambda = lambda, 
+#     nlam = nlam, intercept = intercept, scaling = scaling,
+#     rho.type = "squared")
+#   
+#   # make folds, if necessary
+#   if(is.null(foldid)){
+#     nn <- round(n / nfolds)
+#     sizes <- rep(nn, nfolds)
+#     sizes[nfolds] <- sizes[nfolds] + n - nn * nfolds
+#     b <- c(0, cumsum(sizes))
+#     # set.seed(100) # set.seed for random number generator
+#     ii <- sample(n)
+#     folds <- list()
+#     for (i in seq(nfolds)) folds[[i]] <- ii[seq(b[i] + 1, b[i + 1])]
+#   } else{
+#     folds = list()
+#     for(i in 1:nfolds) folds[[i]] = which(foldid == i)
+#   }
+#   
+#   errs <- array(NA, dim=c(nlam, 1, nfolds))
+#   errs2 = matrix(NA, nrow = )
+#   
+#   # define error function
+#   errfun <- function(est, truth) colMeans((est - truth)^2)
+#   
+#   # Fit based on folds and compute error metric
+#   for (i in seq(nfolds)) {
+#     # fit model on all but the ith fold
+#     ##### directly #####
+#     # fit_cv <- glmnet(x = Xb[-folds[[i]], ], y = y[-folds[[i]]], 
+#     #                  lambda = fit_exact$lambda, nlambda = nlam, 
+#     #                  intercept = intercept)
+#     ##### calling fitSLR0 #####
+#     fit_cv = fitSLR0(
+#       y = y[-folds[[i]]], 
+#       X = X[-folds[[i]], ],
+#       # Xb = Xb[-folds[[i]], ], 
+#       btree = btree,
+#       linkage = "complete", lambda = fitObj$lambda, nlam = nlam, 
+#       intercept = intercept, scaling = scaling, rho.type = "squared")
+#     pred_te <- lapply(seq(1), function(k) {
+#       Xb[folds[[i]], ] %*% fit_cv$bet + 
+#           rep(fit_cv$int, each = length(folds[[i]]))
+#     })
+#     for (k in 1) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
+#     cat("##########################\n")
+#     cat(sprintf("Finished model fits for fold[%s].\n", i))
+#     cat("##########################\n")
+#   }
+#   m <- apply(errs, c(1, 2), mean)
+#   se <- apply(errs, c(1, 2), stats::sd) / sqrt(nfolds)
+#   
+#   return(list(
+#     int = fitObj$int,
+#     bet = fitObj$bet,
+#     lambda = fitObj$lambda,
+#     glmnet = fitObj$glmnet,
+#     btree = btree,
+#     cvm = m
+#     , errs = errs
+#   ))
+# }

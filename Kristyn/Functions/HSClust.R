@@ -136,7 +136,8 @@ HSClust <- function(
   force_levelMax = TRUE, 
   method = "ShiMalik" # ShiMalik or kmeans
 ){
-  if(is.null(levelMax)) levelMax = nrow(W)
+  p = nrow(W)
+  if(is.null(levelMax)) levelMax = p
   
   stop <- FALSE
   # level of the clustering, i.e. how many cluster partitions have already been 
@@ -145,7 +146,7 @@ HSClust <- function(
   # clusterToCut = set of clusters to be further partitioned into more clusters
   clusterToCut <- 1
   # the clusters
-  cl <- matrix(1, nrow = nrow(W), ncol = levelMax)
+  cl <- matrix(1, nrow = p, ncol = levelMax)
   
   while(!stop){
     newCluster <- c()
@@ -187,7 +188,7 @@ HSClust <- function(
           }
         } else if(!is.null(groups) && length(unique(groups)) == 1 && 
                   length(groups) >= 2 && force_levelMax){ # artificially split them
-          groups = c(1, rep(2, length(groups) - 1))
+          groups = c(rep(1, length(groups) - 1), 2)
           if(length(groups) == p){
             cl[indices, level + 1] <- as.character(groups)
           } else{

@@ -276,6 +276,5 @@ saveRDS(
   file = paste0(
     output_dir, 
     "/10blockSigma_threshold_maxsigma",
-    "_rho", rho, 
     ".rds"
   ))

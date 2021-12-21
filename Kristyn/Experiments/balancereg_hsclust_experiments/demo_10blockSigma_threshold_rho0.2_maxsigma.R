@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 12/19/2021
+# Date: 12/13/2021
 
 ################################################################################
 # libraries and settings
@@ -24,8 +24,7 @@ registerDoRNG(rng.seed)
 # numSims = 100
 
 # > max(abs(beta)) / 2 # 4.472136
-rho_seq = seq(0, 1, by = 0.1)
-rho_seq = rho_seq[-length(rho_seq)]
+sigma_eps_seq = seq(0, 4.5, by = 0.1)
 
 ################################################################################
 # Simulations #
@@ -33,10 +32,9 @@ rho_seq = rho_seq[-length(rho_seq)]
 
 registerDoRNG(rng.seed)
 res = foreach(
-  b = 1:length(rho_seq)
+  b = 1:length(sigma_eps_seq)
 ) %dorng% {
-  rho_seq = seq(0, 1, by = 0.1) ############# adjust according to settings above
-  rho_seq = rho_seq[-length(rho_seq)]
+  sigma_eps_seq = seq(0, 4.5, by = 0.1) ##### adjust according to settings above
   
   library(mvtnorm)
   
@@ -56,12 +54,12 @@ res = foreach(
   library(igraph) # transform dataframe to graph object: graph_from_data_frame()
   library(tidygraph)
   
-  # expdecay Sigma #############################################################
+  # 10-block Sigma #############################################################
   
   # Settings to toggle with
-  sigma.settings = "expdecaySigma"
+  sigma.settings = "10blockSigma"
   rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "pminus4"
+  theta.settings = "1blockpair4halves"
   values.theta = 10
   linkage = "average"
   tol = 1e-4
@@ -71,13 +69,17 @@ res = foreach(
   K = 10
   n = 100
   p = 30
-  rho = rho_seq[b] 
+  rho = 0.2
   scaling = TRUE
   
   # Population parameters
-  sigma_eps = 0 ###################
-  SigmaW = rgExpDecay(p, rho)$Sigma
-  # fields::image.plot(SigmaW)
+  sigma_eps =sigma_eps_seq[b]
+  num.blocks = 10
+  SigmaWblock = matrix(rho, p / num.blocks, p / num.blocks)
+  for(i in 1:nrow(SigmaWblock)) SigmaWblock[i, i] = 1
+  SigmaW = as.matrix(bdiag(
+    SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, 
+    SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
   
   # theta settings
   SigmaW_hsclust = HSClust(
@@ -85,16 +87,82 @@ res = foreach(
     levelMax = p, force_levelMax = TRUE)
   SBP = sbp.fromHSClust(levels_matrix = SigmaW_hsclust$allLevels)
   
-  # a preliminary plot of the tree given by covariance matrix SigmaW
-  # nodes_types = data.frame(
-  #   name = c(colnames(SBP), rownames(SBP)),
-  #   type = c(rep("balance", ncol(SBP)), rep("covariate", nrow(SBP)))
-  # )
-  # plotSBP(SBP, title = "Sigma", nodes_types = nodes_types) 
-  
   # for each column (contrast), find which variables are included (1 or -1)
-  indices.theta = p - 4
-  
+  contrast.vars = apply(SBP, 2, FUN = function(col) which(col != 0))
+  if(theta.settings == "1blockpair4halves"){
+    # "1blockpair4halves" => 
+    #   1 contrast corresponding to 2 blocks (accounts for 2 blocks so far), 
+    #   4 contrasts, each corresponding to half (or approx. half) of the vars 
+    #     in 4 different blocks (accounts for 8 blocks so far), and 
+    #   the other 4 blocks with inactive vars (i.e. not in any of the 
+    #     selected contrasts).
+    # get the 1 contrast corresponding to 2 blocks
+    contrast_lengths = sapply(contrast.vars, length)
+    contrasts.blockpair = which(
+      contrast_lengths == 2 * (p / num.blocks))
+    indices.theta1 = unname(contrasts.blockpair[1])
+    blockpair.vars = contrast.vars[[contrasts.blockpair[1]]]
+    # get the 4 contrasts, each corresponding to half (or approx. half) of the 
+    #   vars in 4 different blocks
+    num.closest.to.half = contrast_lengths[
+      which.min(contrast_lengths - (p / num.blocks / 2))]
+    contrasts.halves = which(
+      contrast_lengths == num.closest.to.half) # 0.5 * (p / num.blocks))
+    # identify the contrasts corresponding to half-blocks that aren't in
+    #   the already-selected two blocks and that aren't in the same blocks
+    contrasts.10blocks = which(contrast_lengths == (p / num.blocks))
+    contrasts.halves.selected = c()
+    for(i in 1:length(contrasts.halves)){
+      # current half and which of the 10 blocks it is in
+      contrast.half.tmp = contrasts.halves[i]
+      contrast.half.vars.tmp = contrast.vars[[contrast.half.tmp]]
+      contrast.half.block.tmp = NA
+      for(l in 1:length(contrasts.10blocks)){
+        contrast.block.tmp = contrasts.10blocks[l]
+        contrast.block.vars.tmp = contrast.vars[[contrast.block.tmp]]
+        if(any(contrast.half.vars.tmp %in% contrast.block.vars.tmp)){
+          contrast.half.block.tmp = contrasts.10blocks[l]
+          break
+        }
+      }
+      contrast.half.block.vars.tmp = contrast.vars[[contrast.half.block.tmp]]
+      # first check if the current half has any variables in the block-pair's set
+      if(!any(contrast.half.vars.tmp %in% blockpair.vars)){
+        # then check if it is any of the prev. selected halves' blocks
+        if(length(contrasts.halves.selected) > 0){
+          is.in.block = rep(FALSE, length(contrasts.halves.selected))
+          for(j in 1:length(contrasts.halves.selected)){
+            contrast.half.sel.tmp = contrasts.halves.selected[j]
+            contrast.half.sel.vars.tmp = contrast.vars[[contrast.half.sel.tmp]]
+            contrast.half.sel.block.tmp = NA
+            for(l in 1:length(contrasts.10blocks)){
+              contrast.block.tmp = contrasts.10blocks[l]
+              contrast.block.vars.tmp = contrast.vars[[contrast.block.tmp]]
+              if(any(contrast.half.sel.vars.tmp %in% contrast.block.vars.tmp)){
+                contrast.half.sel.block.tmp = contrasts.10blocks[l]
+                break
+              }
+            }
+            if(contrast.half.block.tmp == contrast.half.sel.block.tmp){
+              is.in.block[j] = TRUE
+            }
+          }
+          if(all(!is.in.block)){
+            contrasts.halves.selected = c(
+              contrasts.halves.selected, contrast.half.tmp)
+            if(length(contrasts.halves.selected) >= 4) break
+          }
+        } else{
+          contrasts.halves.selected = c(
+            contrasts.halves.selected, contrast.half.tmp)
+        }
+      }
+    }
+    indices.theta2 = unname(contrasts.halves.selected[1:4])
+    indices.theta = c(indices.theta1, indices.theta2)
+  } else{
+    stop("invalid theta.settings")
+  }
   # print(indices.theta)
   # error checking indices.theta found based on theta.settings argument
   if(is.null(indices.theta)){
@@ -139,7 +207,7 @@ res = foreach(
     type = c(balance_types, leaf_types)
   )
   plt1 = plotSBP(
-    SBP, title = "Sigma", nodes_types = nodes_types) # ...
+    SBP, title = "Sigma", nodes_types = nodes_types)
   
   ##############################################################################
   # generate data
@@ -207,6 +275,7 @@ saveRDS(
   res, 
   file = paste0(
     output_dir, 
-    "/expdecaySigma_threshold_maxrho",
+    "/10blockSigma_threshold_maxsigma",
+    "_rho", rho, 
     ".rds"
   ))

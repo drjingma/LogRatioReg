@@ -192,7 +192,7 @@ res = foreach(
     type = c(slr_balance_types, slr_leaf_types)
   )
   plt2 = plotSBP(
-    slr_sbp, title = "Sigma", nodes_types = slr_nodes_types) # ...
+    slr_sbp, title = "SLR tree", nodes_types = slr_nodes_types) # ...
   
   plt1and2 = list(
     true_tree = plt1, 

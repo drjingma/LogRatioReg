@@ -49,15 +49,15 @@ for(i in 1:length(diagSigma_sigmaeps)){
   #   width = 8, height = 5, units = c("in")
   # )
   plt2.tmp = diagSigma_sigmaeps[[i]]$slr_tree
-  ggsave(
-    filename = paste0(
-      "20211220_",
-      "diagSigma_threshold_maxsigma", 
-      "_noise", sigma_eps_seq[i],
-      "_slrtree.pdf"),
-    plot = plt2.tmp,
-    width = 8, height = 5, units = c("in")
-  )
+  # ggsave(
+  #   filename = paste0(
+  #     "20211220_",
+  #     "diagSigma_threshold_maxsigma", 
+  #     "_noise", sigma_eps_seq[i],
+  #     "_slrtree.pdf"),
+  #   plot = plt2.tmp,
+  #   width = 8, height = 5, units = c("in")
+  # )
 }
 
 
@@ -80,23 +80,59 @@ expdecaySigma_rho[[idx]]$slr_tree
 # save plots
 for(i in 1:length(expdecaySigma_rho)){
   plt1.tmp = expdecaySigma_rho[[i]]$true_tree
+  # ggsave(
+  #   filename = paste0(
+  #     "20211220_",
+  #     "expdecaySigma_threshold_maxrho", 
+  #     "_noise", sigma_eps,
+  #     "_rho", rho_seq[i],
+  #     "_SigmaWtree.pdf"),
+  #   plot = plt1.tmp,
+  #   width = 8, height = 5, units = c("in")
+  # )
+  plt2.tmp = expdecaySigma_rho[[i]]$slr_tree
+  # ggsave(
+  #   filename = paste0(
+  #     "20211220_",
+  #     "expdecaySigma_threshold_maxrho", 
+  #     "_noise", sigma_eps,
+  #     "_rho", rho_seq[i],
+  #     "_slrtree.pdf"),
+  #   plot = plt2.tmp,
+  #   width = 8, height = 5, units = c("in")
+  # )
+}
+
+# 10 block Sigma - different sigma_eps values ##################################
+block10Sigma_sigmaeps = readRDS(paste0(
+  output_dir, 
+  "/10blockSigma_threshold_maxsigma",
+  ".rds"
+))
+sigma_eps_seq = seq(0, 4.5, by = 0.1)
+
+# preview
+length(block10Sigma_sigmaeps)
+idx = 10
+
+# save plots
+for(i in 1:length(block10Sigma_sigmaeps)){
+  plt1.tmp = block10Sigma_sigmaeps[[i]]$true_tree
   ggsave(
     filename = paste0(
       "20211220_",
-      "expdecaySigma_threshold_maxrho", 
-      "_noise", sigma_eps,
-      "_rho", rho_seq[i],
+      "10block_threshold_maxsigma",
+      "_noise", sigma_eps_seq[i],
       "_SigmaWtree.pdf"),
     plot = plt1.tmp,
     width = 8, height = 5, units = c("in")
   )
-  plt2.tmp = expdecaySigma_rho[[i]]$slr_tree
+  plt2.tmp = block10Sigma_sigmaeps[[i]]$slr_tree
   ggsave(
     filename = paste0(
       "20211220_",
-      "expdecaySigma_threshold_maxrho", 
-      "_noise", sigma_eps,
-      "_rho", rho_seq[i],
+      "10block_threshold_maxsigma", 
+      "_noise", sigma_eps_seq[i],
       "_slrtree.pdf"),
     plot = plt2.tmp,
     width = 8, height = 5, units = c("in")

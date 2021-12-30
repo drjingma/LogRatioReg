@@ -80,6 +80,7 @@ res = foreach(
   SigmaW = as.matrix(bdiag(
     SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, 
     SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock, SigmaWblock))
+  # fields::image.plot(SigmaW)
   
   # theta settings
   SigmaW_hsclust = HSClust(

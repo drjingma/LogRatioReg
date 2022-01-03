@@ -1,7 +1,8 @@
 fitILReta = function(
   y, X, 
-  W, # normalized similarity matrix (all values between 0 & 1)
+  W, # normalized similarity/distance matrix (all values between 0 & 1)
   sbp,
+  clustering_method = "hsc", # "hs", "hsc"
   hsc_method = "kmeans", # "shimalik", "kmeans"
   force_levelMax = FALSE, 
   lambda = NULL, nlam = 20, 
@@ -60,20 +61,33 @@ fitILReta = function(
       W_thresh = W[meets_threshold_i, meets_threshold_i, drop = FALSE]
       X_thresh = X[, meets_threshold_i, drop = FALSE]
       # model fitting
-      hsclust_thresh = HSClust(
-        W = W_thresh, force_levelMax = force_levelMax, method = hsc_method
-      )
-      SBP_thresh = sbp.fromHSClust(
-        levels_matrix = hsclust_thresh$allLevels, 
-        row_names = rownames(sbp)[meets_threshold_i])
-      modelfit = cvILR(
-        y = y, X = X_thresh, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
-        nfolds = nfolds, intercept = intercept, standardize = standardize)
-      # save the model
-      theta[[i]] = modelfit$bet
-      theta0[[i]] = modelfit$int
-      meets_threshold[[i]] = meets_threshold_i
-      sbp_thresh[[i]] = SBP_thresh
+      if(clustering_method == "hsc"){
+        hsclust_thresh = HSClust(
+          W = W_thresh, force_levelMax = force_levelMax, method = hsc_method
+        )
+        SBP_thresh = sbp.fromHSClust(
+          levels_matrix = hsclust_thresh$allLevels, 
+          row_names = rownames(sbp)[meets_threshold_i])
+        modelfit = cvILR(
+          y = y, X = X_thresh, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
+          nfolds = nfolds, intercept = intercept, standardize = standardize)
+        # save the model
+        theta[[i]] = modelfit$bet
+        theta0[[i]] = modelfit$int
+        meets_threshold[[i]] = meets_threshold_i
+        sbp_thresh[[i]] = SBP_thresh
+      } else if(clustering_method == "hc"){
+        hclust_thresh = hclust(as.dist(W_thresh),method = linkage)
+        SBP_thresh = sbp.fromHclust(hclust_thresh)
+        modelfit = cvILR(
+          y = y, X = X_thresh, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
+          nfolds = nfolds, intercept = intercept, standardize = standardize)
+        # save the model
+        theta[[i]] = modelfit$bet
+        theta0[[i]] = modelfit$int
+        meets_threshold[[i]] = meets_threshold_i
+        sbp_thresh[[i]] = SBP_thresh
+      }
     }
   }
   
@@ -91,8 +105,9 @@ fitILReta = function(
 }
 cvILReta <- function(
   y, X,
-  W, # normalized similarity matrix (all values between 0 & 1)
+  W, # normalized similarity/distance matrix (all values between 0 & 1)
   sbp,
+  clustering_method = "hsc", # "hs", "hsc"
   hsc_method = "kmeans", # "shimalik", "kmeans"
   force_levelMax = TRUE, 
   lambda = NULL, nlam = 20, 

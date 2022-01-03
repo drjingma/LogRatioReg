@@ -4,6 +4,7 @@
 #   - have one active contrast pair within each block
 #   - compare slr to coat, where the latter captures correlated structure
 #       among covariates, but not whether the covariates are predicted
+### this time, use slr with hierarchical spectral clustering
 # Date: 12/02/2021
 
 ################################################################################

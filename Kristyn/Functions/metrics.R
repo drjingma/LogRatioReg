@@ -62,8 +62,9 @@ getMetricsBalanceReg = function(
   
   # 3. selection accuracy #
   non0.thetahat = (thetahat != 0)
-  sel.cols.SBP = sbp[, non0.thetahat, drop = FALSE]
-  non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
+  # sel.cols.SBP = sbp[, non0.thetahat, drop = FALSE]
+  # non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
+  non0.betahat = abs(betahat) > 10e-8
   SA = getSelectionAccuracy(
     is0.true.beta = is0.true.beta, non0.true.beta = non0.true.beta, 
     non0.betahat = non0.betahat)

@@ -1,4 +1,5 @@
-# Purpose: demonstrate hierarchical spectral clustering with a threshold
+# Purpose: observe results from varying either sigma_eps or rho in various 
+#   settings
 # Date: 12/19/2021
 
 ################################################################################

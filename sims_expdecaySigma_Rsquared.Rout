@@ -33,11 +33,16 @@ Type 'q()' to quit R.
 > registerDoFuture()
 > nworkers = detectCores()
 > plan(multisession, workers = nworkers)
-Error in makeClusterPSOCK(workers, ...) : 
-  Cluster setup failed. 15 of 56 workers failed to connect.
-Calls: plan ... <Anonymous> -> ClusterRegistry -> makeCluster -> makeClusterPSOCK
-Execution halted
-##########################
+> 
+> library(rngtools)
+> library(doRNG)
+> rng.seed = 123 # 123, 345
+> registerDoRNG(rng.seed)
+> 
+> # Other simulation settings
+> numSims = 100
+> 
+> ################################################################################
 > # Simulations #
 > ################################################################################
 > 
@@ -92,7 +97,7 @@ Execution halted
 +   #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
 +   #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
 +   rho = 0 #
-+   desired_Rsquared = 0.6 #
++   desired_Rsquared = 0.8 #
 +   if(rho == 0){
 +     if(desired_Rsquared == 0.6){
 +       sigma_eps = sqrt(2/3)
@@ -120,13 +125,9 @@ Execution halted
 +   
 +   file.end = paste0(
 +     "_", sigma.settings,
-+     "_val", values.theta[1],
 +     "_dim", n, "x", p, 
 +     "_Rsq", desired_Rsquared,
 +     "_rho", rho, 
-+     "_noise", sigma_eps,
-+     "_int", intercept,
-+     "_scale", scaling,
 +     "_sim", b,
 +     ".rds")
 +   
@@ -447,17 +448,6 @@ Execution halted
 +   
 +   ### fin ###
 + }
-Error in unserialize(node$con) : 
-  MultisessionFuture (doFuture-4) failed to receive results from cluster RichSOCKnode #4 (PID 35607 on ‘localhost’). The reason reported was ‘error reading from connection’. Post-mortem diagnostic: The total size of the 2 globals exported is 304 bytes. There are two globals: ‘output_dir’ (168 bytes of class ‘character’) and ‘...future.x_ii’ (136 bytes of class ‘list’)
-Calls: %dorng% ... resolved -> resolved.ClusterFuture -> receiveMessageFromWorker
-Execution halted
-Warning message:
-In q("no", status = (status != 0), runLast = FALSE) :
-  system call failed: Cannot allocate memory
-Error: .onLoad failed in loadNamespace() for 'utils', details:
-  call: system(paste(which, shQuote(names[i])), intern = TRUE, ignore.stderr = TRUE)
-  error: cannot popen '/usr/bin/which 'uname' 2>/dev/null', probable reason 'Cannot allocate memory'
-Execution halted
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -4056,8 +4046,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -4301,8 +4290,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -5382,8 +5370,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -5871,8 +5858,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -8023,64 +8009,77 @@ The following object is masked from ‘package:MASS’:
 The following object is masked from ‘package:stats’:
 
     filter
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -8381,12 +8380,7 @@ The following objects are masked from ‘package:stats’:
 The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
-
 
-WARNING: The tools required to build C++ code for R were not found.
-
-Please install GNU development tools including a C++ compiler.
-
 Loading required package: ggplot2
 
 Attaching package: ‘igraph’
@@ -8922,7 +8916,77 @@ The following object is masked from ‘package:stats’:
 
     filter
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
 ##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
 Finished model fits for fold[1].
 ##########################
 ##########################
@@ -9166,55 +9230,229 @@ Finished model fits for fold[10].
 [1] 8
 [1] 9
 [1] 10
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
-Finished model fits for fold[8].
-##########################
-##########################
-Finished model fits for fold[9].
-##########################
-##########################
-Finished model fits for fold[10].
-##########################
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
 Finished model fits for fold[7].
 ##########################
 ##########################
@@ -10394,16 +10632,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -10647,14 +10876,6 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
 gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
@@ -11584,146 +11805,6 @@ The following object is masked from ‘package:base’:
 
     startsWith
 
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
-Finished model fits for fold[8].
-##########################
-##########################
-Finished model fits for fold[9].
-##########################
-##########################
-Finished model fits for fold[10].
-##########################
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
-Finished model fits for fold[8].
-##########################
-##########################
-Finished model fits for fold[9].
-##########################
-##########################
-Finished model fits for fold[10].
-##########################
-[1] 1
-[1] 2
-[1] 3
-[1] 4
-[1] 5
-[1] 6
-[1] 7
-[1] 8
-[1] 9
-[1] 10
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
-Finished model fits for fold[8].
-##########################
-##########################
-Finished model fits for fold[9].
-##########################
-##########################
-Finished model fits for fold[10].
-##########################
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
-Finished model fits for fold[8].
-##########################
-##########################
-Finished model fits for fold[9].
-##########################
-##########################
-Finished model fits for fold[10].
-##########################
-[1] 1
-[1] 2
-[1] 3
-[1] 4
-[1] 5
-[1] 6
-[1] 7
-[1] 8
-[1] 9
-[1] 10
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -11797,7 +11878,6 @@ The following object is masked from ‘package:stats’:
 
     filter
 
-Loaded glmnet 4.1-2
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -11938,134 +12018,62 @@ Finished model fits for fold[10].
 [1] 8
 [1] 9
 [1] 10
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
 
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 The following object is masked from ‘package:balance’:
 
     wide2long
-
 
 gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
 
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
 gdata: Run the function 'installXLSXsupport()'
 gdata: to automatically download and install the perl
 gdata: libaries needed to support Excel XLS and XLSX formats.
 
 Attaching package: ‘gdata’
-
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
 
 The following object is masked from ‘package:stats’:
 
     nobs
-
-The following object is masked from ‘package:base’:
-
-    startsWith
 
 The following object is masked from ‘package:utils’:
 
     object.size
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
 
 The following object is masked from ‘package:base’:
 
     startsWith
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
 
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
 
 
 Attaching package: ‘compositions’
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
 
 The following object is masked from ‘package:balance’:
 
     balance
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
 
 The following object is masked from ‘package:glmnet’:
 
     rmult
 
-Loading required package: ggplot2
 The following object is masked from ‘package:Matrix’:
 
     norm
-
-
-Attaching package: ‘igraph’
-
-The following object is masked _by_ ‘.GlobalEnv’:
-
-    graph.laplacian
 
 The following objects are masked from ‘package:stats’:
 
     anova, cor, cov, dist, var
-
-The following object is masked from ‘package:compositions’:
-
-    normalize
 
 The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
-
-The following object is masked from ‘package:MGLM’:
-
-    path
 
 Loading required package: ggplot2
 
@@ -12082,38 +12090,7 @@ The following object is masked from ‘package:compositions’:
 The following object is masked from ‘package:MGLM’:
 
     path
-
-The following object is masked from ‘package:propr’:
-
-    simplify
-
-The following objects are masked from ‘package:future’:
-
-    %->%, %<-%
-
-The following objects are masked from ‘package:stats’:
-
-    decompose, spectrum
-
-The following object is masked from ‘package:base’:
-
-    union
-
-
-Attaching package: ‘tidygraph’
-
-The following object is masked from ‘package:igraph’:
-
-    groups
-
-The following object is masked from ‘package:MASS’:
-
-    select
 
-The following object is masked from ‘package:stats’:
-
-    filter
-
 The following object is masked from ‘package:propr’:
 
     simplify
@@ -12955,8 +12932,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -13296,13 +13272,12 @@ The following object is masked from ‘package:stats’:
 
     filter
 
-Error in { : 
-  task 60 failed - "cannot popen '/usr/local/R/4.1.2/lib64/R/bin/R CMD SHLIB foo.c 2>/dev/null', probable reason 'Cannot allocate memory'"
-Calls: %dorng% -> do.call -> %dopar% -> <Anonymous>
-In addition: Warning message:
-In file(filename, "r", encoding = encoding) :
-  cannot open file 'RCode/func_libs.R': No such file or directory
-Execution halted
+> 
+> 
+> 
+> proc.time()
+    user   system  elapsed 
+ 136.088    2.762 1221.308 
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -13861,110 +13836,6 @@ Finished model fits for fold[10].
 [1] 8
 [1] 9
 [1] 10
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
-Loading required package: ggplot2
-
-Attaching package: ‘igraph’
-
-The following object is masked _by_ ‘.GlobalEnv’:
-
-    graph.laplacian
-
-The following object is masked from ‘package:compositions’:
-
-    normalize
-
-The following object is masked from ‘package:MGLM’:
-
-    path
-
-The following object is masked from ‘package:propr’:
-
-    simplify
-
-The following objects are masked from ‘package:future’:
-
-    %->%, %<-%
-
-The following objects are masked from ‘package:stats’:
-
-    decompose, spectrum
-
-The following object is masked from ‘package:base’:
-
-    union
-
-
-Attaching package: ‘tidygraph’
-
-The following object is masked from ‘package:igraph’:
-
-    groups
-
-The following object is masked from ‘package:MASS’:
-
-    select
-
-The following object is masked from ‘package:stats’:
-
-    filter
-
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -14035,6 +13906,110 @@ Finished model fits for fold[10].
 [1] 8
 [1] 9
 [1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -14941,7 +14916,77 @@ The following object is masked from ‘package:stats’:
 
     filter
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
 ##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
 Finished model fits for fold[1].
 ##########################
 ##########################
@@ -15185,28 +15230,202 @@ Finished model fits for fold[10].
 [1] 8
 [1] 9
 [1] 10
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
 Finished model fits for fold[8].
 ##########################
 ##########################
@@ -17563,8 +17782,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -17903,63 +18121,6 @@ The following object is masked from ‘package:MASS’:
 The following object is masked from ‘package:stats’:
 
     filter
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
 
 ##########################
 Finished model fits for fold[1].
@@ -18031,76 +18192,6 @@ Finished model fits for fold[10].
 [1] 8
 [1] 9
 [1] 10
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
-Finished model fits for fold[8].
-##########################
-##########################
-Finished model fits for fold[9].
-##########################
-##########################
-Finished model fits for fold[10].
-##########################
-##########################
-Finished model fits for fold[1].
-##########################
-##########################
-Finished model fits for fold[2].
-##########################
-##########################
-Finished model fits for fold[3].
-##########################
-##########################
-Finished model fits for fold[4].
-##########################
-##########################
-Finished model fits for fold[5].
-##########################
-##########################
-Finished model fits for fold[6].
-##########################
-##########################
-Finished model fits for fold[7].
-##########################
-##########################
-Finished model fits for fold[8].
-##########################
-##########################
-Finished model fits for fold[9].
-##########################
-##########################
-Finished model fits for fold[10].
-##########################
-[1] 1
-[1] 2
-[1] 3
-[1] 4
-[1] 5
-[1] 6
-[1] 7
-[1] 8
-[1] 9
-[1] 10
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
@@ -18448,178 +18539,7 @@ The following object is masked from ‘package:MASS’:
 The following object is masked from ‘package:stats’:
 
     filter
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -19107,64 +19027,7 @@ The following object is masked from ‘package:MASS’:
 The following object is masked from ‘package:stats’:
 
     filter
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
 
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
 ##########################
 Finished model fits for fold[1].
 ##########################
@@ -19487,8 +19350,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -19976,16 +19838,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -20081,7 +19934,77 @@ The following object is masked from ‘package:stats’:
 
     filter
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
 ##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
 Finished model fits for fold[1].
 ##########################
 ##########################
@@ -20255,6 +20178,76 @@ The following object is masked from ‘package:stats’:
 
     filter
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
@@ -20263,8 +20256,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -20312,64 +20304,53 @@ The following objects are masked from ‘package:stats’:
 The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
 
-    wide2long
+Loading required package: ggplot2
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+Attaching package: ‘igraph’
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
+The following object is masked _by_ ‘.GlobalEnv’:
 
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
+    graph.laplacian
 
-Attaching package: ‘gdata’
+The following object is masked from ‘package:compositions’:
 
-The following object is masked from ‘package:stats’:
+    normalize
 
-    nobs
+The following object is masked from ‘package:MGLM’:
 
-The following object is masked from ‘package:utils’:
+    path
 
-    object.size
+The following object is masked from ‘package:propr’:
 
-The following object is masked from ‘package:base’:
+    simplify
 
-    startsWith
+The following objects are masked from ‘package:future’:
 
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
+    %->%, %<-%
 
+The following objects are masked from ‘package:stats’:
 
-Attaching package: ‘compositions’
+    decompose, spectrum
 
-The following object is masked from ‘package:balance’:
+The following object is masked from ‘package:base’:
 
-    balance
+    union
 
-The following object is masked from ‘package:glmnet’:
 
-    rmult
+Attaching package: ‘tidygraph’
 
-The following object is masked from ‘package:Matrix’:
+The following object is masked from ‘package:igraph’:
 
-    norm
+    groups
 
-The following objects are masked from ‘package:stats’:
+The following object is masked from ‘package:MASS’:
 
-    anova, cor, cov, dist, var
+    select
 
-The following objects are masked from ‘package:base’:
+The following object is masked from ‘package:stats’:
 
-    %*%, norm, scale, scale.default
+    filter
 
 ##########################
 Finished model fits for fold[1].
@@ -20685,22 +20666,92 @@ Finished model fits for fold[10].
 [1] 8
 [1] 9
 [1] 10
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
 
 Attaching package: ‘gdata’
 
@@ -20789,7 +20840,146 @@ The following object is masked from ‘package:stats’:
 
     filter
 
-
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
@@ -20847,120 +21037,123 @@ The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
 
-Loaded glmnet 4.1-2
+Loading required package: ggplot2
 
-Attaching package: ‘propr’
+Attaching package: ‘igraph’
 
-The following object is masked from ‘package:balance’:
+The following object is masked _by_ ‘.GlobalEnv’:
 
-    wide2long
+    graph.laplacian
 
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+The following object is masked from ‘package:compositions’:
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
+    normalize
 
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
+The following object is masked from ‘package:MGLM’:
 
-Attaching package: ‘gdata’
+    path
 
-The following object is masked from ‘package:stats’:
+The following object is masked from ‘package:propr’:
 
-    nobs
+    simplify
 
-The following object is masked from ‘package:utils’:
+The following objects are masked from ‘package:future’:
 
-    object.size
+    %->%, %<-%
 
-The following object is masked from ‘package:base’:
+The following objects are masked from ‘package:stats’:
 
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
+    decompose, spectrum
 
 The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
 
-    balance
+    union
 
-The following object is masked from ‘package:glmnet’:
 
-    rmult
+Attaching package: ‘tidygraph’
 
-The following object is masked from ‘package:Matrix’:
+The following object is masked from ‘package:igraph’:
 
-    norm
+    groups
 
-The following objects are masked from ‘package:stats’:
+The following object is masked from ‘package:MASS’:
 
-    anova, cor, cov, dist, var
+    select
 
-The following objects are masked from ‘package:base’:
+The following object is masked from ‘package:stats’:
 
-    %*%, norm, scale, scale.default
+    filter
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
@@ -21017,139 +21210,3156 @@ The following objects are masked from ‘package:stats’:
 The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
 
-    object.size
+Loading required package: ggplot2
 
-The following object is masked from ‘package:base’:
+Attaching package: ‘igraph’
 
-    startsWith
+The following object is masked _by_ ‘.GlobalEnv’:
 
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
+    graph.laplacian
 
+The following object is masked from ‘package:compositions’:
 
-Attaching package: ‘compositions’
+    normalize
 
-The following object is masked from ‘package:balance’:
+The following object is masked from ‘package:MGLM’:
 
-    balance
+    path
 
-The following object is masked from ‘package:glmnet’:
+The following object is masked from ‘package:propr’:
 
-    rmult
+    simplify
 
-The following object is masked from ‘package:Matrix’:
+The following objects are masked from ‘package:future’:
 
-    norm
+    %->%, %<-%
 
 The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
 
-    object.size
+    decompose, spectrum
 
 The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
 
-
-Attaching package: ‘compositions’
+    union
 
-The following object is masked from ‘package:balance’:
 
-    balance
+Attaching package: ‘tidygraph’
 
-The following object is masked from ‘package:glmnet’:
+The following object is masked from ‘package:igraph’:
 
-    rmult
+    groups
 
-The following object is masked from ‘package:Matrix’:
+The following object is masked from ‘package:MASS’:
 
-    norm
+    select
 
-The following objects are masked from ‘package:stats’:
+The following object is masked from ‘package:stats’:
 
-    anova, cor, cov, dist, var
+    filter
 
-The following objects are masked from ‘package:base’:
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
 
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+Loaded glmnet 4.1-2
+
+Attaching package: ‘propr’
+
+The following object is masked from ‘package:balance’:
+
+    wide2long
+
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
+
+gdata: Unable to load perl libaries needed by read.xls()
+gdata: to support 'XLSX' (Excel 2007+) files.
+
+gdata: Run the function 'installXLSXsupport()'
+gdata: to automatically download and install the perl
+gdata: libaries needed to support Excel XLS and XLSX formats.
+
+Attaching package: ‘gdata’
+
+The following object is masked from ‘package:stats’:
+
+    nobs
+
+The following object is masked from ‘package:utils’:
+
+    object.size
+
+The following object is masked from ‘package:base’:
+
+    startsWith
+
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
     %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
+
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
@@ -21158,8 +24368,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -21207,7 +24416,194 @@ The following objects are masked from ‘package:stats’:
 The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
+
+Loading required package: ggplot2
+
+Attaching package: ‘igraph’
+
+The following object is masked _by_ ‘.GlobalEnv’:
+
+    graph.laplacian
+
+The following object is masked from ‘package:compositions’:
+
+    normalize
+
+The following object is masked from ‘package:MGLM’:
+
+    path
+
+The following object is masked from ‘package:propr’:
 
+    simplify
+
+The following objects are masked from ‘package:future’:
+
+    %->%, %<-%
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+Attaching package: ‘tidygraph’
+
+The following object is masked from ‘package:igraph’:
+
+    groups
+
+The following object is masked from ‘package:MASS’:
+
+    select
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
@@ -21216,16 +24612,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -21273,64 +24660,53 @@ The following objects are masked from ‘package:stats’:
 The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
 
-    wide2long
+Loading required package: ggplot2
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+Attaching package: ‘igraph’
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
+The following object is masked _by_ ‘.GlobalEnv’:
 
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
+    graph.laplacian
 
-Attaching package: ‘gdata’
+The following object is masked from ‘package:compositions’:
 
-The following object is masked from ‘package:stats’:
+    normalize
 
-    nobs
+The following object is masked from ‘package:MGLM’:
 
-The following object is masked from ‘package:utils’:
+    path
 
-    object.size
+The following object is masked from ‘package:propr’:
 
-The following object is masked from ‘package:base’:
+    simplify
 
-    startsWith
+The following objects are masked from ‘package:future’:
 
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
+    %->%, %<-%
 
+The following objects are masked from ‘package:stats’:
 
-Attaching package: ‘compositions’
+    decompose, spectrum
 
-The following object is masked from ‘package:balance’:
+The following object is masked from ‘package:base’:
 
-    balance
+    union
 
-The following object is masked from ‘package:glmnet’:
 
-    rmult
+Attaching package: ‘tidygraph’
 
-The following object is masked from ‘package:Matrix’:
+The following object is masked from ‘package:igraph’:
 
-    norm
+    groups
 
-The following objects are masked from ‘package:stats’:
+The following object is masked from ‘package:MASS’:
 
-    anova, cor, cov, dist, var
+    select
 
-The following objects are masked from ‘package:base’:
+The following object is masked from ‘package:stats’:
 
-    %*%, norm, scale, scale.default
+    filter
 
 ##########################
 Finished model fits for fold[1].
@@ -21575,63 +24951,6 @@ The following object is masked from ‘package:MASS’:
 The following object is masked from ‘package:stats’:
 
     filter
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
-
-    wide2long
-
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
-
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
-
-Attaching package: ‘gdata’
-
-The following object is masked from ‘package:stats’:
-
-    nobs
-
-The following object is masked from ‘package:utils’:
-
-    object.size
-
-The following object is masked from ‘package:base’:
-
-    startsWith
-
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
-
-
-Attaching package: ‘compositions’
-
-The following object is masked from ‘package:balance’:
-
-    balance
-
-The following object is masked from ‘package:glmnet’:
-
-    rmult
-
-The following object is masked from ‘package:Matrix’:
-
-    norm
-
-The following objects are masked from ‘package:stats’:
-
-    anova, cor, cov, dist, var
-
-The following objects are masked from ‘package:base’:
-
-    %*%, norm, scale, scale.default
 
 ##########################
 Finished model fits for fold[1].
@@ -21877,6 +25196,76 @@ The following object is masked from ‘package:stats’:
 
     filter
 
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+##########################
+Finished model fits for fold[1].
+##########################
+##########################
+Finished model fits for fold[2].
+##########################
+##########################
+Finished model fits for fold[3].
+##########################
+##########################
+Finished model fits for fold[4].
+##########################
+##########################
+Finished model fits for fold[5].
+##########################
+##########################
+Finished model fits for fold[6].
+##########################
+##########################
+Finished model fits for fold[7].
+##########################
+##########################
+Finished model fits for fold[8].
+##########################
+##########################
+Finished model fits for fold[9].
+##########################
+##########################
+Finished model fits for fold[10].
+##########################
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
 Loaded glmnet 4.1-2
 
 Attaching package: ‘propr’
@@ -21885,16 +25274,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -21942,72 +25322,53 @@ The following objects are masked from ‘package:stats’:
 The following objects are masked from ‘package:base’:
 
     %*%, norm, scale, scale.default
-
-Loaded glmnet 4.1-2
-
-Attaching package: ‘propr’
-
-The following object is masked from ‘package:balance’:
 
-    wide2long
+Loading required package: ggplot2
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+Attaching package: ‘igraph’
 
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLSX' (Excel 2007+) files.
+The following object is masked _by_ ‘.GlobalEnv’:
 
-gdata: Run the function 'installXLSXsupport()'
-gdata: to automatically download and install the perl
-gdata: libaries needed to support Excel XLS and XLSX formats.
+    graph.laplacian
 
-Attaching package: ‘gdata’
+The following object is masked from ‘package:compositions’:
 
-The following object is masked from ‘package:stats’:
+    normalize
 
-    nobs
+The following object is masked from ‘package:MGLM’:
 
-The following object is masked from ‘package:utils’:
+    path
 
-    object.size
+The following object is masked from ‘package:propr’:
 
-The following object is masked from ‘package:base’:
+    simplify
 
-    startsWith
+The following objects are masked from ‘package:future’:
 
-Welcome to compositions, a package for compositional data analysis.
-Find an intro with "? compositions"
+    %->%, %<-%
 
+The following objects are masked from ‘package:stats’:
 
-Attaching package: ‘compositions’
+    decompose, spectrum
 
-The following object is masked from ‘package:balance’:
+The following object is masked from ‘package:base’:
 
-    balance
+    union
 
-The following object is masked from ‘package:glmnet’:
 
-    rmult
+Attaching package: ‘tidygraph’
 
-The following object is masked from ‘package:Matrix’:
+The following object is masked from ‘package:igraph’:
 
-    norm
+    groups
 
-The following objects are masked from ‘package:stats’:
+The following object is masked from ‘package:MASS’:
 
-    anova, cor, cov, dist, var
+    select
 
-The following objects are masked from ‘package:base’:
+The following object is masked from ‘package:stats’:
 
-    %*%, norm, scale, scale.default
+    filter
 
 ##########################
 Finished model fits for fold[1].
@@ -22157,16 +25518,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -22410,16 +25762,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -22663,16 +26006,7 @@ The following object is masked from ‘package:balance’:
 
     wide2long
 
-gdata: Unable to locate valid perl interpreter
-gdata: 
-gdata: read.xls() will be unable to read Excel XLS and XLSX files
-gdata: unless the 'perl=' argument is used to specify the location of a
-gdata: valid perl intrpreter.
-gdata: 
-gdata: (To avoid display of this message in the future, please ensure
-gdata: perl is installed and available on the executable search path.)
-gdata: Unable to load perl libaries needed by read.xls()
-gdata: to support 'XLX' (Excel 97-2004) files.
+gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
 
 gdata: Unable to load perl libaries needed by read.xls()
 gdata: to support 'XLSX' (Excel 2007+) files.
@@ -22768,8 +26102,9 @@ The following object is masked from ‘package:stats’:
 
     filter
 
-Error in { : 
-  task 39 failed - "cannot popen '/usr/local/R/4.1.2/lib64/R/bin/R CMD SHLIB foo.c 2>/dev/null', probable reason 'Cannot allocate memory'"
-Calls: %dorng% -> do.call -> %dopar% -> <Anonymous>
-In addition: There were 14 warnings (use warnings() to see them)
-Execution halted
+> 
+> 
+> 
+> proc.time()
+    user   system  elapsed 
+ 136.534    2.413 1217.069 

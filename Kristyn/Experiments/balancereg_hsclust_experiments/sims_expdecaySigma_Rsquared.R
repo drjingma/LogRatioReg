@@ -78,7 +78,7 @@ res = foreach(
   #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
   #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
   rho = 0 #
-  desired_Rsquared = 0.6 #
+  desired_Rsquared = 0.8 #
   if(rho == 0){
     if(desired_Rsquared == 0.6){
       sigma_eps = sqrt(2/3)

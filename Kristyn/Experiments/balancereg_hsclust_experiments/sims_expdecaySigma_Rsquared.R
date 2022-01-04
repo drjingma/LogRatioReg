@@ -106,13 +106,9 @@ res = foreach(
   
   file.end = paste0(
     "_", sigma.settings,
-    "_val", values.theta[1],
     "_dim", n, "x", p, 
     "_Rsq", desired_Rsquared,
     "_rho", rho, 
-    "_noise", sigma_eps,
-    "_int", intercept,
-    "_scale", scaling,
     "_sim", b,
     ".rds")
   

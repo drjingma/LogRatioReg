@@ -17,8 +17,6 @@ numSims = 100
 
 # Settings to toggle with
 sigma.settings = "expdecaySigma"
-rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "pminus4"
 values.theta = 1
 linkage = "average"
 tol = 1e-4
@@ -39,8 +37,8 @@ scaling = TRUE
 # if rho = 0.5, 
 #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
 #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
-rho = 0.2
-desired_Rsquared = 0.6
+rho = 0 #
+desired_Rsquared = 0.6 #
 if(rho == 0){
   if(desired_Rsquared == 0.6){
     sigma_eps = sqrt(2/3)
@@ -61,32 +59,18 @@ if(rho == 0){
   }
 }
 
-if(!is.null(values.theta)){
-  theta.settings2 = paste0(theta.settings, "_val",values.theta)
-} else{
-  theta.settings2 = theta.settings
-}
-
 file.end0 = paste0(
   "_", sigma.settings,
-  "_", theta.settings, 
-  "_val", values.theta[1],
   "_dim", n, "x", p, 
   "_Rsq", desired_Rsquared,
-  "_rho", rho, 
-  "_noise", sigma_eps,
-  "_int", intercept,
-  "_scale", scaling)
+  "_rho", rho)
 
 ################################################################################
 # plot metrics
 
-metric_names = NULL
-if(theta.settings == "dense"){
-  metric_names = c(
-    "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision",
-    "Fscore", "betaSparsity", "Rsq")
-}
+metric_names = c(
+  "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision",
+  "Fscore", "betaSparsity", "Rsq")
 
 # import metrics
 slrhc_sims_list = list()
@@ -96,6 +80,7 @@ slrhsc2_sims_list = list()
 cl_sims_list = list()
 pr_sims_list = list()
 for(i in 1:numSims){
+  print(i)
   # slr hc
   slrhc.sim.tmp = t(data.frame(readRDS(paste0(
     output_dir, "/metrics", "/slr_hc_", "metrics", file.end0,

@@ -57,8 +57,6 @@ res = foreach(
   
   # Settings to toggle with
   sigma.settings = "expdecaySigma"
-  rho.type = "square" # 1 = "absolute value", 2 = "square"
-  theta.settings = "pminus4"
   values.theta = 1
   linkage = "average"
   tol = 1e-4
@@ -100,75 +98,14 @@ res = foreach(
       sigma_eps = sqrt(0.303125)
     }
   }
-  #################
   
+  # Population parameters
   SigmaW = rgExpDecay(p, rho)$Sigma
-  # fields::image.plot(SigmaW)
-  
-  # theta settings
-  SigmaW_hsclust = HSClust(
-    W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW),
-    levelMax = p, force_levelMax = TRUE)
-  SBP = sbp.fromHSClust(levels_matrix = SigmaW_hsclust$allLevels)
-  
-  # a preliminary plot of the tree given by covariance matrix SigmaW
-  # nodes_types = data.frame(
-  #   name = c(colnames(SBP), rownames(SBP)),
-  #   type = c(rep("balance", ncol(SBP)), rep("covariate", nrow(SBP)))
-  # )
-  # plotSBP(SBP, title = "Sigma", nodes_types = nodes_types) 
-  
-  # for each column (contrast), find which variables are included (1 or -1)
-  indices.theta = p - 4
-  
-  # print(indices.theta)
-  # error checking indices.theta found based on theta.settings argument
-  if(is.null(indices.theta)){
-    stop("invalid indices.theta")
-  }
-  
-  # get theta
-  theta = rep(0, p - 1)
-  if(is.null(values.theta)){
-    # assume values.theta = 1
-    values.theta = 1
-  }
-  if(length(values.theta) == 1){
-    # if values.theta = 1, assume it's the same value for all nonzero indices
-    values.theta = rep(values.theta, length(indices.theta))
-  } else if(length(values.theta) != length(indices.theta)){
-    # when 1 < length(values.theta) < total # of nonzero values
-    stop("indices.theta does not have same length as values.theta")
-  }
-  theta[indices.theta] = values.theta
-  theta = as.matrix(theta)
-  
-  # about beta
-  beta = as.vector(getBeta(theta, sbp = SBP))
-  names(beta) <- paste0('s', 1:p)
-  non0.beta = (beta != 0)
-  is0.beta = abs(beta) <= 10e-8
-  bspars = sum(non0.beta)
-  
-  # Population parameters, continued
   muW = c(rep(log(p), 5), rep(0, p - 5))
-  names(muW) = names(beta)
-  
-  # plot the tree given by covariance matrix SigmaW, indicating 
-  #   significant covariates and balances (theta's)
-  leaf_types = rep("insignif cov", nrow(SBP))
-  leaf_types[non0.beta] = "signif cov"
-  balance_types = rep("insignif bal", ncol(SBP))
-  balance_types[theta[, 1] != 0] = "signif bal"
-  nodes_types = data.frame(
-    name = c(colnames(SBP), rownames(SBP)),
-    type = c(balance_types, leaf_types)
-  )
-  # plotSBP(SBP, title = "Sigma", nodes_types = nodes_types)
+  names(muW) = paste0('s', 1:p)
   
   file.end = paste0(
     "_", sigma.settings,
-    "_", theta.settings, 
     "_val", values.theta[1],
     "_dim", n, "x", p, 
     "_Rsq", desired_Rsquared,
@@ -187,13 +124,16 @@ res = foreach(
   logW.all <- mvrnorm(n = 2 * n, mu = muW, Sigma = SigmaW) 
   W.all <- exp(logW.all)
   X.all <- sweep(W.all, 1, rowSums(W.all), FUN='/')
-  colnames(X.all) = names(beta)
+  colnames(X.all) = paste0('s', 1:p)
   # create the ilr(X.all) covariate by hand to
   #   generate y
   SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   U.true.details = getUdetailed(sbp = SBP.true)
   U.true = U.true.details$U
-  y.all = as.numeric(log(X.all) %*% U.true * values.theta) + rnorm(n) * sigma_eps
+  # note: there is no theta
+  # also note: beta is U.true * values.theta
+  beta = as.numeric(U.true * values.theta)
+  y.all = as.numeric(log(X.all) %*% beta) + rnorm(n) * sigma_eps
   
   # subset out training and test sets
   X = X.all[1:n, ]
@@ -201,9 +141,15 @@ res = foreach(
   Y <- y.all[1:n]
   Y.test <- y.all[-(1:n)]
   
+  # about beta
+  names(beta) <- paste0('s', 1:p)
+  non0.beta = (beta != 0)
+  is0.beta = abs(beta) <= 10e-8
+  bspars = sum(non0.beta)
+  
   ##############################################################################
   # estimate Rsquared, given the true model
-  SSres = sum((y.all - as.numeric(log(X.all) %*% U.true * values.theta))^2)
+  SSres = sum((y.all - as.numeric(log(X.all) %*% beta))^2)
   SStot = sum((y.all - mean(y.all))^2)
   Rsq = 1 - SSres/SStot
   
@@ -213,7 +159,7 @@ res = foreach(
   ##############################################################################
   # apply hierarchical clustering to the SLR distance matrix
   slrDistMat = getSupervisedMatrix(
-    y = Y, X = X, rho.type = rho.type, type = "distance")
+    y = Y, X = X, type = "distance")
   slrhc_btree = hclust(as.dist(slrDistMat), method = linkage)
   slrhc_SBP = sbp.fromHclust(slrhc_btree)
   
@@ -234,6 +180,16 @@ res = foreach(
     thetahat0 = slrhc.a0, thetahat = slrhc.thetahat, betahat = slrhc.betahat, 
     sbp = slrhc$sbp, 
     true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+  
+  # # plot the tree given by slr-hc, indicating significant covariates
+  # slrhc_leaf_types = rep("covariate", nrow(slrhc$sbp))
+  # slrhc_balance_types = rep("balance", ncol(slrhc$sbp))
+  # slrhc_nodes_types = data.frame(
+  #   name = c(colnames(slrhc$sbp), rownames(slrhc$sbp)),
+  #   type = c(slrhc_balance_types, slrhc_leaf_types)
+  # )
+  # plotSBP(slrhc$sbp, title = "slr-hc", nodes_types = slrhc_nodes_types)
+  # fields::image.plot(slrDistMat)
   
   saveRDS(c(
     slrhc.metrics, 
@@ -263,20 +219,6 @@ res = foreach(
     standardize = scaling
   )
   
-  # slrhc2_sbp = slrhc2$sbp_thresh[[slrhc2$min.idx[2]]]
-  # slrhc2_thetahat = slrhc2$theta[[slrhc2$min.idx[2]]][, slrhc2$min.idx[1]]
-  # slrhc2_betahat = getBeta(theta = slrhc2_thetahat, sbp = slrhc2_sbp)[, 1]
-  # slrhc2_leaf_types = rep("not-selected cov", nrow(slrhc2_sbp))
-  # slrhc2_leaf_types[slrhc2_betahat != 0] = "selected cov"
-  # slrhc2_balance_types = rep("not-selected bal", ncol(slrhc2_sbp))
-  # slrhc2_balance_types[slrhc2_thetahat != 0] = "selected bal"
-  # slrhc2_nodes_types = data.frame(
-  #   name = c(colnames(slrhc2_sbp), rownames(slrhc2_sbp)),
-  #   type = c(slrhc2_balance_types, slrhc2_leaf_types)
-  # )
-  # plotSBP(slrhc2_sbp, title = "SLR hclust - eta tree", 
-  #         nodes_types = slrhc2_nodes_types)
-  
   slrhc2.eta.min.idx = slrhc2$min.idx[2]
   slrhc2.lam.min.idx = slrhc2$min.idx[1]
   slrhc2.a0 = slrhc2$theta0[[slrhc2.eta.min.idx]][slrhc2.lam.min.idx]
@@ -302,6 +244,16 @@ res = foreach(
     sbp = slrhc2.SBP, 
     true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
   
+  # # plot the tree given by slr-hc-eta, indicating significant covariates
+  # slrhc2_leaf_types = rep("covariate", nrow(slrhc2.SBP))
+  # slrhc2_balance_types = rep("balance", ncol(slrhc2.SBP))
+  # slrhc2_nodes_types = data.frame(
+  #   name = c(colnames(slrhc2.SBP), rownames(slrhc2.SBP)),
+  #   type = c(slrhc2_balance_types, slrhc2_leaf_types)
+  # )
+  # plotSBP(slrhc2.SBP, title = "slr-hc-eta", nodes_types = slrhc2_nodes_types)
+  # # fields::image.plot(slrDistMat)
+  
   saveRDS(c(
     slrhc2.metrics, 
     "betaSparsity" = bspars,
@@ -315,7 +267,7 @@ res = foreach(
   ##############################################################################
   # apply hierarchical spectral clustering to the SLR similarity matrix
   slrSimMat = getSupervisedMatrix(
-    y = Y, X = X, rho.type = rho.type, type = "similarity")
+    y = Y, X = X, type = "similarity")
   slrhsc_btree = HSClust(
     W = slrSimMat, force_levelMax = TRUE, method = "kmeans")
   slrhsc_SBP = sbp.fromHSClust(
@@ -339,6 +291,16 @@ res = foreach(
     thetahat0 = slrhsc.a0, thetahat = slrhsc.thetahat, betahat = slrhsc.betahat, 
     sbp = slrhsc$sbp, 
     true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+  
+  # # plot the tree given by slr-hsc, indicating significant covariates
+  # slrhsc_leaf_types = rep("covariate", nrow(slrhsc$sbp))
+  # slrhsc_balance_types = rep("balance", ncol(slrhsc$sbp))
+  # slrhsc_nodes_types = data.frame(
+  #   name = c(colnames(slrhsc$sbp), rownames(slrhsc$sbp)),
+  #   type = c(slrhsc_balance_types, slrhsc_leaf_types)
+  # )
+  # plotSBP(slrhsc$sbp, title = "slr-hsc", nodes_types = slrhsc_nodes_types)
+  # fields::image.plot(slrSimMat)
   
   saveRDS(c(
     slrhsc.metrics, 
@@ -367,20 +329,6 @@ res = foreach(
     standardize = scaling
   )
   
-  # slrhsc2_sbp = slrhsc2$sbp_thresh[[slrhsc2$min.idx[2]]]
-  # slrhsc2_thetahat = slrhsc2$theta[[slrhsc2$min.idx[2]]][, slrhsc2$min.idx[1]]
-  # slrhsc2_betahat = getBeta(theta = slrhsc2_thetahat, sbp = slrhsc2_sbp)[, 1]
-  # slrhsc2_leaf_types = rep("not-selected cov", nrow(slrhsc2_sbp))
-  # slrhsc2_leaf_types[slrhsc2_betahat != 0] = "selected cov"
-  # slrhsc2_balance_types = rep("not-selected bal", ncol(slrhsc2_sbp))
-  # slrhsc2_balance_types[slrhsc2_thetahat != 0] = "selected bal"
-  # slrhsc2_nodes_types = data.frame(
-  #   name = c(colnames(slrhsc2_sbp), rownames(slrhsc2_sbp)),
-  #   type = c(slrhsc2_balance_types, slrhsc2_leaf_types)
-  # )
-  # plotSBP(slrhsc2_sbp, title = "SLR HSClust - eta tree", 
-  #         nodes_types = slrhsc2_nodes_types)
-  
   slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
   slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
   slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
@@ -406,6 +354,16 @@ res = foreach(
     betahat = slrhsc2.betahat, 
     sbp = slrhsc2.SBP, 
     true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+  
+  # # plot the tree given by slr-hsc, indicating significant covariates
+  # slrhsc2_leaf_types = rep("covariate", nrow(slrhsc2.SBP))
+  # slrhsc2_balance_types = rep("balance", ncol(slrhsc2.SBP))
+  # slrhsc2_nodes_types = data.frame(
+  #   name = c(colnames(slrhsc2.SBP), rownames(slrhsc2.SBP)),
+  #   type = c(slrhsc2_balance_types, slrhsc2_leaf_types)
+  # )
+  # plotSBP(slrhsc2.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_nodes_types)
+  # # fields::image.plot(slrSimMat)
   
   saveRDS(c(
     slrhsc2.metrics, 

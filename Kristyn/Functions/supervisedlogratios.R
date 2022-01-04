@@ -4,7 +4,7 @@
 
 # do hierarchical clustering with specified linkage 
 #   for compositional data X and y
-getSupervisedMatrix = function(y, X, rho.type, type = "similarity"){
+getSupervisedMatrix = function(y, X, rho.type = "square", type = "similarity"){
   n = dim(X)[1]
   p = dim(X)[2]
   
@@ -178,7 +178,7 @@ getUdetailed= function(btree = NULL, sbp = NULL){
 # Fit supervised log-ratios model to compositional data X and response y
 fitSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE, 
-  standardize = standardize, rho.type = "squared"
+  standardize = standardize, rho.type = "square"
 ){
   n = dim(X)[1]
   p = dim(X)[2]

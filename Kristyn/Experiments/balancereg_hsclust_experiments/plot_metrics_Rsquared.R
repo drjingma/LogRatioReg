@@ -1,7 +1,7 @@
 rm(list=ls())
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
 #   explore various sigma_eps & rho values to get specified Rsquared values
-# Date: 10/11/2021
+# Date: 1/3/2021
 
 ################################################################################
 # libraries and settings
@@ -37,27 +37,35 @@ scaling = TRUE
 # if rho = 0.5, 
 #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
 #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
+get_sigma_eps = function(theta_val, Rsq_val, rho_val){
+  sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
+    theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
+    (10 * Rsq_val)
+  return(sqrt(sigma_eps_sq.tmp))
+}
 rho = 0 #
 desired_Rsquared = 0.6 #
-if(rho == 0){
-  if(desired_Rsquared == 0.6){
-    sigma_eps = sqrt(2/3)
-  } else if(desired_Rsquared == 0.8){
-    sigma_eps = sqrt(1/4)
-  }
-} else if(rho == 0.2){
-  if(desired_Rsquared == 0.6){
-    sigma_eps = sqrt(0.7125333)
-  } else if(desired_Rsquared == 0.8){
-    sigma_eps = sqrt(0.2672)
-  }
-} else if(rho == 0.5){
-  if(desired_Rsquared == 0.6){
-    sigma_eps = sqrt(0.808333)
-  } else if(desired_Rsquared == 0.8){
-    sigma_eps = sqrt(0.303125)
-  }
-}
+sigma_eps = get_sigma_eps(
+  theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
+# if(rho == 0){
+#   if(desired_Rsquared == 0.6){
+#     sigma_eps = sqrt(2/3) # 0.8164966
+#   } else if(desired_Rsquared == 0.8){
+#     sigma_eps = sqrt(1/4) # 0.5
+#   }
+# } else if(rho == 0.2){
+#   if(desired_Rsquared == 0.6){
+#     sigma_eps = sqrt(0.7125333) # 0.8441169
+#   } else if(desired_Rsquared == 0.8){
+#     sigma_eps = sqrt(0.2672) # 0.5169139
+#   }
+# } else if(rho == 0.5){
+#   if(desired_Rsquared == 0.6){
+#     sigma_eps = sqrt(0.808333) # 0.8990734
+#   } else if(desired_Rsquared == 0.8){
+#     sigma_eps = sqrt(0.303125) # 0.5505679
+#   }
+# }
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -104,7 +112,7 @@ for(i in 1:numSims){
   slrhsc_sims_list[[i]] = data.table(slrhsc.sim.tmp)
   # slr hsc - eta
   slrhsc2.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_hsc_", "metrics", file.end0,
+    output_dir, "/metrics", "/slr_hsc_eta_", "metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(slrhsc2.sim.tmp) = NULL
@@ -179,8 +187,12 @@ pr.sims.gg = reshape2::melt(pr_sims)
 pr.sims.gg$Method = "propr"
 
 data.gg = rbind(
-  slrhc.sims.gg, slrhc2.sims.gg, slrhsc.sims.gg, slrhsc2.sims.gg, 
-  cl.sims.gg, pr.sims.gg)
+  slrhc.sims.gg, 
+  slrhc2.sims.gg, 
+  slrhsc.sims.gg, 
+  slrhsc2.sims.gg, 
+  cl.sims.gg, 
+  pr.sims.gg)
 # levels.gg = c(
 #   "slr-hc", "slr-hsc", "slr-hc-eta", "slr-hsc-eta", "classo", "propr")
 
@@ -206,7 +218,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20210103_",
+    "20220104",
     "_Rsq", desired_Rsquared,
     "_rho", rho, 
     "_", "metrics", ".pdf"),

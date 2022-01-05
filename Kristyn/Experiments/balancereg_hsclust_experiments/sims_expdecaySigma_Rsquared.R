@@ -31,6 +31,7 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:numSims
 ) %dorng% {
+  # rm(list=ls())
   library(mvtnorm)
   
   library(Matrix)
@@ -77,7 +78,13 @@ res = foreach(
   # if rho = 0.5, 
   #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
   #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
-  rho = 0.5 #
+  get_sigma_eps = function(theta_val, Rsq_val, rho_val){
+    sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
+      theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
+      (10 * Rsq_val)
+    return(sqrt(sigma_eps_sq.tmp))
+  }
+  rho = 0 #
   desired_Rsquared = 0.6 #
   if(rho == 0){
     if(desired_Rsquared == 0.6){
@@ -114,8 +121,7 @@ res = foreach(
   
   ##############################################################################
   # generate data
-  # seed = 123
-  # set.seed(seed)
+  # set.seed(1947)
   # generate X
   logW.all <- mvrnorm(n = 2 * n, mu = muW, Sigma = SigmaW) 
   W.all <- exp(logW.all)
@@ -240,15 +246,15 @@ res = foreach(
     sbp = slrhc2.SBP, 
     true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
   
-  # # plot the tree given by slr-hc-eta, indicating significant covariates
-  # slrhc2_leaf_types = rep("covariate", nrow(slrhc2.SBP))
-  # slrhc2_balance_types = rep("balance", ncol(slrhc2.SBP))
-  # slrhc2_nodes_types = data.frame(
-  #   name = c(colnames(slrhc2.SBP), rownames(slrhc2.SBP)),
-  #   type = c(slrhc2_balance_types, slrhc2_leaf_types)
-  # )
-  # plotSBP(slrhc2.SBP, title = "slr-hc-eta", nodes_types = slrhc2_nodes_types)
-  # # fields::image.plot(slrDistMat)
+  # plot the tree given by slr-hc-eta, indicating significant covariates
+  slrhc2_leaf_types = rep("covariate", nrow(slrhc2.SBP))
+  slrhc2_balance_types = rep("balance", ncol(slrhc2.SBP))
+  slrhc2_nodes_types = data.frame(
+    name = c(colnames(slrhc2.SBP), rownames(slrhc2.SBP)),
+    type = c(slrhc2_balance_types, slrhc2_leaf_types)
+  )
+  plotSBP(slrhc2.SBP, title = "slr-hc-eta", nodes_types = slrhc2_nodes_types)
+  # fields::image.plot(slrDistMat)
   
   saveRDS(c(
     slrhc2.metrics, 
@@ -419,6 +425,16 @@ res = foreach(
     thetahat0 = pr.a0, thetahat = pr.thetahat, betahat = pr.betahat, 
     sbp = pr$sbp, 
     true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+  
+  # # plot the tree given by slr-hsc, indicating significant covariates
+  # pr_leaf_types = rep("covariate", nrow(pr$sbp))
+  # pr_balance_types = rep("balance", ncol(pr$sbp))
+  # pr_nodes_types = data.frame(
+  #   name = c(colnames(pr$sbp), rownames(pr$sbp)),
+  #   type = c(pr_balance_types, pr_leaf_types)
+  # )
+  # plotSBP(pr$sbp, title = "propr", nodes_types = pr_nodes_types)
+  # fields::image.plot(pr_res@matrix)
   
   saveRDS(c(
     pr.metrics, 

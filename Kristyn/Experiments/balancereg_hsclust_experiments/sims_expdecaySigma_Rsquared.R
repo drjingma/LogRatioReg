@@ -186,6 +186,58 @@ res = foreach(
   #   "time" = slrhc.timing
   # ), 
   # paste0(output_dir, "/metrics", "/slr_hc_metrics", file.end))
+  
+  ##############################################################################
+  # supervised log-ratios (a balance regression method) withOUT eta, using 
+  #   distal balances
+  #   -- hierarchical clustering
+  ##############################################################################
+  start.time = Sys.time()
+  # apply hierarchical clustering to the SLR distance matrix
+  slrDistMat = getSupervisedMatrix(
+    y = Y, X = X, type = "distance")
+  slrhc_btree = hclust(as.dist(slrDistMat), method = linkage)
+  slrhc_distal_SBP = sbp.fromHclust(slrhc_btree)
+  slrhc_distal_SBP = sbp.subset(slrhc_distal_SBP)
+  # apply supervised log-ratios, using CV to select threshold and also lambda
+  slrhc_distal = cvILR(y = Y, X = X, sbp = slrhc_distal_SBP, nlam = nlam,
+             nfolds = K, intercept = intercept, standardize = scaling)
+  end.time = Sys.time()
+  slrhc_distal.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+
+  slrhc_distal.lam.min.idx = which.min(slrhc_distal$cvm)
+  slrhc_distal.a0 = slrhc_distal$int[slrhc_distal.lam.min.idx]
+  slrhc_distal.thetahat = slrhc_distal$bet[, slrhc_distal.lam.min.idx]
+  slrhc_distal.betahat = getBeta(slrhc_distal.thetahat, sbp = slrhc_distal$sbp)
+
+  # compute metrics on the selected model #
+  slrhc_distal.metrics = getMetricsBalanceReg(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = computeBalances(X, sbp = slrhc_distal$sbp),
+    ilrX.test = computeBalances(X.test, sbp = slrhc_distal$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrhc_distal.a0, thetahat = slrhc_distal.thetahat, betahat = slrhc_distal.betahat,
+    sbp = slrhc_distal$sbp,
+    true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+
+  # # plot the tree given by slr-hc, indicating significant covariates
+  # slrhc_distal_leaf_types = rep("covariate", nrow(slrhc_distal$sbp))
+  # slrhc_distal_balance_types = rep("balance", ncol(slrhc_distal$sbp))
+  # slrhc_distal_nodes_types = data.frame(
+  #   name = c(colnames(slrhc_distal$sbp), rownames(slrhc_distal$sbp)),
+  #   type = c(slrhc_distal_balance_types, slrhc_distal_leaf_types)
+  # )
+  # plotSBP(slrhc_distal$sbp, title = "slr-hc", nodes_types = slrhc_distal_nodes_types)
+  # fields::image.plot(slrDistMat)
+
+  saveRDS(c(
+    slrhc_distal.metrics,
+    "betaSparsity" = bspars,
+    "Rsq" = Rsq,
+    "time" = slrhc_distal.timing
+  ),
+  paste0(output_dir, "/metrics", "/slr_hc_distal_metrics", file.end))
+  
   # 
   # ##############################################################################
   # # supervised log-ratios (a balance regression method) with eta
@@ -465,83 +517,83 @@ res = foreach(
   #   "time" = slrhsc2_natstop.timing
   # ), 
   # paste0(output_dir, "/metrics", "/slr_hsc_eta_natstop_metrics", file.end))
-  
-  ##############################################################################
-  # supervised log-ratios (a balance regression method) with eta
-  #   -- hierarchical spectral clustering, with Newton-Girvan modularity
-  #     stopping rule
-  ##############################################################################
-  start.time = Sys.time()
-  # apply hierarchical spectral clustering to the SLR similarity matrix
-  slrSimMat = getSupervisedMatrix(
-    y = Y, X = X, type = "similarity")
-  slrhsc_btree_ngmstop = HSClust(
-    W = slrSimMat, force_levelMax = FALSE, method = "kmeans",
-    stopping_rule = "ngm")
-  slrhsc_SBP_ngmstop = sbp.fromHSClust(
-    levels_matrix = slrhsc_btree_ngmstop$allLevels, row_names = names(beta))
-  # apply supervised log-ratios, using CV to select threshold and also lambda
-  slrhsc2_ngmstop = cvILReta(
-    y = Y, X = X,
-    W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
-    clustering_method = "hsc",
-    hsc_method = "kmeans", # "shimalik", "kmeans"
-    force_levelMax = TRUE,
-    sbp = slrhsc_SBP_ngmstop,
-    lambda = NULL, nlam = nlam,
-    eta = NULL, neta = neta,
-    nfolds = K, foldid = NULL,
-    intercept = intercept,
-    standardize = scaling
-  )
-  end.time = Sys.time()
-  slrhsc2_ngmstop.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-
-  slrhsc2_ngmstop.eta.min.idx = slrhsc2_ngmstop$min.idx[2]
-  slrhsc2_ngmstop.lam.min.idx = slrhsc2_ngmstop$min.idx[1]
-  slrhsc2_ngmstop.a0 = slrhsc2_ngmstop$theta0[[slrhsc2_ngmstop.eta.min.idx]][slrhsc2_ngmstop.lam.min.idx]
-  slrhsc2_ngmstop.thetahat = slrhsc2_ngmstop$theta[[slrhsc2_ngmstop.eta.min.idx]][, slrhsc2_ngmstop.lam.min.idx]
-  slrhsc2_ngmstop.SBP = slrhsc2_ngmstop$sbp_thresh[[slrhsc2_ngmstop.eta.min.idx]]
-  slrhsc2_ngmstop.betahat.nonzero = getBeta(slrhsc2_ngmstop.thetahat, sbp = slrhsc2_ngmstop.SBP)
-  slrhsc2_ngmstop.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-  rownames(slrhsc2_ngmstop.betahat) = names(beta)
-  slrhsc2_ngmstop.betahat[slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], ] =
-    as.numeric(slrhsc2_ngmstop.betahat.nonzero)
-
-  # compute metrics on the selected model #
-  slrhsc2_ngmstop.metrics = getMetricsBalanceReg(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = computeBalances(
-      X[, slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], drop = FALSE],
-      sbp = slrhsc2_ngmstop.SBP),
-    ilrX.test = computeBalances(
-      X.test[, slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], drop = FALSE],
-      sbp = slrhsc2_ngmstop.SBP),
-    n.train = n, n.test = n,
-    thetahat0 = slrhsc2_ngmstop.a0, thetahat = slrhsc2_ngmstop.thetahat,
-    betahat = slrhsc2_ngmstop.betahat,
-    sbp = slrhsc2_ngmstop.SBP,
-    true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
-
-  # # plot the tree given by slr-hsc, indicating significant covariates
-  # slrhsc2_ngmstop_leaf_types = rep("covariate", nrow(slrhsc2_ngmstop.SBP))
-  # slrhsc2_ngmstop_balance_types = rep("balance", ncol(slrhsc2_ngmstop.SBP))
-  # slrhsc2_ngmstop_nodes_types = data.frame(
-  #   name = c(colnames(slrhsc2_ngmstop.SBP), rownames(slrhsc2_ngmstop.SBP)),
-  #   type = c(slrhsc2_ngmstop_balance_types, slrhsc2_ngmstop_leaf_types)
+  # 
+  # ##############################################################################
+  # # supervised log-ratios (a balance regression method) with eta
+  # #   -- hierarchical spectral clustering, with Newman-Girvan modularity
+  # #     stopping rule
+  # ##############################################################################
+  # start.time = Sys.time()
+  # # apply hierarchical spectral clustering to the SLR similarity matrix
+  # slrSimMat = getSupervisedMatrix(
+  #   y = Y, X = X, type = "similarity")
+  # slrhsc_btree_ngmstop = HSClust(
+  #   W = slrSimMat, force_levelMax = FALSE, method = "kmeans",
+  #   stopping_rule = "ngm")
+  # slrhsc_SBP_ngmstop = sbp.fromHSClust(
+  #   levels_matrix = slrhsc_btree_ngmstop$allLevels, row_names = names(beta))
+  # # apply supervised log-ratios, using CV to select threshold and also lambda
+  # slrhsc2_ngmstop = cvILReta(
+  #   y = Y, X = X,
+  #   W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
+  #   clustering_method = "hsc",
+  #   hsc_method = "kmeans", # "shimalik", "kmeans"
+  #   force_levelMax = TRUE,
+  #   sbp = slrhsc_SBP_ngmstop,
+  #   lambda = NULL, nlam = nlam,
+  #   eta = NULL, neta = neta,
+  #   nfolds = K, foldid = NULL,
+  #   intercept = intercept,
+  #   standardize = scaling
   # )
-  # plotSBP(slrhsc2_ngmstop.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_ngmstop_nodes_types)
-  # # fields::image.plot(slrSimMat)
-
-  saveRDS(c(
-    slrhsc2_ngmstop.metrics,
-    "betaSparsity" = bspars,
-    "Rsq" = Rsq,
-    "time" = slrhsc2_ngmstop.timing
-  ),
-  paste0(output_dir, "/metrics", "/slr_hsc_eta_ngmstop_metrics", file.end))
-  
+  # end.time = Sys.time()
+  # slrhsc2_ngmstop.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # slrhsc2_ngmstop.eta.min.idx = slrhsc2_ngmstop$min.idx[2]
+  # slrhsc2_ngmstop.lam.min.idx = slrhsc2_ngmstop$min.idx[1]
+  # slrhsc2_ngmstop.a0 = slrhsc2_ngmstop$theta0[[slrhsc2_ngmstop.eta.min.idx]][slrhsc2_ngmstop.lam.min.idx]
+  # slrhsc2_ngmstop.thetahat = slrhsc2_ngmstop$theta[[slrhsc2_ngmstop.eta.min.idx]][, slrhsc2_ngmstop.lam.min.idx]
+  # slrhsc2_ngmstop.SBP = slrhsc2_ngmstop$sbp_thresh[[slrhsc2_ngmstop.eta.min.idx]]
+  # slrhsc2_ngmstop.betahat.nonzero = getBeta(slrhsc2_ngmstop.thetahat, sbp = slrhsc2_ngmstop.SBP)
+  # slrhsc2_ngmstop.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+  # rownames(slrhsc2_ngmstop.betahat) = names(beta)
+  # slrhsc2_ngmstop.betahat[slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], ] =
+  #   as.numeric(slrhsc2_ngmstop.betahat.nonzero)
+  # 
+  # # compute metrics on the selected model #
+  # slrhsc2_ngmstop.metrics = getMetricsBalanceReg(
+  #   y.train = Y, y.test = Y.test,
+  #   ilrX.train = computeBalances(
+  #     X[, slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], drop = FALSE],
+  #     sbp = slrhsc2_ngmstop.SBP),
+  #   ilrX.test = computeBalances(
+  #     X.test[, slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], drop = FALSE],
+  #     sbp = slrhsc2_ngmstop.SBP),
+  #   n.train = n, n.test = n,
+  #   thetahat0 = slrhsc2_ngmstop.a0, thetahat = slrhsc2_ngmstop.thetahat,
+  #   betahat = slrhsc2_ngmstop.betahat,
+  #   sbp = slrhsc2_ngmstop.SBP,
+  #   true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+  # 
+  # # # plot the tree given by slr-hsc, indicating significant covariates
+  # # slrhsc2_ngmstop_leaf_types = rep("covariate", nrow(slrhsc2_ngmstop.SBP))
+  # # slrhsc2_ngmstop_balance_types = rep("balance", ncol(slrhsc2_ngmstop.SBP))
+  # # slrhsc2_ngmstop_nodes_types = data.frame(
+  # #   name = c(colnames(slrhsc2_ngmstop.SBP), rownames(slrhsc2_ngmstop.SBP)),
+  # #   type = c(slrhsc2_ngmstop_balance_types, slrhsc2_ngmstop_leaf_types)
+  # # )
+  # # plotSBP(slrhsc2_ngmstop.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_ngmstop_nodes_types)
+  # # # fields::image.plot(slrSimMat)
+  # 
+  # saveRDS(c(
+  #   slrhsc2_ngmstop.metrics,
+  #   "betaSparsity" = bspars,
+  #   "Rsq" = Rsq,
+  #   "time" = slrhsc2_ngmstop.timing
+  # ),
+  # paste0(output_dir, "/metrics", "/slr_hsc_eta_ngmstop_metrics", file.end))
+  # 
   # ##############################################################################
   # # compositional lasso (a linear log contrast method)
   # ##############################################################################

@@ -6,8 +6,12 @@ rm(list=ls())
 # libraries and settings
 
 library(mvtnorm)
+
 library(Matrix)
 library(glmnet)
+
+library(balance)
+library(propr)
 
 source("RCode/func_libs.R")
 source("Kristyn/Functions/supervisedlogratios.R")
@@ -405,3 +409,4 @@ c(
   "Rsq" = Rsq,
   "time" = slrhsc2_ngmstop.timing
 )
+

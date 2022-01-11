@@ -134,10 +134,21 @@ HSClust <- function(
   W, # similarity matrix
   levelMax = NULL, # p for full binary partition
   force_levelMax = TRUE, 
+  stopping_rule = NULL, 
+  #   NULL means go with force_levelMax
+  #   "TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm"
   method = "ShiMalik" # ShiMalik or kmeans
 ){
   p = nrow(W)
   if(is.null(levelMax)) levelMax = p
+  if(is.null(stopping_rule)){
+    stopping_rule = "none"
+  } else{
+    if(stopping_rule %in% 
+       c("TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm")){
+      force_levelMax = FALSE
+    }
+  }
   
   stop <- FALSE
   # level of the clustering, i.e. how many cluster partitions have already been 
@@ -177,25 +188,37 @@ HSClust <- function(
           stop("invalid method argument")
         }
         # Changing the cluster if necessary
-        if(!is.null(groups) && length(unique(groups)) > 1){
+        if(is.null(groups)){
+          stop("HSClust(): groups is null for some reason! Clustering didn't happen correctly.")
+        }
+        if(length(unique(groups)) > 1){
+          # cluster assignments for each observation
           if(level == 1){
-            cl[indices, level + 1] <- paste0(groups)
-            newCluster <- c(newCluster, unique(paste0(groups)))
+            cluster_assignments <- as.character(groups)
           } else{
-            cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
+            cluster_assignments <- paste0(cl[indices, level], ".", groups)
+          }
+          cl[indices, level + 1] <- cluster_assignments
+          # clusters to be further split
+          newCluster <- c(newCluster, unique(cluster_assignments))
+          if(stopping_rule %in% 
+             c("TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm")
+             ){
+            # stopping rule to be implemented here! --------------------------------
+          }
+        } else {
+          # artificially split clusters if spectral clustering doesn't split
+          #   and force_levelMax == TRUE
+          if(length(groups) >= 2 && force_levelMax){
+            groups = c(rep(1, length(groups) - 1), 2)
+            if(length(groups) == p){
+              cl[indices, level + 1] <- as.character(groups)
+            } else{
+              cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
+            }
             newCluster <- c(
-              newCluster, unique(paste0(cl[indices, level], ".", groups)))
+              newCluster, unique(cl[indices, level + 1]))
           }
-        } else if(!is.null(groups) && length(unique(groups)) == 1 && 
-                  length(groups) >= 2 && force_levelMax){ # artificially split them
-          groups = c(rep(1, length(groups) - 1), 2)
-          if(length(groups) == p){
-            cl[indices, level + 1] <- as.character(groups)
-          } else{
-            cl[indices, level + 1] <- paste0(cl[indices, level], ".", groups)
-          }
-          newCluster <- c(
-            newCluster, unique(cl[indices, level + 1]))
         }
       }
     }

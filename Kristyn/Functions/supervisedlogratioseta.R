@@ -5,6 +5,10 @@ fitILReta = function(
   clustering_method = "hsc", # "hs", "hsc"
   hsc_method = "kmeans", # "shimalik", "kmeans"
   force_levelMax = FALSE, 
+  stopping_rule = NULL,
+  #   NULL means none
+  #   "natural" means force_levelMax = FALSE, 
+  #   "TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm"
   lambda = NULL, nlam = 20, 
   eta = NULL, neta = 20,
   nfolds = 5,
@@ -46,11 +50,19 @@ fitILReta = function(
   }
   
   # thresholding with eta: Iterate solution paths along eta
-  meets_threshold <- sbp_thresh <- theta0 <- theta <- list()
+  meets_threshold <- clust_thresh <- sbp_thresh <- theta0 <- theta <- list()
   num_covariates = rep(NA, neta)
   for(i in 1:neta){
     # thresholding
-    meets_threshold_i = apply(W, 1, function(row) !all(row < eta[i]))
+    if(clustering_method == "hsc"){ 
+      # using a similarity matrix (close to 1 = highly correlated with y)
+      # if there is an element that is greater than eta
+      meets_threshold_i = apply(W, 1, function(row) !all(row < eta[i]))
+    } else if(clustering_method == "hc"){ 
+      # using a distance matrix (close to 1 = not highly correlated with y)
+      # if there is an element that is less than eta
+      meets_threshold_i = apply(W, 1, function(row) !all(row > eta[i]))
+    }
     num_covariates[i] = sum(meets_threshold_i)
     if(sum(meets_threshold_i) <= 2){ # cannot cluster
       theta[[i]] = rep(NA, sum(meets_threshold_i))
@@ -63,7 +75,8 @@ fitILReta = function(
       # model fitting
       if(clustering_method == "hsc"){
         hsclust_thresh = HSClust(
-          W = W_thresh, force_levelMax = force_levelMax, method = hsc_method
+          W = W_thresh, force_levelMax = force_levelMax, 
+          stopping_rule = stopping_rule, method = hsc_method
         )
         SBP_thresh = sbp.fromHSClust(
           levels_matrix = hsclust_thresh$allLevels, 
@@ -75,6 +88,7 @@ fitILReta = function(
         theta[[i]] = modelfit$bet
         theta0[[i]] = modelfit$int
         meets_threshold[[i]] = meets_threshold_i
+        clust_thresh[[i]] = hsclust_thresh
         sbp_thresh[[i]] = SBP_thresh
       } else if(clustering_method == "hc"){
         hclust_thresh = hclust(as.dist(W_thresh),method = linkage)
@@ -86,6 +100,7 @@ fitILReta = function(
         theta[[i]] = modelfit$bet
         theta0[[i]] = modelfit$int
         meets_threshold[[i]] = meets_threshold_i
+        clust_thresh[[i]] = hclust_thresh
         sbp_thresh[[i]] = SBP_thresh
       }
     }
@@ -96,6 +111,7 @@ fitILReta = function(
     theta = theta,
     meets_threshold = meets_threshold,
     sbp_thresh = sbp_thresh,
+    clust_thresh = clust_thresh,
     num_covariates = num_covariates, 
     lambda = lambda,
     eta = eta, 
@@ -110,6 +126,10 @@ cvILReta <- function(
   clustering_method = "hsc", # "hs", "hsc"
   hsc_method = "kmeans", # "shimalik", "kmeans"
   force_levelMax = TRUE, 
+  stopping_rule = NULL, 
+  #   NULL means none
+  #   "natural" means force_levelMax = FALSE, 
+  #   "TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm"
   lambda = NULL, nlam = 20, 
   eta = NULL, neta = 5,
   nfolds = 10, foldid = NULL, 
@@ -155,7 +175,7 @@ cvILReta <- function(
   # fit the models
   fitObj = fitILReta(
     y = y, X = X, W = W, hsc_method = hsc_method,
-    force_levelMax = force_levelMax, sbp = sbp, 
+    force_levelMax = force_levelMax, stopping_rule = stopping_rule, sbp = sbp, 
     lambda = lambda, nlam = nlam, eta = eta, neta = neta, nfolds = nfolds,
     intercept = intercept, standardize = standardize)
   
@@ -187,7 +207,7 @@ cvILReta <- function(
     fit_cv <- fitILReta(
       y = y[-folds[[i]]], X = X[-folds[[i]], , drop = FALSE], W = W, sbp = sbp,
       hsc_method = hsc_method,
-      force_levelMax = force_levelMax,
+      force_levelMax = force_levelMax, stopping_rule = stopping_rule,
       lambda = lambda, nlam = nlam, eta = eta, neta = neta, nfolds = nfolds,
       intercept = intercept, standardize = standardize)
     pred_te <- lapply(1:neta, function(k) {
@@ -224,6 +244,7 @@ cvILReta <- function(
     theta0 = fitObj$theta0,
     theta = fitObj$theta,
     meets_threshold = fitObj$meets_threshold,
+    clust_thresh = fitObj$clust_thresh,
     sbp_thresh = fitObj$sbp_thresh,
     num_covariates = fitObj$num_covariates,
     lambda = fitObj$lambda,

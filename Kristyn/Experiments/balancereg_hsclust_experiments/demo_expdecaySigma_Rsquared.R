@@ -1,5 +1,6 @@
+rm(list=ls())
 # Purpose: observe different R^2 values for specified rho and sigma_eps values
-# Date: 1/2/2021
+# Date: 1/11/2022
 
 ################################################################################
 # libraries and settings
@@ -10,6 +11,7 @@ library(glmnet)
 
 source("RCode/func_libs.R")
 source("Kristyn/Functions/supervisedlogratios.R")
+source("Kristyn/Functions/supervisedlogratioseta.R")
 source("Kristyn/Functions/HSClust.R")
 
 # helper functions
@@ -25,8 +27,6 @@ library(tidygraph)
 
 # Settings to toggle with
 sigma.settings = "expdecaySigma"
-rho.type = "square" # 1 = "absolute value", 2 = "square"
-theta.settings = "pminus4"
 values.theta = 1
 linkage = "average"
 tol = 1e-4
@@ -47,91 +47,42 @@ scaling = TRUE
 # if rho = 0.5, 
 #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
 #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
-rho = 0.5
-sigma_eps = sqrt(0.303125)
+# rho = 0.5
+# sigma_eps = sqrt(0.303125)
+get_sigma_eps = function(theta_val, Rsq_val, rho_val){
+  sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
+    theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
+    (10 * Rsq_val)
+  return(sqrt(sigma_eps_sq.tmp))
+}
+rho = 0.2 #
+desired_Rsquared = 0.6 #
+sigma_eps = get_sigma_eps(
+  theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
 #################
 
+# Population parameters
 SigmaW = rgExpDecay(p, rho)$Sigma
-# fields::image.plot(SigmaW)
-
-# theta settings
-SigmaW_hsclust = HSClust(
-  W = getSimilarityMatrix(unnormalized_similarity_matrix = SigmaW),
-  levelMax = p, force_levelMax = TRUE)
-SBP = sbp.fromHSClust(levels_matrix = SigmaW_hsclust$allLevels)
-
-# a preliminary plot of the tree given by covariance matrix SigmaW
-# nodes_types = data.frame(
-#   name = c(colnames(SBP), rownames(SBP)),
-#   type = c(rep("balance", ncol(SBP)), rep("covariate", nrow(SBP)))
-# )
-# plotSBP(SBP, title = "Sigma", nodes_types = nodes_types)
-
-# for each column (contrast), find which variables are included (1 or -1)
-indices.theta = p - 4
-
-# print(indices.theta)
-# error checking indices.theta found based on theta.settings argument
-if(is.null(indices.theta)){
-  stop("invalid indices.theta")
-}
-
-# get theta
-theta = rep(0, p - 1)
-if(is.null(values.theta)){
-  # assume values.theta = 1
-  values.theta = 1
-}
-if(length(values.theta) == 1){
-  # if values.theta = 1, assume it's the same value for all nonzero indices
-  values.theta = rep(values.theta, length(indices.theta))
-} else if(length(values.theta) != length(indices.theta)){
-  # when 1 < length(values.theta) < total # of nonzero values
-  stop("indices.theta does not have same length as values.theta")
-}
-theta[indices.theta] = values.theta
-theta = as.matrix(theta)
-
-# about beta
-beta = as.vector(getBeta(theta, sbp = SBP))
-names(beta) <- paste0('s', 1:p)
-non0.beta = (beta != 0)
-is0.beta = abs(beta) <= 10e-8
-bspars = sum(non0.beta)
-
-# Population parameters, continued
 muW = c(rep(log(p), 5), rep(0, p - 5))
-names(muW) = names(beta)
-
-# plot the tree given by covariance matrix SigmaW, indicating 
-#   significant covariates and balances (theta's)
-leaf_types = rep("insignif cov", nrow(SBP))
-leaf_types[non0.beta] = "signif cov"
-balance_types = rep("insignif bal", ncol(SBP))
-balance_types[theta[, 1] != 0] = "signif bal"
-nodes_types = data.frame(
-  name = c(colnames(SBP), rownames(SBP)),
-  type = c(balance_types, leaf_types)
-)
-plt1 = plotSBP(
-  SBP, title = "Sigma", nodes_types = nodes_types) # ...
+names(muW) = paste0('s', 1:p)
 
 ##############################################################################
 # generate data
-seed = 123
-# set.seed(seed)
+set.seed(1947)
 # generate X
 logW.all <- mvrnorm(n = 2 * n, mu = muW, Sigma = SigmaW) 
 W.all <- exp(logW.all)
 X.all <- sweep(W.all, 1, rowSums(W.all), FUN='/')
-colnames(X.all) = names(beta)
-# ilrX = computeBalances(X = X.all, U = getU(sbp = SBP))
+colnames(X.all) = paste0('s', 1:p)
 # create the ilr(X.all) covariate by hand to
-# generate y
+#   generate y
 SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 U.true.details = getUdetailed(sbp = SBP.true)
 U.true = U.true.details$U
-y.all = as.numeric(log(X.all) %*% U.true * values.theta) + rnorm(n) * sigma_eps
+# note: there is no theta
+# also note: beta is U.true * values.theta
+beta = as.numeric(U.true * values.theta)
+y.all = as.numeric(log(X.all) %*% beta) + rnorm(n) * sigma_eps
 
 # subset out training and test sets
 X = X.all[1:n, ]
@@ -139,56 +90,318 @@ X.test = X.all[-(1:n), ]
 Y <- y.all[1:n]
 Y.test <- y.all[-(1:n)]
 
-# ##############################################################################
-# # supervised log-ratios (a balance regression method)
-# ##############################################################################
-# 
-# # apply supervised log-ratios, using CV to select threshold and also lambda
-# slrMat = getSupervisedMatrix(y = Y, X = X, rho.type = rho.type)
-# # fields::image.plot(slrMat)
-# slr.hsclust = HSClust(
-#   W = slrMat, 
-#   force_levelMax = TRUE, method = "kmeans")
-# slr.SBP = sbp.fromHSClust(
-#   levels_matrix = slr.hsclust$allLevels, row_names = names(beta))
-# slr = cvILReta(
-#   y = Y, X = X, 
-#   W = slrMat, # normalized similarity matrix (all values between 0 & 1)
-#   hsc_method = "kmeans", # "shimalik", "kmeans"
-#   force_levelMax = TRUE, 
-#   sbp = slr.SBP,
-#   lambda = NULL, nlam = nlam, 
-#   eta = NULL, neta = neta,
-#   nfolds = K, foldid = NULL, 
-#   intercept = intercept, 
-#   standardize = scaling
-# )
-# 
-# slr_sbp = slr$sbp_thresh[[slr$min.idx[2]]]
-# # plt2 = plotSBP(
-# #   slr_sbp, 
-# #   title = paste0("rho = ", rho, ", sigma_eps = ", sigma_eps))
-# slr_thetahat = slr$theta[[slr$min.idx[2]]][, slr$min.idx[[1]]]
-# slr_betahat = getBeta(theta = slr_thetahat, sbp = slr_sbp)[, 1]
-# slr_leaf_types = rep("not-selected cov", nrow(slr_sbp))
-# slr_leaf_types[slr_betahat != 0] = "selected cov"
-# slr_balance_types = rep("not-selected bal", ncol(slr_sbp))
-# slr_balance_types[slr_thetahat != 0] = "selected bal"
-# slr_nodes_types = data.frame(
-#   name = c(colnames(slr_sbp), rownames(slr_sbp)),
-#   type = c(slr_balance_types, slr_leaf_types)
-# )
-# plt2 = plotSBP(
-#   slr_sbp, title = "SLR tree", nodes_types = slr_nodes_types) # ...
-# 
-# plt1and2 = list(
-#   true_tree = plt1, 
-#   slr_tree = plt2
-# )
+# about beta
+names(beta) <- paste0('s', 1:p)
+non0.beta = (beta != 0)
+is0.beta = abs(beta) <= 10e-8
+bspars = sum(non0.beta)
 
-# R-squared (in terms of the true model)
-SSres = sum((y.all - as.numeric(log(X.all) %*% U.true * values.theta))^2)
+##############################################################################
+# estimate Rsquared, given the true model
+SSres = sum((y.all - as.numeric(log(X.all) %*% beta))^2)
 SStot = sum((y.all - mean(y.all))^2)
 Rsq = 1 - SSres/SStot
-Rsq
 
+# #############################################################################
+# # playing around with different hsc methods on variables 1:6
+# max.idx = 6
+# X.sub = X[, 1:max.idx]
+# slrSimMat.sub = getSupervisedMatrix(
+#   y = Y, X = X.sub, type = "similarity")
+# # k-means
+# slrhsc_btree_kmeans.sub = HSClust(
+#   W = slrSimMat.sub, force_levelMax = TRUE, method = "kmeans")
+# slrhsc_SBP_kmeans.sub = sbp.fromHSClust(
+#   levels_matrix = slrhsc_btree_kmeans.sub$allLevels, 
+#   row_names = names(beta)[1:max.idx])
+# # shi-malik
+# slrhsc_btree_sc.sub = HSClust(
+#   W = slrSimMat.sub, force_levelMax = TRUE, method = "shimalik")
+# slrhsc_SBP_sc.sub = sbp.fromHSClust(
+#   levels_matrix = slrhsc_btree_sc.sub$allLevels, 
+#   row_names = names(beta)[1:max.idx])
+# # compare their sbp matrices
+# ggarrange(plotSBP(sbp = slrhsc_SBP_kmeans.sub, title = "k-means"), 
+#           plotSBP(sbp = slrhsc_SBP_sc.sub, title = "shi-malik"))
+# 
+# ##############################################################################
+# # supervised log-ratios (a balance regression method) withOUT eta
+# #   -- hierarchical spectral clustering
+# ##############################################################################
+# start.time = Sys.time()
+# # apply hierarchical spectral clustering to the SLR similarity matrix
+# slrSimMat = getSupervisedMatrix(
+#   y = Y, X = X, type = "similarity")
+# slrhsc_btree = HSClust(
+#   W = slrSimMat, force_levelMax = TRUE, method = "kmeans")
+# slrhsc_SBP = sbp.fromHSClust(
+#   levels_matrix = slrhsc_btree$allLevels, row_names = names(beta))
+# # apply supervised log-ratios, using CV to select threshold and also lambda
+# slrhsc = cvILR(
+#   y = Y, X = X, sbp = slrhsc_SBP, nlam = nlam, nfolds = K,
+#   intercept = intercept, standardize = scaling)
+# end.time = Sys.time()
+# slrhsc.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
+# 
+# slrhsc.lam.min.idx = which.min(slrhsc$cvm)
+# slrhsc.a0 = slrhsc$int[slrhsc.lam.min.idx]
+# slrhsc.thetahat = slrhsc$bet[, slrhsc.lam.min.idx]
+# slrhsc.betahat = getBeta(slrhsc.thetahat, sbp = slrhsc$sbp)
+# 
+# # compute metrics on the selected model #
+# slrhsc.metrics = getMetricsBalanceReg(
+#   y.train = Y, y.test = Y.test,
+#   ilrX.train = computeBalances(X, sbp = slrhsc$sbp),
+#   ilrX.test = computeBalances(X.test, sbp = slrhsc$sbp),
+#   n.train = n, n.test = n,
+#   thetahat0 = slrhsc.a0, thetahat = slrhsc.thetahat, betahat = slrhsc.betahat,
+#   sbp = slrhsc$sbp,
+#   true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+# 
+# # # plot the tree given by slr-hsc, indicating significant covariates
+# # slrhsc_leaf_types = rep("covariate", nrow(slrhsc$sbp))
+# # slrhsc_balance_types = rep("balance", ncol(slrhsc$sbp))
+# # slrhsc_nodes_types = data.frame(
+# #   name = c(colnames(slrhsc$sbp), rownames(slrhsc$sbp)),
+# #   type = c(slrhsc_balance_types, slrhsc_leaf_types)
+# # )
+# # plotSBP(slrhsc$sbp, title = "slr-hsc", nodes_types = slrhsc_nodes_types)
+# # fields::image.plot(slrSimMat)
+# 
+# c(
+#   slrhsc.metrics,
+#   "betaSparsity" = bspars,
+#   "Rsq" = Rsq,
+#   "time" = slrhsc.timing
+# )
+# 
+# ##############################################################################
+# # supervised log-ratios (a balance regression method) with eta
+# #   -- hierarchical spectral clustering
+# ##############################################################################
+# start.time = Sys.time()
+# # apply hierarchical spectral clustering to the SLR similarity matrix
+# slrSimMat = getSupervisedMatrix(
+#   y = Y, X = X, type = "similarity")
+# slrhsc_btree = HSClust(
+#   W = slrSimMat, force_levelMax = TRUE, method = "kmeans")
+# slrhsc_SBP = sbp.fromHSClust(
+#   levels_matrix = slrhsc_btree$allLevels, row_names = names(beta))
+# # apply supervised log-ratios, using CV to select threshold and also lambda
+# slrhsc2 = cvILReta(
+#   y = Y, X = X,
+#   W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
+#   clustering_method = "hsc",
+#   hsc_method = "kmeans", # "shimalik", "kmeans"
+#   force_levelMax = TRUE,
+#   sbp = slrhsc_SBP,
+#   lambda = NULL, nlam = nlam,
+#   eta = NULL, neta = neta,
+#   nfolds = K, foldid = NULL,
+#   intercept = intercept,
+#   standardize = scaling
+# )
+# end.time = Sys.time()
+# slrhsc2.timing = difftime(
+#   time1 = end.time, time2 = start.time, units = "secs")
+# 
+# slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
+# slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
+# slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
+# slrhsc2.thetahat = slrhsc2$theta[[slrhsc2.eta.min.idx]][, slrhsc2.lam.min.idx]
+# slrhsc2.SBP = slrhsc2$sbp_thresh[[slrhsc2.eta.min.idx]]
+# slrhsc2.betahat.nonzero = getBeta(slrhsc2.thetahat, sbp = slrhsc2.SBP)
+# slrhsc2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+# rownames(slrhsc2.betahat) = names(beta)
+# slrhsc2.betahat[slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], ] =
+#   as.numeric(slrhsc2.betahat.nonzero)
+# 
+# # compute metrics on the selected model #
+# slrhsc2.metrics = getMetricsBalanceReg(
+#   y.train = Y, y.test = Y.test,
+#   ilrX.train = computeBalances(
+#     X[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
+#     sbp = slrhsc2.SBP),
+#   ilrX.test = computeBalances(
+#     X.test[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
+#     sbp = slrhsc2.SBP),
+#   n.train = n, n.test = n,
+#   thetahat0 = slrhsc2.a0, thetahat = slrhsc2.thetahat,
+#   betahat = slrhsc2.betahat,
+#   sbp = slrhsc2.SBP,
+#   true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+# 
+# # # plot the tree given by slr-hsc, indicating significant covariates
+# # slrhsc2_leaf_types = rep("covariate", nrow(slrhsc2.SBP))
+# # slrhsc2_balance_types = rep("balance", ncol(slrhsc2.SBP))
+# # slrhsc2_nodes_types = data.frame(
+# #   name = c(colnames(slrhsc2.SBP), rownames(slrhsc2.SBP)),
+# #   type = c(slrhsc2_balance_types, slrhsc2_leaf_types)
+# # )
+# # plotSBP(slrhsc2.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_nodes_types)
+# # # fields::image.plot(slrSimMat)
+# 
+# saveRDS(c(
+#   slrhsc2.metrics,
+#   "betaSparsity" = bspars,
+#   "Rsq" = Rsq,
+#   "time" = slrhsc2.timing
+# ),
+# paste0(output_dir, "/metrics", "/slr_hsc_eta_metrics", file.end))
+# 
+# ##############################################################################
+# # supervised log-ratios (a balance regression method) with eta
+# #   -- hierarchical spectral clustering, natural stop
+# #     i.e. if spectral clustering halts, let it
+# ##############################################################################
+# start.time = Sys.time()
+# # apply hierarchical spectral clustering to the SLR similarity matrix
+# slrSimMat = getSupervisedMatrix(
+#   y = Y, X = X, type = "similarity")
+# slrhsc_btree_natstop = HSClust(
+#   W = slrSimMat, force_levelMax = FALSE, method = "kmeans")
+# slrhsc_SBP_natstop = sbp.fromHSClust(
+#   levels_matrix = slrhsc_btree_natstop$allLevels, row_names = names(beta))
+# # apply supervised log-ratios, using CV to select threshold and also lambda
+# slrhsc2_natstop = cvILReta(
+#   y = Y, X = X,
+#   W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
+#   clustering_method = "hsc",
+#   hsc_method = "kmeans", # "shimalik", "kmeans"
+#   force_levelMax = TRUE,
+#   sbp = slrhsc_SBP_natstop,
+#   lambda = NULL, nlam = nlam,
+#   eta = NULL, neta = neta,
+#   nfolds = K, foldid = NULL,
+#   intercept = intercept,
+#   standardize = scaling
+# )
+# end.time = Sys.time()
+# slrhsc2_natstop.timing = difftime(
+#   time1 = end.time, time2 = start.time, units = "secs")
+# 
+# slrhsc2_natstop.eta.min.idx = slrhsc2_natstop$min.idx[2]
+# slrhsc2_natstop.lam.min.idx = slrhsc2_natstop$min.idx[1]
+# slrhsc2_natstop.a0 = slrhsc2_natstop$theta0[[slrhsc2_natstop.eta.min.idx]][
+#   slrhsc2_natstop.lam.min.idx]
+# slrhsc2_natstop.thetahat = slrhsc2_natstop$theta[[
+#   slrhsc2_natstop.eta.min.idx]][, slrhsc2_natstop.lam.min.idx]
+# slrhsc2_natstop.SBP = slrhsc2_natstop$sbp_thresh[[
+#   slrhsc2_natstop.eta.min.idx]]
+# slrhsc2_natstop.betahat.nonzero = getBeta(
+#   slrhsc2_natstop.thetahat, sbp = slrhsc2_natstop.SBP)
+# slrhsc2_natstop.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+# rownames(slrhsc2_natstop.betahat) = names(beta)
+# slrhsc2_natstop.betahat[slrhsc2_natstop$meets_threshold[[
+#   slrhsc2_natstop.eta.min.idx]], ] =
+#   as.numeric(slrhsc2_natstop.betahat.nonzero)
+# 
+# # compute metrics on the selected model #
+# slrhsc2_natstop.metrics = getMetricsBalanceReg(
+#   y.train = Y, y.test = Y.test,
+#   ilrX.train = computeBalances(
+#     X[, slrhsc2_natstop$meets_threshold[[slrhsc2_natstop.eta.min.idx]],
+#       drop = FALSE],
+#     sbp = slrhsc2_natstop.SBP),
+#   ilrX.test = computeBalances(
+#     X.test[, slrhsc2_natstop$meets_threshold[[slrhsc2_natstop.eta.min.idx]],
+#            drop = FALSE],
+#     sbp = slrhsc2_natstop.SBP),
+#   n.train = n, n.test = n,
+#   thetahat0 = slrhsc2_natstop.a0, thetahat = slrhsc2_natstop.thetahat,
+#   betahat = slrhsc2_natstop.betahat,
+#   sbp = slrhsc2_natstop.SBP,
+#   true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+# 
+# # # plot the tree given by slr-hsc, indicating significant covariates
+# # slrhsc2_natstop_leaf_types = rep("covariate", nrow(slrhsc2_natstop.SBP))
+# # slrhsc2_natstop_balance_types = rep("balance", ncol(slrhsc2_natstop.SBP))
+# # slrhsc2_natstop_nodes_types = data.frame(
+# #   name = c(colnames(slrhsc2_natstop.SBP), rownames(slrhsc2_natstop.SBP)),
+# #   type = c(slrhsc2_natstop_balance_types, slrhsc2_natstop_leaf_types)
+# # )
+# # plotSBP(slrhsc2_natstop.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_natstop_nodes_types)
+# # # fields::image.plot(slrSimMat)
+# 
+# saveRDS(c(
+#   slrhsc2_natstop.metrics,
+#   "betaSparsity" = bspars,
+#   "Rsq" = Rsq,
+#   "time" = slrhsc2_natstop.timing
+# ),
+# paste0(output_dir, "/metrics", "/slr_hsc_eta_natstop_metrics", file.end))
+
+##############################################################################
+# supervised log-ratios (a balance regression method) with eta
+#   -- hierarchical spectral clustering, with Newton-Girvan modularity
+#     stopping rule
+##############################################################################
+start.time = Sys.time()
+# apply hierarchical spectral clustering to the SLR similarity matrix
+slrSimMat = getSupervisedMatrix(
+  y = Y, X = X, type = "similarity")
+slrhsc_btree_ngmstop = HSClust(
+  W = slrSimMat, force_levelMax = FALSE, method = "kmeans",
+  stopping_rule = "ngm")
+slrhsc_SBP_ngmstop = sbp.fromHSClust(
+  levels_matrix = slrhsc_btree_ngmstop$allLevels, row_names = names(beta))
+# apply supervised log-ratios, using CV to select threshold and also lambda
+slrhsc2_ngmstop = cvILReta(
+  y = Y, X = X,
+  W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
+  clustering_method = "hsc",
+  hsc_method = "kmeans", # "shimalik", "kmeans"
+  force_levelMax = TRUE,
+  sbp = slrhsc_SBP_ngmstop,
+  lambda = NULL, nlam = nlam,
+  eta = NULL, neta = neta,
+  nfolds = K, foldid = NULL,
+  intercept = intercept,
+  standardize = scaling
+)
+end.time = Sys.time()
+slrhsc2_ngmstop.timing = difftime(
+  time1 = end.time, time2 = start.time, units = "secs")
+
+slrhsc2_ngmstop.eta.min.idx = slrhsc2_ngmstop$min.idx[2]
+slrhsc2_ngmstop.lam.min.idx = slrhsc2_ngmstop$min.idx[1]
+slrhsc2_ngmstop.a0 = slrhsc2_ngmstop$theta0[[slrhsc2_ngmstop.eta.min.idx]][slrhsc2_ngmstop.lam.min.idx]
+slrhsc2_ngmstop.thetahat = slrhsc2_ngmstop$theta[[slrhsc2_ngmstop.eta.min.idx]][, slrhsc2_ngmstop.lam.min.idx]
+slrhsc2_ngmstop.SBP = slrhsc2_ngmstop$sbp_thresh[[slrhsc2_ngmstop.eta.min.idx]]
+slrhsc2_ngmstop.betahat.nonzero = getBeta(slrhsc2_ngmstop.thetahat, sbp = slrhsc2_ngmstop.SBP)
+slrhsc2_ngmstop.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+rownames(slrhsc2_ngmstop.betahat) = names(beta)
+slrhsc2_ngmstop.betahat[slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], ] =
+  as.numeric(slrhsc2_ngmstop.betahat.nonzero)
+
+# compute metrics on the selected model #
+slrhsc2_ngmstop.metrics = getMetricsBalanceReg(
+  y.train = Y, y.test = Y.test,
+  ilrX.train = computeBalances(
+    X[, slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], drop = FALSE],
+    sbp = slrhsc2_ngmstop.SBP),
+  ilrX.test = computeBalances(
+    X.test[, slrhsc2_ngmstop$meets_threshold[[slrhsc2_ngmstop.eta.min.idx]], drop = FALSE],
+    sbp = slrhsc2_ngmstop.SBP),
+  n.train = n, n.test = n,
+  thetahat0 = slrhsc2_ngmstop.a0, thetahat = slrhsc2_ngmstop.thetahat,
+  betahat = slrhsc2_ngmstop.betahat,
+  sbp = slrhsc2_ngmstop.SBP,
+  true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+
+# # plot the tree given by slr-hsc, indicating significant covariates
+# slrhsc2_ngmstop_leaf_types = rep("covariate", nrow(slrhsc2_ngmstop.SBP))
+# slrhsc2_ngmstop_balance_types = rep("balance", ncol(slrhsc2_ngmstop.SBP))
+# slrhsc2_ngmstop_nodes_types = data.frame(
+#   name = c(colnames(slrhsc2_ngmstop.SBP), rownames(slrhsc2_ngmstop.SBP)),
+#   type = c(slrhsc2_ngmstop_balance_types, slrhsc2_ngmstop_leaf_types)
+# )
+# plotSBP(slrhsc2_ngmstop.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_ngmstop_nodes_types)
+# # fields::image.plot(slrSimMat)
+
+c(
+  slrhsc2_ngmstop.metrics,
+  "betaSparsity" = bspars,
+  "Rsq" = Rsq,
+  "time" = slrhsc2_ngmstop.timing
+)

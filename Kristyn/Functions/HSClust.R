@@ -62,17 +62,21 @@ getSimilarityMatrix = function(
   }
 }
 
-getNormalizedLaplacian = function(S){
+getNormalizedLaplacian = function(S, shifted = FALSE){
   # S is similarity matrix (called A in TooManyCells)
   if(nrow(S) != ncol(S)) stop("S isn't pxp!")
   if(!isSymmetric(S)) stop("S isn't symmetric!")
   p = nrow(S)
-  Dmat_diag = as.numeric(S %*% rep(1, p)) # assumed to be the matrix with degrees of nodes
-  Dmat = diag(Dmat_diag)
-  negsqrtD = diag(1 / sqrt(Dmat_diag))
+  degrees = as.numeric(S %*% rep(1, p)) # assumed to be the matrix with degrees of nodes
+  Dmat = diag(degrees)
+  negsqrtD = diag(1 / sqrt(degrees))
   AdjMat = S # assume S is the adjacency matrix?
   normAdjMat = negsqrtD  %*% AdjMat %*% negsqrtD
-  normLaplacMat = diag(p) - normAdjMat
+  if(shifted){
+    normLaplacMat = diag(p) + normAdjMat
+  } else{
+    normLaplacMat = diag(p) - normAdjMat
+  }
   return(normLaplacMat)
 }
 
@@ -172,14 +176,18 @@ HSClust <- function(
         # spectral clustering to partition into 2 clusters!
         if(method %in% c("ShiMalik", "shimalik", "sm", "SM")){
           invisible(capture.output(results <- ShiMalikSC(
-            W = Wprime, flagDiagZero = FALSE, verbose = FALSE)))
+            W = Wprime, flagDiagZero = FALSE, verbose = FALSE))) # turns W into gram matrix of W
+          # results$eigenVal
+          
+          # nL = getNormalizedLaplacian(W)
+          # nL.eigen = eigen(nL, symmetric = TRUE)
+          # small2_idx = order(nL.eigen$values, decreasing = FALSE)[2]
+          # ifelse(nL.eigen$vectors[, small2_idx] < 0, 1, 2)
+          # not sure why this doesn't work as expected, but it's computing
+          #   the normalized laplacian the same way -- minus the gram part
+          
           # groups <- results$cluster
-          # # the above code might be choosing second largest instead of second 
-          # #   smallest eigenvalue
-          # NL = getNormalizedLaplacian(Wprime)
-          # ei = eigen(NL, symmetric = TRUE)
-          # second_smallest_idx = order(ei$values, decreasing = FALSE)[2]
-          # groups = ifelse(ei$vectors[, second_smallest_idx] < 0, 1, 2)
+          # # the above code uses sort(), which might be making mistakes
           second_smallest_idx = order(results$eigenVal, decreasing = FALSE)[2]
           groups = ifelse(results$eigenVect[, second_smallest_idx] < 0, 1, 2)
         } else if(method %in% c("kmeans", "KMeans", "k", "K")){
@@ -199,17 +207,43 @@ HSClust <- function(
             cluster_assignments <- paste0(cl[indices, level], ".", groups)
           }
           cl[indices, level + 1] <- cluster_assignments
-          # clusters to be further split
-          newCluster <- c(newCluster, unique(cluster_assignments))
+          # clusters to be further split -- only include if the stopping rule 
+          #   doesn't apply
           if(stopping_rule %in% 
              c("TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm")
              ){
-            # stopping rule to be implemented here! --------------------------------
+            unique_cluster_assignments = unique(cluster_assignments)
+            degrees = rowSums(W)
+            Q = 0
+            Lk = rep(NA, length(unique_cluster_assignments))
+            Okk = rep(NA, length(unique_cluster_assignments))
+            for(k in 1:length(unique_cluster_assignments)){
+              in_current_cluster = 
+                cluster_assignments == unique_cluster_assignments[k]
+              Okk_cur = 0
+              for(idx1 in 1:nrow(Wprime)){
+                for(idx2 in 1:ncol(Wprime)){
+                  if(in_current_cluster[idx1] | 
+                     in_current_cluster[idx2]){
+                    Okk_cur = Okk_cur + Wprime[idx1, idx2]
+                  }
+                }
+              }
+              Lk[k] = sum(degrees[in_current_cluster])
+              Okk[k] = Okk_cur
+            }
+            L = sum(degrees)
+            stopping_rule_val = sum(Okk / L + (Lk / L)^2)
+            if(stopping_rule_val > 0){
+              newCluster <- c(newCluster, unique(cluster_assignments))
+            }
+          } else{
+            newCluster <- c(newCluster, unique(cluster_assignments))
           }
         } else {
           # artificially split clusters if spectral clustering doesn't split
           #   and force_levelMax == TRUE
-          if(length(groups) >= 2 && force_levelMax){
+          if(length(groups) >= 2 && force_levelMax && stopping_rule == "none"){
             groups = c(rep(1, length(groups) - 1), 2)
             if(length(groups) == p){
               cl[indices, level + 1] <- as.character(groups)

@@ -43,29 +43,10 @@ get_sigma_eps = function(theta_val, Rsq_val, rho_val){
     (10 * Rsq_val)
   return(sqrt(sigma_eps_sq.tmp))
 }
-rho = 0 #
+rho = 0.2 #
 desired_Rsquared = 0.6 #
 sigma_eps = get_sigma_eps(
   theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
-# if(rho == 0){
-#   if(desired_Rsquared == 0.6){
-#     sigma_eps = sqrt(2/3) # 0.8164966
-#   } else if(desired_Rsquared == 0.8){
-#     sigma_eps = sqrt(1/4) # 0.5
-#   }
-# } else if(rho == 0.2){
-#   if(desired_Rsquared == 0.6){
-#     sigma_eps = sqrt(0.7125333) # 0.8441169
-#   } else if(desired_Rsquared == 0.8){
-#     sigma_eps = sqrt(0.2672) # 0.5169139
-#   }
-# } else if(rho == 0.5){
-#   if(desired_Rsquared == 0.6){
-#     sigma_eps = sqrt(0.808333) # 0.8990734
-#   } else if(desired_Rsquared == 0.8){
-#     sigma_eps = sqrt(0.303125) # 0.5505679
-#   }
-# }
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -78,13 +59,15 @@ file.end0 = paste0(
 
 metric_names = c(
   "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision",
-  "Fscore", "betaSparsity", "Rsq")
+  "Fscore", "betaSparsity", "Rsq", "time")
 
 # import metrics
 slrhc_sims_list = list()
 slrhc2_sims_list = list()
 slrhsc_sims_list = list()
 slrhsc2_sims_list = list()
+slrhsc_natstop_sims_list = list()
+# slrhsc_ngmstop_sims_list = list()
 cl_sims_list = list()
 pr_sims_list = list()
 for(i in 1:numSims){
@@ -117,6 +100,20 @@ for(i in 1:numSims){
   ))))
   rownames(slrhsc2.sim.tmp) = NULL
   slrhsc2_sims_list[[i]] = data.table(slrhsc2.sim.tmp)
+  # slr hsc - eta - natural stop
+  slrhsc_natstop.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/slr_hsc_eta_natstop_", "metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrhsc_natstop.sim.tmp) = NULL
+  slrhsc_natstop_sims_list[[i]] = data.table(slrhsc_natstop.sim.tmp)
+  # # slr hsc - eta - NGM stop
+  # slrhsc_ngmstop.sim.tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/metrics", "/slr_hsc_eta_ngmstop_", "metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(slrhsc_ngmstop.sim.tmp) = NULL
+  # slrhsc_ngmstop_sims_list[[i]] = data.table(slrhsc_ngmstop.sim.tmp)
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
     output_dir, "/metrics", "/classo_", "metrics", file.end0,
@@ -137,6 +134,8 @@ slrhc_sims = as.data.frame(rbindlist(slrhc_sims_list))
 slrhc2_sims = as.data.frame(rbindlist(slrhc2_sims_list))
 slrhsc_sims = as.data.frame(rbindlist(slrhsc_sims_list))
 slrhsc2_sims = as.data.frame(rbindlist(slrhsc2_sims_list))
+slrhsc_natstop_sims = as.data.frame(rbindlist(slrhsc_natstop_sims_list))
+# slrhsc_ngmstop_sims = as.data.frame(rbindlist(slrhsc_ngmstop_sims_list))
 cl_sims = as.data.frame(rbindlist(cl_sims_list))
 pr_sims = as.data.frame(rbindlist(pr_sims_list))
 
@@ -161,6 +160,16 @@ slrhsc2_summaries = data.frame(
   "sd" = apply(slrhsc2_sims, 2, sd), 
   "se" =  apply(slrhsc2_sims, 2, sd) / sqrt(numSims)
 )
+slrhsc_natstop_summaries = data.frame(
+  "mean" = apply(slrhsc_natstop_sims, 2, mean), 
+  "sd" = apply(slrhsc_natstop_sims, 2, sd), 
+  "se" =  apply(slrhsc_natstop_sims, 2, sd) / sqrt(numSims)
+)
+# slrhsc_ngmstop_summaries = data.frame(
+#   "mean" = apply(slrhsc_ngmstop_sims, 2, mean), 
+#   "sd" = apply(slrhsc_ngmstop_sims, 2, sd), 
+#   "se" =  apply(slrhsc_ngmstop_sims, 2, sd) / sqrt(numSims)
+# )
 cl_summaries = data.frame(
   "mean" = apply(cl_sims, 2, mean), 
   "sd" = apply(cl_sims, 2, sd), 
@@ -181,25 +190,37 @@ slrhsc.sims.gg = reshape2::melt(slrhsc_sims)
 slrhsc.sims.gg$Method = "slr-hsc"
 slrhsc2.sims.gg = reshape2::melt(slrhsc2_sims)
 slrhsc2.sims.gg$Method = "slr-hsc-eta"
+slrhsc_natstop.sims.gg = reshape2::melt(slrhsc_natstop_sims)
+slrhsc_natstop.sims.gg$Method = "slr-hsc-eta-nat"
+# slrhsc_ngmstop.sims.gg = reshape2::melt(slrhsc_ngmstop_sims)
+# slrhsc_ngmstop.sims.gg$Method = "slr-hsc-eta-ngm"
 cl.sims.gg = reshape2::melt(cl_sims)
 cl.sims.gg$Method = "classo"
 pr.sims.gg = reshape2::melt(pr_sims)
 pr.sims.gg$Method = "propr"
 
-data.gg = rbind(
+data.gg0 = rbind(
   slrhc.sims.gg, 
-  slrhc2.sims.gg, 
-  slrhsc.sims.gg, 
+  # slrhc2.sims.gg, # slr-hc-eta -- not good
+  slrhsc.sims.gg, # slr-hsc -- not good, if not thresholding
   slrhsc2.sims.gg, 
+  slrhsc_natstop.sims.gg, 
+  # slrhsc_ngmstop.sims.gg,
   cl.sims.gg, 
   pr.sims.gg)
 # levels.gg = c(
 #   "slr-hc", "slr-hsc", "slr-hc-eta", "slr-hsc-eta", "classo", "propr")
-
+data.gg = data.gg0
 if(!is.null(metric_names)){
   data.gg = dplyr::filter(data.gg, variable %in% metric_names)
 }
 data.gg$Method = factor(data.gg$Method)#, levels = levels.gg)
+data.gg = data.gg %>% filter(
+  variable %in% c(
+    "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
+    "Fscore", "time"
+  )
+)
 
 ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
   facet_wrap(vars(variable), scales = "free_y") +
@@ -218,7 +239,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20220104",
+    "20220111",
     "_Rsq", desired_Rsquared,
     "_rho", rho, 
     "_", "metrics", ".pdf"),

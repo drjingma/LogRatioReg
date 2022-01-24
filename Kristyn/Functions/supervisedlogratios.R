@@ -21,10 +21,10 @@ getSupervisedMatrix = function(y, X, rho.type = "square", type = "similarity"){
       if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
          rho.type == 2){
         # val = (cor(Zjk_demeaned, y_demeaned))^2
-        val = (cor(Zjk, y))^2
+        val = (stats::cor(Zjk, y))^2
       } else{
         # val = abs(cor(Zjk_demeaned, y_demeaned))
-        val = abs(cor(Zjk, y))
+        val = abs(stats::cor(Zjk, y))
       }
       # if(is.na(val)) stop("getSupervisedTree() : correlation = 0")
       # hopefully we never have to use this line below.

@@ -71,6 +71,8 @@ slrhsc_natstop_sims_list = list()
 slrhsc_ngmstop_sims_list = list()
 cl_sims_list = list()
 pr_sims_list = list()
+or_sims_list = list()
+slbl_sims_list = list()
 for(i in 1:numSims){
   # print(i)
   # slr hc
@@ -136,6 +138,20 @@ for(i in 1:numSims){
   ))))
   rownames(pr.sim.tmp) = NULL
   pr_sims_list[[i]] = data.table(pr.sim.tmp)
+  # oracle
+  or.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/oracle_", "metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(or.sim.tmp) = NULL
+  or_sims_list[[i]] = data.table(or.sim.tmp)
+  # selbal
+  slbl.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/selbal_", "metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slbl.sim.tmp) = NULL
+  slbl_sims_list[[i]] = data.table(slbl.sim.tmp)
 }
 
 slrhc_sims = as.data.frame(rbindlist(slrhc_sims_list))
@@ -147,6 +163,8 @@ slrhsc_natstop_sims = as.data.frame(rbindlist(slrhsc_natstop_sims_list))
 slrhsc_ngmstop_sims = as.data.frame(rbindlist(slrhsc_ngmstop_sims_list))
 cl_sims = as.data.frame(rbindlist(cl_sims_list))
 pr_sims = as.data.frame(rbindlist(pr_sims_list))
+or_sims = as.data.frame(rbindlist(or_sims_list))
+slbl_sims = as.data.frame(rbindlist(slbl_sims_list))
 
 # summary stats
 slrhc_summaries = data.frame(
@@ -194,6 +212,16 @@ pr_summaries = data.frame(
   "sd" = apply(pr_sims, 2, sd), 
   "se" =  apply(pr_sims, 2, sd) / sqrt(numSims)
 )
+or_summaries = data.frame(
+  "mean" = apply(or_sims, 2, mean), 
+  "sd" = apply(or_sims, 2, sd), 
+  "se" =  apply(or_sims, 2, sd) / sqrt(numSims)
+)
+slbl_summaries = data.frame(
+  "mean" = apply(slbl_sims, 2, mean), 
+  "sd" = apply(slbl_sims, 2, sd), 
+  "se" =  apply(slbl_sims, 2, sd) / sqrt(numSims)
+)
 
 # metrics boxplots
 slrhc.sims.gg = reshape2::melt(slrhc_sims)
@@ -214,6 +242,10 @@ cl.sims.gg = reshape2::melt(cl_sims)
 cl.sims.gg$Method = "classo"
 pr.sims.gg = reshape2::melt(pr_sims)
 pr.sims.gg$Method = "propr"
+or.sims.gg = reshape2::melt(or_sims)
+or.sims.gg$Method = "oracle (hc)"
+slbl.sims.gg = reshape2::melt(slbl_sims)
+slbl.sims.gg$Method = "selbal"
 
 data.gg0 = rbind(
   slrhc.sims.gg, 
@@ -224,7 +256,9 @@ data.gg0 = rbind(
   slrhsc_natstop.sims.gg, 
   slrhsc_ngmstop.sims.gg,
   cl.sims.gg, 
-  pr.sims.gg)
+  pr.sims.gg, 
+  or.sims.gg, 
+  slbl.sims.gg)
 # levels.gg = c(
 #   "slr-hc", "slr-hsc", "slr-hc-eta", "slr-hsc-eta", "classo", "propr")
 data.gg = data.gg0
@@ -232,7 +266,7 @@ if(!is.null(metric_names)){
   data.gg = dplyr::filter(data.gg, variable %in% metric_names)
 }
 data.gg$Method = factor(data.gg$Method)#, levels = levels.gg)
-data.gg = data.gg %>% filter(
+data.gg = data.gg %>% dplyr::filter(
   variable %in% c(
     "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
     "Fscore", "time"
@@ -258,7 +292,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20220111",
+    "20220124",
     "_Rsq", desired_Rsquared,
     "_rho", rho, 
     "_", "metrics", ".pdf"),

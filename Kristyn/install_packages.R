@@ -4,11 +4,17 @@ r["CRAN"] <- "http://cran.r-project.org"
 options(repos=r)
 })
 
+# need to do library("igraph"), 
+#   but for that, need a fortran compiler, so outside of R, may need to do:
+#     sudo apt-get install libpoppler-cpp-dev
+#     sudo apt-get install libapparmor-dev
+# (note: this might be specific to ubuntu)
+
 packages <- c(
   "mvtnorm",
-  "balance",
-  "selbal",
-  "propr",
+  "balance", 
+  "selbal", 
+  "propr", 
   "Matrix", 
   "glmnet", 
   "compositions", 

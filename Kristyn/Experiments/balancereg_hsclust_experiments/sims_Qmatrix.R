@@ -74,25 +74,7 @@ res = foreach(
   p = ncol(Q)
   scaling = TRUE
   #################
-  # if rho = 0, 
-  #   sigma_eps = sqrt(2/3) => R^2 = 0.6
-  #   sigma_eps = sqrt(1/4) => R^2 = 0.8
-  # if rho = 0.2, 
-  #   sigma_eps = sqrt(0.7125333) => R^2 = 0.6
-  #   sigma_eps = sqrt(0.2672) => R^2 = 0.8
-  # if rho = 0.5, 
-  #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
-  #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
-  get_sigma_eps = function(theta_val, Rsq_val, rho_val){
-    sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
-      theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
-      (10 * Rsq_val)
-    return(sqrt(sigma_eps_sq.tmp))
-  }
-  rho = 0.2 #
-  desired_Rsquared = 0.6 #
-  sigma_eps = get_sigma_eps(
-    theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
+  sigma_eps = 0
   
   # Population parameters
   
@@ -138,6 +120,7 @@ res = foreach(
   file.end = paste0(
     "_", sigma.settings,
     "_dim", n, "x", p, 
+    "_noise", sigma_eps, 
     "_sim", b,
     ".rds")
   
@@ -199,7 +182,6 @@ res = foreach(
   saveRDS(c(
     slrhc.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrhc.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hc_metrics", file.end))
@@ -250,7 +232,6 @@ res = foreach(
   saveRDS(c(
     slrhc_distal.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrhc_distal.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hc_distal_metrics", file.end))
@@ -322,7 +303,6 @@ res = foreach(
   saveRDS(c(
     slrhc2.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrhc2.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hc_eta_metrics", file.end))
@@ -374,7 +354,6 @@ res = foreach(
   saveRDS(c(
     slrhsc.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrhsc.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hsc_metrics", file.end))
@@ -448,7 +427,6 @@ res = foreach(
   saveRDS(c(
     slrhsc2.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrhsc2.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hsc_eta_metrics", file.end))
@@ -530,7 +508,6 @@ res = foreach(
   saveRDS(c(
     slrhsc2_natstop.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrhsc2_natstop.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hsc_eta_natstop_metrics", file.end))
@@ -606,7 +583,6 @@ res = foreach(
   saveRDS(c(
     slrhsc2_ngmstop.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrhsc2_ngmstop.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hsc_eta_ngmstop_metrics", file.end))
@@ -638,7 +614,6 @@ res = foreach(
   saveRDS(c(
     cl.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = cl.timing
   ),
   paste0(output_dir, "/metrics", "/classo_metrics", file.end))
@@ -684,7 +659,6 @@ res = foreach(
   saveRDS(c(
     pr.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = pr.timing
   ),
   paste0(output_dir, "/metrics", "/propr_metrics", file.end))
@@ -728,7 +702,6 @@ res = foreach(
   saveRDS(c(
     or.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = or.timing
   ),
   paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
@@ -812,7 +785,6 @@ res = foreach(
   saveRDS(c(
     slbl.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slbl.timing
   ),
   paste0(output_dir, "/metrics", "/selbal_metrics", file.end))

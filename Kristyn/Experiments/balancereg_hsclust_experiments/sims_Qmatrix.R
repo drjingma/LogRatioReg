@@ -74,6 +74,7 @@ res = foreach(
   p = ncol(Q)
   scaling = TRUE
   #################
+  rho = 0
   sigma_eps = 0
   
   # Population parameters

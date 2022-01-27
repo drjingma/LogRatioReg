@@ -24,6 +24,86 @@ registerDoRNG(rng.seed)
 numSims = 100
 
 ################################################################################
+# The model #
+################################################################################
+
+source("Kristyn/Functions/supervisedlogratios.R")
+source("Kristyn/Functions/HSClust.R")
+
+################################################################################
+# data
+Q = read.table(file = "Data/Q.txt")
+Q = as.matrix(Q)
+
+# Settings to toggle with (make sure these are the same as in the loop)
+sigma.settings = "Qmatrix"
+values.theta = 1
+linkage = "average"
+tol = 1e-4
+nlam = 100
+neta = 50
+intercept = TRUE
+K = 10
+n = 100
+p = ncol(Q)
+scaling = TRUE
+#################
+rho = 0
+sigma_eps = 0
+
+# Population parameters
+registerDoRNG(123) # for tree with an overlapped balance
+# registerDoRNG(456) # for tree with no overlapping balances
+
+### apply hierarchical spectral clustering to similarity matrix Q?
+# hsclust_Q = HSClust(
+#   W = Q, # assuming Q is a similarity matrix
+#   force_levelMax = TRUE, method = "kmeans")
+# sbp_Q = sbp.fromHSClust(levels_matrix = hsclust_Q$allLevels)
+### apply hierarchical clustering to similarity matrix Q?
+hclust_Q = hclust(
+  as.dist(getSimilarityMatrix(unnormalized_similarity_matrix = Q)), 
+  method = linkage)
+sbp_Q = sbp.fromHclust(hclust_Q)
+
+# define theta (directly related to sparsity)
+# randomly choose 5% of balances/internal nodes that at most 5 active variables
+#   i.e. excluse balances/internal nodes with more than 5 active variables
+contrast_vars = apply(sbp_Q, 2, FUN = function(col) which(col != 0))
+contrast_lens = sapply(contrast_vars, length)
+viable_contrasts = colnames(sbp_Q)[contrast_lens <= 5]
+num_select_viable_contrasts = signif(length(viable_contrasts) * 0.05, 0)
+# View(sbp_Q[, viable_contrasts])
+theta = rep(0, p - 1)
+names(theta) = colnames(sbp_Q)
+selected_viable_contrasts = sample(
+  x = viable_contrasts, size = num_select_viable_contrasts, 
+  replace = FALSE)
+theta[selected_viable_contrasts] = values.theta
+non0.theta = (theta != 0)
+which(non0.theta)
+
+# define beta
+beta = as.vector(getBeta(theta = theta, sbp = sbp_Q))
+names(beta) <- rownames(sbp_Q)
+non0.beta = (beta != 0)
+is0.beta = abs(beta) <= 10e-8
+bspars = sum(non0.beta)
+
+################################################################################
+# plot the selected balances
+
+balance_types = rep("bal", ncol(sbp_Q))
+balance_types[non0.theta] = "selected bal"
+covariate_types = rep("cov", nrow(sbp_Q))
+covariate_types[non0.beta] = "selected cov"
+model_nodes_types = data.frame(
+  name = c(colnames(sbp_Q), rownames(sbp_Q)),
+  type = c(balance_types, covariate_types)
+)
+plotSBP(sbp = sbp_Q, nodes_types = model_nodes_types, text_size = 1.5) # 8x25
+
+################################################################################
 # Simulations #
 ################################################################################
 
@@ -95,23 +175,23 @@ res = foreach(
   muW = c(rep(log(p), 5), rep(0, p - 5))
   names(muW) = paste0('s', 1:p)
   
-  # define theta (directly related to sparsity)
-  # randomly choose 5% of balances/internal nodes that at most 5 active variables
-  #   i.e. excluse balances/internal nodes with more than 5 active variables
-  contrast_vars = apply(sbp_Q, 2, FUN = function(col) which(col != 0))
-  contrast_lens = sapply(contrast_vars, length)
-  viable_contrasts = colnames(sbp_Q)[contrast_lens <= 5]
-  num_select_viable_contrasts = signif(length(viable_contrasts) * 0.05, 0)
-  # View(sbp_Q[, viable_contrasts])
-  theta = rep(0, p - 1)
-  names(theta) = colnames(sbp_Q)
-  selected_viable_contrasts = sample(
-    x = viable_contrasts, size = num_select_viable_contrasts, 
-    replace = FALSE)
-  theta[selected_viable_contrasts] = values.theta
-  beta = as.vector(getBeta(theta = theta, sbp = sbp_Q))
+  # # define theta (directly related to sparsity)
+  # # randomly choose 5% of balances/internal nodes that at most 5 active variables
+  # #   i.e. excluse balances/internal nodes with more than 5 active variables
+  # contrast_vars = apply(sbp_Q, 2, FUN = function(col) which(col != 0))
+  # contrast_lens = sapply(contrast_vars, length)
+  # viable_contrasts = colnames(sbp_Q)[contrast_lens <= 5]
+  # num_select_viable_contrasts = signif(length(viable_contrasts) * 0.05, 0)
+  # # View(sbp_Q[, viable_contrasts])
+  # theta = rep(0, p - 1)
+  # names(theta) = colnames(sbp_Q)
+  # selected_viable_contrasts = sample(
+  #   x = viable_contrasts, size = num_select_viable_contrasts, 
+  #   replace = FALSE)
+  # theta[selected_viable_contrasts] = values.theta
   
   # define beta
+  beta = as.vector(getBeta(theta = theta, sbp = sbp_Q))
   names(beta) <- rownames(sbp_Q)
   non0.beta = (beta != 0)
   is0.beta = abs(beta) <= 10e-8

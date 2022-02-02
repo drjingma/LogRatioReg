@@ -43,6 +43,42 @@ getSupervisedMatrix = function(y, X, rho.type = "square", type = "similarity"){
   } 
   return(cormat)
 }
+getSupervisedMatrixCentering = function(
+  y, X, rho.type = "square", type = "similarity"
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  # checks
+  if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
+  
+  # calculate correlation of each pair of log-ratios with response y
+  cormat = matrix(0, p, p) # diagonal == 1
+  y_demeaned = y - mean(y)
+  for (j in 1:(p - 1)){
+    for (k in (j + 1):p){
+      Zjk = log(X[, j]) - log(X[, k])
+      Zjk_demeaned = Zjk - mean(Zjk)
+      if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
+         rho.type == 2){
+        val = (stats::cor(Zjk_demeaned, y_demeaned))^2
+      } else{
+        val = abs(stats::cor(Zjk_demeaned, y_demeaned))
+      }
+      cormat[j, k] = val
+      cormat[k, j] = val
+    }
+  }
+  # give the rows and columns the names of taxa in X, for sbp.fromHclust()
+  rownames(cormat) = colnames(X)
+  colnames(cormat) = colnames(X)
+  
+  # get dissimilarity matrix
+  if(type != "similarity"){
+    cormat = 1 - cormat
+  } 
+  return(cormat)
+}
 
 getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
   Gammamat = getSupervisedMatrix(

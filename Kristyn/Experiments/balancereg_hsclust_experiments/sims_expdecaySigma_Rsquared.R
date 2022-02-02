@@ -267,8 +267,8 @@ res = foreach(
   end.time = Sys.time()
   slrhc2.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
 
-  slrhc2.eta.min.idx = slrhc2$min.idx[2]
-  slrhc2.lam.min.idx = slrhc2$min.idx[1]
+  slrhc2.eta.min.idx = slrhc2$min.idx[1]
+  slrhc2.lam.min.idx = slrhc2$min.idx[2]
   slrhc2.a0 = slrhc2$theta0[[slrhc2.eta.min.idx]][slrhc2.lam.min.idx]
   slrhc2.thetahat = slrhc2$theta[[slrhc2.eta.min.idx]][, slrhc2.lam.min.idx]
   slrhc2.SBP = slrhc2$sbp_thresh[[slrhc2.eta.min.idx]]
@@ -392,8 +392,8 @@ res = foreach(
   slrhsc2.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
-  slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
-  slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
+  slrhsc2.eta.min.idx = slrhsc2$min.idx[1]
+  slrhsc2.lam.min.idx = slrhsc2$min.idx[2]
   slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
   slrhsc2.thetahat = slrhsc2$theta[[slrhsc2.eta.min.idx]][, slrhsc2.lam.min.idx]
   slrhsc2.SBP = slrhsc2$sbp_thresh[[slrhsc2.eta.min.idx]]
@@ -467,8 +467,8 @@ res = foreach(
   slrhsc2_natstop.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
-  slrhsc2_natstop.eta.min.idx = slrhsc2_natstop$min.idx[2]
-  slrhsc2_natstop.lam.min.idx = slrhsc2_natstop$min.idx[1]
+  slrhsc2_natstop.eta.min.idx = slrhsc2_natstop$min.idx[1]
+  slrhsc2_natstop.lam.min.idx = slrhsc2_natstop$min.idx[2]
   slrhsc2_natstop.a0 = slrhsc2_natstop$theta0[[slrhsc2_natstop.eta.min.idx]][
     slrhsc2_natstop.lam.min.idx]
   slrhsc2_natstop.thetahat = slrhsc2_natstop$theta[[
@@ -550,8 +550,8 @@ res = foreach(
   slrhsc2_ngmstop.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
-  slrhsc2_ngmstop.eta.min.idx = slrhsc2_ngmstop$min.idx[2]
-  slrhsc2_ngmstop.lam.min.idx = slrhsc2_ngmstop$min.idx[1]
+  slrhsc2_ngmstop.eta.min.idx = slrhsc2_ngmstop$min.idx[1]
+  slrhsc2_ngmstop.lam.min.idx = slrhsc2_ngmstop$min.idx[2]
   slrhsc2_ngmstop.a0 = slrhsc2_ngmstop$theta0[[slrhsc2_ngmstop.eta.min.idx]][slrhsc2_ngmstop.lam.min.idx]
   slrhsc2_ngmstop.thetahat = slrhsc2_ngmstop$theta[[slrhsc2_ngmstop.eta.min.idx]][, slrhsc2_ngmstop.lam.min.idx]
   slrhsc2_ngmstop.SBP = slrhsc2_ngmstop$sbp_thresh[[slrhsc2_ngmstop.eta.min.idx]]
@@ -716,89 +716,89 @@ res = foreach(
   ),
   paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
   
-  ##############################################################################
-  # selbal method (a balance regression method)
-  ##############################################################################
-  library(selbal) # masks stats::cor()
-  
-  start.time = Sys.time()
-  X.slbl = X
-  rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
-  colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
-  slbl = selbal.cv(x = X.slbl, y = as.vector(Y), n.fold = K)
-  end.time = Sys.time()
-  slbl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # U (transformation) matrix
-  U.slbl = rep(0, p)
-  names(U.slbl) = colnames(X.slbl)
-  pba.pos = unlist(subset(
-    slbl$global.balance, subset = Group == "NUM", select = Taxa))
-  num.pos = length(pba.pos)
-  pba.neg = unlist(subset(
-    slbl$global.balance, subset = Group == "DEN", select = Taxa))
-  num.neg = length(pba.neg)
-  U.slbl[pba.pos] = 1 / num.pos
-  U.slbl[pba.neg] = -1 / num.neg
-  norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
-  U.slbl = norm.const * U.slbl
-  # check: these are equal
-  # lm(as.vector(Y) ~ log(X) %*% as.matrix(U.slbl))
-  # slbl$glm
-  slbl.thetahat = coefficients(slbl$glm)[2]
-  slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
-  
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  slbl.Yhat.train = predict.glm(
-    slbl$glm, newdata = data.frame(X.slbl), type = "response")
-  slbl.PE.train = crossprod(Y - slbl.Yhat.train) / n
-  # get prediction error on test set
-  X.slbl.test = X.test
-  rownames(X.slbl.test) = paste("Sample", 1:nrow(X.slbl.test), sep = "_")
-  colnames(X.slbl.test) = paste("V", 1:ncol(X.slbl.test), sep = "")
-  slbl.Yhat.test = predict.glm(
-    slbl$glm, newdata = data.frame(X.slbl.test), type = "response")
-  slbl.PE.test = crossprod(Y.test - slbl.Yhat.test) / n
-  # estimation accuracy
-  slbl.EA = getEstimationAccuracy(true.beta = beta, betahat = slbl.betahat)
-  slbl.EA.active = getEstimationAccuracy(
-    true.beta = beta[non0.beta], betahat = slbl.betahat[non0.beta])
-  slbl.EA.inactive = getEstimationAccuracy(
-    true.beta = beta[is0.beta], betahat = slbl.betahat[is0.beta])
-  # selection accuracy
-  slbl.non0.betahat = abs(slbl.betahat) > 10e-8
-  slbl.SA = getSelectionAccuracy(
-    is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
-    non0.betahat = slbl.non0.betahat)
-    
-  slbl.metrics = c(
-    "PEtr" = slbl.PE.train, 
-    "PEte" = slbl.PE.test, 
-    "EA1" = slbl.EA$EA1, 
-    "EA2" = slbl.EA$EA2, 
-    "EAInfty" = slbl.EA$EAInfty, 
-    "EA1Active" = slbl.EA.active$EA1, 
-    "EA2Active" = slbl.EA.active$EA2, 
-    "EAInftyActive" = slbl.EA.active$EAInfty, 
-    "EA1Inactive" = slbl.EA.inactive$EA1, 
-    "EA2Inactive" = slbl.EA.inactive$EA2, 
-    "EAInftyInactive" = slbl.EA.inactive$EAInfty, 
-    "FP" = slbl.SA$FP, 
-    "FN" = slbl.SA$FN, 
-    "TPR" = slbl.SA$TPR, 
-    "precision" = slbl.SA$precision, 
-    "Fscore" = slbl.SA$Fscore
-  )
-  saveRDS(c(
-    slbl.metrics,
-    "betaSparsity" = bspars,
-    "Rsq" = Rsq,
-    "time" = slbl.timing
-  ),
-  paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
+  # ##############################################################################
+  # # selbal method (a balance regression method)
+  # ##############################################################################
+  # library(selbal) # masks stats::cor()
+  # 
+  # start.time = Sys.time()
+  # X.slbl = X
+  # rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
+  # colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+  # slbl = selbal.cv(x = X.slbl, y = as.vector(Y), n.fold = K)
+  # end.time = Sys.time()
+  # slbl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # U (transformation) matrix
+  # U.slbl = rep(0, p)
+  # names(U.slbl) = colnames(X.slbl)
+  # pba.pos = unlist(subset(
+  #   slbl$global.balance, subset = Group == "NUM", select = Taxa))
+  # num.pos = length(pba.pos)
+  # pba.neg = unlist(subset(
+  #   slbl$global.balance, subset = Group == "DEN", select = Taxa))
+  # num.neg = length(pba.neg)
+  # U.slbl[pba.pos] = 1 / num.pos
+  # U.slbl[pba.neg] = -1 / num.neg
+  # norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
+  # U.slbl = norm.const * U.slbl
+  # # check: these are equal
+  # # lm(as.vector(Y) ~ log(X) %*% as.matrix(U.slbl))
+  # # slbl$glm
+  # slbl.thetahat = coefficients(slbl$glm)[2]
+  # slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
+  # 
+  # # compute metrics on the selected model #
+  # # prediction errors
+  # # get prediction error on training set
+  # slbl.Yhat.train = predict.glm(
+  #   slbl$glm, newdata = data.frame(X.slbl), type = "response")
+  # slbl.PE.train = crossprod(Y - slbl.Yhat.train) / n
+  # # get prediction error on test set
+  # X.slbl.test = X.test
+  # rownames(X.slbl.test) = paste("Sample", 1:nrow(X.slbl.test), sep = "_")
+  # colnames(X.slbl.test) = paste("V", 1:ncol(X.slbl.test), sep = "")
+  # slbl.Yhat.test = predict.glm(
+  #   slbl$glm, newdata = data.frame(X.slbl.test), type = "response")
+  # slbl.PE.test = crossprod(Y.test - slbl.Yhat.test) / n
+  # # estimation accuracy
+  # slbl.EA = getEstimationAccuracy(true.beta = beta, betahat = slbl.betahat)
+  # slbl.EA.active = getEstimationAccuracy(
+  #   true.beta = beta[non0.beta], betahat = slbl.betahat[non0.beta])
+  # slbl.EA.inactive = getEstimationAccuracy(
+  #   true.beta = beta[is0.beta], betahat = slbl.betahat[is0.beta])
+  # # selection accuracy
+  # slbl.non0.betahat = abs(slbl.betahat) > 10e-8
+  # slbl.SA = getSelectionAccuracy(
+  #   is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+  #   non0.betahat = slbl.non0.betahat)
+  #   
+  # slbl.metrics = c(
+  #   "PEtr" = slbl.PE.train, 
+  #   "PEte" = slbl.PE.test, 
+  #   "EA1" = slbl.EA$EA1, 
+  #   "EA2" = slbl.EA$EA2, 
+  #   "EAInfty" = slbl.EA$EAInfty, 
+  #   "EA1Active" = slbl.EA.active$EA1, 
+  #   "EA2Active" = slbl.EA.active$EA2, 
+  #   "EAInftyActive" = slbl.EA.active$EAInfty, 
+  #   "EA1Inactive" = slbl.EA.inactive$EA1, 
+  #   "EA2Inactive" = slbl.EA.inactive$EA2, 
+  #   "EAInftyInactive" = slbl.EA.inactive$EAInfty, 
+  #   "FP" = slbl.SA$FP, 
+  #   "FN" = slbl.SA$FN, 
+  #   "TPR" = slbl.SA$TPR, 
+  #   "precision" = slbl.SA$precision, 
+  #   "Fscore" = slbl.SA$Fscore
+  # )
+  # saveRDS(c(
+  #   slbl.metrics,
+  #   "betaSparsity" = bspars,
+  #   "Rsq" = Rsq,
+  #   "time" = slbl.timing
+  # ),
+  # paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
   
   ##############################################################################
   ##############################################################################

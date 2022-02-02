@@ -59,7 +59,7 @@ slrhsc_natstop_sims_list = list()
 slrhsc_ngmstop_sims_list = list()
 cl_sims_list = list()
 pr_sims_list = list()
-# or_sims_list = list()
+or_sims_list = list()
 # slbl_sims_list = list()
 for(i in 1:numSims){
   # print(i)
@@ -126,13 +126,13 @@ for(i in 1:numSims){
   ))))
   rownames(pr.sim.tmp) = NULL
   pr_sims_list[[i]] = data.table(pr.sim.tmp)
-  # # oracle
-  # or.sim.tmp = t(data.frame(readRDS(paste0(
-  #   output_dir, "/metrics", "/oracle_", "metrics", file.end0,
-  #   "_sim", i, ".rds"
-  # ))))
-  # rownames(or.sim.tmp) = NULL
-  # or_sims_list[[i]] = data.table(or.sim.tmp)
+  # oracle
+  or.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/oracle_", "metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(or.sim.tmp) = NULL
+  or_sims_list[[i]] = data.table(or.sim.tmp)
   # # selbal
   # slbl.sim.tmp = t(data.frame(readRDS(paste0(
   #   output_dir, "/metrics", "/selbal_", "metrics", file.end0,

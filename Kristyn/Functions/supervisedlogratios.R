@@ -50,7 +50,7 @@ getSupervisedMatrix4 = function(
   n = dim(X)[1]
   p = dim(X)[2]
   
-  cor_logx_y = apply(log(X), 2, function(x) (stats::cor(x, Y))^2)
+  cor_logx_y = apply(log(X), 2, function(x) (stats::cor(x, y))^2)
   
   # checks
   if(length(y) != n) stop("getSupervisedMatrix4() error: dim(X)[1] != length(y)!")

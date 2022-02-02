@@ -72,7 +72,8 @@ names(muW) = paste0('s', 1:p)
 
 ##############################################################################
 # generate data
-set.seed(1947)
+# set.seed(1947)
+set.seed(1234)
 # generate X
 logW.all <- mvrnorm(n = 2 * n, mu = muW, Sigma = SigmaW) 
 W.all <- exp(logW.all)
@@ -115,10 +116,22 @@ start.time = Sys.time()
 # apply hierarchical spectral clustering to the SLR similarity matrix
 slrSimMat = getSupervisedMatrix(
   y = Y, X = X, type = "similarity")
+
+# kmeans
 slrhsc_btree = HSClust(
   W = slrSimMat, force_levelMax = TRUE, method = "kmeans")
 slrhsc_SBP = sbp.fromHSClust(
   levels_matrix = slrhsc_btree$allLevels, row_names = names(beta))
+plotSBP(slrhsc_SBP)
+fields::image.plot(slrSimMat)
+
+# # shi-malik
+# slrhsc_btree2 = HSClust(
+#   W = slrSimMat, force_levelMax = TRUE, method = "shimalik")
+# slrhsc_SBP2 = sbp.fromHSClust(
+#   levels_matrix = slrhsc_btree2$allLevels, row_names = names(beta))
+# plotSBP(slrhsc_SBP2)
+
 # apply supervised log-ratios, using CV to select threshold and also lambda
 slrhsc2 = cvILReta(
   y = Y, X = X,
@@ -179,19 +192,18 @@ fields::image.plot(slrSimMat)
 #   -- looks like it would work just as well for thresholding
 cor_logx_y = apply(log(X), 2, function(x) (stats::cor(x, Y))^2)
 plot(1:30, cor_logx_y)
-abline(h = 0.0265)
 
 # heat map of cross-validated mse's
 fields::image.plot(slrhsc2$cvm)
-points(slrhsc2$cvm[slrhsc2$min.idx[1], slrhsc2$min.idx[2]], col = 2)
+# points(slrhsc2$cvm[slrhsc2$min.idx], col = 1)
 title(
   # columns
-  xlab = paste0( # eta: there is at least one value less than eta
+  ylab = paste0( # eta: there is at least one value less than eta
     "eta ", "[", 
     round(slrhsc2$eta[1], 3), ",", 
     round(slrhsc2$eta[neta], 3), "]"),
   # rows
-  ylab = paste0(
+  xlab = paste0(
     "lambda ", "[", 
     round(slrhsc2$lambda[1], 3), ",", 
     round(slrhsc2$lambda[nlam], 3), "]")
@@ -306,11 +318,11 @@ getSupervisedMatrix4 = function(
       Zjk2 = log(X[, j]) + log(X[, k])
       if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
          rho.type == 2){
-        val = (stats::cor(Zjk, y))^2 + (stats::cor(Zjk2, y))^2 - 
-          max((cor_logx_y[j])^2, (cor_logx_y[k])^2)
+        val = max((stats::cor(Zjk, y))^2 + (stats::cor(Zjk2, y))^2 - 
+          max((cor_logx_y[j])^2, (cor_logx_y[k])^2), 0)
       } else{
-        val = abs(stats::cor(Zjk, y)) + abs(stats::cor(Zjk2, y)) - 
-          max(abs(cor_logx_y[j]), abs(cor_logx_y[k]))
+        val = max(abs(stats::cor(Zjk, y)) + abs(stats::cor(Zjk2, y)) - 
+          max(abs(cor_logx_y[j]), abs(cor_logx_y[k])), 0)
       }
       cormat[j, k] = val
       cormat[k, j] = val
@@ -330,6 +342,70 @@ slrSimMat4 = getSupervisedMatrix4(
   y = Y, X = X, type = "similarity")
 fields::image.plot(slrSimMat)
 fields::image.plot(slrSimMat2) # incorporate cor(logXj, y)
-fields::image.plot(slrSimMat3) # incorporate balances in same branch of ratio
+fields::image.plot(slrSimMat3) # incorporate balances in same side of ratio
 fields::image.plot(slrSimMat4) # incorporate both
 
+##############################################################################
+# supervised log-ratios (a balance regression method) with eta
+#   -- hierarchical spectral clustering
+##############################################################################
+start.time = Sys.time()
+# apply hierarchical spectral clustering to the SLR similarity matrix
+slr2SimMat4 = getSupervisedMatrix4(
+  y = Y, X = X, type = "similarity")
+slr2hsc_btree = HSClust(
+  W = slr2SimMat4, force_levelMax = TRUE, method = "kmeans")
+slr2hsc_SBP = sbp.fromHSClust(
+  levels_matrix = slr2hsc_btree$allLevels, row_names = names(beta))
+# apply supervised log-ratios, using CV to select threshold and also lambda
+slr2hsc2 = cvILReta(
+  y = Y, X = X,
+  W = slr2SimMat4, # normalized similarity matrix (all values between 0 & 1)
+  clustering_method = "hsc",
+  hsc_method = "kmeans", # "shimalik", "kmeans"
+  force_levelMax = TRUE,
+  sbp = slr2hsc_SBP,
+  lambda = NULL, nlam = nlam,
+  eta = NULL, neta = neta,
+  nfolds = K, foldid = NULL,
+  intercept = intercept,
+  standardize = scaling
+)
+end.time = Sys.time()
+slr2hsc2.timing = difftime(
+  time1 = end.time, time2 = start.time, units = "secs")
+
+slr2hsc2.eta.min.idx = slr2hsc2$min.idx[2]
+slr2hsc2.lam.min.idx = slr2hsc2$min.idx[1]
+slr2hsc2.a0 = slr2hsc2$theta0[[slr2hsc2.eta.min.idx]][slr2hsc2.lam.min.idx]
+slr2hsc2.thetahat = slr2hsc2$theta[[slr2hsc2.eta.min.idx]][, slr2hsc2.lam.min.idx]
+slr2hsc2.SBP = slr2hsc2$sbp_thresh[[slr2hsc2.eta.min.idx]]
+slr2hsc2.betahat.nonzero = getBeta(slr2hsc2.thetahat, sbp = slr2hsc2.SBP)
+slr2hsc2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+rownames(slr2hsc2.betahat) = names(beta)
+slr2hsc2.betahat[slr2hsc2$meets_threshold[[slr2hsc2.eta.min.idx]], ] =
+  as.numeric(slr2hsc2.betahat.nonzero)
+
+# compute metrics on the selected model #
+slr2hsc2.metrics = getMetricsBalanceReg(
+  y.train = Y, y.test = Y.test,
+  ilrX.train = computeBalances(
+    X[, slr2hsc2$meets_threshold[[slr2hsc2.eta.min.idx]], drop = FALSE],
+    sbp = slr2hsc2.SBP),
+  ilrX.test = computeBalances(
+    X.test[, slr2hsc2$meets_threshold[[slr2hsc2.eta.min.idx]], drop = FALSE],
+    sbp = slr2hsc2.SBP),
+  n.train = n, n.test = n,
+  thetahat0 = slr2hsc2.a0, thetahat = slr2hsc2.thetahat,
+  betahat = slr2hsc2.betahat,
+  sbp = slr2hsc2.SBP,
+  true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+
+# plot the tree given by slr-hsc, indicating significant covariates
+slr2hsc2_leaf_types = rep("covariate", nrow(slr2hsc2.SBP))
+slr2hsc2_balance_types = rep("balance", ncol(slr2hsc2.SBP))
+slr2hsc2_nodes_types = data.frame(
+  name = c(colnames(slr2hsc2.SBP), rownames(slr2hsc2.SBP)),
+  type = c(slr2hsc2_balance_types, slr2hsc2_leaf_types)
+)
+plotSBP(slr2hsc2.SBP, title = "slr2-hsc-eta", nodes_types = slr2hsc2_nodes_types)

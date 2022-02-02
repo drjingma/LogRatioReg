@@ -64,10 +64,10 @@ getSupervisedMatrix4 = function(
       if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
          rho.type == 2){
         val = max((stats::cor(Zjk, y))^2 + (stats::cor(Zjk2, y))^2 - 
-          max((cor_logx_y[j])^2, (cor_logx_y[k])^2), 0)
+          max((cor_logx_y[j])^2, (cor_logx_y[k])^2), 1e-15)
       } else{
         val = max(abs(stats::cor(Zjk, y)) + abs(stats::cor(Zjk2, y)) - 
-          max(abs(cor_logx_y[j]), abs(cor_logx_y[k])), 0)
+          max(abs(cor_logx_y[j]), abs(cor_logx_y[k])), 1e-15)
       }
       cormat[j, k] = val
       cormat[k, j] = val

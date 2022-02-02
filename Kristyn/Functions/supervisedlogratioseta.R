@@ -236,7 +236,7 @@ cvILReta <- function(
     cat(sprintf("Finished model fits for fold[%s].\n", i))
     cat("##########################\n")
   }
-  m <- apply(errs, c(1, 2), function(x) mean(x, na.rm = TRUE))
+  m <- apply(errs, c(1, 2), function(x) mean(x, na.rm = TRUE)) # rows = lambda, cols = eta
   # se <- apply(errs, c(1, 2), function(x) stats::sd(x, na.rm = TRUE)) / sqrt(nfolds)
   ibest <- which(m == min(m, na.rm = TRUE), arr.ind = TRUE)[1, , drop = FALSE]
   

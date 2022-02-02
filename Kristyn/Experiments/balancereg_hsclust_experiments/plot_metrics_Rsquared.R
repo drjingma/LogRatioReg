@@ -44,7 +44,7 @@ get_sigma_eps = function(theta_val, Rsq_val, rho_val){
   return(sqrt(sigma_eps_sq.tmp))
 }
 rho = 0.2 #
-desired_Rsquared = 0.6 #
+desired_Rsquared = 0.8 #
 sigma_eps = get_sigma_eps(
   theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
 
@@ -72,7 +72,7 @@ slrhsc_ngmstop_sims_list = list()
 cl_sims_list = list()
 pr_sims_list = list()
 or_sims_list = list()
-slbl_sims_list = list()
+# slbl_sims_list = list()
 for(i in 1:numSims){
   # print(i)
   # slr hc
@@ -145,13 +145,13 @@ for(i in 1:numSims){
   ))))
   rownames(or.sim.tmp) = NULL
   or_sims_list[[i]] = data.table(or.sim.tmp)
-  # selbal
-  slbl.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/selbal_", "metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slbl.sim.tmp) = NULL
-  slbl_sims_list[[i]] = data.table(slbl.sim.tmp)
+  # # selbal
+  # slbl.sim.tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/metrics", "/selbal_", "metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(slbl.sim.tmp) = NULL
+  # slbl_sims_list[[i]] = data.table(slbl.sim.tmp)
 }
 
 slrhc_sims = as.data.frame(rbindlist(slrhc_sims_list))

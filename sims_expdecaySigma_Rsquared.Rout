@@ -9602,7 +9602,4 @@ The following object is masked from ‘package:stats’:
 
 Error in { : task 39 failed - "infinite or missing values in 'x'"
 Calls: %dorng% -> do.call -> %dopar% -> <Anonymous>
-In addition: Warning messages:
-1: In sqrt(g) : NaNs produced
-2: In sqrt(g) : NaNs produced
 Execution halted

@@ -44,7 +44,7 @@ get_sigma_eps = function(theta_val, Rsq_val, rho_val){
   return(sqrt(sigma_eps_sq.tmp))
 }
 rho = 0.2 #
-desired_Rsquared = 0.8 #
+desired_Rsquared = 0.6 #
 sigma_eps = get_sigma_eps(
   theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
 
@@ -67,14 +67,15 @@ slrhc2_sims_list = list()
 slrhc_distal_sims_list = list()
 slrhsc_sims_list = list()
 slrhsc2_sims_list = list()
-slrhsc_natstop_sims_list = list()
-slrhsc_ngmstop_sims_list = list()
+slr2hsc2_sims_list = list()
+# slrhsc_natstop_sims_list = list()
+# slrhsc_ngmstop_sims_list = list()
 cl_sims_list = list()
 pr_sims_list = list()
 or_sims_list = list()
 # slbl_sims_list = list()
 for(i in 1:numSims){
-  # print(i)
+  print(i)
   # slr hc
   slrhc.sim.tmp = t(data.frame(readRDS(paste0(
     output_dir, "/metrics", "/slr_hc_", "metrics", file.end0,
@@ -110,20 +111,27 @@ for(i in 1:numSims){
   ))))
   rownames(slrhsc2.sim.tmp) = NULL
   slrhsc2_sims_list[[i]] = data.table(slrhsc2.sim.tmp)
-  # slr hsc - eta - natural stop
-  slrhsc_natstop.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_hsc_eta_natstop_", "metrics", file.end0,
+  # slr2 hsc - eta
+  slr2hsc2.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/slr2_hsc_eta_", "metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slrhsc_natstop.sim.tmp) = NULL
-  slrhsc_natstop_sims_list[[i]] = data.table(slrhsc_natstop.sim.tmp)
-  # # slr hsc - eta - NGM stop
-  slrhsc_ngmstop.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_hsc_eta_ngmstop_", "metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slrhsc_ngmstop.sim.tmp) = NULL
-  slrhsc_ngmstop_sims_list[[i]] = data.table(slrhsc_ngmstop.sim.tmp)
+  rownames(slr2hsc2.sim.tmp) = NULL
+  slr2hsc2_sims_list[[i]] = data.table(slr2hsc2.sim.tmp)
+  # # slr hsc - eta - natural stop
+  # slrhsc_natstop.sim.tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/metrics", "/slr_hsc_eta_natstop_", "metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(slrhsc_natstop.sim.tmp) = NULL
+  # slrhsc_natstop_sims_list[[i]] = data.table(slrhsc_natstop.sim.tmp)
+  # # # slr hsc - eta - NGM stop
+  # slrhsc_ngmstop.sim.tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/metrics", "/slr_hsc_eta_ngmstop_", "metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(slrhsc_ngmstop.sim.tmp) = NULL
+  # slrhsc_ngmstop_sims_list[[i]] = data.table(slrhsc_ngmstop.sim.tmp)
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
     output_dir, "/metrics", "/classo_", "metrics", file.end0,

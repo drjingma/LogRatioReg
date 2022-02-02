@@ -14,7 +14,7 @@ library(data.table)
 library(reshape2)
 
 numSims = 100
-theta_overlapping_balance = FALSE
+theta_overlapping_balance = TRUE
 
 # data
 Q = read.table(file = "Data/Q.txt")

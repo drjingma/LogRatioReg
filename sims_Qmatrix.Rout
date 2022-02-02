@@ -149,7 +149,7 @@ Type 'q()' to quit R.
 +   # rm(list=ls())
 +   
 +   output_dir = "Kristyn/Experiments/balancereg_hsclust_experiments/outputs"
-+   theta_overlapping_balance = TRUE
++   theta_overlapping_balance = FALSE
 +   
 +   library(mvtnorm)
 +   
@@ -774,7 +774,7 @@ Type 'q()' to quit R.
 +   #   "time" = pr.timing
 +   # ),
 +   # paste0(output_dir, "/metrics", "/propr_metrics", file.end))
-+   
++   # 
 +   ##############################################################################
 +   # oracle method (a balance regression method)
 +   #   -- hierarchical clustering
@@ -2693,4 +2693,4 @@ The following object is masked from ‘package:stats’:
 > 
 > proc.time()
    user  system elapsed 
-  3.102   0.107  59.786 
+  3.099   0.127  60.850 

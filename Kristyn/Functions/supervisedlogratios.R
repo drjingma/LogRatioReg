@@ -9,7 +9,7 @@ getSupervisedMatrix = function(y, X, rho.type = "square", type = "similarity"){
   p = dim(X)[2]
   
   # checks
-  if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
+  if(length(y) != n) stop("getSupervisedMatrix() error: dim(X)[1] != length(y)!")
   
   # calculate correlation of each pair of log-ratios with response y
   cormat = matrix(0, p, p) # diagonal == 1
@@ -43,27 +43,31 @@ getSupervisedMatrix = function(y, X, rho.type = "square", type = "similarity"){
   } 
   return(cormat)
 }
-getSupervisedMatrixCentering = function(
+# try incorporating balances in the same part of the ratio AND cor(Xj, y)?
+getSupervisedMatrix4 = function(
   y, X, rho.type = "square", type = "similarity"
 ){
   n = dim(X)[1]
   p = dim(X)[2]
   
+  cor_logx_y = apply(log(X), 2, function(x) (stats::cor(x, Y))^2)
+  
   # checks
-  if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
+  if(length(y) != n) stop("getSupervisedMatrix4() error: dim(X)[1] != length(y)!")
   
   # calculate correlation of each pair of log-ratios with response y
   cormat = matrix(0, p, p) # diagonal == 1
-  y_demeaned = y - mean(y)
   for (j in 1:(p - 1)){
     for (k in (j + 1):p){
       Zjk = log(X[, j]) - log(X[, k])
-      Zjk_demeaned = Zjk - mean(Zjk)
+      Zjk2 = log(X[, j]) + log(X[, k])
       if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
          rho.type == 2){
-        val = (stats::cor(Zjk_demeaned, y_demeaned))^2
+        val = (stats::cor(Zjk, y))^2 + (stats::cor(Zjk2, y))^2 - 
+          max((cor_logx_y[j])^2, (cor_logx_y[k])^2)
       } else{
-        val = abs(stats::cor(Zjk_demeaned, y_demeaned))
+        val = abs(stats::cor(Zjk, y)) + abs(stats::cor(Zjk2, y)) - 
+          max(abs(cor_logx_y[j]), abs(cor_logx_y[k]))
       }
       cormat[j, k] = val
       cormat[k, j] = val
@@ -80,9 +84,16 @@ getSupervisedMatrixCentering = function(
   return(cormat)
 }
 
-getSupervisedTree = function(y, X, linkage = "complete", rho.type = "square"){
-  Gammamat = getSupervisedMatrix(
-    y = y, X = X, rho.type = rho.type, type = "distance")
+getSupervisedTree = function(
+  y, X, linkage = "complete", rho.type = "square", slr.type = "original"
+){
+  if(slr.type %in% c("original", "getSupervisedMatrix")){
+    Gammamat = getSupervisedMatrix(
+      y = y, X = X, rho.type = rho.type, type = "distance")
+  } else{
+    Gammamat = getSupervisedMatrix4(
+      y = y, X = X, rho.type = rho.type, type = "distance")
+  }
   # get tree from hierarchical clustering
   btree_slr = hclust(as.dist(Gammamat), method = linkage)
   return(btree_slr)
@@ -214,7 +225,7 @@ getUdetailed= function(btree = NULL, sbp = NULL){
 # Fit supervised log-ratios model to compositional data X and response y
 fitSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, intercept = TRUE, 
-  standardize = standardize, rho.type = "square"
+  standardize = standardize, rho.type = "square", slr.type = "original"
 ){
   n = dim(X)[1]
   p = dim(X)[2]
@@ -228,8 +239,9 @@ fitSLR = function(
   }
   
   # compute balances
-  btree = getSupervisedTree(y, X, linkage, rho.type)
-  Xb = computeBalances(X, btree)
+  btree = getSupervisedTree(
+    y = y, X = X, linkage = linkage, rho.type = rho.type, slr.type = slr.type)
+  Xb = computeBalances(X = X, btree = btree)
   
   # run glmnet
   glmnet.fit = glmnet(x = Xb, y = y, lambda = lambda, nlambda = nlam, 
@@ -254,6 +266,7 @@ fitSLR = function(
 cvSLR = function(
   y, X, linkage = "complete", lambda = NULL, nlam = 20, nfolds = 10, 
   foldid = NULL, intercept = TRUE, standardize = TRUE, rho.type = "squared", 
+  slr.type = "original",
   keep = FALSE
 ){
   n = dim(X)[1]
@@ -268,8 +281,9 @@ cvSLR = function(
   }
   
   # compute balances
-  btree = getSupervisedTree(y, X, linkage, rho.type)
-  Xb = computeBalances(X, btree)
+  btree = getSupervisedTree(
+    y = y, X = X, linkage = linkage, rho.type = rho.type, slr.type = slr.type)
+  Xb = computeBalances(X = X, btree = btree)
   
   # run cv.glmnet
   cv_exact = cv.glmnet(

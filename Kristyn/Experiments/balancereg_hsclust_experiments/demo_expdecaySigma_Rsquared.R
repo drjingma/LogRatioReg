@@ -81,6 +81,7 @@ colnames(X.all) = paste0('s', 1:p)
 # create the ilr(X.all) covariate by hand to
 #   generate y
 SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, -1, -1, -1, rep(0, p - 5)))
 U.true.details = getUdetailed(sbp = SBP.true)
 U.true = U.true.details$U
 # note: there is no theta
@@ -136,8 +137,8 @@ end.time = Sys.time()
 slrhsc2.timing = difftime(
   time1 = end.time, time2 = start.time, units = "secs")
 
-slrhsc2.eta.min.idx = slrhsc2$min.idx[1]
-slrhsc2.lam.min.idx = slrhsc2$min.idx[2]
+slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
+slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
 slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
 slrhsc2.thetahat = slrhsc2$theta[[slrhsc2.eta.min.idx]][, slrhsc2.lam.min.idx]
 slrhsc2.SBP = slrhsc2$sbp_thresh[[slrhsc2.eta.min.idx]]
@@ -171,6 +172,8 @@ slrhsc2_nodes_types = data.frame(
 )
 plotSBP(slrhsc2.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_nodes_types)
 fields::image.plot(slrSimMat)
+# note: centering X and y didn't change the slrSimMat
+# note 2: using clrXj - clrXk instead of logXj - logXk didn't change slrSimMat
 
 # what does Cor(y, Xj) look like? 
 #   -- looks like it would work just as well for thresholding
@@ -182,14 +185,151 @@ abline(h = 0.0265)
 fields::image.plot(slrhsc2$cvm)
 points(slrhsc2$cvm[slrhsc2$min.idx[1], slrhsc2$min.idx[2]], col = 2)
 title(
+  # columns
   xlab = paste0( # eta: there is at least one value less than eta
     "eta ", "[", 
     round(slrhsc2$eta[1], 3), ",", 
     round(slrhsc2$eta[neta], 3), "]"),
+  # rows
   ylab = paste0(
     "lambda ", "[", 
     round(slrhsc2$lambda[1], 3), ",", 
     round(slrhsc2$lambda[nlam], 3), "]")
 )
 # the more variables you have (small lambda, large eta), the more 
+
+# try incorporating cor(logXj, y)^2?
+getSupervisedMatrix2 = function(
+  y, X, rho.type = "square", type = "similarity"
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  cor_logx_y = apply(log(X), 2, function(x) (stats::cor(x, Y))^2)
+  
+  # checks
+  if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
+  
+  # calculate correlation of each pair of log-ratios with response y
+  cormat = matrix(0, p, p) # diagonal == 1
+  for (j in 1:(p - 1)){
+    for (k in (j + 1):p){
+      Zjk = log(X[, j]) - log(X[, k])
+      if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
+         rho.type == 2){
+        val = (stats::cor(Zjk, y))^2 * 
+          min((cor_logx_y[j])^2, (cor_logx_y[k])^2)
+      } else{
+        val = abs(stats::cor(Zjk, y)) * 
+          min(abs(cor_logx_y[j]), abs(cor_logx_y[k]))
+      }
+      cormat[j, k] = val
+      cormat[k, j] = val
+    }
+  }
+  # give the rows and columns the names of taxa in X, for sbp.fromHclust()
+  rownames(cormat) = colnames(X)
+  colnames(cormat) = colnames(X)
+  
+  # get dissimilarity matrix
+  if(type != "similarity"){
+    cormat = 1 - cormat
+  } 
+  return(cormat)
+}
+slrSimMat2 = getSupervisedMatrix2(
+  y = Y, X = X, type = "similarity")
+fields::image.plot(slrSimMat)
+fields::image.plot(slrSimMat2)
+# apply(slrSimMat2, 1, function(row) !all(row < 8.182383e-05))
+
+# try incorporating balances in the same part of the ratio?
+getSupervisedMatrix3 = function(
+  y, X, rho.type = "square", type = "similarity"
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  cor_logx_y = apply(log(X), 2, function(x) (stats::cor(x, Y))^2)
+  
+  # checks
+  if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
+  
+  # calculate correlation of each pair of log-ratios with response y
+  cormat = matrix(0, p, p) # diagonal == 1
+  for (j in 1:(p - 1)){
+    for (k in (j + 1):p){
+      Zjk = log(X[, j]) - log(X[, k])
+      Zjk2 = log(X[, j]) + log(X[, k])
+      if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
+         rho.type == 2){
+        val = (stats::cor(Zjk, y))^2 + (stats::cor(Zjk2, y))^2
+      } else{
+        val = abs(stats::cor(Zjk, y)) + abs(stats::cor(Zjk2, y))
+      }
+      cormat[j, k] = val
+      cormat[k, j] = val
+    }
+  }
+  # give the rows and columns the names of taxa in X, for sbp.fromHclust()
+  rownames(cormat) = colnames(X)
+  colnames(cormat) = colnames(X)
+  
+  # get dissimilarity matrix
+  if(type != "similarity"){
+    cormat = 1 - cormat
+  } 
+  return(cormat)
+}
+slrSimMat3 = getSupervisedMatrix3(
+  y = Y, X = X, type = "similarity")
+fields::image.plot(slrSimMat)
+fields::image.plot(slrSimMat3)
+
+# try incorporating balances in the same part of the ratio AND cor(Xj, y)?
+getSupervisedMatrix4 = function(
+  y, X, rho.type = "square", type = "similarity"
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  cor_logx_y = apply(log(X), 2, function(x) (stats::cor(x, Y))^2)
+  
+  # checks
+  if(length(y) != n) stop("getSupervisedTree() error: dim(X)[1] != length(y)!")
+  
+  # calculate correlation of each pair of log-ratios with response y
+  cormat = matrix(0, p, p) # diagonal == 1
+  for (j in 1:(p - 1)){
+    for (k in (j + 1):p){
+      Zjk = log(X[, j]) - log(X[, k])
+      Zjk2 = log(X[, j]) + log(X[, k])
+      if(rho.type == "square" | rho.type == "squared" | rho.type == "s" | 
+         rho.type == 2){
+        val = (stats::cor(Zjk, y))^2 + (stats::cor(Zjk2, y))^2 - 
+          max((cor_logx_y[j])^2, (cor_logx_y[k])^2)
+      } else{
+        val = abs(stats::cor(Zjk, y)) + abs(stats::cor(Zjk2, y)) - 
+          max(abs(cor_logx_y[j]), abs(cor_logx_y[k]))
+      }
+      cormat[j, k] = val
+      cormat[k, j] = val
+    }
+  }
+  # give the rows and columns the names of taxa in X, for sbp.fromHclust()
+  rownames(cormat) = colnames(X)
+  colnames(cormat) = colnames(X)
+  
+  # get dissimilarity matrix
+  if(type != "similarity"){
+    cormat = 1 - cormat
+  } 
+  return(cormat)
+}
+slrSimMat4 = getSupervisedMatrix4(
+  y = Y, X = X, type = "similarity")
+fields::image.plot(slrSimMat)
+fields::image.plot(slrSimMat2) # incorporate cor(logXj, y)
+fields::image.plot(slrSimMat3) # incorporate balances in same branch of ratio
+fields::image.plot(slrSimMat4) # incorporate both
 

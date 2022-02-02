@@ -85,7 +85,7 @@ res = foreach(
     return(sqrt(sigma_eps_sq.tmp))
   }
   rho = 0.2 #
-  desired_Rsquared = 0.6 #
+  desired_Rsquared = 0.8 #
   sigma_eps = get_sigma_eps(
     theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
   

@@ -720,7 +720,7 @@ res = foreach(
   # selbal method (a balance regression method)
   ##############################################################################
   library(selbal) # masks stats::cor()
-  
+
   start.time = Sys.time()
   X.slbl = X
   rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
@@ -729,7 +729,7 @@ res = foreach(
   end.time = Sys.time()
   slbl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
-  
+
   # U (transformation) matrix
   U.slbl = rep(0, p)
   names(U.slbl) = colnames(X.slbl)
@@ -748,7 +748,7 @@ res = foreach(
   # slbl$glm
   slbl.thetahat = coefficients(slbl$glm)[2]
   slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
-  
+
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
@@ -771,25 +771,25 @@ res = foreach(
   # selection accuracy
   slbl.non0.betahat = abs(slbl.betahat) > 10e-8
   slbl.SA = getSelectionAccuracy(
-    is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+    is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     non0.betahat = slbl.non0.betahat)
-    
+
   slbl.metrics = c(
-    "PEtr" = slbl.PE.train, 
-    "PEte" = slbl.PE.test, 
-    "EA1" = slbl.EA$EA1, 
-    "EA2" = slbl.EA$EA2, 
-    "EAInfty" = slbl.EA$EAInfty, 
-    "EA1Active" = slbl.EA.active$EA1, 
-    "EA2Active" = slbl.EA.active$EA2, 
-    "EAInftyActive" = slbl.EA.active$EAInfty, 
-    "EA1Inactive" = slbl.EA.inactive$EA1, 
-    "EA2Inactive" = slbl.EA.inactive$EA2, 
-    "EAInftyInactive" = slbl.EA.inactive$EAInfty, 
-    "FP" = slbl.SA$FP, 
-    "FN" = slbl.SA$FN, 
-    "TPR" = slbl.SA$TPR, 
-    "precision" = slbl.SA$precision, 
+    "PEtr" = slbl.PE.train,
+    "PEte" = slbl.PE.test,
+    "EA1" = slbl.EA$EA1,
+    "EA2" = slbl.EA$EA2,
+    "EAInfty" = slbl.EA$EAInfty,
+    "EA1Active" = slbl.EA.active$EA1,
+    "EA2Active" = slbl.EA.active$EA2,
+    "EAInftyActive" = slbl.EA.active$EAInfty,
+    "EA1Inactive" = slbl.EA.inactive$EA1,
+    "EA2Inactive" = slbl.EA.inactive$EA2,
+    "EAInftyInactive" = slbl.EA.inactive$EAInfty,
+    "FP" = slbl.SA$FP,
+    "FN" = slbl.SA$FN,
+    "TPR" = slbl.SA$TPR,
+    "precision" = slbl.SA$precision,
     "Fscore" = slbl.SA$Fscore
   )
   saveRDS(c(

@@ -130,7 +130,7 @@ res = foreach(
   # rm(list=ls())
   
   output_dir = "Kristyn/Experiments/balancereg_hsclust_experiments/outputs"
-  theta_overlapping_balance = TRUE
+  theta_overlapping_balance = FALSE
   
   library(mvtnorm)
   
@@ -756,131 +756,131 @@ res = foreach(
   # ),
   # paste0(output_dir, "/metrics", "/propr_metrics", file.end))
   # 
-  # ##############################################################################
-  # # oracle method (a balance regression method)
-  # #   -- hierarchical clustering
-  # ##############################################################################
-  # start.time = Sys.time()
-  # or_SBP = sbp_Q[, theta != 0, drop = FALSE]
-  # or.ilrX = computeBalances(X, sbp = or_SBP)
-  # oracle = lm(Y ~ or.ilrX)
-  # end.time = Sys.time()
-  # or.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # or.coefs = coefficients(oracle)
-  # or.a0 = or.coefs[1]
-  # or.thetahat = or.coefs[-1]
-  # or.betahat = getBeta(or.thetahat, sbp = or_SBP)
-  # 
-  # # compute metrics on the selected model #
-  # or.metrics = getMetricsBalanceReg(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = computeBalances(X, sbp = or_SBP),
-  #   ilrX.test = computeBalances(X.test, sbp = or_SBP),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = or.a0, thetahat = or.thetahat, betahat = or.betahat,
-  #   sbp = or_SBP,
-  #   true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
-  # 
-  # # # plot the tree given by slr-hsc, indicating significant covariates
-  # # or_leaf_types = rep("covariate", nrow(or_SBP))
-  # # or_balance_types = rep("balance", ncol(or_SBP))
-  # # or_nodes_types = data.frame(
-  # #   name = c(colnames(or_SBP), rownames(or_SBP)),
-  # #   type = c(or_balance_types, or_leaf_types)
-  # # )
-  # # plotSBP(or_SBP, title = "oracle", nodes_types = or_nodes_types)
-  # 
-  # saveRDS(c(
-  #   or.metrics,
-  #   "betaSparsity" = bspars,
-  #   "time" = or.timing
-  # ),
-  # paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
-  
   ##############################################################################
-  # selbal method (a balance regression method)
+  # oracle method (a balance regression method)
+  #   -- hierarchical clustering
   ##############################################################################
-  library(selbal) # masks stats::cor()
-
   start.time = Sys.time()
-  X.slbl = X
-  rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
-  colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
-  slbl = selbal.cv(x = X.slbl, y = as.vector(Y), n.fold = K)
+  or_SBP = sbp_Q[, theta != 0, drop = FALSE]
+  or.ilrX = computeBalances(X, sbp = or_SBP)
+  oracle = lm(Y ~ or.ilrX)
   end.time = Sys.time()
-  slbl.timing = difftime(
+  or.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
-  # U (transformation) matrix
-  U.slbl = rep(0, p)
-  names(U.slbl) = colnames(X.slbl)
-  pba.pos = unlist(subset(
-    slbl$global.balance, subset = Group == "NUM", select = Taxa))
-  num.pos = length(pba.pos)
-  pba.neg = unlist(subset(
-    slbl$global.balance, subset = Group == "DEN", select = Taxa))
-  num.neg = length(pba.neg)
-  U.slbl[pba.pos] = 1 / num.pos
-  U.slbl[pba.neg] = -1 / num.neg
-  norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
-  U.slbl = norm.const * U.slbl
-  # check: these are equal
-  # lm(as.vector(Y) ~ log(X) %*% as.matrix(U.slbl))
-  # slbl$glm
-  slbl.thetahat = coefficients(slbl$glm)[2]
-  slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
+  or.coefs = coefficients(oracle)
+  or.a0 = or.coefs[1]
+  or.thetahat = or.coefs[-1]
+  or.betahat = getBeta(or.thetahat, sbp = or_SBP)
 
   # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  slbl.Yhat.train = predict.glm(
-    slbl$glm, newdata = data.frame(X.slbl), type = "response")
-  slbl.PE.train = crossprod(Y - slbl.Yhat.train) / n
-  # get prediction error on test set
-  X.slbl.test = X.test
-  rownames(X.slbl.test) = paste("Sample", 1:nrow(X.slbl.test), sep = "_")
-  colnames(X.slbl.test) = paste("V", 1:ncol(X.slbl.test), sep = "")
-  slbl.Yhat.test = predict.glm(
-    slbl$glm, newdata = data.frame(X.slbl.test), type = "response")
-  slbl.PE.test = crossprod(Y.test - slbl.Yhat.test) / n
-  # estimation accuracy
-  slbl.EA = getEstimationAccuracy(true.beta = beta, betahat = slbl.betahat)
-  slbl.EA.active = getEstimationAccuracy(
-    true.beta = beta[non0.beta], betahat = slbl.betahat[non0.beta])
-  slbl.EA.inactive = getEstimationAccuracy(
-    true.beta = beta[is0.beta], betahat = slbl.betahat[is0.beta])
-  # selection accuracy
-  slbl.non0.betahat = abs(slbl.betahat) > 10e-8
-  slbl.SA = getSelectionAccuracy(
-    is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    non0.betahat = slbl.non0.betahat)
+  or.metrics = getMetricsBalanceReg(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = computeBalances(X, sbp = or_SBP),
+    ilrX.test = computeBalances(X.test, sbp = or_SBP),
+    n.train = n, n.test = n,
+    thetahat0 = or.a0, thetahat = or.thetahat, betahat = or.betahat,
+    sbp = or_SBP,
+    true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
 
-  slbl.metrics = c(
-    "PEtr" = slbl.PE.train,
-    "PEte" = slbl.PE.test,
-    "EA1" = slbl.EA$EA1,
-    "EA2" = slbl.EA$EA2,
-    "EAInfty" = slbl.EA$EAInfty,
-    "EA1Active" = slbl.EA.active$EA1,
-    "EA2Active" = slbl.EA.active$EA2,
-    "EAInftyActive" = slbl.EA.active$EAInfty,
-    "EA1Inactive" = slbl.EA.inactive$EA1,
-    "EA2Inactive" = slbl.EA.inactive$EA2,
-    "EAInftyInactive" = slbl.EA.inactive$EAInfty,
-    "FP" = slbl.SA$FP,
-    "FN" = slbl.SA$FN,
-    "TPR" = slbl.SA$TPR,
-    "precision" = slbl.SA$precision,
-    "Fscore" = slbl.SA$Fscore
-  )
+  # # plot the tree given by slr-hsc, indicating significant covariates
+  # or_leaf_types = rep("covariate", nrow(or_SBP))
+  # or_balance_types = rep("balance", ncol(or_SBP))
+  # or_nodes_types = data.frame(
+  #   name = c(colnames(or_SBP), rownames(or_SBP)),
+  #   type = c(or_balance_types, or_leaf_types)
+  # )
+  # plotSBP(or_SBP, title = "oracle", nodes_types = or_nodes_types)
+
   saveRDS(c(
-    slbl.metrics,
+    or.metrics,
     "betaSparsity" = bspars,
-    "time" = slbl.timing
+    "time" = or.timing
   ),
-  paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
+  paste0(output_dir, "/metrics", "/oracle_metrics", file.end))
+  
+  # ##############################################################################
+  # # selbal method (a balance regression method)
+  # ##############################################################################
+  # library(selbal) # masks stats::cor()
+  # 
+  # start.time = Sys.time()
+  # X.slbl = X
+  # rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
+  # colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+  # slbl = selbal.cv(x = X.slbl, y = as.vector(Y), n.fold = K)
+  # end.time = Sys.time()
+  # slbl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # U (transformation) matrix
+  # U.slbl = rep(0, p)
+  # names(U.slbl) = colnames(X.slbl)
+  # pba.pos = unlist(subset(
+  #   slbl$global.balance, subset = Group == "NUM", select = Taxa))
+  # num.pos = length(pba.pos)
+  # pba.neg = unlist(subset(
+  #   slbl$global.balance, subset = Group == "DEN", select = Taxa))
+  # num.neg = length(pba.neg)
+  # U.slbl[pba.pos] = 1 / num.pos
+  # U.slbl[pba.neg] = -1 / num.neg
+  # norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
+  # U.slbl = norm.const * U.slbl
+  # # check: these are equal
+  # # lm(as.vector(Y) ~ log(X) %*% as.matrix(U.slbl))
+  # # slbl$glm
+  # slbl.thetahat = coefficients(slbl$glm)[2]
+  # slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
+  # 
+  # # compute metrics on the selected model #
+  # # prediction errors
+  # # get prediction error on training set
+  # slbl.Yhat.train = predict.glm(
+  #   slbl$glm, newdata = data.frame(X.slbl), type = "response")
+  # slbl.PE.train = crossprod(Y - slbl.Yhat.train) / n
+  # # get prediction error on test set
+  # X.slbl.test = X.test
+  # rownames(X.slbl.test) = paste("Sample", 1:nrow(X.slbl.test), sep = "_")
+  # colnames(X.slbl.test) = paste("V", 1:ncol(X.slbl.test), sep = "")
+  # slbl.Yhat.test = predict.glm(
+  #   slbl$glm, newdata = data.frame(X.slbl.test), type = "response")
+  # slbl.PE.test = crossprod(Y.test - slbl.Yhat.test) / n
+  # # estimation accuracy
+  # slbl.EA = getEstimationAccuracy(true.beta = beta, betahat = slbl.betahat)
+  # slbl.EA.active = getEstimationAccuracy(
+  #   true.beta = beta[non0.beta], betahat = slbl.betahat[non0.beta])
+  # slbl.EA.inactive = getEstimationAccuracy(
+  #   true.beta = beta[is0.beta], betahat = slbl.betahat[is0.beta])
+  # # selection accuracy
+  # slbl.non0.betahat = abs(slbl.betahat) > 10e-8
+  # slbl.SA = getSelectionAccuracy(
+  #   is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+  #   non0.betahat = slbl.non0.betahat)
+  # 
+  # slbl.metrics = c(
+  #   "PEtr" = slbl.PE.train,
+  #   "PEte" = slbl.PE.test,
+  #   "EA1" = slbl.EA$EA1,
+  #   "EA2" = slbl.EA$EA2,
+  #   "EAInfty" = slbl.EA$EAInfty,
+  #   "EA1Active" = slbl.EA.active$EA1,
+  #   "EA2Active" = slbl.EA.active$EA2,
+  #   "EAInftyActive" = slbl.EA.active$EAInfty,
+  #   "EA1Inactive" = slbl.EA.inactive$EA1,
+  #   "EA2Inactive" = slbl.EA.inactive$EA2,
+  #   "EAInftyInactive" = slbl.EA.inactive$EAInfty,
+  #   "FP" = slbl.SA$FP,
+  #   "FN" = slbl.SA$FN,
+  #   "TPR" = slbl.SA$TPR,
+  #   "precision" = slbl.SA$precision,
+  #   "Fscore" = slbl.SA$Fscore
+  # )
+  # saveRDS(c(
+  #   slbl.metrics,
+  #   "betaSparsity" = bspars,
+  #   "time" = slbl.timing
+  # ),
+  # paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
   
   ##############################################################################
   ##############################################################################

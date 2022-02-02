@@ -14,7 +14,7 @@ library(data.table)
 library(reshape2)
 
 numSims = 100
-theta_overlapping_balance = TRUE
+theta_overlapping_balance = FALSE
 
 # data
 Q = read.table(file = "Data/Q.txt")
@@ -151,7 +151,7 @@ slrhsc_natstop_sims = as.data.frame(rbindlist(slrhsc_natstop_sims_list))
 slrhsc_ngmstop_sims = as.data.frame(rbindlist(slrhsc_ngmstop_sims_list))
 cl_sims = as.data.frame(rbindlist(cl_sims_list))
 pr_sims = as.data.frame(rbindlist(pr_sims_list))
-# or_sims = as.data.frame(rbindlist(or_sims_list))
+or_sims = as.data.frame(rbindlist(or_sims_list))
 # slbl_sims = as.data.frame(rbindlist(slbl_sims_list))
 
 # summary stats
@@ -200,11 +200,11 @@ pr_summaries = data.frame(
   "sd" = apply(pr_sims, 2, sd), 
   "se" =  apply(pr_sims, 2, sd) / sqrt(numSims)
 )
-# or_summaries = data.frame(
-#   "mean" = apply(or_sims, 2, mean), 
-#   "sd" = apply(or_sims, 2, sd), 
-#   "se" =  apply(or_sims, 2, sd) / sqrt(numSims)
-# )
+or_summaries = data.frame(
+  "mean" = apply(or_sims, 2, mean),
+  "sd" = apply(or_sims, 2, sd),
+  "se" =  apply(or_sims, 2, sd) / sqrt(numSims)
+)
 # slbl_summaries = data.frame(
 #   "mean" = apply(slbl_sims, 2, mean), 
 #   "sd" = apply(slbl_sims, 2, sd), 
@@ -230,8 +230,8 @@ cl.sims.gg = reshape2::melt(cl_sims)
 cl.sims.gg$Method = "classo"
 pr.sims.gg = reshape2::melt(pr_sims)
 pr.sims.gg$Method = "propr"
-# or.sims.gg = reshape2::melt(or_sims)
-# or.sims.gg$Method = "oracle (hc)"
+or.sims.gg = reshape2::melt(or_sims)
+or.sims.gg$Method = "oracle (hc)"
 # slbl.sims.gg = reshape2::melt(slbl_sims)
 # slbl.sims.gg$Method = "selbal"
 
@@ -244,8 +244,8 @@ data.gg0 = rbind(
   slrhsc_natstop.sims.gg, 
   slrhsc_ngmstop.sims.gg,
   cl.sims.gg, 
-  pr.sims.gg #, 
-  # or.sims.gg, 
+  pr.sims.gg, 
+  or.sims.gg #,
   # slbl.sims.gg
   )
 data.gg = data.gg0
@@ -279,6 +279,7 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 ggsave(
   filename = paste0(
     "20220131",
+    "balanceoverlap", theta_overlapping_balance, 
     "_rho", rho, 
     "_sigma", sigma_eps,
     "_", "metrics", ".pdf"),

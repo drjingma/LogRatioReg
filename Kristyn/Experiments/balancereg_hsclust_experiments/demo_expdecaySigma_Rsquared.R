@@ -81,8 +81,8 @@ X.all <- sweep(W.all, 1, rowSums(W.all), FUN='/')
 colnames(X.all) = paste0('s', 1:p)
 # create the ilr(X.all) covariate by hand to
 #   generate y
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-# SBP.true = matrix(c(1, 1, -1, -1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, -1, -1, -1, rep(0, p - 5)))
 U.true = getIlrTrans(sbp = SBP.true)
 # note: there is no theta
 # also note: beta is U.true * values.theta

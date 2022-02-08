@@ -60,7 +60,7 @@ get_sigma_eps = function(theta_val, Rsq_val, rho_val){
   return(sqrt(sigma_eps_sq.tmp))
 }
 rho = 0.2 #
-desired_Rsquared = 0.6 #
+desired_Rsquared = 0.8 #
 sigma_eps = get_sigma_eps(
   theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
 #################
@@ -83,8 +83,7 @@ colnames(X.all) = paste0('s', 1:p)
 #   generate y
 SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 # SBP.true = matrix(c(1, 1, -1, -1, -1, rep(0, p - 5)))
-U.true.details = getUdetailed(sbp = SBP.true)
-U.true = U.true.details$U
+U.true = getIlrTrans(sbp = SBP.true)
 # note: there is no theta
 # also note: beta is U.true * values.theta
 beta = as.numeric(U.true * values.theta)
@@ -112,9 +111,8 @@ Rsq = 1 - SSres/SStot
 # supervised log-ratios (a balance regression method) with eta
 #   -- hierarchical spectral clustering
 ##############################################################################
-start.time = Sys.time()
 # apply hierarchical spectral clustering to the SLR similarity matrix
-slrSimMat = getSupervisedMatrix(
+slrSimMat = getSlrMatrix(
   y = Y, X = X, type = "similarity")
 
 # kmeans
@@ -133,10 +131,10 @@ fields::image.plot(slrSimMat)
 # plotSBP(slrhsc_SBP2)
 
 # apply supervised log-ratios, using CV to select threshold and also lambda
-slrhsc2 = cvILReta(
+start.time = Sys.time()
+slrhsc2 = cvBMLassoThresh(
   y = Y, X = X,
   W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
-  clustering_method = "hsc",
   hsc_method = "kmeans", # "shimalik", "kmeans"
   force_levelMax = TRUE,
   sbp = slrhsc_SBP,
@@ -155,7 +153,7 @@ slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
 slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
 slrhsc2.thetahat = slrhsc2$theta[[slrhsc2.eta.min.idx]][, slrhsc2.lam.min.idx]
 slrhsc2.SBP = slrhsc2$sbp_thresh[[slrhsc2.eta.min.idx]]
-slrhsc2.betahat.nonzero = getBeta(slrhsc2.thetahat, sbp = slrhsc2.SBP)
+slrhsc2.betahat.nonzero = getBetaFromTheta(slrhsc2.thetahat, sbp = slrhsc2.SBP)
 slrhsc2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
 rownames(slrhsc2.betahat) = names(beta)
 slrhsc2.betahat[slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], ] =
@@ -164,10 +162,10 @@ slrhsc2.betahat[slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], ] =
 # compute metrics on the selected model #
 slrhsc2.metrics = getMetricsBalanceReg(
   y.train = Y, y.test = Y.test,
-  ilrX.train = computeBalances(
+  ilrX.train = getIlrX(
     X[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
     sbp = slrhsc2.SBP),
-  ilrX.test = computeBalances(
+  ilrX.test = getIlrX(
     X.test[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
     sbp = slrhsc2.SBP),
   n.train = n, n.test = n,
@@ -183,7 +181,7 @@ slrhsc2_nodes_types = data.frame(
   name = c(colnames(slrhsc2.SBP), rownames(slrhsc2.SBP)),
   type = c(slrhsc2_balance_types, slrhsc2_leaf_types)
 )
-plotSBP(slrhsc2.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_nodes_types)
+plotSBP(slrhsc2.SBP, title = "slr-hsc-eta (old)", nodes_types = slrhsc2_nodes_types)
 fields::image.plot(slrSimMat)
 # note: centering X and y didn't change the slrSimMat
 # note 2: using clrXj - clrXk instead of logXj - logXk didn't change slrSimMat
@@ -345,67 +343,81 @@ fields::image.plot(slrSimMat2) # incorporate cor(logXj, y)
 fields::image.plot(slrSimMat3) # incorporate balances in same side of ratio
 fields::image.plot(slrSimMat4) # incorporate both
 
+
 ##############################################################################
-# supervised log-ratios (a balance regression method) with eta
+# supervised log-ratios (a balance regression method) with eta and NO lambda
 #   -- hierarchical spectral clustering
 ##############################################################################
-start.time = Sys.time()
 # apply hierarchical spectral clustering to the SLR similarity matrix
-slr2SimMat4 = getSupervisedMatrix4(
+slrSimMat = getSlrMatrix(
   y = Y, X = X, type = "similarity")
-slr2hsc_btree = HSClust(
-  W = slr2SimMat4, force_levelMax = TRUE, method = "kmeans")
-slr2hsc_SBP = sbp.fromHSClust(
-  levels_matrix = slr2hsc_btree$allLevels, row_names = names(beta))
+
+# kmeans
+slrhsc_btree = HSClust(
+  W = slrSimMat, force_levelMax = TRUE, method = "kmeans")
+slrhsc_SBP = sbp.fromHSClust(
+  levels_matrix = slrhsc_btree$allLevels, row_names = names(beta))
+plotSBP(slrhsc_SBP)
+fields::image.plot(slrSimMat)
+
+# # shi-malik
+# slrhsc_btree2 = HSClust(
+#   W = slrSimMat, force_levelMax = TRUE, method = "shimalik")
+# slrhsc_SBP2 = sbp.fromHSClust(
+#   levels_matrix = slrhsc_btree2$allLevels, row_names = names(beta))
+# plotSBP(slrhsc_SBP2)
+
 # apply supervised log-ratios, using CV to select threshold and also lambda
-slr2hsc2 = cvILReta(
+start.timing = Sys.time()
+slrhsc3 = cvBMThresh(
   y = Y, X = X,
-  W = slr2SimMat4, # normalized similarity matrix (all values between 0 & 1)
-  clustering_method = "hsc",
+  W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
   hsc_method = "kmeans", # "shimalik", "kmeans"
+  multiple_balances = FALSE,
   force_levelMax = TRUE,
-  sbp = slr2hsc_SBP,
-  lambda = NULL, nlam = nlam,
+  sbp = slrhsc_SBP,
   eta = NULL, neta = neta,
   nfolds = K, foldid = NULL,
   intercept = intercept,
   standardize = scaling
 )
 end.time = Sys.time()
-slr2hsc2.timing = difftime(
+slrhsc3.timing = difftime(
   time1 = end.time, time2 = start.time, units = "secs")
 
-slr2hsc2.eta.min.idx = slr2hsc2$min.idx[2]
-slr2hsc2.lam.min.idx = slr2hsc2$min.idx[1]
-slr2hsc2.a0 = slr2hsc2$theta0[[slr2hsc2.eta.min.idx]][slr2hsc2.lam.min.idx]
-slr2hsc2.thetahat = slr2hsc2$theta[[slr2hsc2.eta.min.idx]][, slr2hsc2.lam.min.idx]
-slr2hsc2.SBP = slr2hsc2$sbp_thresh[[slr2hsc2.eta.min.idx]]
-slr2hsc2.betahat.nonzero = getBeta(slr2hsc2.thetahat, sbp = slr2hsc2.SBP)
-slr2hsc2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-rownames(slr2hsc2.betahat) = names(beta)
-slr2hsc2.betahat[slr2hsc2$meets_threshold[[slr2hsc2.eta.min.idx]], ] =
-  as.numeric(slr2hsc2.betahat.nonzero)
+slrhsc3.eta.min.idx = slrhsc3$min.idx
+slrhsc3.a0 = slrhsc3$theta0[[slrhsc3.eta.min.idx]]
+slrhsc3.thetahat = slrhsc3$theta[[slrhsc3.eta.min.idx]]
+slrhsc3.SBP = slrhsc3$sbp_thresh[[slrhsc3.eta.min.idx]]
+slrhsc3.betahat.nonzero = getBetaFromTheta(slrhsc3.thetahat, sbp = slrhsc3.SBP)
+slrhsc3.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+rownames(slrhsc3.betahat) = names(beta)
+slrhsc3.betahat[slrhsc3$meets_threshold[[slrhsc3.eta.min.idx]], ] =
+  as.numeric(slrhsc3.betahat.nonzero)
 
 # compute metrics on the selected model #
-slr2hsc2.metrics = getMetricsBalanceReg(
+slrhsc3.metrics = getMetricsBalanceReg(
   y.train = Y, y.test = Y.test,
-  ilrX.train = computeBalances(
-    X[, slr2hsc2$meets_threshold[[slr2hsc2.eta.min.idx]], drop = FALSE],
-    sbp = slr2hsc2.SBP),
-  ilrX.test = computeBalances(
-    X.test[, slr2hsc2$meets_threshold[[slr2hsc2.eta.min.idx]], drop = FALSE],
-    sbp = slr2hsc2.SBP),
+  ilrX.train = getIlrX(
+    X[, slrhsc3$meets_threshold[[slrhsc3.eta.min.idx]], drop = FALSE],
+    sbp = slrhsc3.SBP),
+  ilrX.test = getIlrX(
+    X.test[, slrhsc3$meets_threshold[[slrhsc3.eta.min.idx]], drop = FALSE],
+    sbp = slrhsc3.SBP),
   n.train = n, n.test = n,
-  thetahat0 = slr2hsc2.a0, thetahat = slr2hsc2.thetahat,
-  betahat = slr2hsc2.betahat,
-  sbp = slr2hsc2.SBP,
+  thetahat0 = slrhsc3.a0, thetahat = slrhsc3.thetahat,
+  betahat = slrhsc3.betahat,
+  sbp = slrhsc3.SBP,
   true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
 
 # plot the tree given by slr-hsc, indicating significant covariates
-slr2hsc2_leaf_types = rep("covariate", nrow(slr2hsc2.SBP))
-slr2hsc2_balance_types = rep("balance", ncol(slr2hsc2.SBP))
-slr2hsc2_nodes_types = data.frame(
-  name = c(colnames(slr2hsc2.SBP), rownames(slr2hsc2.SBP)),
-  type = c(slr2hsc2_balance_types, slr2hsc2_leaf_types)
+slrhsc3_leaf_types = rep("covariate", nrow(slrhsc3.SBP))
+slrhsc3_balance_types = rep("balance", ncol(slrhsc3.SBP))
+slrhsc3_nodes_types = data.frame(
+  name = c(colnames(slrhsc3.SBP), rownames(slrhsc3.SBP)),
+  type = c(slrhsc3_balance_types, slrhsc3_leaf_types)
 )
-plotSBP(slr2hsc2.SBP, title = "slr2-hsc-eta", nodes_types = slr2hsc2_nodes_types)
+plotSBP(slrhsc3.SBP, title = "slr-hsc-eta", nodes_types = slrhsc3_nodes_types)
+fields::image.plot(slrSimMat)
+# note: centering X and y didn't change the slrSimMat
+# note 2: using clrXj - clrXk instead of logXj - logXk didn't change slrSimMat

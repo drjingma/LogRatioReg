@@ -85,7 +85,7 @@ res = foreach(
     return(sqrt(sigma_eps_sq.tmp))
   }
   rho = 0.2 #
-  desired_Rsquared = 0.6 #
+  desired_Rsquared = 0.8 #
   sigma_eps = get_sigma_eps(
     theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
   
@@ -113,8 +113,7 @@ res = foreach(
   # create the ilr(X.all) covariate by hand to
   #   generate y
   SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-  U.true.details = getUdetailed(sbp = SBP.true)
-  U.true = U.true.details$U
+  U.true = getIlrTrans(sbp = SBP.true)
   # note: there is no theta
   # also note: beta is U.true * values.theta
   beta = as.numeric(U.true * values.theta)
@@ -155,8 +154,8 @@ res = foreach(
   slrhc.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
 
   slrhc.lam.min.idx = which.min(slrhc$cvm)
-  slrhc.a0 = slrhc$int[slrhc.lam.min.idx]
-  slrhc.thetahat = slrhc$bet[, slrhc.lam.min.idx]
+  slrhc.a0 = slrhc$theta0[slrhc.lam.min.idx]
+  slrhc.thetahat = slrhc$theta[, slrhc.lam.min.idx]
   slrhc.betahat = getBetaFromTheta(slrhc.thetahat, sbp = slrhc$sbp)
 
   # compute metrics on the selected model #
@@ -206,8 +205,8 @@ res = foreach(
   slrhc_distal.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
 
   slrhc_distal.lam.min.idx = which.min(slrhc_distal$cvm)
-  slrhc_distal.a0 = slrhc_distal$int[slrhc_distal.lam.min.idx]
-  slrhc_distal.thetahat = slrhc_distal$bet[, slrhc_distal.lam.min.idx]
+  slrhc_distal.a0 = slrhc_distal$theta0[slrhc_distal.lam.min.idx]
+  slrhc_distal.thetahat = slrhc_distal$theta[, slrhc_distal.lam.min.idx]
   slrhc_distal.betahat = getBetaFromTheta(slrhc_distal.thetahat, sbp = slrhc_distal$sbp)
 
   # compute metrics on the selected model #
@@ -258,8 +257,8 @@ res = foreach(
   slrhsc.timing = difftime(time1 = end.time, time2 = start.time, units = "secs")
 
   slrhsc.lam.min.idx = which.min(slrhsc$cvm)
-  slrhsc.a0 = slrhsc$int[slrhsc.lam.min.idx]
-  slrhsc.thetahat = slrhsc$bet[, slrhsc.lam.min.idx]
+  slrhsc.a0 = slrhsc$theta0[slrhsc.lam.min.idx]
+  slrhsc.thetahat = slrhsc$theta[, slrhsc.lam.min.idx]
   slrhsc.betahat = getBetaFromTheta(slrhsc.thetahat, sbp = slrhsc$sbp)
 
   # compute metrics on the selected model #
@@ -306,7 +305,6 @@ res = foreach(
   slrhsc2 = cvBMLassoThresh(
     y = Y, X = X,
     W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
-    clustering_method = "hsc",
     hsc_method = "kmeans", # "shimalik", "kmeans"
     force_levelMax = TRUE,
     sbp = slrhsc_SBP,
@@ -380,7 +378,6 @@ res = foreach(
   slrhsc3 = cvBMThresh(
     y = Y, X = X,
     W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
-    clustering_method = "hsc",
     hsc_method = "kmeans", # "shimalik", "kmeans"
     multiple_balances = TRUE,
     force_levelMax = TRUE,
@@ -394,7 +391,7 @@ res = foreach(
   slrhsc3.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrhsc3.eta.min.idx = slrhsc3$min.idx[2]
+  slrhsc3.eta.min.idx = slrhsc3$min.idx
   slrhsc3.a0 = slrhsc3$theta0[[slrhsc3.eta.min.idx]]
   slrhsc3.thetahat = slrhsc3$theta[[slrhsc3.eta.min.idx]]
   slrhsc3.SBP = slrhsc3$sbp_thresh[[slrhsc3.eta.min.idx]]
@@ -454,7 +451,6 @@ res = foreach(
   slrhsc4 = cvBMThresh(
     y = Y, X = X,
     W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
-    clustering_method = "hsc",
     hsc_method = "kmeans", # "shimalik", "kmeans"
     multiple_balances = TRUE,
     force_levelMax = TRUE,
@@ -468,7 +464,7 @@ res = foreach(
   slrhsc4.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrhsc4.eta.min.idx = slrhsc4$min.idx[2]
+  slrhsc4.eta.min.idx = slrhsc4$min.idx
   slrhsc4.a0 = slrhsc4$theta0[[slrhsc4.eta.min.idx]]
   slrhsc4.thetahat = slrhsc4$theta[[slrhsc4.eta.min.idx]]
   slrhsc4.SBP = slrhsc4$sbp_thresh[[slrhsc4.eta.min.idx]]
@@ -557,8 +553,8 @@ res = foreach(
     time1 = end.time, time2 = start.time, units = "secs")
 
   pr.lam.min.idx = which.min(pr$cvm)
-  pr.a0 = pr$int[pr.lam.min.idx]
-  pr.thetahat = pr$bet[, pr.lam.min.idx]
+  pr.a0 = pr$theta0[pr.lam.min.idx]
+  pr.thetahat = pr$theta[, pr.lam.min.idx]
   pr.betahat = getBetaFromTheta(pr.thetahat, sbp = pr$sbp)
 
   # compute metrics on the selected model #

@@ -217,11 +217,6 @@ res = foreach(
   names(muW) = paste0('s', 1:p)
   
   # import theta
-  theta = readRDS(paste0(
-    output_dir, 
-    "/theta_overlapping_balance_", theta_overlapping_balance, ".rds")
-  )
-  
   if(single_balance){
     theta = readRDS(paste0(
         output_dir,

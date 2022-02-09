@@ -337,7 +337,9 @@ fitBMThresh = function(
       if(multiple_balances){
         ilrX_thresh = getIlrX(X = X_thresh, sbp = SBP_thresh)
       } else {
-        ilrX_thresh = getIlrX(X = X_thresh, sbp = SBP_thresh[, 1, drop = FALSE])
+        # rewrite SBP_thresh to just include 1st column
+        SBP_thresh = SBP_thresh[, 1, drop = FALSE]
+        ilrX_thresh = getIlrX(X = X_thresh, sbp = SBP_thresh)
       }
       if(intercept){
         modelfit = lm(y ~ ilrX_thresh)

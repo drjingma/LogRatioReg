@@ -151,7 +151,7 @@ res = foreach(
   
   output_dir = "Kristyn/Experiments/balancereg_hsclust_experiments/outputs"
   single_balance = FALSE
-  theta_overlapping_balance = FALSE
+  theta_overlapping_balance = TRUE
   
   library(mvtnorm)
   

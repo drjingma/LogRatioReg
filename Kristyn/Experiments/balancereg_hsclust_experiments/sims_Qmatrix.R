@@ -150,7 +150,7 @@ res = foreach(
   # rm(list=ls())
   
   output_dir = "Kristyn/Experiments/balancereg_hsclust_experiments/outputs"
-  single_balance = FALSE
+  single_balance = TRUE
   theta_overlapping_balance = TRUE
   
   library(mvtnorm)
@@ -185,13 +185,13 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "Qmatrix"
   values.theta = 1
-  intercept = TRUE
-  scaling = TRUE
-  linkage = "average"
-  tol = 1e-4
   n = 100
   p = 30
+  intercept = TRUE
+  scaling = TRUE
   K = 10
+  linkage = "average"
+  tol = 1e-4
   nlam = 100
   neta = p
   #################

@@ -59,13 +59,13 @@ res = foreach(
   # Settings to toggle with
   sigma.settings = "expdecaySigma"
   values.theta = 1
-  intercept = TRUE
-  scaling = TRUE
-  linkage = "average"
-  tol = 1e-4
   n = 100
   p = 30
+  intercept = TRUE
+  scaling = TRUE
   K = 10
+  linkage = "average"
+  tol = 1e-4
   nlam = 100
   neta = p
   #################

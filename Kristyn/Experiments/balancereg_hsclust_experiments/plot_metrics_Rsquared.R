@@ -57,10 +57,6 @@ file.end0 = paste0(
 ################################################################################
 # plot metrics
 
-metric_names = c(
-  "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision",
-  "Fscore", "betaSparsity", "Rsq", "time")
-
 # import metrics
 slrhc_sims_list = list()
 slrhc_distal_sims_list = list()
@@ -227,17 +223,17 @@ slrhc_distal.sims.gg$Method = "slr-hc-distal"
 slrhsc.sims.gg = reshape2::melt(slrhsc_sims)
 slrhsc.sims.gg$Method = "slr-hsc"
 slrhsc_thresh_lasso.sims.gg = reshape2::melt(slrhsc_thresh_lasso_sims)
-slrhsc_thresh_lasso.sims.gg$Method = "slr-hsc-thresh-lasso"
+slrhsc_thresh_lasso.sims.gg$Method = "slr-thresh-lasso"
 slrhsc_thresh_mlm.sims.gg = reshape2::melt(slrhsc_thresh_mlm_sims)
-slrhsc_thresh_mlm.sims.gg$Method = "slr-hsc-thresh-mlm"
+slrhsc_thresh_mlm.sims.gg$Method = "slr-thresh-mlm"
 slrhsc_thresh_1lm.sims.gg = reshape2::melt(slrhsc_thresh_1lm_sims)
-slrhsc_thresh_1lm.sims.gg$Method = "slr-hsc-thresh-1lm"
+slrhsc_thresh_1lm.sims.gg$Method = "slr-thresh-1lm"
 cl.sims.gg = reshape2::melt(cl_sims)
 cl.sims.gg$Method = "classo"
 pr.sims.gg = reshape2::melt(pr_sims)
 pr.sims.gg$Method = "propr"
 or.sims.gg = reshape2::melt(or_sims)
-or.sims.gg$Method = "oracle (hc)"
+or.sims.gg$Method = "oracle"
 # slbl.sims.gg = reshape2::melt(slbl_sims)
 # slbl.sims.gg$Method = "selbal"
 
@@ -255,28 +251,26 @@ data.gg0 = rbind(
 # levels.gg = c(
 #   "slr-hc", "slr-hsc", "slr-hc-eta", "slr-hsc-eta", "classo", "propr")
 data.gg = data.gg0
-if(!is.null(metric_names)){
-  data.gg = dplyr::filter(data.gg, variable %in% metric_names)
-}
+metric_names = c(
+  "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
+  "Fscore", "time"
+)
 # data.gg$Method = factor(data.gg$Method, levels = levels.gg)
 data.gg = data.gg %>% dplyr::filter(
-  variable %in% c(
-    "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
-    "Fscore", "time"
-  )
-) %>% dplyr::filter(
-  Method != "selbal"
-)
+  variable %in% metric_names
+) # %>% dplyr::filter(
+#   Method != "selbal"
+# )
 
 ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
   facet_wrap(vars(variable), scales = "free_y") +
   geom_boxplot() +
+  # stat_summary(
+  #   fun = mean, fun.min = mean, fun.max = mean,
+  #   geom = "errorbar", width = 0.75,
+  #   linetype = "dashed") +
   stat_summary(
-    fun = mean, fun.min = mean, fun.max = mean,
-    geom = "errorbar", width = 0.75,
-    linetype = "dashed") +
-  stat_summary(
-    fun = mean, geom = "point", shape = 17, size = 2,
+    fun = mean, geom = "point", shape = 4, size = 1.5,
     color = "red") +
   theme_bw() +
   theme(
@@ -287,12 +281,11 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
 
 ggsave(
   filename = paste0(
-    "20220208",
-    "_Rsq", desired_Rsquared,
-    "_rho", rho, 
+    "20220209",
+    file.end0, 
     "_", "metrics", ".pdf"),
   plot = last_plot(),
-  width = 8, height = 5, units = c("in")
+  width = 8, height = 6, units = c("in")
 )
 
 

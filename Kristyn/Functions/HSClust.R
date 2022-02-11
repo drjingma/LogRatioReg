@@ -141,10 +141,17 @@ HSClust <- function(
   stopping_rule = NULL, 
   #   NULL means go with force_levelMax
   #   "TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm"
-  method = "ShiMalik" # ShiMalik or kmeans
+  method = "kmeans" # ShiMalik or kmeans
 ){
+  # checks
+  if(!is.null(levelMax) && (levelMax == 1)){
+    warning("levelMax == 1. No splits are made for one cluster.")
+  }
+  
   p = nrow(W)
-  if(is.null(levelMax)) levelMax = p
+  if(is.null(levelMax)){
+    levelMax = p
+  }
   if(is.null(stopping_rule)){
     stopping_rule = "none"
   } else{
@@ -165,8 +172,10 @@ HSClust <- function(
   
   while(!stop){
     newCluster <- c()
-    # get the previous cluster assignments (base = 1, ..., 1)
-    cl[,level + 1] <- cl[, level]
+    # get the previous cluster assignments (base case = 1, ..., 1)
+    if(levelMax > 1){
+      cl[,level + 1] <- cl[, level]
+    }
     # iterate over clusterToCut to further partition the clusters in that set
     for(i in 1:length(clusterToCut)){
       x = clusterToCut[i]
@@ -262,7 +271,7 @@ HSClust <- function(
   }
   
   out <- list(
-    cluster = cl[,level],
+    cluster = cl[, level],
     allLevels = cl,
     nbLevels <- level
   )

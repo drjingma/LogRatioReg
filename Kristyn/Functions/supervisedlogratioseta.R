@@ -123,6 +123,7 @@ cvBMLassoThresh <- function(
   eta = NULL, neta = 5,
   nfolds = 10, foldid = NULL, 
   intercept = TRUE, standardize = TRUE,
+  prints = FALSE, 
   seed = NULL
 ){
   if(!is.null(seed)) set.seed(seed)
@@ -157,7 +158,7 @@ cvBMLassoThresh <- function(
     # check lambda length -- if it doesn't have length nlam, rerun
     if(nlam != length(lambda)){
       log_lambda <- log(lambda)
-      lambda <- exp(seq(max(log_lambda), min(log_lambda),length.out = nlam))
+      lambda <- exp(seq(max(log_lambda), min(log_lambda), length.out = nlam))
     }
   }
   
@@ -231,9 +232,11 @@ cvBMLassoThresh <- function(
       }
     })
     for (k in 1:neta) errs[, k, i] <- errfun(pred_te[[k]], y[folds[[i]]])
-    cat("##########################\n")
-    cat(sprintf("Finished model fits for fold[%s].\n", i))
-    cat("##########################\n")
+    if(prints){
+      cat("##########################\n")
+      cat(sprintf("Finished model fits for fold[%s].\n", i))
+      cat("##########################\n")
+    }
   }
   m <- apply(errs, c(1, 2), function(x) mean(x, na.rm = TRUE)) # rows = lambda, cols = eta
   # se <- apply(errs, c(1, 2), function(x) stats::sd(x, na.rm = TRUE)) / sqrt(nfolds)
@@ -272,13 +275,14 @@ fitBMThresh = function(
   W, # similarity matrix
   sbp,
   hsc_method = "kmeans", # "shimalik", "kmeans"
-  multiple_balances = TRUE,
+  thresh_method = "original",
+  multiple_balances = FALSE,
   force_levelMax = FALSE, 
   stopping_rule = NULL,
   #   NULL means none
   #   "natural" means force_levelMax = FALSE, 
   #   "TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm"
-  eta = NULL, neta = 20,
+  eta = NULL, neta = NULL,
   intercept = TRUE, standardize = TRUE
 ){
   n = dim(X)[1]
@@ -297,25 +301,47 @@ fitBMThresh = function(
   if(is.null(rownames(sbp))){
     warning("fitBMThresh(): sbp matrix doesn't have named rows!!")
   }
+  if(!(thresh_method %in% c("original", "max", "sum"))){
+    stop("invalid thresh_method arg")
+  }
+  
+  # calculate row operations
+  if(thresh_method %in% c("original", "max")){
+    W_rowOp = rowMaxs(W)
+  } else if(thresh_method == "sum"){
+    W_rowOp = rowSums(W)
+  }
   
   # get eta (if not provided)
-  if(is.null(eta) | is.null(neta)){
-    if(is.null(neta)) neta = 5
-    eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
-  } else{
+  if(is.null(neta) & is.null(eta)){
+    neta = p
+  } 
+  if(is.null(eta)){
+    if(neta == p){
+      eta = sort(W_rowOp)
+    } else {
+      # eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
+      eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
+    }
+  } else {
     if(neta != length(eta)) stop("fitBMThresh(): neta != length(eta)")
   }
   
   # thresholding with eta: Iterate solution paths along eta
   meets_threshold <- clust_thresh <- sbp_thresh <- theta0 <- theta <- list()
-  num_covariates = rep(NA, neta)
+  num_covariates <- rep(NA, neta)
   for(i in 1:neta){
     # thresholding
     # using a similarity matrix (close to 1 = highly correlated with y)
     # if there is an element that is greater than eta
-    meets_threshold_i = apply(W, 1, function(row) !all(row < eta[i]))
-    num_covariates[i] = sum(meets_threshold_i)
-    if(sum(meets_threshold_i) <= 2){ # cannot cluster
+    if(thresh_method == "original"){
+      meets_threshold_i = apply(W, 1, function(row) !all(row < eta[i]))
+      num_covariates[i] = sum(meets_threshold_i)
+    } else {
+      meets_threshold_i = W_rowOp >= eta[i]
+      num_covariates[i] = sum(meets_threshold_i)
+    }
+    if(sum(meets_threshold_i) < 2){ # cannot cluster
       theta[[i]] = rep(NA, sum(meets_threshold_i))
       theta0[[i]] = NA
       meets_threshold[[i]] = meets_threshold_i
@@ -324,23 +350,25 @@ fitBMThresh = function(
       W_thresh = W[meets_threshold_i, meets_threshold_i, drop = FALSE]
       X_thresh = X[, meets_threshold_i, drop = FALSE]
       # model fitting
-      hsclust_thresh = HSClust(
-        W = W_thresh, force_levelMax = force_levelMax, 
-        stopping_rule = stopping_rule, method = hsc_method
-      )
-      SBP_thresh = sbp.fromHSClust(
-        levels_matrix = hsclust_thresh$allLevels, 
-        row_names = rownames(sbp)[meets_threshold_i])
       # modelfit = cvBMLasso(
-      #   y = y, X = X_thresh, sbp = SBP_thresh, 
+      #   y = y, X = X_thresh, sbp = sbp_thresh, 
       #   nfolds = nfolds, intercept = intercept, standardize = standardize)
       if(multiple_balances){
-        ilrX_thresh = getIlrX(X = X_thresh, sbp = SBP_thresh)
+        hsclust_thresh = HSClust(
+          W = W_thresh, force_levelMax = force_levelMax, 
+          stopping_rule = stopping_rule, method = hsc_method
+        )
       } else {
-        # rewrite SBP_thresh to just include 1st column
-        SBP_thresh = SBP_thresh[, 1, drop = FALSE]
-        ilrX_thresh = getIlrX(X = X_thresh, sbp = SBP_thresh)
+        # rewrite sbp_thresh to just include 1st column
+        hsclust_thresh = HSClust(
+          W = W_thresh, force_levelMax = FALSE, levelMax = 2, 
+          stopping_rule = stopping_rule, method = hsc_method
+        )
       }
+      sbp_thresh_i = sbp.fromHSClust(
+        levels_matrix = hsclust_thresh$allLevels, 
+        row_names = rownames(sbp)[meets_threshold_i])
+      ilrX_thresh = getIlrX(X = X_thresh, sbp = sbp_thresh_i)
       if(intercept){
         modelfit = lm(y ~ ilrX_thresh)
         coeffs = coefficients(modelfit)
@@ -357,7 +385,7 @@ fitBMThresh = function(
       # save stuff
       meets_threshold[[i]] = meets_threshold_i
       clust_thresh[[i]] = hsclust_thresh
-      sbp_thresh[[i]] = SBP_thresh
+      sbp_thresh[[i]] = sbp_thresh_i
     }
   }
   
@@ -380,7 +408,8 @@ cvBMThresh <- function(
   W, # similarity matrix
   sbp,
   hsc_method = "kmeans", # "shimalik", "kmeans"
-  multiple_balances = TRUE, 
+  thresh_method = "original",
+  multiple_balances = FALSE, 
   force_levelMax = TRUE, 
   stopping_rule = NULL, 
   #   NULL means none
@@ -397,33 +426,48 @@ cvBMThresh <- function(
   
   # checks
   if(length(y) != n){
-    stop("cvBMThresh(): dimensions of y and X don't match")
+    stop("fitBMThresh(): dimensions of y and X don't match!!")
   }
   if(is.null(colnames(X))){
     colnames(X) = paste("V", 1:p, sep = "")
   }
   if(nrow(W) != p | ncol(W) != p){
-    stop("cvBMThresh(): W isn't pxp matrix")
+    stop("fitBMThresh(): W isn't pxp matrix!!")
   }
   if(is.null(rownames(sbp))){
-    warning("cvBMThresh(): sbp matrix doesn't have named rows")
+    warning("fitBMThresh(): sbp matrix doesn't have named rows!!")
+  }
+  if(!(thresh_method %in% c("original", "max", "sum"))){
+    stop("invalid thresh_method arg")
+  }
+  
+  # calculate row operations
+  if(thresh_method %in% c("original", "max")){
+    W_rowOp = rowMaxs(W)
+  } else if(thresh_method == "sum"){
+    W_rowOp = rowSums(W)
   }
   
   # get eta (if not provided)
-  if(is.null(eta) | is.null(neta)){
-    if(is.null(neta)) neta = 5
-    eta = seq(0, max(W), length.out = neta + 1)[2:(neta + 1)]
-  } else{
-    if(neta != length(eta)){
-      stop("cvBMThresh(): neta != length(eta)")
+  if(is.null(neta) & is.null(eta)){
+    neta = p
+  } 
+  if(is.null(eta)){
+    if(neta == p){
+      eta = sort(W_rowOp)
+    } else {
+      # eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
+      eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
     }
+  } else {
+    if(neta != length(eta)) stop("cvBMThresh(): neta != length(eta)")
   }
   
   # fit the models
   fitObj = fitBMThresh(
-    y = y, X = X, W = W, hsc_method = hsc_method, 
-    multiple_balances = multiple_balances,
-    force_levelMax = force_levelMax, stopping_rule = stopping_rule, sbp = sbp, 
+    y = y, X = X, W = W, sbp = sbp, hsc_method = hsc_method, 
+    thresh_method = thresh_method, multiple_balances = multiple_balances, 
+    force_levelMax = force_levelMax, stopping_rule = stopping_rule, 
     eta = eta, neta = neta, intercept = intercept, standardize = standardize)
   
   # make folds, if necessary
@@ -438,7 +482,7 @@ cvBMThresh <- function(
   
   # Fit based on folds and compute error metric
   # calculate squared error for each fold, needed for CV(eta) calculation
-  cvm_sqerror = matrix(rep(NA, nfolds * neta), nfolds, neta)
+  cvm_sqerror = matrix(NA, nfolds, neta)
   for (i in 1:nfolds) {
     Xtrain_i = X[idfold != i, , drop = FALSE]
     Ytrain_i = y[idfold != i]
@@ -447,9 +491,10 @@ cvBMThresh <- function(
     # fit model on all but the ith fold
     fit_i <- fitBMThresh(
       y = Ytrain_i, X = Xtrain_i, W = W, sbp = sbp,
-      hsc_method = hsc_method, force_levelMax = force_levelMax, 
-      stopping_rule = stopping_rule, eta = eta, neta = neta,
-      intercept = intercept, standardize = standardize)
+      hsc_method = hsc_method, thresh_method = thresh_method, multiple_balances,
+      force_levelMax = force_levelMax, stopping_rule = stopping_rule, 
+      eta = eta, neta = neta, intercept = intercept, standardize = standardize)
+
     # calculate predicted y on test set for each eta's model
     for(k in 1:neta){
       if(all(is.na(fit_i$sbp_thresh[[k]]))){
@@ -466,34 +511,7 @@ cvBMThresh <- function(
       # prediction error on test set for ith fold and kth eta's model
       cvm_sqerror[i, k] = sum(crossprod(ypred_test_i, Ytest_i))
     }
-    
-    # pred_te <- lapply(1:neta, function(k) {
-    #   if(all(is.na(fit_i$sbp_thresh[[k]]))){
-    #     rep(NA, n_fold[i])
-    #   } else{
-    #     if (intercept) {
-    #       getIlrX(
-    #         X = Xtest_i[, fit_i$meets_threshold[[k]], drop = FALSE], 
-    #         sbp = fit_i$sbp_thresh[[k]]) %*%
-    #         fit_i$theta[[k]] +
-    #         rep(fit_i$theta0[[k]], each = n_fold[i])
-    #     } else {
-    #       getIlrX(
-    #         X = Xtest_i[, fit_i$meets_threshold[[k]], drop = FALSE], 
-    #         sbp = fit_i$sbp_thresh[[k]]) %*% 
-    #         fit_i$theta[[k]]
-    #     }
-    #   }
-    # })
-    # for (k in 1:neta) cvm_sqerror[k, i] <- sum(crossprod(pred_te[[k]], Ytest_i))
-    #
-    cat("##########################\n")
-    cat(sprintf("Finished model fits for fold[%s].\n", i))
-    cat("##########################\n")
   }
-  # fields::image.plot(cvm_sqerror)
-  # m <- apply(errs, 1, function(x) mean(x, na.rm = TRUE)) # rows = eta
-  # ibest <- which.min(m)
   cvm = colMeans(cvm_sqerror)
   min.idx = which.min(cvm)
   return(list(

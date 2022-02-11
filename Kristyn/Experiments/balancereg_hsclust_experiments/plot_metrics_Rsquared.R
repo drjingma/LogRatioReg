@@ -18,15 +18,15 @@ numSims = 100
 # Settings to toggle with
 sigma.settings = "expdecaySigma"
 values.theta = 1
+n = 100
+p = 30
+intercept = TRUE
+scaling = TRUE
+K = 10
 linkage = "average"
 tol = 1e-4
 nlam = 100
-neta = 50
-intercept = TRUE
-K = 10
-n = 100
-p = 30
-scaling = TRUE
+neta = p
 #################
 # if rho = 0, 
 #   sigma_eps = sqrt(2/3) => R^2 = 0.6

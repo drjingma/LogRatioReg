@@ -14,7 +14,7 @@ library(data.table)
 library(reshape2)
 
 numSims = 100
-single_balance = TRUE
+single_balance = FALSE
 theta_overlapping_balance = FALSE
 
 # data
@@ -24,15 +24,15 @@ Q = as.matrix(Q)
 # Settings to toggle with
 sigma.settings = "Qmatrix"
 values.theta = 1
+n = 100
+p = nrow(Q)
+intercept = TRUE
+scaling = TRUE
+K = 10
 linkage = "average"
 tol = 1e-4
 nlam = 100
-neta = 50
-intercept = TRUE
-K = 10
-n = 100
-p = ncol(Q)
-scaling = TRUE
+neta = p
 #################
 rho = 0
 sigma_eps = 0

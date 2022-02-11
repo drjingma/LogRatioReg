@@ -5,6 +5,7 @@ fitBMLassoThresh = function(
   W, # similarity matrix
   sbp,
   hsc_method = "kmeans", # "shimalik", "kmeans"
+  thresh_method = "original",
   force_levelMax = FALSE, 
   stopping_rule = NULL,
   #   NULL means none
@@ -34,6 +35,16 @@ fitBMLassoThresh = function(
   if(is.null(rownames(sbp))){
     warning("fitBMLassoThresh(): sbp matrix doesn't have named rows!!")
   }
+  if(!(thresh_method %in% c("original", "max", "sum"))){
+    stop("invalid thresh_method arg")
+  }
+  
+  # calculate row operations
+  if(thresh_method %in% c("original", "max")){
+    W_rowOp = rowMaxs(W)
+  } else if(thresh_method == "sum"){
+    W_rowOp = rowSums(W)
+  }
   
   # get lambda (if not provided)
   if(is.null(lambda) | is.null(nlam)){
@@ -50,11 +61,17 @@ fitBMLassoThresh = function(
   }
   
   # get eta (if not provided)
-  if(is.null(eta) | is.null(neta)){
-    if(is.null(neta)) neta = 5
-    eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
-  } else{
-    if(neta != length(eta)) stop("fitBMLassoThresh(): neta != length(eta)")
+  if(is.null(neta) & is.null(eta)){
+    neta = p
+  } 
+  if(is.null(eta)){
+    if(neta == p){
+      eta = sort(W_rowOp)
+    } else {
+      eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
+    }
+  } else {
+    if(neta != length(eta)) stop("cvBMThresh(): neta != length(eta)")
   }
   
   # thresholding with eta: Iterate solution paths along eta
@@ -64,9 +81,14 @@ fitBMLassoThresh = function(
     # thresholding
     # using a similarity matrix (close to 1 = highly correlated with y)
     # if there is an element that is greater than eta
-    meets_threshold_i = apply(W, 1, function(row) !all(row < eta[i]))
-    num_covariates[i] = sum(meets_threshold_i)
-    if(sum(meets_threshold_i) <= 2){ # cannot cluster
+    if(thresh_method == "original"){
+      meets_threshold_i = apply(W, 1, function(row) !all(row < eta[i]))
+      num_covariates[i] = sum(meets_threshold_i)
+    } else {
+      meets_threshold_i = W_rowOp >= eta[i]
+      num_covariates[i] = sum(meets_threshold_i)
+    }
+    if(sum(meets_threshold_i) < 2){ # cannot cluster
       theta[[i]] = rep(NA, sum(meets_threshold_i))
       theta0[[i]] = NA
       meets_threshold[[i]] = meets_threshold_i
@@ -79,18 +101,35 @@ fitBMLassoThresh = function(
         W = W_thresh, force_levelMax = force_levelMax, 
         stopping_rule = stopping_rule, method = hsc_method
       )
-      SBP_thresh = sbp.fromHSClust(
+      sbp_thresh_i = sbp.fromHSClust(
         levels_matrix = hsclust_thresh$allLevels, 
         row_names = rownames(sbp)[meets_threshold_i])
-      modelfit = cvBMLasso(
-        y = y, X = X_thresh, sbp = SBP_thresh, lambda = lambda, nlam = nlam, 
-        nfolds = nfolds, intercept = intercept, standardize = standardize)
-      # save the model
-      theta[[i]] = modelfit$theta
-      theta0[[i]] = modelfit$theta0
+      if(sum(meets_threshold_i) == 2){ # need to fit with lm
+        ilrX_thresh = getIlrX(X = X_thresh, sbp = sbp_thresh_i)
+        if(intercept){
+          modelfit = lm(y ~ ilrX_thresh)
+          coeffs = coefficients(modelfit)
+          # save the model
+          theta[[i]] = coeffs[-1]
+          theta0[[i]] = coeffs[1]
+        } else{
+          modelfit = lm(y ~ -1 + ilrX_thresh)
+          coeffs = coefficients(modelfit)
+          # save the model
+          theta[[i]] = coefs
+          theta0[[i]] = NA
+        }
+      } else { # can use glmnet
+        modelfit = cvBMLasso(
+          y = y, X = X_thresh, sbp = sbp_thresh_i, lambda = lambda, nlam = nlam, 
+          nfolds = nfolds, intercept = intercept, standardize = standardize)
+        # save the model
+        theta[[i]] = modelfit$theta
+        theta0[[i]] = modelfit$theta0
+      }
       meets_threshold[[i]] = meets_threshold_i
       clust_thresh[[i]] = hsclust_thresh
-      sbp_thresh[[i]] = SBP_thresh
+      sbp_thresh[[i]] = sbp_thresh_i
     }
   }
   
@@ -114,6 +153,7 @@ cvBMLassoThresh <- function(
   W, # similarity matrix
   sbp,
   hsc_method = "kmeans", # "shimalik", "kmeans"
+  thresh_method = "original",
   force_levelMax = TRUE, 
   stopping_rule = NULL, 
   #   NULL means none
@@ -147,6 +187,16 @@ cvBMLassoThresh <- function(
   if(is.null(rownames(sbp))){
     warning("cvBMLassoThresh(): sbp matrix doesn't have named rows")
   }
+  if(!(thresh_method %in% c("original", "max", "sum"))){
+    stop("invalid thresh_method arg")
+  }
+  
+  # calculate row operations
+  if(thresh_method %in% c("original", "max")){
+    W_rowOp = rowMaxs(W)
+  } else if(thresh_method == "sum"){
+    W_rowOp = rowSums(W)
+  }
   
   # get lambda (if not provided)
   if(is.null(lambda) | is.null(nlam)){
@@ -163,24 +213,27 @@ cvBMLassoThresh <- function(
   }
   
   # get eta (if not provided)
-  if(is.null(eta) | is.null(neta)){
-    if(is.null(neta)) neta = 5
-    eta = seq(0, max(W), length.out = neta + 1)[2:(neta + 1)]
-  } else{
-    if(neta != length(eta)){
-      stop("cvBMLassoThresh(): neta != length(eta)")
+  if(is.null(neta) & is.null(eta)){
+    neta = p
+  } 
+  if(is.null(eta)){
+    if(neta == p){
+      eta = sort(W_rowOp)
+    } else {
+      eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
     }
+  } else {
+    if(neta != length(eta)) stop("cvBMThresh(): neta != length(eta)")
   }
   
   # fit the models
   fitObj = fitBMLassoThresh(
-    y = y, X = X, W = W, hsc_method = hsc_method,
-    force_levelMax = force_levelMax, stopping_rule = stopping_rule, sbp = sbp, 
+    y = y, X = X, W = W, sbp = sbp, hsc_method = hsc_method, 
+    thresh_method = thresh_method, force_levelMax = force_levelMax, 
+    stopping_rule = stopping_rule, 
     lambda = lambda, nlam = nlam, eta = eta, neta = neta, nfolds = nfolds,
     intercept = intercept, standardize = standardize)
   
-  # nlam <- length(fitObj$lambda)
-  # nalpha <- length(fitObj$alpha)
   errs <- array(NA, dim=c(nlam, neta, nfolds))
   
   # define error function
@@ -206,10 +259,11 @@ cvBMLassoThresh <- function(
     # fit model on all but the ith fold
     fit_cv <- fitBMLassoThresh(
       y = y[-folds[[i]]], X = X[-folds[[i]], , drop = FALSE], W = W, sbp = sbp,
-      hsc_method = hsc_method,
+      hsc_method = hsc_method, thresh_method = thresh_method,
       force_levelMax = force_levelMax, stopping_rule = stopping_rule,
       lambda = lambda, nlam = nlam, eta = eta, neta = neta, nfolds = nfolds,
       intercept = intercept, standardize = standardize)
+    
     pred_te <- lapply(1:neta, function(k) {
       if(all(is.na(fit_cv$sbp_thresh[[k]]))){
         matrix(NA, nrow = length(folds[[i]]), ncol = neta)
@@ -320,8 +374,7 @@ fitBMThresh = function(
     if(neta == p){
       eta = sort(W_rowOp)
     } else {
-      # eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
-      eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
+      eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
     }
   } else {
     if(neta != length(eta)) stop("fitBMThresh(): neta != length(eta)")
@@ -456,8 +509,7 @@ cvBMThresh <- function(
     if(neta == p){
       eta = sort(W_rowOp)
     } else {
-      # eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
-      eta = seq(0, 1, length.out = neta + 1)[2:(neta + 1)]
+      eta = seq(min(W_rowOp), max(W_rowOp), length.out = neta + 1)[2:(neta + 1)]
     }
   } else {
     if(neta != length(eta)) stop("cvBMThresh(): neta != length(eta)")

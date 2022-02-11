@@ -120,7 +120,7 @@ Rsq = 1 - SSres/SStot
 #   W = slrSimMat, force_levelMax = TRUE, method = "kmeans")
 # slrhsc_SBP = sbp.fromHSClust(
 #   levels_matrix = slrhsc_btree$allLevels, row_names = names(beta))
-# plotSBP(slrhsc_SBP)
+# # plotSBP(slrhsc_SBP)
 # fields::image.plot(slrSimMat)
 # 
 # # # shi-malik
@@ -138,12 +138,14 @@ Rsq = 1 - SSres/SStot
 #   # thresh_method = "original",
 #   # multiple_balances = TRUE,
 #   force_levelMax = TRUE,
-#   stopping_rule = NULL, 
+#   stopping_rule = NULL,
 #   sbp = slrhsc_SBP,
 #   neta = neta, nlam = nlam,
 #   nfolds = K, foldid = NULL,
 #   intercept = intercept,
-#   standardize = scaling
+#   standardize = scaling, 
+#   prints = TRUE, 
+#   seed = 123
 # )
 # 
 # slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
@@ -208,17 +210,17 @@ slrhsc_SBP = sbp.fromHSClust(
 # apply supervised log-ratios, using CV to select threshold and also lambda
 slrhsc3 = cvBMThresh(
   y = Y, X = X,
-  W = slrSimMat, # similarity matrix 
-  hsc_method = "kmeans", 
+  W = slrSimMat, # similarity matrix
+  hsc_method = "kmeans",
   thresh_method = "max",
   multiple_balances = TRUE,
-  force_levelMax = FALSE,
-  stopping_rule = NULL, 
+  force_levelMax = TRUE,
+  stopping_rule = NULL,
   sbp = slrhsc_SBP,
   eta = NULL, neta = p,
   nfolds = K, foldid = NULL,
   intercept = intercept,
-  standardize = scaling, 
+  standardize = scaling,
   seed = 123
 )
 

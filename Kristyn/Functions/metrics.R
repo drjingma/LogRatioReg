@@ -66,8 +66,17 @@ getMetricsBalanceReg = function(
   # non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
   non0.betahat = abs(betahat) > 10e-8
   SA = getSelectionAccuracy(
-    is0.true.beta = is0.true.beta, non0.true.beta = non0.true.beta, 
+    is0.true.beta = is0.true.beta, 
+    non0.true.beta = non0.true.beta, 
     non0.betahat = non0.betahat)
+  SA.pos = getSelectionAccuracy(
+    is0.true.beta = is0.true.beta[true.beta > 0], 
+    non0.true.beta = non0.true.beta[true.beta > 0], 
+    non0.betahat = non0.betahat[true.beta > 0])
+  SA.neg = getSelectionAccuracy(
+    is0.true.beta = is0.true.beta[true.beta < 0], 
+    non0.true.beta = non0.true.beta[true.beta < 0], 
+    non0.betahat = non0.betahat[true.beta < 0])
   
   return(
     c(
@@ -86,7 +95,17 @@ getMetricsBalanceReg = function(
       "FN" = SA$FN, 
       "TPR" = SA$TPR, 
       "precision" = SA$precision, 
-      "Fscore" = SA$Fscore
+      "Fscore" = SA$Fscore, 
+      "FP+" = SA.pos$FP, 
+      "FN+" = SA.pos$FN, 
+      "TPR+" = SA.pos$TPR, 
+      "precision+" = SA.pos$precision, 
+      "Fscore+" = SA.pos$Fscore, 
+      "FP-" = SA.neg$FP, 
+      "FN-" = SA.neg$FN, 
+      "TPR-" = SA.neg$TPR, 
+      "precision-" = SA.neg$precision, 
+      "Fscore-" = SA.neg$Fscore
     )
   )
 }
@@ -117,8 +136,17 @@ getMetricsLLC = function(
   # 3. selection accuracy #
   non0.betahat = abs(betahat) > 10e-8
   SA = getSelectionAccuracy(
-    is0.true.beta = is0.true.beta, non0.true.beta = non0.true.beta, 
+    is0.true.beta = is0.true.beta, 
+    non0.true.beta = non0.true.beta, 
     non0.betahat = non0.betahat)
+  SA.pos = getSelectionAccuracy(
+    is0.true.beta = is0.true.beta[true.beta > 0], 
+    non0.true.beta = non0.true.beta[true.beta > 0], 
+    non0.betahat = non0.betahat[true.beta > 0])
+  SA.neg = getSelectionAccuracy(
+    is0.true.beta = is0.true.beta[true.beta < 0], 
+    non0.true.beta = non0.true.beta[true.beta < 0], 
+    non0.betahat = non0.betahat[true.beta < 0])
   
   return(
     c(
@@ -137,7 +165,17 @@ getMetricsLLC = function(
       "FN" = SA$FN, 
       "TPR" = SA$TPR, 
       "precision" = SA$precision, 
-      "Fscore" = SA$Fscore
+      "Fscore" = SA$Fscore, 
+      "FP+" = SA.pos$FP, 
+      "FN+" = SA.pos$FN, 
+      "TPR+" = SA.pos$TPR, 
+      "precision+" = SA.pos$precision, 
+      "Fscore+" = SA.pos$Fscore, 
+      "FP-" = SA.neg$FP, 
+      "FN-" = SA.neg$FN, 
+      "TPR-" = SA.neg$TPR, 
+      "precision-" = SA.neg$precision, 
+      "Fscore-" = SA.neg$Fscore
     )
   )
 }

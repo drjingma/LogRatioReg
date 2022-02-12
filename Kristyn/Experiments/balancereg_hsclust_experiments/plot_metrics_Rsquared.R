@@ -1,7 +1,7 @@
 rm(list=ls())
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
 #   explore various sigma_eps & rho values to get specified Rsquared values
-# Date: 1/3/2021
+# Date: 2/12/2022
 
 ################################################################################
 # libraries and settings

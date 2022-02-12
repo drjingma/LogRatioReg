@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 1/2/2021
+# Date: 2/9/2021
 
 ################################################################################
 # libraries and settings

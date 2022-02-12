@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 2/2/2022
+# Date: 2/9/2022
 
 ################################################################################
 # libraries and settings
@@ -150,8 +150,8 @@ res = foreach(
   # rm(list=ls())
   
   output_dir = "Kristyn/Experiments/balancereg_hsclust_experiments/outputs"
-  single_balance = TRUE
-  theta_overlapping_balance = TRUE
+  single_balance = FALSE
+  theta_overlapping_balance = FALSE
   
   library(mvtnorm)
   

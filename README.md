@@ -1,4 +1,6 @@
-# Regression and Classification with Supervised Log Ratios
+# About
+
+This repo provides code, data, and references for the supervised log-ratio project. 
 
 **RCode**
 
@@ -17,7 +19,7 @@ A few relevant papers:
   - Rivera-Pinto, J., et al. "Balances: a new perspective for microbiome analysis." mSystems 3.4 (2018).
   - Bates, Stephen, and Robert Tibshirani. "Log‐ratio lasso: Scalable, sparse estimation for log‐ratio models." Biometrics 75.2 (2019): 613-624.
   - Quinn, Thomas P., and Ionas Erb. "Interpretable Log Contrasts for the Classification of Health Biomarkers: a New Approach to Balance Selection." mSystems 5.2 (2020).
-  - Gordon et al. "Learning sparse log-ratios for high-throughput sequencing data." Bioinformatics. 38(1):157--163 (2022) 
+  - Gordon-Rodriguez, et al. "Learning sparse log-ratios for high-throughput sequencing data." Bioinformatics. 38(1):157--163 (2022) 
 
 **Data**
 

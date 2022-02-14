@@ -20,6 +20,7 @@ slr <- function(x,y){
   rhoMat_approx_1 <-  tcrossprod(rhoMat.svd$u[,1], rhoMat.svd$v[,1]) * rhoMat.svd$d[1]
   index <- which(spectral.clustering(rhoMat_approx_1)==1)
   
+  ## Perform spectral clustering on each subset of variables using the original correlation matrix
   subset1 <- spectral.clustering(rhoMat[index,index])
   subset2 <- spectral.clustering(rhoMat[-index,-index]) 
   
@@ -29,7 +30,7 @@ slr <- function(x,y){
   rownames(sbp.est) <- colnames(x)
   sbp.est[match(names(subset1),rownames(sbp.est)),1] <- subset1
   sbp.est[match(names(subset2),rownames(sbp.est)),2] <- subset2
-  est.balance <- balance.fromSBP(x=x,y=sbp.est)
+  est.balance <- balance::balance.fromSBP(x=x,y=sbp.est)
   coeff <- coefficients(lm(y~est.balance))
   
   # The correct subset should have larger coefficient. 

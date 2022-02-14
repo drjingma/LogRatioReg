@@ -5,3 +5,9 @@
 LogRatioReg.Rproj
 Kristyn/ReproducingLin2014
 Kristyn/Experiments/complasso_simulations/output_solpath
+
+Results/
+figures/
+talk/
+RCode/
+.DS_Store

@@ -2,9 +2,17 @@
 
 This repo provides code, data, and references for the supervised log-ratio project. 
 
+
+## Issues 02/15
+
+- How to address the unbalanced balance issue? 
+- Confirm simulation setup. Confirm definition of balance.
+- How is r-squared calculated?
+
 **RCode**
 
 This folder consists of the code used in simulations.
+
 
 **COAT-master**
 

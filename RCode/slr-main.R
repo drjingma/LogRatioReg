@@ -1,3 +1,8 @@
+alrinv <- function(y) {
+  x <- cbind(exp(y),1)
+  x / rowSums(x)
+}
+
 slr <- function(x,y){
   
   p <- ncol(x)
@@ -10,14 +15,12 @@ slr <- function(x,y){
       if (k==j){next}
       else {
         # testmat[j,k] <- cor.test(log(x[,j])-log(x[,k]),y)$p.value
-        rhoMat[j,k] <- abs(stats::cor(log(x[,j])-log(x[,k]),y))
+        rhoMat[j,k] <- abs(stats::cor(log(x[,j])-log(x[,k]),y)) # correlation
       }
     }
   }
-  
-  # rank-1 approximation and spectral clustering
   rhoMat.svd <- svd(rhoMat)
-  rhoMat_approx_1 <-  tcrossprod(rhoMat.svd$u[,1], rhoMat.svd$v[,1]) * rhoMat.svd$d[1]
+  rhoMat_approx_1 <-  tcrossprod(rhoMat.svd$u[,1], rhoMat.svd$v[,1]) * rhoMat.svd$d[1] 
   index <- which(spectral.clustering(rhoMat_approx_1)==1)
   
   ## Perform spectral clustering on each subset of variables using the original correlation matrix

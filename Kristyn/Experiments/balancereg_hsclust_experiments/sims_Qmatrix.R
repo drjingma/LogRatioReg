@@ -827,7 +827,6 @@ res = foreach(
   saveRDS(c(
     slrnew.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
     "time" = slrnew.timing
   ),
   paste0(output_dir, "/metrics", "/slr_new_metrics", file.end))

@@ -22,13 +22,14 @@ source(paste0(CodeFolder,"func_libs.R"))
 source("RCode/slr-main.R")
 
 DEBUG <- 'aim3'
-today <- '20220201'
+today <- '20220216'
 linkage <- 'average'   # controls the hclust
 rho <- 0.5 # magnitude of the correlation in cov Sigma
-p <- 60   # number of variables 
+p <- 50   # number of variables 
 n <- 100   # number of samples
 sig <- 0.5 # noise level
-
+r <- 3
+s <- 3
 today <- paste0(DEBUG,'_',today,"_p",p,"_n",n,'_sig',sig*10,'_rho',rho*10)
 
 Sigma <- rgExpDecay(p,rho)$Sigma
@@ -38,36 +39,74 @@ rownames(Sigma) <- colnames(Sigma) <- paste0('s',1:p)
 h_oracle <- hclust(as.dist(1-cov2cor(Sigma)),method = linkage)
 sbp_oracle <- sbp.fromHclust(h_oracle)
 
-## Generate compositions from normalized log-normal
+## Generate x from normalized log-normal ----
 mu <- c(rep(log(p),5),rep(0,p-5))
 logW <- mvrnorm(n=n*2, mu=mu, Sigma=diag(p)) 
 W <- exp(logW) # basis
 colnames(W) <- paste0('s',1:p)
-WC <- sweep(W,1,rowSums(W), FUN='/')
-WCLR <- t(apply(WC,1,clr))
+x <- sweep(W,1,rowSums(W), FUN='/')
+xCLR <- t(apply(x,1,clr))
+## Generate y ----
+theta <- 1
+# y <-  (rowMeans(log(x[,1:3])) - rowMeans(log(x[,4:6]))) * theta + rnorm(n) * sig
+# y <-  (rowMeans(log(x[,1:4])) - log(x[,5])) * theta + rnorm(2*n) * sig
 
-## Generate response ----
-theta <- 0.5
-yAll <-  (log(WC[,1]) + log(WC[,2]) + log(WC[,3]) - log(WC[,4]) - log(WC[,5]) - log(WC[,6])) * theta + rnorm(n) * sig
-y_train <- yAll[1:n]
-y_test <- yAll[-(1:n)]
-X_train <- WC[1:n,]
-X_test <- WC[-c(1:n),]
+## Generate x and y from a latent variable model ----
+U <- runif(2*n)
+y <- theta * U + rnorm(2*n) * sig
+xALR <- tcrossprod(as.matrix(U), as.matrix(10*c(rep(1,r)/r,-rep(1,s)/s,rep(0,p-1-r-s)))) + matrix(rnorm(2*n*(p-1)),nrow=2*n) * sig
+x <- alrinv(xALR)
 
-out <- slr(WC,yAll)
-print(out$index)
+# y_train <- y[1:n]
+# y_test <- y[-(1:n)]
+# X_train <- x[1:n,]
+# X_test <- x[-c(1:n),]
 
-# asinTransform <- function(p) { asin(sqrt(p)) }
-# plot(svd(rhoMat)$d)
-# pheatmap(rhoMat,show_colnames = T, show_rownames = T, 
+## Model fitting ----
+rhoMat <- matrix(0,p,p)
+rownames(rhoMat) <- colnames(rhoMat) <- colnames(x)
+rhoMat2 <- rhoMat
+scale <- 0.1 # controls local behavior
+for (j in 1:p){
+  for (k in 1:p){
+    if (k==j){next}
+    else {
+      # testmat[j,k] <- cor.test(log(x[,j])-log(x[,k]),y)$p.value
+      rhoMat[j,k] <- abs(stats::cor(log(x[,j])-log(x[,k]),y))
+      rhoMat2[j,k] <- exp(-(1-rhoMat[j,k])^2/scale)
+    }
+  }
+}
+diag(rhoMat) <- 1
+# rhoMat <- -0.5 * GowerCentering(rhoMat)
+
+pheatmap(rhoMat,show_colnames = T, show_rownames = T,
+         cluster_rows = F, cluster_cols = F,
+         main = 'Heatmap of the original correlation')
+spectral.clustering(rhoMat)
+# pheatmap(rhoMat2,show_colnames = T, show_rownames = T,
 #          cluster_rows = F, cluster_cols = F,
-#          main = 'Heatmap of the original correlation')
-# pheatmap(asinTransform(rhoMat),show_colnames = T, show_rownames = T, 
-#          cluster_rows = F, cluster_cols = F,
-#          main = 'Heatmap of the arcsin correlation')
-# spectral.clustering(asinTransform(rhoMat))
-# spectral.clustering(rhoMat[1:6,1:6])
+#          main = 'Heatmap of the radial similarity')
+# a = spectral.clustering(rhoMat2) # this won't work, because the points are in two clusters
+# which(a==1)
+# which(a==-1)
+rhoMat.svd <- svd(rhoMat)
+plot(rhoMat.svd$d)
 
+list.approx <- lapply(1:p, function(j) tcrossprod(rhoMat.svd$u[,j], rhoMat.svd$v[,j]) * rhoMat.svd$d[j])
+rhoMat_approx_1 <-  Reduce("+",list.approx[1:2])
+b = spectral.clustering(rhoMat_approx_1)
+index <- which(b==1)
+which(b==-1)
+# pheatmap(rhoMat_approx_1,show_colnames = T, show_rownames = T,
+#          cluster_rows = F, cluster_cols = F,
+#          main = 'Heatmap of the Rank-1 approximated similarity')
+
+## Perform spectral clustering on each subset of variables using the original correlation matrix
+# subset1 <- spectral.clustering(rhoMat2[index,index])
+# subset2 <- spectral.clustering(rhoMat2[-index,-index])
+
+# out <- slr(x,y)
 # head(sort(apply(rhoMat,1,sum), decreasing = T))
 # setdiff(names(head(sort(apply(rhoMat,1,max), decreasing = T))),names(index))
 # setdiff(names(head(sort(apply(rhoMat,1,sum), decreasing = T))),names(index))
@@ -109,13 +148,13 @@ print(out$index)
 # library(pROC)
 # library(ggplot2)
 # source("RCode/Selbal_Functions.R")
-# out <- selbal(WC,yAll)
+# out <- selbal(x,yAll)
 
 ## ---- Set the error matrix ----
-err <- matrix(NA,nrow=6,ncol=2)
-rownames(err) <- c('slr','propr','coat','pba','classo','selbal')
-colnames(err) <- c('training', 'test')
-x = X_train; y=y_train; lambda=seq(0.1,0.7,0.02)
+# err <- matrix(NA,nrow=6,ncol=2)
+# rownames(err) <- c('slr','propr','coat','pba','classo','selbal')
+# colnames(err) <- c('training', 'test')
+# x = X_train; y=y_train; lambda=seq(0.1,0.7,0.02)
 # fit <- cv.slr(x = X_train, y=y_train, lambda=seq(0.3,0.7,0.02))
 # refit <- slr(X_train, y_train, lambda=0.75)
 # err[1,1] <- mean((y_train - refit$fitted.values)^2)
@@ -123,23 +162,23 @@ x = X_train; y=y_train; lambda=seq(0.1,0.7,0.02)
 ## Tuning parameters
 
 # ## Construct SBP from proportionality matrix
-# pr <- propr::propr(WC[1:n,], metric = "phs")
+# pr <- propr::propr(x[1:n,], metric = "phs")
 # sbp_propr <- sbp.fromHclust(hclust(as.dist(pr@matrix),method = linkage))
-# ba_propr <- balance.fromSBP(WC,sbp_propr)
+# ba_propr <- balance.fromSBP(x,sbp_propr)
 # fit_propr <- run.glmnet(x=ba_propr[1:n,],y,xt=ba_propr[-(1:n),],y_test,lambda = lambda)
 # err[2,1] <- fit_propr$mse.pred
 # roc_propr <- apply(fit_propr$beta, 2, function(a) roc.for.coef.LR(a, beta_lc, sbp_propr))
 # 
-# # d_coat <- 1-coat(WC[1:n,])$corr
+# # d_coat <- 1-coat(x[1:n,])$corr
 # # rownames(d_coat) <- colnames(d_coat) <- colnames(W)
 # # sbp_coat <- sbp.fromHclust(hclust(as.dist(d_coat),method = linkage))
-# # ba_coat <- balance.fromSBP(WC,sbp_coat)
+# # ba_coat <- balance.fromSBP(x,sbp_coat)
 # # fit_coat <- run.glmnet(x=ba_coat[1:n,],y,xt=ba_coat[-(1:n),],y_test)
 # # err[3,1] <- fit_coat$mse.pred
 # # roc_coat <- apply(fit_coat$beta, 2, function(a) roc.for.coef.LR(a, beta_lc, sbp_coat))
 # 
 # ## Construct principal balances
-# sbp_pba <- pba(WC)
+# sbp_pba <- pba(x)
 # fit_pba <- run.glmnet(x=sbp_pba@pba[1:n,],y,xt=sbp_pba@pba[-(1:n),],y_test,lambda = lambda)
 # err[4,1] <- fit_pba$mse.pred
 # roc_pba <- apply(fit_pba$beta, 2, function(a) roc.for.coef.LR(a, beta_lc, sbp_pba@sbp))

@@ -28,16 +28,28 @@ tol = 1e-4
 nlam = 100
 neta = p
 #################
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# if rho = 0, 
+#   sigma_eps = sqrt(2/3) => R^2 = 0.6
+#   sigma_eps = sqrt(1/4) => R^2 = 0.8
+# if rho = 0.2, 
+#   sigma_eps = sqrt(0.7125333) => R^2 = 0.6
+#   sigma_eps = sqrt(0.2672) => R^2 = 0.8
+# if rho = 0.5, 
+#   sigma_eps = sqrt(0.808333) => R^2 = 0.6
+#   sigma_eps = sqrt(0.303125) => R^2 = 0.8
+get_sigma_eps = function(theta_val, Rsq_val, rho_val){
+  sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
+    theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
+    (10 * Rsq_val)
+  return(sqrt(sigma_eps_sq.tmp))
+}
 rho = 0.2 #
 desired_Rsquared = 0.8 #
+sigma_eps = get_sigma_eps(
+  theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
 
 file.end0 = paste0(
   "_", sigma.settings,
-  "_", paste0(
-    paste(which(SBP.true == 1), collapse = ""), "v", 
-    paste(which(SBP.true == -1), collapse = "")),
   "_dim", n, "x", p, 
   "_Rsq", desired_Rsquared,
   "_rho", rho)

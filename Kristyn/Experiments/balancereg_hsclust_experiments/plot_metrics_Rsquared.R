@@ -28,8 +28,8 @@ tol = 1e-4
 nlam = 100
 neta = p
 #################
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 rho = 0.2 #
 desired_Rsquared = 0.8 #
 
@@ -55,6 +55,7 @@ slrhsc_thresh_1lm_sims_list = list()
 slrhsc_thresh_1lm_max_sims_list = list()
 slrhsc_thresh_1lm_sum_sims_list = list()
 cl_sims_list = list()
+slrnew_sims_list = list()
 # pr_sims_list = list()
 # or_sims_list = list()
 # slbl_sims_list = list()
@@ -133,6 +134,14 @@ for(i in 1:numSims){
   rownames(cl.sim.tmp) = NULL
   cl_sims_list[[i]] = data.table(cl.sim.tmp)
   
+  # slrnew
+  slrnew.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/slr_new_", "metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrnew.sim.tmp) = NULL
+  slrnew_sims_list[[i]] = data.table(slrnew.sim.tmp)
+  
   # # propr
   # pr.sim.tmp = t(data.frame(readRDS(paste0(
   #   output_dir, "/metrics", "/propr_", "metrics", file.end0,
@@ -167,6 +176,7 @@ slrhsc_thresh_1lm_sims = as.data.frame(rbindlist(slrhsc_thresh_1lm_sims_list))
 slrhsc_thresh_1lm_max_sims = as.data.frame(rbindlist(slrhsc_thresh_1lm_max_sims_list))
 slrhsc_thresh_1lm_sum_sims = as.data.frame(rbindlist(slrhsc_thresh_1lm_sum_sims_list))
 cl_sims = as.data.frame(rbindlist(cl_sims_list))
+slrnew_sims = as.data.frame(rbindlist(slrnew_sims_list))
 # pr_sims = as.data.frame(rbindlist(pr_sims_list))
 # or_sims = as.data.frame(rbindlist(or_sims_list))
 # slbl_sims = as.data.frame(rbindlist(slbl_sims_list))
@@ -217,6 +227,11 @@ cl_summaries = data.frame(
   "sd" = apply(cl_sims, 2, sd), 
   "se" =  apply(cl_sims, 2, sd) / sqrt(numSims)
 )
+slrnew_summaries = data.frame(
+  "mean" = apply(slrnew_sims, 2, mean), 
+  "sd" = apply(slrnew_sims, 2, sd), 
+  "se" =  apply(slrnew_sims, 2, sd) / sqrt(numSims)
+)
 # pr_summaries = data.frame(
 #   "mean" = apply(pr_sims, 2, mean), 
 #   "sd" = apply(pr_sims, 2, sd), 
@@ -252,6 +267,8 @@ slrhsc_thresh_1lm_sum.sims.gg = reshape2::melt(slrhsc_thresh_1lm_sum_sims)
 slrhsc_thresh_1lm_sum.sims.gg$Method = "slr-thresh-1lm-sum"
 cl.sims.gg = reshape2::melt(cl_sims)
 cl.sims.gg$Method = "classo"
+slrnew.sims.gg = reshape2::melt(slrnew_sims)
+slrnew.sims.gg$Method = "slr-new"
 # pr.sims.gg = reshape2::melt(pr_sims)
 # pr.sims.gg$Method = "propr"
 # or.sims.gg = reshape2::melt(or_sims)
@@ -268,7 +285,8 @@ data.gg = rbind(
   slrhsc_thresh_1lm.sims.gg,
   slrhsc_thresh_1lm_max.sims.gg,
   slrhsc_thresh_1lm_sum.sims.gg,
-  cl.sims.gg)#, 
+  cl.sims.gg,
+  slrnew.sims.gg)
 # pr.sims.gg, 
 # or.sims.gg)#, 
 # slbl.sims.gg)
@@ -299,7 +317,7 @@ plt_main = ggplot(
     axis.title.y = element_blank())
 ggsave(
   filename = paste0(
-    "20220215",
+    "20220216",
     file.end0, 
     "_", "metrics", ".pdf"),
   plot = plt_main,

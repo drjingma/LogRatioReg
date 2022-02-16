@@ -18,13 +18,13 @@ slr <- function(x,y){
   # rank-1 approximation and spectral clustering
   rhoMat.svd <- svd(rhoMat)
   rhoMat_approx_1 <-  tcrossprod(rhoMat.svd$u[,1], rhoMat.svd$v[,1]) * rhoMat.svd$d[1]
-  index <- which(spectral.clustering(rhoMat_approx_1)==1)
+  index <- which(ifelse(specClust(rhoMat_approx_1) == 1, 1, -1) == 1)
   
   if(length(index) %in% c(1, p - 1)){
     if(length(index) == 1){
-      subset1 <- spectral.clustering(rhoMat[-index,-index]) 
+      subset1 <- ifelse(specClust(rhoMat[-index,-index]) == 1, 1, -1)
     } else if(length(index) == p - 1){
-      subset1 <- spectral.clustering(rhoMat[index,index])
+      subset1 <- ifelse(specClust(rhoMat[index,index]) == 1, 1, -1)
     }
     sbp.est = matrix(0, ncol = 1, nrow = p)
     rownames(sbp.est) <- colnames(x)
@@ -44,8 +44,8 @@ slr <- function(x,y){
     return(out)
   } else{
     ## Perform spectral clustering on each subset of variables using the original correlation matrix
-    subset1 <- spectral.clustering(rhoMat[index,index])
-    subset2 <- spectral.clustering(rhoMat[-index,-index]) 
+    subset1 <- ifelse(specClust(rhoMat[index,index]) == 1, 1, -1)
+    subset2 <- ifelse(specClust(rhoMat[-index,-index]) == 1, 1, -1)
     
     # Since we don't know which subset contains the active variables, 
     ## we first fit a linear model with balances obtained from both subsets. 

@@ -41,6 +41,7 @@ res = foreach(
   library(propr)
   
   source("RCode/func_libs.R")
+  source("RCode/slr-main.R")
   source("Kristyn/Functions/supervisedlogratios.R")
   source("Kristyn/Functions/supervisedlogratioseta.R")
   source("Kristyn/Functions/HSClust.R")
@@ -58,7 +59,7 @@ res = foreach(
   
   # Settings to toggle with
   sigma.settings = "expdecaySigma"
-  values.theta = 1
+  theta.value = 1
   n = 100
   p = 30
   intercept = TRUE
@@ -69,6 +70,9 @@ res = foreach(
   nlam = 100
   neta = p
   #################
+  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  U.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # if rho = 0, 
   #   sigma_eps = sqrt(2/3) => R^2 = 0.6
   #   sigma_eps = sqrt(1/4) => R^2 = 0.8
@@ -78,16 +82,41 @@ res = foreach(
   # if rho = 0.5, 
   #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
   #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
-  get_sigma_eps = function(theta_val, Rsq_val, rho_val){
-    sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
-      theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
-      (10 * Rsq_val)
-    return(sqrt(sigma_eps_sq.tmp))
+  # get_sigma_eps = function(theta_val, Rsq_val, rho_val){
+  #   sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
+  #     theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
+  #     (10 * Rsq_val)
+  #   return(sqrt(sigma_eps_sq.tmp))
+  # }
+  get_sigma_eps = function(sbp, ilr.trans.constant, theta, Rsq, rho){
+    # calculate Var[ilr(X)]
+    pos.idx = which(sbp == 1)
+    num.pos = length(pos.idx)
+    neg.idx = which(sbp == -1)
+    num.neg = length(neg.idx)
+    pairs.pos <- pairs.neg <- c()
+    if(num.pos > 1){
+      pairs.pos = t(combn(pos.idx, 2))
+    }
+    if(num.neg > 1){
+      pairs.neg = t(combn(neg.idx, 2))
+    }
+    Sigma.ij.pos = rho^abs(pairs.pos[, 1] - pairs.pos[, 2])
+    Sigma.ij.neg = rho^abs(pairs.neg[, 1] - pairs.neg[, 2])
+    varIlrX = ilr.trans.constant^2 * (
+      1 / num.pos + 1 / num.neg + 
+        2 * sum(Sigma.ij.pos) / num.pos^2 + 2 * sum(Sigma.ij.neg) / num.neg^2
+    )
+    # get sigma.eps.sq
+    sigma.eps.sq = theta^2 * varIlrX * (1 / Rsq - 1)
+    # return sigma.eps
+    return(sqrt(sigma.eps.sq))
   }
   rho = 0.2 #
   desired_Rsquared = 0.8 #
   sigma_eps = get_sigma_eps(
-    theta_val = values.theta, Rsq_val = desired_Rsquared, rho_val = rho)
+    sbp = SBP.true, ilr.trans.constant = U.true$const, theta = theta.value, 
+    Rsq = desired_Rsquared, rho = rho)
   
   # Population parameters
   SigmaW = rgExpDecay(p, rho)$Sigma
@@ -96,6 +125,9 @@ res = foreach(
   
   file.end = paste0(
     "_", sigma.settings,
+    "_", paste0(
+      paste(which(SBP.true == 1), collapse = ""), "v", 
+      paste(which(SBP.true == -1), collapse = "")),
     "_dim", n, "x", p, 
     "_Rsq", desired_Rsquared,
     "_rho", rho, 
@@ -112,11 +144,8 @@ res = foreach(
   colnames(X.all) = paste0('s', 1:p)
   # create the ilr(X.all) covariate by hand to
   #   generate y
-  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-  U.true = getIlrTrans(sbp = SBP.true)
-  # note: there is no theta
-  # also note: beta is U.true * values.theta
-  beta = as.numeric(U.true * values.theta)
+  U.true = U.true$ilr.trans
+  beta = as.numeric(U.true * theta.value)
   y.all = as.numeric(log(X.all) %*% beta) + rnorm(n) * sigma_eps
   
   # subset out training and test sets

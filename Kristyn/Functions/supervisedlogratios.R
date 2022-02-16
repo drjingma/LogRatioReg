@@ -96,7 +96,7 @@ getSlrMatrix = function(y, X, type = "similarity"){
 # Compute the transformation matrix U
 #   using a hierarchical tree or SBP matrix
 # old name: getU
-getIlrTrans = function(sbp = NULL){
+getIlrTrans = function(sbp = NULL, detailed = FALSE){
   # normalize SBP matrix to get U
   pos.vec = colSums(sbp == 1)
   neg.vec = colSums(sbp == -1)
@@ -111,7 +111,16 @@ getIlrTrans = function(sbp = NULL){
   norm.const = sqrt((pos.vec * neg.vec) / (pos.vec + neg.vec))
   U = sweep(U, MARGIN = 2, STATS = norm.const, FUN = "*")
   # U2 = t(t(U) * norm.const) # equal to U
-  return(U)
+  if(detailed){
+    return(
+      list(
+        ilr.trans = U, 
+        const = norm.const
+      )
+    )
+  } else{
+    return(U)
+  }
 }
 
 # getUdetailed= function(btree = NULL, sbp = NULL){

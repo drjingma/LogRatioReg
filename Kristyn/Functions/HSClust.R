@@ -24,8 +24,8 @@ getSimilarityMatrix = function(
   normalized_distance_matrix = NULL, unnormalized_distance_matrix = NULL
 ){
   if(sum(c(!is.null(similarity_measure), !is.null(normalized_distance_matrix),
-      !is.null(unnormalized_similarity_matrix), 
-      !is.null(unnormalized_distance_matrix))) != 1){
+           !is.null(unnormalized_similarity_matrix), 
+           !is.null(unnormalized_distance_matrix))) != 1){
     stop("getSimilarityMatrix: must give either a similarity measure, a distance measure, a normalized distance matrix, an unnormalized similarity matrix, OR an unormalized distance matrix!!")
   }
   if(!is.null(normalized_distance_matrix) | !is.null(distance_measure)){
@@ -81,11 +81,11 @@ getNormalizedLaplacian = function(S, shifted = FALSE){
 }
 
 
-spectral.clustering <- function(
+specClust <- function(
   W, # similarity matrix
   n_eig = 2
 ){
-  L = graph.laplacian(W)          # 2. compute graph laplacian
+  L = graphLaplacian(W)          # 2. compute graph laplacian
   ei = eigen(L, symmetric = TRUE) # 3. Compute the eigenvectors and values of L
   # we will use k-means to cluster the data
   # using the leading eigenvalues in absolute values
@@ -102,25 +102,25 @@ spectral.clustering <- function(
   # if (n_eig==2){
   #   cl <- 2*(obj$cluster - 1) - 1
   # } else {
-    cl <- obj$cluster
+  cl <- obj$cluster
   # }
   names(cl) <- rownames(W)
   # return the cluster membership
   return(cl)
 }
 
-graph.laplacian <- function(
+graphLaplacian <- function(
   W, 
   normalized = TRUE, 
   zeta=0.01
 ){
   stopifnot(nrow(W) == ncol(W))
-
+  
   n = nrow(W)    # number of vertices
   # We perturb the network by adding some links with low edge weights
   W <- W + zeta * mean(colSums(W))/n * tcrossprod(rep(1,n))
   g <- colSums(W) # degrees of vertices
-
+  
   if(normalized){
     D_half = diag(1 / sqrt(g) )
     return(D_half %*% W %*% D_half )
@@ -200,7 +200,7 @@ HSClust <- function(
           second_smallest_idx = order(results$eigenVal, decreasing = FALSE)[2]
           groups = ifelse(results$eigenVect[, second_smallest_idx] < 0, 1, 2)
         } else if(method %in% c("kmeans", "KMeans", "k", "K")){
-          groups = spectral.clustering(W = Wprime, n_eig = 2)
+          groups = specClust(W = Wprime, n_eig = 2)
         } else{
           stop("invalid method argument")
         }
@@ -220,7 +220,7 @@ HSClust <- function(
           #   doesn't apply
           if(stopping_rule %in% 
              c("TooManyCells", "newmangirmanmodularity", "ngmod", "tmc", "ngm")
-             ){
+          ){
             unique_cluster_assignments = unique(cluster_assignments)
             degrees = rowSums(W)
             Q = 0
@@ -449,8 +449,8 @@ plotSBP = function(
     mygraph <- as_tbl_graph(graph_from_data_frame(
       d = edges, 
       vertices = nodes_types
-      ),
-      directed = TRUE)
+    ),
+    directed = TRUE)
   } else{
     mygraph <- as_tbl_graph(graph_from_data_frame(
       d = edges, vertices = data.frame(nodes = unique(unlist(edges)))),

@@ -14,7 +14,7 @@ library(data.table)
 library(reshape2)
 
 numSims = 100
-single_balance = TRUE
+single_balance = FALSE
 theta_overlapping_balance = FALSE
 
 # data
@@ -268,7 +268,7 @@ cl.sims.gg$Method = "classo"
 # slbl.sims.gg = reshape2::melt(slbl_sims)
 # slbl.sims.gg$Method = "selbal"
 
-data.gg0 = rbind(
+data.gg = rbind(
   # slrhc.sims.gg, 
   # slrhc_distal.sims.gg,
   # slrhsc.sims.gg,
@@ -281,21 +281,16 @@ data.gg0 = rbind(
   # pr.sims.gg, 
   # or.sims.gg)#, 
 # slbl.sims.gg)
-# levels.gg = c(
-#   "slr-hc", "slr-hsc", "slr-hc-eta", "slr-hsc-eta", "classo", "propr")
-data.gg = data.gg0
-metric_names = c(
-  "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
-  "Fscore", "time"
-)
-# data.gg$Method = factor(data.gg$Method, levels = levels.gg)
-data.gg = data.gg %>% dplyr::filter(
-  variable %in% metric_names
-) # %>% dplyr::filter(
-#   Method != "selbal"
-# )
 
-ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
+data.gg_main = data.gg %>% dplyr::filter(
+  variable %in% c(
+    "PEtr", "PEte", "EA1", "EA2", "EAInfty", "FP", "FN", "TPR", "precision", 
+    "Fscore", "time"
+  )
+)
+plt_main = ggplot(
+  data.gg_main, 
+  aes(x = Method, y = value, color = Method)) +
   facet_wrap(vars(variable), scales = "free_y") +
   geom_boxplot() +
   # stat_summary(
@@ -311,14 +306,67 @@ ggplot(data.gg, aes(x = Method, y = value, color = Method)) +
     # axis.text.x = element_blank(),
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
-
 ggsave(
   filename = paste0(
-    "20220209",
+    "20220214",
     file.end0, 
     "_", "metrics", ".pdf"),
-  plot = last_plot(),
+  plot = plt_main,
   width = 8, height = 6, units = c("in")
 )
 
-
+data.gg_pos = data.gg %>% dplyr::filter(
+  variable %in% c(
+    "FP+", "FN+", "TPR+", "precision+", "Fscore+"
+  )
+)
+plt_pos = ggplot(
+  data.gg_pos, 
+  aes(x = Method, y = value, color = Method)) +
+  facet_wrap(vars(variable), scales = "free_y") +
+  geom_boxplot() +
+  # stat_summary(
+  #   fun = mean, fun.min = mean, fun.max = mean,
+  #   geom = "errorbar", width = 0.75,
+  #   linetype = "dashed") +
+  stat_summary(
+    fun = mean, geom = "point", shape = 4, size = 1.5,
+    color = "red") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    # axis.text.x = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank())
+data.gg_neg = data.gg %>% dplyr::filter(
+  variable %in% c(
+    "FP-", "FN-", "TPR-", "precision-", "Fscore-"
+  )
+)
+plt_neg = ggplot(
+  data.gg_neg, 
+  aes(x = Method, y = value, color = Method)) +
+  facet_wrap(vars(variable), scales = "free_y") +
+  geom_boxplot() +
+  # stat_summary(
+  #   fun = mean, fun.min = mean, fun.max = mean,
+  #   geom = "errorbar", width = 0.75,
+  #   linetype = "dashed") +
+  stat_summary(
+    fun = mean, geom = "point", shape = 4, size = 1.5,
+    color = "red") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    # axis.text.x = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank())
+ggarrange(plt_pos, plt_neg, nrow = 2)
+ggsave(
+  filename = paste0(
+    "20220214",
+    file.end0, 
+    "_", "metrics_posneg", ".pdf"),
+  plot = last_plot(),
+  width = 8, height = 8, units = c("in")
+)

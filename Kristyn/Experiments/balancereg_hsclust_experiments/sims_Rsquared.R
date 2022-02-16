@@ -70,8 +70,8 @@ res = foreach(
   nlam = 100
   neta = p
   #################
-  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   U.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # if rho = 0, 
   #   sigma_eps = sqrt(2/3) => R^2 = 0.6
@@ -113,7 +113,7 @@ res = foreach(
     return(sqrt(sigma.eps.sq))
   }
   rho = 0.2 #
-  desired_Rsquared = 0.6 #
+  desired_Rsquared = 0.8 #
   sigma_eps = get_sigma_eps(
     sbp = SBP.true, ilr.trans.constant = U.true$const, theta = theta.value, 
     Rsq = desired_Rsquared, rho = rho)

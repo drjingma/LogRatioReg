@@ -41,10 +41,10 @@ res = foreach(
   library(propr)
   
   source("RCode/func_libs.R")
-  source("RCode/slr-main.R")
   source("Kristyn/Functions/supervisedlogratios.R")
   source("Kristyn/Functions/supervisedlogratioseta.R")
   source("Kristyn/Functions/HSClust.R")
+  source("Kristyn/Functions/slrnew.R")
   
   # helper functions
   source("Kristyn/Functions/metrics.R")

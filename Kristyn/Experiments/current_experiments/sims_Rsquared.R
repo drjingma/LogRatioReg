@@ -72,51 +72,13 @@ res = foreach(
   #################
   # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  U.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
-  # if rho = 0, 
-  #   sigma_eps = sqrt(2/3) => R^2 = 0.6
-  #   sigma_eps = sqrt(1/4) => R^2 = 0.8
-  # if rho = 0.2, 
-  #   sigma_eps = sqrt(0.7125333) => R^2 = 0.6
-  #   sigma_eps = sqrt(0.2672) => R^2 = 0.8
-  # if rho = 0.5, 
-  #   sigma_eps = sqrt(0.808333) => R^2 = 0.6
-  #   sigma_eps = sqrt(0.303125) => R^2 = 0.8
-  # get_sigma_eps = function(theta_val, Rsq_val, rho_val){
-  #   sigma_eps_sq.tmp = theta_val^2 * (1 - Rsq_val) / Rsq_val + 
-  #     theta_val^2 * (1 - Rsq_val) * (rho_val^3 + 2 * rho_val^2 + 3 * rho_val) / 
-  #     (10 * Rsq_val)
-  #   return(sqrt(sigma_eps_sq.tmp))
-  # }
-  get_sigma_eps = function(sbp, ilr.trans.constant, theta, Rsq, rho){
-    # calculate Var[ilr(X)]
-    pos.idx = which(sbp == 1)
-    num.pos = length(pos.idx)
-    neg.idx = which(sbp == -1)
-    num.neg = length(neg.idx)
-    pairs.pos <- pairs.neg <- c()
-    if(num.pos > 1){
-      pairs.pos = t(combn(pos.idx, 2))
-    }
-    if(num.neg > 1){
-      pairs.neg = t(combn(neg.idx, 2))
-    }
-    Sigma.ij.pos = rho^abs(pairs.pos[, 1] - pairs.pos[, 2])
-    Sigma.ij.neg = rho^abs(pairs.neg[, 1] - pairs.neg[, 2])
-    varIlrX = ilr.trans.constant^2 * (
-      1 / num.pos + 1 / num.neg + 
-        2 * sum(Sigma.ij.pos) / num.pos^2 + 2 * sum(Sigma.ij.neg) / num.neg^2
-    )
-    # get sigma.eps.sq
-    sigma.eps.sq = theta^2 * varIlrX * (1 / Rsq - 1)
-    # return sigma.eps
-    return(sqrt(sigma.eps.sq))
-  }
+  ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
+  #################
   rho = 0.2 #
   desired_Rsquared = 0.8 #
   sigma_eps = get_sigma_eps(
-    sbp = SBP.true, ilr.trans.constant = U.true$const, theta = theta.value, 
-    Rsq = desired_Rsquared, rho = rho)
+    sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, 
+    theta = theta.value, Rsq = desired_Rsquared, rho = rho)
   
   # Population parameters
   SigmaW = rgExpDecay(p, rho)$Sigma
@@ -144,8 +106,7 @@ res = foreach(
   colnames(X.all) = paste0('s', 1:p)
   # create the ilr(X.all) covariate by hand to
   #   generate y
-  U.true = U.true$ilr.trans
-  beta = as.numeric(U.true * theta.value)
+  beta = as.numeric(ilrtrans.true$ilr.trans * theta.value)
   y.all = as.numeric(log(X.all) %*% beta) + rnorm(n) * sigma_eps
   
   # subset out training and test sets

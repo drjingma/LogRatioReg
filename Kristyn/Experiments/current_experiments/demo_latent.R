@@ -16,10 +16,10 @@ library(balance)
 library(propr)
 
 source("RCode/func_libs.R")
-source("RCode/slr-main.R")
 source("Kristyn/Functions/supervisedlogratios.R")
 source("Kristyn/Functions/supervisedlogratioseta.R")
 source("Kristyn/Functions/HSClust.R")
+source("Kristyn/Functions/slrnew.R")
 
 # helper functions
 source("Kristyn/Functions/metrics.R")
@@ -51,9 +51,11 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 #################
 rho = 0.2 #
 desired_Rsquared = 0.6 #
-sigma_eps = get_sigma_eps(
-  sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
-  Rsq = desired_Rsquared, rho = rho)
+# sigma_eps1 = get_sigma_eps(
+#   sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
+#   Rsq = desired_Rsquared, rho = rho)
+sigma_eps1 = 0.1
+sigma_eps2 = 0
 #################
 
 # Population parameters
@@ -65,6 +67,32 @@ names(muW) = paste0('s', 1:p)
 # generate data
 # set.seed(1947)
 set.seed(1234)
+# get info from sbp
+num.pos = ilrtrans.true$pos.vec
+num.neg = ilrtrans.true$neg.vec
+# get latent variable
+latent.var.all = runif(2 * n)
+# simulate y from latent variable
+y.all2 = theta.value * latent.var.all + rnorm(2 * n) * sigma_eps1
+# simulate X
+alrX.noises = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
+# alrX.covariates = as.matrix(
+#   c(rep(1, num.pos) / num.pos, 
+#     -rep(1, num.neg) / num.neg, 
+#     rep(0, p - 1 - num.pos - num.neg)))
+alrX.covariates = ilrtrans.true$ilr.trans[-p]
+coeffX1 = 1 # 10
+alrX.all = as.matrix(latent.var.all) %*% (coeffX1 * t(alrX.covariates)) + 
+  alrX.noises
+X.all <- alrinv(alrX.all)
+colnames(X.all) = paste0('s', 1:p)
+
+
+
+
+
+
+########################
 # generate X
 logW.all <- mvrnorm(n = 2 * n, mu = muW, Sigma = SigmaW)
 W.all <- exp(logW.all)

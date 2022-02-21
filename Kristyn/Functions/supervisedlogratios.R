@@ -115,7 +115,9 @@ getIlrTrans = function(sbp = NULL, detailed = FALSE){
     return(
       list(
         ilr.trans = U, 
-        const = norm.const
+        const = norm.const, 
+        pos.vec = pos.vec, 
+        neg.vec = neg.vec
       )
     )
   } else{

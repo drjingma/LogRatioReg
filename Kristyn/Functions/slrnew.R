@@ -1,4 +1,4 @@
-slr <- function(x,y){
+slr <- function(x, y, rank1approx = TRUE){
   
   p <- ncol(x)
   ## Compute pairwise correlation 
@@ -15,10 +15,14 @@ slr <- function(x,y){
     }
   }
   
-  # rank-1 approximation and spectral clustering
-  rhoMat.svd <- svd(rhoMat)
-  rhoMat_approx_1 <-  tcrossprod(rhoMat.svd$u[,1], rhoMat.svd$v[,1]) * rhoMat.svd$d[1]
-  index <- which(ifelse(specClust(rhoMat_approx_1) == 1, 1, -1) == 1)
+  # spectral clustering
+  if(rank1approx){
+    rhoMat.svd <- svd(rhoMat)
+    rhoMat_approx_1 <-  tcrossprod(rhoMat.svd$u[,1], rhoMat.svd$v[,1]) * rhoMat.svd$d[1]
+    index <- which(ifelse(specClust(rhoMat_approx_1) == 1, 1, -1) == 1)
+  } else{
+    index <- which(ifelse(specClust(rhoMat) == 1, 1, -1) == 1)
+  }
   
   if(length(index) %in% c(1, p - 1)){
     if(length(index) == 1){

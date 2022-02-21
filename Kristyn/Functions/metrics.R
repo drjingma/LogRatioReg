@@ -109,6 +109,85 @@ getMetricsBalanceReg = function(
     )
   )
 }
+# getMetricsBalanceReg = function(
+#   y.train, y.test, ilrX.train, ilrX.test, n.train, n.test, 
+#   thetahat0, thetahat, betahat, sbp, 
+#   true.beta, is0.true.beta, non0.true.beta, 
+#   metrics = c("prediction", "betaestimation", "selection")
+# ){
+#   result = list()
+#   
+#   if("prediction" %in% metrics){
+#     # 1. prediction error #
+#     # 1a. on training set #
+#     result$PEtr = getMSEyhat(
+#       y = y.train, n = n.train, betahat0 = thetahat0, betahat = thetahat, 
+#       predMat = ilrX.train)
+#     # 1b. on test set #
+#     result$PEte = getMSEyhat(
+#       y = y.test, n = n.test, betahat0 = thetahat0, betahat = thetahat, 
+#       predMat = ilrX.test)
+#   }
+#   
+#   if("betaestimation" %in% metrics){
+#     # 2. estimation accuracy #
+#     # 2a. estimation of beta #
+#     EA = getEstimationAccuracy(true.beta = true.beta, betahat = betahat)
+#     # 2b. estimation accuracy for active set
+#     EA.active = getEstimationAccuracy(
+#       true.beta = true.beta[non0.true.beta], betahat = betahat[non0.true.beta])
+#     # 2c. estimation accuracy for inactive set
+#     EA.inactive = getEstimationAccuracy(
+#       true.beta = true.beta[is0.true.beta], betahat = betahat[is0.true.beta])
+#     # save
+#     result$EA1 = EA$EA1
+#     result$EA2 = EA$EA2
+#     result$EAInfty = EA$EAInfty
+#     result$EA1Active = EA.active$EA1
+#     result$EA2Active = EA.active$EA2
+#     result$EAInftyActive = EA.active$EAInfty
+#     result$EA1Inactive = EA.inactive$EA1
+#     result$EA2Inactive = EA.inactive$EA2
+#     result$EAInftyInactive = EA.inactive$EAInfty
+#   }
+#   
+#   if("selection" %in% metrics){
+#     # 3. selection accuracy #
+#     non0.thetahat = (thetahat != 0)
+#     # sel.cols.SBP = sbp[, non0.thetahat, drop = FALSE]
+#     # non0.betahat = apply(sel.cols.SBP, 1, function(row) any(row != 0))
+#     non0.betahat = abs(betahat) > 10e-8
+#     SA = getSelectionAccuracy(
+#       is0.true.beta = is0.true.beta, 
+#       non0.true.beta = non0.true.beta, 
+#       non0.betahat = non0.betahat)
+#     SA.pos = getSelectionAccuracy(
+#       is0.true.beta = is0.true.beta[true.beta > 0], 
+#       non0.true.beta = non0.true.beta[true.beta > 0], 
+#       non0.betahat = non0.betahat[true.beta > 0])
+#     SA.neg = getSelectionAccuracy(
+#       is0.true.beta = is0.true.beta[true.beta < 0], 
+#       non0.true.beta = non0.true.beta[true.beta < 0], 
+#       non0.betahat = non0.betahat[true.beta < 0])
+#     result$FP = SA$FP
+#     result$FN = SA$FN
+#     result$TPR = SA$TPR
+#     result$precision = SA$precision
+#     result$Fscore = SA$Fscore
+#     result$"FP+" = SA.pos$FP
+#     result$"FN+" = SA.pos$FN
+#     result$"TPR+" = SA.pos$TPR
+#     result$"precision+" = SA.pos$precision
+#     result$"Fscore+" = SA.pos$Fscore
+#     result$"FP-" = SA.neg$FP
+#     result$"FN-" = SA.neg$FN
+#     result$"TPR-" = SA.neg$TPR
+#     result$"precision-" = SA.neg$precision
+#     result$"Fscore-" = SA.neg$Fscore
+#   }
+#   
+#   return(unlist(result))
+# }
 getMetricsLLC = function(
   y.train, y.test, logX.train, logX.test, n.train, n.test, 
   betahat0, betahat, true.beta, is0.true.beta, non0.true.beta

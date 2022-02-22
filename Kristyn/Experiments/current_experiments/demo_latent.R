@@ -55,7 +55,7 @@ desired_Rsquared = 0.6 #
 #   sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
 #   Rsq = desired_Rsquared, rho = rho)
 sigma_eps1 = 0.1
-sigma_eps2 = 0
+sigma_eps2 = 0.1
 #################
 
 # Population parameters
@@ -73,35 +73,19 @@ num.neg = ilrtrans.true$neg.vec
 # get latent variable
 latent.var.all = runif(2 * n)
 # simulate y from latent variable
-y.all2 = theta.value * latent.var.all + rnorm(2 * n) * sigma_eps1
+y.all = theta.value * latent.var.all + rnorm(2 * n) * sigma_eps1
 # simulate X
-alrX.noises = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
+alrX.all.noises = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
 # alrX.covariates = as.matrix(
 #   c(rep(1, num.pos) / num.pos, 
 #     -rep(1, num.neg) / num.neg, 
 #     rep(0, p - 1 - num.pos - num.neg)))
-alrX.covariates = ilrtrans.true$ilr.trans[-p]
+alrX.all.covariates = ilrtrans.true$ilr.trans[-p]
 coeffX1 = 1 # 10
-alrX.all = as.matrix(latent.var.all) %*% (coeffX1 * t(alrX.covariates)) + 
-  alrX.noises
+alrX.all = as.matrix(latent.var.all) %*% (coeffX1 * t(alrX.all.covariates)) + 
+  alrX.all.noises
 X.all <- alrinv(alrX.all)
 colnames(X.all) = paste0('s', 1:p)
-
-
-
-
-
-
-########################
-# generate X
-logW.all <- mvrnorm(n = 2 * n, mu = muW, Sigma = SigmaW)
-W.all <- exp(logW.all)
-X.all <- sweep(W.all, 1, rowSums(W.all), FUN='/')
-colnames(X.all) = paste0('s', 1:p)
-# create the ilr(X.all) covariate by hand to
-#   generate y
-beta = as.numeric(ilrtrans.true$ilr.trans * theta.value)
-y.all = as.numeric(log(X.all) %*% beta) + rnorm(n) * sigma_eps
 
 # subset out training and test sets
 X = X.all[1:n, ]
@@ -110,16 +94,8 @@ Y <- y.all[1:n]
 Y.test <- y.all[-(1:n)]
 
 # about beta
-names(beta) <- paste0('s', 1:p)
-non0.beta = (beta != 0)
-is0.beta = abs(beta) <= 10e-8
-bspars = sum(non0.beta)
-
-##############################################################################
-# estimate Rsquared, given the true model
-SSres = sum((y.all - as.numeric(log(X.all) %*% beta))^2)
-SStot = sum((y.all - mean(y.all))^2)
-Rsq = 1 - SSres/SStot
+non0.beta = as.vector(SBP.true != 0)
+is0.beta = !non0.beta
 
 # ##############################################################################
 # # supervised log-ratios (a balance regression method) with eta
@@ -209,33 +185,28 @@ Rsq = 1 - SSres/SStot
 ##############################################################################
 
 # apply supervised log-ratios, using CV to select threshold
-slr.main = slr(
-  x = X, y = Y
-)
+slrnew = slr(x = X, y = Y)
+slrnew_activevars = names(slrnew$index)
+slrnew_SBP = matrix(slrnew$index)
+rownames(slrnew_SBP) = slrnew_activevars
 
-slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
-slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
-slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
-slrhsc2.thetahat = slrhsc2$theta[[slrhsc2.eta.min.idx]][, slrhsc2.lam.min.idx]
-slrhsc2.SBP = slrhsc2$sbp_thresh[[slrhsc2.eta.min.idx]]
-slrhsc2.betahat.nonzero = getBetaFromTheta(slrhsc2.thetahat, sbp = slrhsc2.SBP)
-slrhsc2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-rownames(slrhsc2.betahat) = names(beta)
-slrhsc2.betahat[slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], ] =
-  as.numeric(slrhsc2.betahat.nonzero)
-slrhsc2.betahat
+slrnew.coefs = coefficients(slrnew$model)
+slrnew.a0 = slrnew.coefs[1]
+slrnew.thetahat = slrnew.coefs[-1]
+
+slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
+slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+rownames(slrnew.betahat) = colnames(X)
+slrnew.betahat[slrnew_activevars, ] =
+  as.numeric(slrnew.betahat.nonzero)
 
 # compute metrics on the selected model #
-slrhsc2.metrics = getMetricsBalanceReg(
+slrnew.metrics = getMetricsBalanceReg(
   y.train = Y, y.test = Y.test,
-  ilrX.train = getIlrX(
-    X[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
-    sbp = slrhsc2.SBP),
-  ilrX.test = getIlrX(
-    X.test[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
-    sbp = slrhsc2.SBP),
+  ilrX.train = getIlrX(X[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
+  ilrX.test = getIlrX(X.test[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
   n.train = n, n.test = n,
-  thetahat0 = slrhsc2.a0, thetahat = slrhsc2.thetahat,
-  betahat = slrhsc2.betahat,
-  sbp = slrhsc2.SBP,
-  true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+  thetahat0 = slrnew.a0, thetahat = slrnew.thetahat, betahat = slrnew.betahat,
+  true.sbp = SBP.true,
+  is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+  metrics = c("prediction", "selection"))

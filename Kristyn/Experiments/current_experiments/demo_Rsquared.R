@@ -93,6 +93,39 @@ SSres = sum((y.all - as.numeric(log(X.all) %*% beta))^2)
 SStot = sum((y.all - mean(y.all))^2)
 Rsq = 1 - SSres/SStot
 
+##############################################################################
+# Dr. Ma's new slr
+##############################################################################
+
+# apply supervised log-ratios, using CV to select threshold
+slrnew = slr(x = X, y = Y)
+slrnew_activevars = names(slrnew$index)
+slrnew_SBP = matrix(slrnew$index)
+rownames(slrnew_SBP) = slrnew_activevars
+
+slrnew.coefs = coefficients(slrnew$model)
+slrnew.a0 = slrnew.coefs[1]
+slrnew.thetahat = slrnew.coefs[-1]
+
+slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
+slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+rownames(slrnew.betahat) = names(beta)
+slrnew.betahat[slrnew_activevars, ] =
+  as.numeric(slrnew.betahat.nonzero)
+
+# compute metrics on the selected model #
+slrnew.metrics = getMetricsBalanceReg(
+  y.train = Y, y.test = Y.test,
+  ilrX.train = getIlrX(X[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
+  ilrX.test = getIlrX(X.test[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
+  n.train = n, n.test = n,
+  thetahat0 = slrnew.a0, thetahat = slrnew.thetahat, betahat = slrnew.betahat,
+  true.sbp = SBP.true,
+  true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+
+
+
+
 # ##############################################################################
 # # supervised log-ratios (a balance regression method) with eta
 # #   -- hierarchical spectral clustering
@@ -175,39 +208,3 @@ Rsq = 1 - SSres/SStot
 # 
 # # heat map of cross-validated mse's
 # # fields::image.plot(slrhsc2$cvm)
-
-##############################################################################
-# Dr. Ma's new slr
-##############################################################################
-
-# apply supervised log-ratios, using CV to select threshold
-slr.main = slr(
-  x = X, y = Y
-)
-
-slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
-slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
-slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
-slrhsc2.thetahat = slrhsc2$theta[[slrhsc2.eta.min.idx]][, slrhsc2.lam.min.idx]
-slrhsc2.SBP = slrhsc2$sbp_thresh[[slrhsc2.eta.min.idx]]
-slrhsc2.betahat.nonzero = getBetaFromTheta(slrhsc2.thetahat, sbp = slrhsc2.SBP)
-slrhsc2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-rownames(slrhsc2.betahat) = names(beta)
-slrhsc2.betahat[slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], ] =
-  as.numeric(slrhsc2.betahat.nonzero)
-slrhsc2.betahat
-
-# compute metrics on the selected model #
-slrhsc2.metrics = getMetricsBalanceReg(
-  y.train = Y, y.test = Y.test,
-  ilrX.train = getIlrX(
-    X[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
-    sbp = slrhsc2.SBP),
-  ilrX.test = getIlrX(
-    X.test[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
-    sbp = slrhsc2.SBP),
-  n.train = n, n.test = n,
-  thetahat0 = slrhsc2.a0, thetahat = slrhsc2.thetahat,
-  betahat = slrhsc2.betahat,
-  sbp = slrhsc2.SBP,
-  true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)

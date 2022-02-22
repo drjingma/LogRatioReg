@@ -95,7 +95,8 @@ res = foreach(
       paste(which(SBP.true == -1), collapse = "")),
     "_dim", n, "x", p, 
     # "_rho", rho, 
-    "_noise", sigma_eps, 
+    "_noisey", sigma_eps1, 
+    "_noisex", sigma_eps2, 
     "_sim", b,
     ".rds")
   

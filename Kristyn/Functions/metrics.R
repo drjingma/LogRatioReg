@@ -46,11 +46,11 @@ getMetricsLLC = function(
   if("prediction" %in% metrics){
     # 1. prediction error #
     # 1a. on training set #
-    PE.train = getMSEyhat(
+    result$PEtr = getMSEyhat(
       y = y.train, n = n.train, betahat0 = betahat0, betahat = betahat, 
       predMat = logX.train)
     # 1b. on test set #
-    PE.test = getMSEyhat(
+    result$PEte = getMSEyhat(
       y = y.test, n = n.test, betahat0 = betahat0, betahat = betahat, 
       predMat = logX.test)
   }

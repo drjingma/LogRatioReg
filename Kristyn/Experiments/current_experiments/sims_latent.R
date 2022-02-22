@@ -4,7 +4,7 @@
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/balancereg_hsclust_experiments/outputs"
+output_dir = "Kristyn/Experiments/current_experiments/outputs"
 
 # set up parallelization
 library(foreach)

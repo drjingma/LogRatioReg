@@ -201,7 +201,7 @@ res = foreach(
   saveRDS(c(
     slrhsc2.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
+     
     "time" = slrhsc2.timing
   ),
   paste0(output_dir, "/metrics", "/slr_hsc_thresh_lasso_metrics", file.end))
@@ -234,7 +234,7 @@ res = foreach(
   saveRDS(c(
     cl.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
+     
     "time" = cl.timing
   ),
   paste0(output_dir, "/metrics", "/classo_metrics", file.end))
@@ -275,7 +275,7 @@ res = foreach(
   saveRDS(c(
     slrnew.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
+     
     "time" = slrnew.timing
   ),
   paste0(output_dir, "/metrics", "/slr_new_metrics", file.end))
@@ -316,7 +316,7 @@ res = foreach(
   saveRDS(c(
     slrnew.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
+     
     "time" = slrnew.timing
   ),
   paste0(output_dir, "/metrics", "/slr_new_noapprox_metrics", file.end))
@@ -362,7 +362,7 @@ res = foreach(
   saveRDS(c(
     pr.metrics,
     "betaSparsity" = bspars,
-    "Rsq" = Rsq,
+     
     "time" = pr.timing
   ),
   paste0(output_dir, "/metrics", "/propr_metrics", file.end))
@@ -432,7 +432,7 @@ res = foreach(
   # saveRDS(c(
   #   slbl.metrics,
   #   "betaSparsity" = bspars,
-  #   "Rsq" = Rsq,
+  #    
   #   "time" = slbl.timing
   # ),
   # paste0(output_dir, "/metrics", "/selbal_metrics", file.end))

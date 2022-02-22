@@ -55,10 +55,10 @@ res = foreach(
   library(igraph) # transform dataframe to graph object: graph_from_data_frame()
   library(tidygraph)
   
-  # expdecay Sigma #############################################################
+  # Tuning parameters###########################################################
   
   # Settings to toggle with
-  sigma.settings = "expdecaySigma"
+  sigma.settings = "diagSigma"
   theta.value = 1
   intercept = TRUE
   K = 10
@@ -84,9 +84,20 @@ res = foreach(
   #################
   
   # Population parameters
-  SigmaW = rgExpDecay(p, rho)$Sigma
-  muW = c(rep(log(p), 5), rep(0, p - 5))
-  names(muW) = paste0('s', 1:p)
+  # SigmaW = rgExpDecay(p, rho)$Sigma
+  # muW = c(rep(log(p), 5), rep(0, p - 5))
+  # names(muW) = paste0('s', 1:p)
+  
+  file.end = paste0(
+    "_", sigma.settings,
+    "_", paste0(
+      paste(which(SBP.true == 1), collapse = ""), "v", 
+      paste(which(SBP.true == -1), collapse = "")),
+    "_dim", n, "x", p, 
+    # "_rho", rho, 
+    "_noise", sigma_eps, 
+    "_sim", b,
+    ".rds")
   
   ##############################################################################
   # generate data

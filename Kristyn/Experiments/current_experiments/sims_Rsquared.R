@@ -75,7 +75,7 @@ res = foreach(
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   #################
   rho = 0.2 #
-  desired_Rsquared = 0.8 #
+  desired_Rsquared = 0.6 #
   sigma_eps = get_sigma_eps(
     sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, 
     theta = theta.value, Rsq = desired_Rsquared, rho = rho)

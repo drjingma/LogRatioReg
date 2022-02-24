@@ -2,6 +2,9 @@
 
 This repo provides code, data, and references for the supervised log-ratio project. 
 
+## To-dos 02/24
+
+- Explore the correlation matrix in several real data examples and suggest ways of determining the number of clusters in step 1. If we need to select the number of clusters, what is the best way of doing so? Cross-validation?
 
 ## Issues 02/24
 

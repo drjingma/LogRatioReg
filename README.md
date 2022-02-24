@@ -3,11 +3,10 @@
 This repo provides code, data, and references for the supervised log-ratio project. 
 
 
-## Issues 02/15
+## Issues 02/24
 
 - How to address the unbalanced balance issue? 
-- Confirm simulation setup. Confirm definition of balance.
-- How is r-squared calculated?
+- The number of clusters in the first step of spectral clustering need to be first determined using some optimization criterion, because when variables in the active set are correlated with variables in the inactive set, we may also observe similarity. However, these will not be as strong as the true active variables. We can visualize the similarity and determine what is the best way of partitioning the variables in the first step. 
 
 **RCode**
 

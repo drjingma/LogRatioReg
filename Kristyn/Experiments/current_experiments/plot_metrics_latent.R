@@ -202,18 +202,18 @@ plt_main = ggplot(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
 plt_main
-ggsave(
-  filename = paste0(
-    "20220222",
-    file.end0, 
-    "_", "metrics", ".pdf"),
-  plot = plt_main,
-  width = 8, height = 6, units = c("in")
-)
+# ggsave(
+#   filename = paste0(
+#     "20220222",
+#     file.end0, 
+#     "_", "metrics", ".pdf"),
+#   plot = plt_main,
+#   width = 8, height = 6, units = c("in")
+# )
 
 data.gg_pos = data.gg %>% dplyr::filter(
   variable %in% c(
-    "FP+", "FN+", "TPR+", "precision+", "Fscore+"
+    "FP+", "FN+", "TPR+"
   )
 )
 plt_pos = ggplot(
@@ -236,7 +236,7 @@ plt_pos = ggplot(
     axis.title.y = element_blank())
 data.gg_neg = data.gg %>% dplyr::filter(
   variable %in% c(
-    "FP-", "FN-", "TPR-", "precision-", "Fscore-"
+    "FP-", "FN-", "TPR-"
   )
 )
 plt_neg = ggplot(

@@ -79,8 +79,8 @@ res = foreach(
   # sigma_eps1 = get_sigma_eps(
   #   sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
   #   Rsq = desired_Rsquared, rho = rho)
-  sigma_eps1 = 1
-  sigma_eps2 = 1
+  sigma_eps1 = 0.5
+  sigma_eps2 = 0.25
   #################
   
   # Population parameters
@@ -108,7 +108,8 @@ res = foreach(
   # get latent variable
   latent.var.all = runif(2 * n)
   # simulate y from latent variable
-  y.all = theta.value * latent.var.all + rnorm(2 * n) * sigma_eps1
+  b0 = 1
+  y.all = b0 + theta.value * latent.var.all + rnorm(2 * n) * sigma_eps1
   # simulate X
   alrX.all.noises = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
   # alrX.covariates = as.matrix(

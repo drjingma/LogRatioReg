@@ -1,4 +1,7 @@
-slr <- function(x, y, rank1approx = TRUE){
+slr <- function(x, y, rank1approx = TRUE, centering = FALSE){
+  # if(centering){
+  #   y = y - mean(y)
+  # }
   
   p <- ncol(x)
   ## Compute pairwise correlation 

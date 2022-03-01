@@ -2,14 +2,14 @@
 
 This repo provides code, data, and references for the supervised log-ratio project. 
 
-## To-dos 02/24
+## To-dos 03/02
 
-- Explore the correlation matrix in several real data examples and suggest ways of determining the number of clusters in step 1. If we need to select the number of clusters, what is the best way of doing so? Cross-validation?
+- When variables are correlated, two iterations of spectral clustering may not correctly identify active variables. There may be too many false positives. Explore the correlation matrix in several real data examples and suggest ways of determining the number of binary splits needed. Can we use cross-validation to determine the number of binary splits?
+- Inform a more realistic simulation design based on the correlation observed in real data.
 
-## Issues 02/24
+## Other Issues
 
 - How to address the unbalanced balance issue? 
-- The number of clusters in the first step of spectral clustering need to be first determined using some optimization criterion, because when variables in the active set are correlated with variables in the inactive set, we may also observe similarity. However, these will not be as strong as the true active variables. We can visualize the similarity and determine what is the best way of partitioning the variables in the first step. 
 
 **RCode**
 

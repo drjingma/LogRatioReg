@@ -80,7 +80,7 @@ res = foreach(
   #   sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
   #   Rsq = desired_Rsquared, rho = rho)
   sigma_eps1 = 0.5
-  sigma_eps2 = 0.25
+  sigma_eps2 = 0.1
   #################
   
   # Population parameters

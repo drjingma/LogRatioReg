@@ -33,10 +33,6 @@ SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 #################
 rho = 0.2 #
-desired_Rsquared = 0.6 #
-# sigma_eps1 = get_sigma_eps(
-#   sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
-#   Rsq = desired_Rsquared, rho = rho)
 sigma_eps1 = 0.1
 sigma_eps2 = 0.1
 
@@ -202,14 +198,14 @@ plt_main = ggplot(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
 plt_main
-# ggsave(
-#   filename = paste0(
-#     "20220222",
-#     file.end0, 
-#     "_", "metrics", ".pdf"),
-#   plot = plt_main,
-#   width = 8, height = 6, units = c("in")
-# )
+ggsave(
+  filename = paste0(
+    "20220228",
+    file.end0,
+    "_", "metrics", ".pdf"),
+  plot = plt_main,
+  width = 8, height = 6, units = c("in")
+)
 
 data.gg_pos = data.gg %>% dplyr::filter(
   variable %in% c(
@@ -260,7 +256,7 @@ plt_neg = ggplot(
 ggarrange(plt_pos, plt_neg, nrow = 2)
 ggsave(
   filename = paste0(
-    "20220222",
+    "20220228",
     file.end0, 
     "_", "metrics_posneg", ".pdf"),
   plot = last_plot(),

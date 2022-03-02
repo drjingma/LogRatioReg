@@ -74,8 +74,8 @@ res = foreach(
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-  b0 = 1 # 0, 1
-  b1 = 1 # 1, (other values?)
+  b0 = 0 # 0, 1
+  b1 = 0.5 # 1, 0.5 (try other values?)
   theta.value = 1 # weight on a1: 1
   a0 = 0 # 0
   
@@ -89,8 +89,8 @@ res = foreach(
     "_noisex", sigma_eps2, 
     "_b0", b0, 
     "_b1", b1, 
-    "a0", a0, 
-    "theta", theta.value,
+    "_a0", a0, 
+    "_theta", theta.value,
     "_sim", b,
     ".rds")
   

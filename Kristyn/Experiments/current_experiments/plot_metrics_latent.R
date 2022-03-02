@@ -32,7 +32,7 @@ SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-b0 = 0
+b0 = 1
 b1 = 1
 a0 = 0
 theta.value = 1 # weight on a1
@@ -43,9 +43,12 @@ file.end0 = paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
   "_dim", n, "x", p, 
-  # "_rho", rho, 
   "_noisey", sigma_eps1, 
-  "_noisex", sigma_eps2)
+  "_noisex", sigma_eps2,
+  "_b0", b0, 
+  "_b1", b1, 
+  "_a0", a0, 
+  "_theta", theta.value)
 
 ################################################################################
 # plot metrics
@@ -160,7 +163,7 @@ data.gg_main = data.gg %>%
       "FP", "FN", "TPR", "precision", 
       "Fscore", "time"
     )
-  ) %>% 
+  ) %>%
   dplyr::filter(
     !(Method %in% c("selbal", "codacore") & variable == "time")
   )
@@ -169,10 +172,6 @@ plt_main = ggplot(
   aes(x = Method, y = value, color = Method)) +
   facet_wrap(vars(variable), scales = "free_y") +
   geom_boxplot() +
-  # stat_summary(
-  #   fun = mean, fun.min = mean, fun.max = mean,
-  #   geom = "errorbar", width = 0.75,
-  #   linetype = "dashed") +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
     color = "red") +
@@ -185,7 +184,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220228",
+    "20220302",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
@@ -241,9 +240,9 @@ plt_neg = ggplot(
 ggarrange(plt_pos, plt_neg, nrow = 2)
 ggsave(
   filename = paste0(
-    "20220228",
+    "20220302",
     file.end0, 
     "_", "metrics_posneg", ".pdf"),
   plot = last_plot(),
-  width = 8, height = 8, units = c("in")
+  width = 8, height = 5, units = c("in")
 )

@@ -42,23 +42,20 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.01 # MUST BE LESS THAN OR EQUAL TO sigma_eps2
-sigma_eps2 = 0.1
+sigma_eps1 = 0.001 # MUST BE LESS THAN OR EQUAL TO sigma_eps2
+sigma_eps2 = 0.001
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
+b0 = 0 # 0, 1 -- doesn't affect betahat
+b1 = 0.5 # 1, (other values?)
+theta.value = 1 # weight on a1: 1
+a0 = 0 # 0
 
 ##############################################################################
 # generate data
-b0 = 0
-b1 = 1
-a0 = 0
-a1 = 1
-theta.value = 1
-# set.seed(1947)
-set.seed(1234)
 # get latent variable
 U.all = matrix(runif(2 * n), ncol = 1)
 # simulate y from latent variable

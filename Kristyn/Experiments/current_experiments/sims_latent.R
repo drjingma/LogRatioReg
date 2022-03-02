@@ -58,35 +58,22 @@ res = foreach(
   # Tuning parameters###########################################################
   
   # Settings to toggle with
-  sigma.settings = "diagSigma"
+  sigma.settings = "latentVarModel"
   theta.value = 1
   intercept = TRUE
   K = 10
   n = 100
   p = 30
   scaling = TRUE
-  linkage = "average"
   tol = 1e-4
   nlam = 100
   neta = p
-  #################
+  rho = 0.2 
+  sigma_eps1 = 0.1
+  sigma_eps2 = 0.1
   # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
-  #################
-  rho = 0.2 #
-  desired_Rsquared = 0.6 #
-  # sigma_eps1 = get_sigma_eps(
-  #   sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
-  #   Rsq = desired_Rsquared, rho = rho)
-  sigma_eps1 = 0.5
-  sigma_eps2 = 0.1
-  #################
-  
-  # Population parameters
-  # SigmaW = rgExpDecay(p, rho)$Sigma
-  # muW = c(rep(log(p), 5), rep(0, p - 5))
-  # names(muW) = paste0('s', 1:p)
   
   file.end = paste0(
     "_", sigma.settings,

@@ -7,13 +7,16 @@ slr <- function(x, y, rank1approx = TRUE, centering = FALSE){
   ## Compute pairwise correlation 
   rhoMat <- matrix(0,p,p)
   rownames(rhoMat) <- colnames(rhoMat) <- colnames(x)
-  testmat <- rhoMat
   for (j in 1:p){
     for (k in 1:p){
       if (k==j){next}
       else {
-        # testmat[j,k] <- cor.test(log(x[,j])-log(x[,k]),y)$p.value
-        rhoMat[j,k] <- abs(stats::cor(log(x[,j])-log(x[,k]),y))
+        logratiojk = log(x[, j]) - log(x[, k])
+        if(all(logratiojk == 0)){ # X[, j] == X[, k]
+          rhoMat[j, k] = 0
+        } else{
+          rhoMat[j, k] <- abs(stats::cor(logratiojk, y))
+        }
       }
     }
   }

@@ -33,58 +33,47 @@ library(tidygraph)
 # expdecay Sigma #############################################################
 
 # Settings to toggle with
-sigma.settings = "expdecaySigma"
-theta.value = 1
+sigma.settings = "latentVarModel"
 intercept = TRUE
 K = 10
 n = 100
 p = 30
 scaling = TRUE
-linkage = "average"
 tol = 1e-4
 nlam = 100
 neta = p
-#################
+rho = 0.2 
+sigma_eps1 = 0
+sigma_eps2 = 0
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
-#################
-rho = 0.2 #
-desired_Rsquared = 0.6 #
-# sigma_eps1 = get_sigma_eps(
-#   sbp = SBP.true, ilr.trans.constant = ilrtrans.true$const, theta = theta.value, 
-#   Rsq = desired_Rsquared, rho = rho)
-sigma_eps1 = 0.1
-sigma_eps2 = 0.1
-#################
-
-# Population parameters
-SigmaW = rgExpDecay(p, rho)$Sigma
-muW = c(rep(log(p), 5), rep(0, p - 5))
-names(muW) = paste0('s', 1:p)
+# ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
+#   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 
 ##############################################################################
 # generate data
+b0 = 0
+b1 = 1
+a0 = 0
+a1 = 1
+theta.value = 1
 # set.seed(1947)
 set.seed(1234)
-# get info from sbp
-num.pos = ilrtrans.true$pos.vec
-num.neg = ilrtrans.true$neg.vec
 # get latent variable
-latent.var.all = runif(2 * n)
+U.all = matrix(runif(2 * n), ncol = 1)
 # simulate y from latent variable
-y.all = theta.value * latent.var.all + rnorm(2 * n) * sigma_eps1
-# simulate X
-alrX.all.noises = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
-# alrX.covariates = as.matrix(
-#   c(rep(1, num.pos) / num.pos, 
-#     -rep(1, num.neg) / num.neg, 
-#     rep(0, p - 1 - num.pos - num.neg)))
-alrX.all.covariates = ilrtrans.true$ilr.trans[-p]
-coeffX1 = 1 # 10
-alrX.all = as.matrix(latent.var.all) %*% (coeffX1 * t(alrX.all.covariates)) + 
-  alrX.all.noises
-X.all <- alrinv(alrX.all)
+y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
+# simulate X: 
+epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
+a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+#   alpha1j = {
+#     c1=theta*ilr.const/k+   if j \in I+
+#     -c2=-theta*ilr.const/k-  if j \in I-
+#     0                       o/w
+#   }
+alrXj.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
+X.all <- alrinv(alrXj.all)
 colnames(X.all) = paste0('s', 1:p)
 
 # subset out training and test sets
@@ -96,6 +85,9 @@ Y.test <- y.all[-(1:n)]
 # about beta
 non0.beta = as.vector(SBP.true != 0)
 is0.beta = !non0.beta
+# solve for beta
+c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
+beta = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
 
 # ##############################################################################
 # # supervised log-ratios (a balance regression method) with eta
@@ -180,33 +172,55 @@ is0.beta = !non0.beta
 # # heat map of cross-validated mse's
 # # fields::image.plot(slrhsc2$cvm)
 
+# ##############################################################################
+# # Dr. Ma's new slr
+# ##############################################################################
+# 
+# # apply supervised log-ratios, using CV to select threshold
+# slrnew = slr(x = X, y = Y)
+# slrnew_activevars = names(slrnew$index)
+# slrnew_SBP = matrix(slrnew$index)
+# rownames(slrnew_SBP) = slrnew_activevars
+# 
+# slrnew.coefs = coefficients(slrnew$model)
+# slrnew.a0 = slrnew.coefs[1]
+# slrnew.thetahat = slrnew.coefs[-1]
+# 
+# slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
+# slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+# rownames(slrnew.betahat) = colnames(X)
+# slrnew.betahat[slrnew_activevars, ] =
+#   as.numeric(slrnew.betahat.nonzero)
+# 
+# # compute metrics on the selected model #
+# slrnew.metrics = getMetricsBalanceReg(
+#   y.train = Y, y.test = Y.test,
+#   ilrX.train = getIlrX(X[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
+#   ilrX.test = getIlrX(X.test[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
+#   n.train = n, n.test = n,
+#   thetahat0 = slrnew.a0, thetahat = slrnew.thetahat, betahat = slrnew.betahat,
+#   true.sbp = SBP.true,
+#   is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+#   metrics = c("prediction", "selection"))
+
 ##############################################################################
-# Dr. Ma's new slr
+# compositional lasso (a linear log contrast method)
 ##############################################################################
+classo = cv.func(
+  method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
+  nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
 
-# apply supervised log-ratios, using CV to select threshold
-slrnew = slr(x = X, y = Y)
-slrnew_activevars = names(slrnew$index)
-slrnew_SBP = matrix(slrnew$index)
-rownames(slrnew_SBP) = slrnew_activevars
-
-slrnew.coefs = coefficients(slrnew$model)
-slrnew.a0 = slrnew.coefs[1]
-slrnew.thetahat = slrnew.coefs[-1]
-
-slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
-slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-rownames(slrnew.betahat) = colnames(X)
-slrnew.betahat[slrnew_activevars, ] =
-  as.numeric(slrnew.betahat.nonzero)
+cl.lam.min.idx = which.min(classo$cvm)
+cl.a0 = classo$int[cl.lam.min.idx]
+cl.betahat = classo$bet[, cl.lam.min.idx]
 
 # compute metrics on the selected model #
-slrnew.metrics = getMetricsBalanceReg(
+cl.metrics = getMetricsLLC(
   y.train = Y, y.test = Y.test,
-  ilrX.train = getIlrX(X[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
-  ilrX.test = getIlrX(X.test[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
+  logX.train = log(X),
+  logX.test = log(X.test),
   n.train = n, n.test = n,
-  thetahat0 = slrnew.a0, thetahat = slrnew.thetahat, betahat = slrnew.betahat,
-  true.sbp = SBP.true,
-  is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+  betahat0 = cl.a0, betahat = cl.betahat,
+  true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
   metrics = c("prediction", "selection"))
+

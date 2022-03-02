@@ -16,7 +16,7 @@ library(reshape2)
 numSims = 100
 
 # Settings to toggle with
-sigma.settings = "diagSigma"
+sigma.settings = "latentVarModel"
 theta.value = 1
 intercept = TRUE
 K = 10

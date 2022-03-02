@@ -17,24 +17,25 @@ numSims = 100
 
 # Settings to toggle with
 sigma.settings = "latentVarModel"
-theta.value = 1
-intercept = TRUE
-K = 10
 n = 100
 p = 30
-scaling = TRUE
-linkage = "average"
-tol = 1e-4
+K = 10
 nlam = 100
 neta = p
-#################
+intercept = TRUE
+scaling = TRUE
+tol = 1e-4
+sigma_eps1 = 0.1 # MUST BE LESS THAN OR EQUAL TO sigma_eps2
+sigma_eps2 = 0.1
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
-#################
-rho = 0.2 #
-sigma_eps1 = 0.1
-sigma_eps2 = 0.1
+# ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
+#   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
+b0 = 0
+b1 = 1
+a0 = 0
+theta.value = 1 # weight on a1
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -50,77 +51,62 @@ file.end0 = paste0(
 # plot metrics
 
 # import metrics
-slrhsc_thresh_lasso_sims_list = list()
 cl_sims_list = list()
 slrnew_sims_list = list()
 slrnew2_sims_list = list()
-pr_sims_list = list()
-# slbl_sims_list = list()
+slbl_sims_list = list()
+cdcr_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
-  # slr hsc thresh lasso
-  slrhsc_thresh_lasso.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_hsc_thresh_lasso_", "metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slrhsc_thresh_lasso.sim.tmp) = NULL
-  slrhsc_thresh_lasso_sims_list[[i]] = data.table(slrhsc_thresh_lasso.sim.tmp)
-  
   # classo
   cl.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/classo_", "metrics", file.end0,
+    output_dir, "/metrics", "/classo_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(cl.sim.tmp) = NULL
   cl_sims_list[[i]] = data.table(cl.sim.tmp)
   
-  # slrnew
+  # slr
   slrnew.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_new_", "metrics", file.end0,
+    output_dir, "/metrics", "/slr_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(slrnew.sim.tmp) = NULL
   slrnew_sims_list[[i]] = data.table(slrnew.sim.tmp)
   
-  # slrnew - no rank 1 approximation
+  # slr with rank 1 approximation
   slrnew2.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/slr_new_noapprox_", "metrics", file.end0,
+    output_dir, "/metrics", "/slr_approx_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(slrnew2.sim.tmp) = NULL
   slrnew2_sims_list[[i]] = data.table(slrnew2.sim.tmp)
   
-  # propr
-  pr.sim.tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/metrics", "/propr_", "metrics", file.end0,
+  # selbal
+  slbl.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/selbal_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(pr.sim.tmp) = NULL
-  pr_sims_list[[i]] = data.table(pr.sim.tmp)
+  rownames(slbl.sim.tmp) = NULL
+  slbl_sims_list[[i]] = data.table(slbl.sim.tmp)
   
-  # # selbal
-  # slbl.sim.tmp = t(data.frame(readRDS(paste0(
-  #   output_dir, "/metrics", "/selbal_", "metrics", file.end0,
-  #   "_sim", i, ".rds"
-  # ))))
-  # rownames(slbl.sim.tmp) = NULL
-  # slbl_sims_list[[i]] = data.table(slbl.sim.tmp)
+  # codacore
+  cdcr.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/codacore_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(cdcr.sim.tmp) = NULL
+  cdcr_sims_list[[i]] = data.table(cdcr.sim.tmp)
 }
 
-slrhsc_thresh_lasso_sims = as.data.frame(rbindlist(slrhsc_thresh_lasso_sims_list))
 cl_sims = as.data.frame(rbindlist(cl_sims_list))
 slrnew_sims = as.data.frame(rbindlist(slrnew_sims_list))
 slrnew2_sims = as.data.frame(rbindlist(slrnew2_sims_list))
-pr_sims = as.data.frame(rbindlist(pr_sims_list))
-# slbl_sims = as.data.frame(rbindlist(slbl_sims_list))
+slbl_sims = as.data.frame(rbindlist(slbl_sims_list))
+cdcr_sims = as.data.frame(rbindlist(cdcr_sims_list))
 
 # summary stats
-slrhsc_thresh_lasso_summaries = data.frame(
-  "mean" = apply(slrhsc_thresh_lasso_sims, 2, mean), 
-  "sd" = apply(slrhsc_thresh_lasso_sims, 2, sd), 
-  "se" =  apply(slrhsc_thresh_lasso_sims, 2, sd) / sqrt(numSims)
-)
 cl_summaries = data.frame(
   "mean" = apply(cl_sims, 2, mean), 
   "sd" = apply(cl_sims, 2, sd), 
@@ -136,49 +122,48 @@ slrnew2_summaries = data.frame(
   "sd" = apply(slrnew2_sims, 2, sd), 
   "se" =  apply(slrnew2_sims, 2, sd) / sqrt(numSims)
 )
-pr_summaries = data.frame(
-  "mean" = apply(pr_sims, 2, mean),
-  "sd" = apply(pr_sims, 2, sd),
-  "se" =  apply(pr_sims, 2, sd) / sqrt(numSims)
+slbl_summaries = data.frame(
+  "mean" = apply(slbl_sims, 2, mean),
+  "sd" = apply(slbl_sims, 2, sd),
+  "se" =  apply(slbl_sims, 2, sd) / sqrt(numSims)
 )
-# slbl_summaries = data.frame(
-#   "mean" = apply(slbl_sims, 2, mean), 
-#   "sd" = apply(slbl_sims, 2, sd), 
-#   "se" =  apply(slbl_sims, 2, sd) / sqrt(numSims)
-# )
+cdcr_summaries = data.frame(
+  "mean" = apply(cdcr_sims, 2, mean),
+  "sd" = apply(cdcr_sims, 2, sd),
+  "se" =  apply(cdcr_sims, 2, sd) / sqrt(numSims)
+)
 
 # metrics boxplots
-slrhsc_thresh_lasso.sims.gg = reshape2::melt(slrhsc_thresh_lasso_sims)
-slrhsc_thresh_lasso.sims.gg$Method = "slr-thresh-lasso"
 cl.sims.gg = reshape2::melt(cl_sims)
 cl.sims.gg$Method = "classo"
 slrnew.sims.gg = reshape2::melt(slrnew_sims)
-slrnew.sims.gg$Method = "slr-new-approx"
+slrnew.sims.gg$Method = "slr"
 slrnew2.sims.gg = reshape2::melt(slrnew2_sims)
-slrnew2.sims.gg$Method = "slr-new"
-pr.sims.gg = reshape2::melt(pr_sims)
-pr.sims.gg$Method = "propr"
-# slbl.sims.gg = reshape2::melt(slbl_sims)
-# slbl.sims.gg$Method = "selbal"
+slrnew2.sims.gg$Method = "slr-approx"
+slbl.sims.gg = reshape2::melt(slbl_sims)
+slbl.sims.gg$Method = "selbal"
+cdcr.sims.gg = reshape2::melt(cdcr_sims)
+cdcr.sims.gg$Method = "codacore"
 
 data.gg = rbind(
-  slrhsc_thresh_lasso.sims.gg, 
   cl.sims.gg,
   slrnew.sims.gg, 
   slrnew2.sims.gg, 
-  pr.sims.gg)
-# pr.sims.gg, 
-# or.sims.gg)#, 
-# slbl.sims.gg)
+  slbl.sims.gg, 
+  cdcr.sims.gg)
 
-data.gg_main = data.gg %>% dplyr::filter(
-  variable %in% c(
-    "PEtr", "PEte", 
-    # "EA1", "EA2", "EAInfty", 
-    "FP", "FN", "TPR", "precision", 
-    "Fscore", "time"
+data.gg_main = data.gg %>% 
+  dplyr::filter(
+    variable %in% c(
+      "PEtr", "PEte", 
+      "EA1", "EA2", "EAInfty",
+      "FP", "FN", "TPR", "precision", 
+      "Fscore", "time"
+    )
+  ) %>% 
+  dplyr::filter(
+    !(Method %in% c("selbal", "codacore") & variable == "time")
   )
-)
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +

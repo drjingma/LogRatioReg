@@ -74,6 +74,10 @@ res = foreach(
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
+  b0 = 0 # 0, 1
+  b1 = 1 # 1, (other values?)
+  theta.value = 1 # weight on a1: 1
+  a0 = 0 # 0
   
   file.end = paste0(
     "_", sigma.settings,
@@ -81,19 +85,17 @@ res = foreach(
       paste(which(SBP.true == 1), collapse = ""), "v", 
       paste(which(SBP.true == -1), collapse = "")),
     "_dim", n, "x", p, 
-    # "_rho", rho, 
     "_noisey", sigma_eps1, 
     "_noisex", sigma_eps2, 
+    "_b0", b0, 
+    "_b1", b1, 
+    "a0", a0, 
+    "theta", theta.value,
     "_sim", b,
     ".rds")
   
   ##############################################################################
   # generate data
-  b0 = 0
-  b1 = 1
-  a0 = 0
-  a1 = 1
-  theta.value = 1
   # get latent variable
   U.all = matrix(runif(2 * n), ncol = 1)
   # simulate y from latent variable

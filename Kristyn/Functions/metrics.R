@@ -36,14 +36,20 @@ getSelectionAccuracy = function(is0.true.beta, non0.true.beta, non0.betahat){
 }
 # package metrics
 getMetricsLLC = function(
-  y.train, y.test, logX.train, logX.test, n.train, n.test,
-  betahat0, betahat, true.sbp = NULL,
+  y.train = NULL, y.test = NULL, logX.train = NULL, logX.test = NULL, 
+  n.train = NULL, n.test = NULL,
+  betahat0 = NULL, betahat, true.sbp = NULL,
   true.beta = NULL, is0.true.beta, non0.true.beta,
   metrics = c("prediction", "betaestimation", "selection")
 ){
   result = list()
   
   if("prediction" %in% metrics){
+    if(is.null(y.train) | is.null(y.test) | 
+       is.null(logX.train) | is.null(logX.test) | 
+       is.null(n.train) | is.null(n.test) | is.null(betahat0)) {
+      stop("getMetricsBalanceReg() prediction: one or more of these are missing -- y.train, y.test, logX.train, logX.test, n.train, n.test, betahat0")
+    }
     # 1. prediction error #
     # 1a. on training set #
     result$PEtr = getMSEyhat(
@@ -57,7 +63,7 @@ getMetricsLLC = function(
   
   if("betaestimation" %in% metrics){
     if(is.null(true.beta)) {
-      stop("getMetricsBalanceReg: true.beta arg is missing -- cannot compute beta estimation metrics without it!!!")
+      stop("getMetricsBalanceReg() betaestimation: true.beta arg is missing")
     }
     # 2. estimation accuracy #
     # 2a. estimation of beta #
@@ -82,7 +88,7 @@ getMetricsLLC = function(
   
   if("selection" %in% metrics){
     if(is.null(true.beta) & is.null(true.sbp)) {
-      stop("getMetricsBalanceReg: true.beta and true.sbp args are both missing -- need at least one of them to know true positives/negatives!!!")
+      stop("getMetricsBalanceReg() selection: true.beta and true.sbp args are both missing, need at least one of them")
     }
     if(is.null(true.beta) & !is.null(true.sbp)){
       true.beta = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
@@ -112,25 +118,27 @@ getMetricsLLC = function(
     result$"FP+" = SA.pos$FP
     result$"FN+" = SA.pos$FN
     result$"TPR+" = SA.pos$TPR
-    result$"precision+" = SA.pos$precision
-    result$"Fscore+" = SA.pos$Fscore
     result$"FP-" = SA.neg$FP
     result$"FN-" = SA.neg$FN
     result$"TPR-" = SA.neg$TPR
-    result$"precision-" = SA.neg$precision
-    result$"Fscore-" = SA.neg$Fscore
   }
   return(unlist(result))
 }
 getMetricsBalanceReg = function(
-  y.train, y.test, ilrX.train, ilrX.test, n.train, n.test,
-  thetahat0, thetahat, betahat, true.sbp = NULL,
+  y.train = NULL, y.test = NULL, ilrX.train = NULL, ilrX.test = NULL, 
+  n.train = NULL, n.test = NULL,
+  thetahat0 = NULL, thetahat, betahat, true.sbp = NULL,
   true.beta = NULL, is0.true.beta, non0.true.beta,
   metrics = c("prediction", "betaestimation", "selection")
 ){
   result = list()
   
   if("prediction" %in% metrics){
+    if(is.null(y.train) | is.null(y.test) | 
+       is.null(ilrX.train) | is.null(ilrX.test) | 
+       is.null(n.train) | is.null(n.test) | is.null(thetahat0)) {
+      stop("getMetricsBalanceReg() prediction: one or more of these are missing -- y.train, y.test, ilrX.train, ilrX.test, n.train, n.test, thetahat0")
+    }
     # 1. prediction error #
     # 1a. on training set #
     result$PEtr = getMSEyhat(
@@ -144,7 +152,7 @@ getMetricsBalanceReg = function(
   
   if("betaestimation" %in% metrics){
     if(is.null(true.beta)) {
-      stop("getMetricsBalanceReg: true.beta arg is missing -- cannot compute beta estimation metrics without it!!!")
+      stop("getMetricsBalanceReg() betaestimation: true.beta arg is missing")
     }
     # 2. estimation accuracy #
     # 2a. estimation of beta #
@@ -169,7 +177,7 @@ getMetricsBalanceReg = function(
   
   if("selection" %in% metrics){
     if(is.null(true.beta) & is.null(true.sbp)) {
-      stop("getMetricsBalanceReg: true.beta and true.sbp args are both missing -- need at least one of them to know true positives/negatives!!!")
+      stop("getMetricsBalanceReg() selection: true.beta and true.sbp args are both missing, need at least one of them")
     }
     if(is.null(true.beta) & !is.null(true.sbp)){
       true.beta = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
@@ -198,13 +206,9 @@ getMetricsBalanceReg = function(
     result$"FP+" = SA.pos$FP
     result$"FN+" = SA.pos$FN
     result$"TPR+" = SA.pos$TPR
-    result$"precision+" = SA.pos$precision
-    result$"Fscore+" = SA.pos$Fscore
     result$"FP-" = SA.neg$FP
     result$"FN-" = SA.neg$FN
     result$"TPR-" = SA.neg$TPR
-    result$"precision-" = SA.neg$precision
-    result$"Fscore-" = SA.neg$Fscore
   }
   return(unlist(result))
 }

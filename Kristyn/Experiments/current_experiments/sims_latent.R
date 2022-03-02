@@ -195,7 +195,7 @@ res = foreach(
   # 
   #   "time" = slrhsc2.timing
   # ),
-  # paste0(output_dir, "/metrics", "/slr_hsc_thresh_lasso_metrics", file.end))
+  # paste0(output_dir, "/metrics", "/slr_thresh_lasso_metrics", file.end))
 
   ##############################################################################
   # compositional lasso (a linear log contrast method)
@@ -269,7 +269,7 @@ res = foreach(
 
     "time" = slrnew.timing
   ),
-  paste0(output_dir, "/metrics", "/slr_new_approx_metrics", file.end))
+  paste0(output_dir, "/metrics", "/slr_approx_metrics", file.end))
 
   ##############################################################################
   # new slr method (a balance regression method)
@@ -310,7 +310,7 @@ res = foreach(
 
     "time" = slrnew2.timing
   ),
-  paste0(output_dir, "/metrics", "/slr_new_metrics", file.end))
+  paste0(output_dir, "/metrics", "/slr_metrics", file.end))
 
   # ##############################################################################
   # # propr method (a balance regression method)
@@ -419,7 +419,63 @@ res = foreach(
   ),
   paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
   
+  ##############################################################################
+  # CoDaCoRe (a balance regression method)
+  ##############################################################################
+  library(codacore)
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+  # tensorflow::install_tensorflow()
+  # keras::install_keras()
   
+  start.time = Sys.time()
+  codacore0 = codacore(x = X, y = Y, logRatioType = "ILR") # instead of "balance" ?
+  codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
+  for(col.idx in 1:ncol(codacore0_SBP)){
+    codacore0_SBP[codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
+    codacore0_SBP[codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
+  }
+  end.time = Sys.time()
+  codacore0.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # getSlopes(codacore0)
+  # codacore0$ensemble[[1]]$intercept
+  # codacore0$ensemble[[1]]$slope
+  # codacore0 # the printed slope doesn't match the slopes given above...
+  codacore0_fit = lm(Y ~ getIlrX(X = X, sbp = codacore0_SBP))
+  # codacore0_fit
+  # lm(Y ~ getLogRatios(codacore0, X))
+  # lm(Y ~ -1 + getLogRatios(codacore0, X))
+  
+  
+  codacore0.thetahat = coefficients(codacore0_fit)[-1] #########################
+  U.codacore0 = getIlrTrans(sbp = codacore0_SBP)################################
+  codacore0.betahat = U.codacore0 %*% as.matrix(codacore0.thetahat)
+  
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  codacore0.Yhat.train = predict(codacore0, X)
+  codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
+  # get prediction error on test set
+  codacore0.Yhat.test = predict(codacore0, X.test)
+  codacore0.PE.test = crossprod(Y.test - codacore0.Yhat.test) / n
+  # beta estimation accuracy, selection accuracy #
+  codacore0.metrics = getMetricsBalanceReg(
+    thetahat = codacore0.thetahat, betahat = codacore0.betahat,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  codacore0.metrics = c(PEtr = codacore0.PE.train, PEte = codacore0.PE.test, codacore0.metrics)
+  
+  saveRDS(c(
+    codacore0.metrics,
+    "betaSparsity" = bspars,
+    
+    "time" = codacore0.timing
+  ),
+  paste0(output_dir, "/metrics", "/codacore_metrics", file.end))
   
   ##############################################################################
   ##############################################################################

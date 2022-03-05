@@ -32,8 +32,8 @@ SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-b0 = 1
-b1 = 1
+b0 = 0
+b1 = 0.5
 a0 = 0
 theta.value = 1 # weight on a1
 
@@ -201,10 +201,6 @@ plt_pos = ggplot(
   aes(x = Method, y = value, color = Method)) +
   facet_wrap(vars(variable), scales = "free_y") +
   geom_boxplot() +
-  # stat_summary(
-  #   fun = mean, fun.min = mean, fun.max = mean,
-  #   geom = "errorbar", width = 0.75,
-  #   linetype = "dashed") +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
     color = "red") +
@@ -224,10 +220,6 @@ plt_neg = ggplot(
   aes(x = Method, y = value, color = Method)) +
   facet_wrap(vars(variable), scales = "free_y") +
   geom_boxplot() +
-  # stat_summary(
-  #   fun = mean, fun.min = mean, fun.max = mean,
-  #   geom = "errorbar", width = 0.75,
-  #   linetype = "dashed") +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
     color = "red") +

@@ -16,10 +16,11 @@ library(balance)
 library(propr)
 
 source("RCode/func_libs.R")
-source("RCode/slr-main.R")
+# source("RCode/slr-main.R")
 source("Kristyn/Functions/supervisedlogratios.R")
 source("Kristyn/Functions/supervisedlogratioseta.R")
 source("Kristyn/Functions/HSClust.R")
+source("Kristyn/Functions/slrnew.R")
 
 # helper functions
 source("Kristyn/Functions/metrics.R")
@@ -110,18 +111,7 @@ slrnew.thetahat = slrnew.coefs[-1]
 slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
 slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
 rownames(slrnew.betahat) = names(beta)
-slrnew.betahat[slrnew_activevars, ] =
-  as.numeric(slrnew.betahat.nonzero)
-
-# compute metrics on the selected model #
-slrnew.metrics = getMetricsBalanceReg(
-  y.train = Y, y.test = Y.test,
-  ilrX.train = getIlrX(X[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
-  ilrX.test = getIlrX(X.test[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
-  n.train = n, n.test = n,
-  thetahat0 = slrnew.a0, thetahat = slrnew.thetahat, betahat = slrnew.betahat,
-  true.sbp = SBP.true,
-  true.beta = beta, is0.true.beta = is0.beta, non0.true.beta = non0.beta)
+slrnew.betahat[slrnew_activevars, ] = as.numeric(slrnew.betahat.nonzero)
 
 ##############################################################################
 # compositional lasso (a linear log contrast method)
@@ -133,18 +123,3 @@ classo = cv.func(
 cl.lam.min.idx = which.min(classo$cvm)
 cl.a0 = classo$int[cl.lam.min.idx]
 cl.betahat = classo$bet[, cl.lam.min.idx]
-
-# compute metrics on the selected model #
-cl.metrics = getMetricsLLC(
-  y.train = Y, y.test = Y.test,
-  logX.train = log(X),
-  logX.test = log(X.test),
-  n.train = n, n.test = n,
-  betahat0 = cl.a0, betahat = cl.betahat,
-  true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
-  metrics = c("prediction", "selection"))
-
-
-
-
-

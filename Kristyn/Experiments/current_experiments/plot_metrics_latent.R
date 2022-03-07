@@ -33,7 +33,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0
-b1 = 0.5 # 1, 0.5, 0.25
+b1 = 0.25 # 1, 0.5, 0.25
 a0 = 0
 theta.value = 1 # weight on a1
 

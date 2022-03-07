@@ -35,7 +35,7 @@ slr <- function(x, y, rank1approx = FALSE){
   sbp.est[match(names(subset1),rownames(sbp.est)), 1] <- subset1
   sbp.est[match(names(subset2),rownames(sbp.est)), 2] <- subset2
   est.balance <- balance::balance.fromSBP(x = x,y = sbp.est)
-  cors = cor(est.balance, y)
+  cors = stats::cor(est.balance, y)
   
   # The correct subset should have larger coefficient. 
   ## We refit the linear model on the balance from the correct subset. 

@@ -1,4 +1,5 @@
-# original, with rank1approx option added
+# original, with rank1approx option added and using balances correlations
+#   instead of effect sizes to choose the active subset
 slr <- function(x, y, rank1approx = FALSE){
   
   p <- ncol(x)
@@ -34,14 +35,15 @@ slr <- function(x, y, rank1approx = FALSE){
   sbp.est[match(names(subset1),rownames(sbp.est)), 1] <- subset1
   sbp.est[match(names(subset2),rownames(sbp.est)), 2] <- subset2
   est.balance <- balance::balance.fromSBP(x = x,y = sbp.est)
-  coeff <- coefficients(lm(y ~ est.balance))
+  cors = cor(est.balance, y)
   
   # The correct subset should have larger coefficient. 
   ## We refit the linear model on the balance from the correct subset. 
   out <- list()
+  out$cors = cors
   out$kernel <- rhoMat
   
-  if ( abs(coeff[2]) > abs(coeff[3]) ){
+  if ( abs(cors[1, ]) > abs(cors[2, ]) ){
     # pick subset1
     out$index <- subset1
     refit <- lm(y~est.balance[, 1])

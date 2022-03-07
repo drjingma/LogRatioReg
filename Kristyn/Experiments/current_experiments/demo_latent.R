@@ -42,72 +42,71 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 1 # MUST BE LESS THAN OR EQUAL TO sigma_eps2
-sigma_eps2 = 1
+sigma_eps1 = 0.1
+sigma_eps2 = 0.1
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-b0 = 0 # 0, 1 -- doesn't affect betahat
-b1 = 1 # 1, (other values?)
+b0 = 0
+b1 = 1 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1: 1
 a0 = 0 # 0
 
 ##############################################################################
 # generate data
-for(i in 1:500){
-  seed = i
-  set.seed(seed)
-  # get latent variable
-  U.all = matrix(runif(2 * n), ncol = 1)
-  # simulate y from latent variable
-  y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
-  # simulate X: 
-  epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
-  a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
-  #   alpha1j = {
-  #     c1=theta*ilr.const/k+   if j \in I+
-  #     -c2=-theta*ilr.const/k-  if j \in I-
-  #     0                       o/w
-  #   }
-  alrXj.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
-  X.all <- alrinv(alrXj.all)
-  colnames(X.all) = paste0('s', 1:p)
-  
-  # subset out training and test sets
-  X = X.all[1:n, ]
-  X.test = X.all[-(1:n), ]
-  Y <- y.all[1:n]
-  Y.test <- y.all[-(1:n)]
-  
-  # about beta
-  non0.beta = as.vector(SBP.true != 0)
-  is0.beta = !non0.beta
-  # solve for beta
-  c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-  beta.true = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
-  
-  ##############################################################################
-  # Dr. Ma's new slr
-  ##############################################################################
-  
-  # apply supervised log-ratios, using CV to select threshold
-  slrnew = slr(x = X, y = Y, rank1approx = FALSE)
-  slrnew_activevars = names(slrnew$index)
-  slrnew_SBP = matrix(slrnew$index)
-  rownames(slrnew_SBP) = slrnew_activevars
-  
-  slrnew.coefs = coefficients(slrnew$model)
-  slrnew.a0 = slrnew.coefs[1]
-  slrnew.thetahat = slrnew.coefs[-1]
-  
-  slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
-  slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-  rownames(slrnew.betahat) = colnames(X)
-  slrnew.betahat[slrnew_activevars, ] = as.numeric(slrnew.betahat.nonzero)
-  print(i)
-}
+# seed = 5
+# set.seed(seed)
+# get latent variable
+U.all = matrix(runif(2 * n), ncol = 1)
+# simulate y from latent variable
+y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
+# simulate X: 
+epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
+a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+#   alpha1j = {
+#     c1=theta*ilr.const/k+   if j \in I+
+#     -c2=-theta*ilr.const/k-  if j \in I-
+#     0                       o/w
+#   }
+alrXj.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
+X.all <- alrinv(alrXj.all)
+colnames(X.all) = paste0('s', 1:p)
+
+# subset out training and test sets
+X = X.all[1:n, ]
+X.test = X.all[-(1:n), ]
+Y <- y.all[1:n]
+Y.test <- y.all[-(1:n)]
+
+# about beta
+non0.beta = as.vector(SBP.true != 0)
+is0.beta = !non0.beta
+# solve for beta
+c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
+beta.true = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
+
+##############################################################################
+# Dr. Ma's new slr
+##############################################################################
+
+# apply supervised log-ratios, using CV to select threshold
+slrnew = slr(x = X, y = Y, rank1approx = FALSE)
+slrnew_activevars = names(slrnew$index)
+slrnew_SBP = matrix(slrnew$index)
+rownames(slrnew_SBP) = slrnew_activevars
+
+slrnew.coefs = coefficients(slrnew$model)
+slrnew.a0 = slrnew.coefs[1]
+slrnew.thetahat = slrnew.coefs[-1]
+
+slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
+slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+rownames(slrnew.betahat) = colnames(X)
+slrnew.betahat[slrnew_activevars, ] = as.numeric(slrnew.betahat.nonzero)
+as.numeric(slrnew.betahat)
+slrnew$cors
 
 # ##############################################################################
 # # compositional lasso (a linear log contrast method)

@@ -1,7 +1,5 @@
 # Supervised Log Ratios Regression
 
-
-
 # do hierarchical clustering with specified linkage 
 #   for compositional data X and y
 getSlrMatrix = function(y, X, type = "similarity"){
@@ -13,18 +11,9 @@ getSlrMatrix = function(y, X, type = "similarity"){
   
   # calculate correlation of each pair of log-ratios with response y
   cormat = matrix(0, p, p) # diagonal == 1
-  y_demeaned = y - mean(y)
   for (j in 1:(p - 1)){
     for (k in (j + 1):p){
-      Zjk = log(X[, j]) - log(X[, k])
-      Zjk_demeaned = Zjk - mean(Zjk)
-      val = (stats::cor(Zjk, y))^2
-      # val = abs(stats::cor(Zjk, y))
-      
-      # if(is.na(val)) stop("getSupervisedTree() : correlation = 0")
-      # hopefully we never have to use this line below.
-      # if(is.na(val)) val = 1 #######################################################################################
-      
+      val = abs(stats::cor(log(X[, j]) - log(X[, k]), y))
       cormat[j, k] = val
       cormat[k, j] = val
     }

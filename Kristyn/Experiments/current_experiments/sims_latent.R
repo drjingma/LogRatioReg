@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 2/21/2021
+# Date: 3/7/2022
 
 ################################################################################
 # libraries and settings
@@ -69,14 +69,13 @@ res = foreach(
   tol = 1e-4
   sigma_eps1 = 0.1
   sigma_eps2 = 0.1
-  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-  b0 = 0 # 0, 1
-  b1 = 1 # 1, 0.5 (try other values?)
-  theta.value = 1 # weight on a1: 1
+  b0 = 0 # 0
+  b1 = 1 # 1, 0.5, 0.25
+  theta.value = 1 # weight on a1
   a0 = 0 # 0
   
   file.end = paste0(

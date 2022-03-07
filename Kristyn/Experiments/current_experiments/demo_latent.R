@@ -2,7 +2,7 @@ rm(list=ls())
 # Purpose: observe different R^2 values for specified rho and sigma_eps values
 #   for the one-balance model
 #   this time, more generalizeable to different balances
-# Date: 2/15/2022
+# Date: 3/7/2022
 
 ################################################################################
 # libraries and settings

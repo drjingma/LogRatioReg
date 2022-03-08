@@ -16,7 +16,7 @@ library(reshape2)
 numSims = 100
 
 # Settings to toggle with
-sigma.settings = "latentVarModel"
+sigma.settings = "latentVarModel_corX"
 n = 100
 p = 30
 K = 10
@@ -35,7 +35,8 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 b0 = 0
 b1 = 1 # 1, 0.5, 0.25
 a0 = 0
-theta.value = 1 # weight on a1
+theta.value = 2 # weight on a1
+rho_alrXj = 0.2
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -48,7 +49,8 @@ file.end0 = paste0(
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
-  "_theta", theta.value)
+  "_theta", theta.value,
+  "_rho", rho_alrXj)
 
 ################################################################################
 # plot metrics

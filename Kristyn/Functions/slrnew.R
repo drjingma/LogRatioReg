@@ -1,6 +1,6 @@
 # original, with rank1approx option added and using balances correlations
 #   instead of effect sizes to choose the active subset
-slr <- function(x, y, rank1approx = FALSE){
+slr <- function(x, y, rank1approx = FALSE, classification = FALSE){
   
   p <- ncol(x)
   ## Compute pairwise correlation 
@@ -34,7 +34,7 @@ slr <- function(x, y, rank1approx = FALSE){
   rownames(sbp.est) <- colnames(x)
   sbp.est[match(names(subset1),rownames(sbp.est)), 1] <- subset1
   sbp.est[match(names(subset2),rownames(sbp.est)), 2] <- subset2
-  est.balance <- balance::balance.fromSBP(x = x,y = sbp.est)
+  est.balance <- balance::balance.fromSBP(x = x, y = sbp.est)
   cors = stats::cor(est.balance, y)
   
   # The correct subset should have larger coefficient. 
@@ -46,11 +46,19 @@ slr <- function(x, y, rank1approx = FALSE){
   if ( abs(cors[1, ]) > abs(cors[2, ]) ){
     # pick subset1
     out$index <- subset1
-    refit <- lm(y~est.balance[, 1])
+    if(!classification){
+      refit <- lm(y~est.balance[, 1])
+    } else{
+      refit = stats::glm(y~est.balance[, 1], family = binomial(link = "logit"))
+    }
   } else {
     # pick subset2
     out$index <- subset2
-    refit <- lm(y~est.balance[, 2])
+    if(!classification){
+      refit <- lm(y~est.balance[, 2])
+    } else{
+      refit = stats::glm(y~est.balance[, 2], family = binomial(link = "logit"))
+    }
   }
   
   out$model <- refit

@@ -474,7 +474,7 @@ codalasso = function(x, y, numFolds=5) {
   foldIdx[y == 1] = caseIdx
   foldIdx[y == 0] = controlIdx
   scores = matrix(nrow=length(lambdas), ncol=numFolds)
-  for (i in 1:length(lambdas)) { print(lambdas[i])
+  for (i in 1:length(lambdas)) { #print(lambdas[i])
     for (j in 1:numFolds) {
       scores[i, j] = -Inf
       try({

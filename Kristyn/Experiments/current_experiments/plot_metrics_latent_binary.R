@@ -16,7 +16,7 @@ library(reshape2)
 numSims = 100
 
 # Settings to toggle with
-sigma.settings = "latentVarModel_corX"
+sigma.settings = "latentVarModel_binary"
 n = 100
 p = 30
 K = 10
@@ -25,7 +25,7 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.1 # MUST BE LESS THAN OR EQUAL TO sigma_eps2
+# sigma_eps1 = 0.1 # MUST BE LESS THAN OR EQUAL TO sigma_eps2
 sigma_eps2 = 0.1
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
@@ -36,7 +36,6 @@ b0 = 0
 b1 = 1 # 1, 0.5, 0.25
 a0 = 0
 theta.value = 1 # weight on a1
-rho_alrXj = 0.2
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -44,13 +43,11 @@ file.end0 = paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
   "_dim", n, "x", p, 
-  "_noisey", sigma_eps1, 
   "_noisex", sigma_eps2,
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
-  "_theta", theta.value,
-  "_rho", rho_alrXj)
+  "_theta", theta.value)
 
 ################################################################################
 # plot metrics

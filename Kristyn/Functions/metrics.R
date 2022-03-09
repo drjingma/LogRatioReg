@@ -1,7 +1,13 @@
 # metrics
-getMSEyhat = function(y, n, betahat0, betahat, predMat){
-  yhat = betahat0 + predMat %*% betahat
-  mse = as.vector(crossprod(y - yhat) / n)
+getMSEyhat = function(y, n, betahat0, betahat, predMat, classification = FALSE){
+  if(!classification){
+    yhat = betahat0 + predMat %*% betahat
+    mse = as.vector(crossprod(y - yhat) / n)
+  } else{
+    yhat = NULL
+    mse = NULL
+  }
+  
   return(mse)
 }
 getEstimationAccuracy = function(true.beta, betahat){
@@ -40,7 +46,8 @@ getMetricsLLC = function(
   n.train = NULL, n.test = NULL,
   betahat0 = NULL, betahat, true.sbp = NULL,
   true.beta = NULL, is0.true.beta, non0.true.beta,
-  metrics = c("prediction", "betaestimation", "selection")
+  metrics = c("prediction", "betaestimation", "selection"), 
+  classification = FALSE
 ){
   result = list()
   
@@ -54,11 +61,11 @@ getMetricsLLC = function(
     # 1a. on training set #
     result$PEtr = getMSEyhat(
       y = y.train, n = n.train, betahat0 = betahat0, betahat = betahat, 
-      predMat = logX.train)
+      predMat = logX.train, classification = classification)
     # 1b. on test set #
     result$PEte = getMSEyhat(
       y = y.test, n = n.test, betahat0 = betahat0, betahat = betahat, 
-      predMat = logX.test)
+      predMat = logX.test, classification = classification)
   }
   
   if("betaestimation" %in% metrics){
@@ -129,7 +136,8 @@ getMetricsBalanceReg = function(
   n.train = NULL, n.test = NULL,
   thetahat0 = NULL, thetahat, betahat, true.sbp = NULL,
   true.beta = NULL, is0.true.beta, non0.true.beta,
-  metrics = c("prediction", "betaestimation", "selection")
+  metrics = c("prediction", "betaestimation", "selection"), 
+  classification = FALSE
 ){
   result = list()
   
@@ -143,11 +151,11 @@ getMetricsBalanceReg = function(
     # 1a. on training set #
     result$PEtr = getMSEyhat(
       y = y.train, n = n.train, betahat0 = thetahat0, betahat = thetahat,
-      predMat = ilrX.train)
+      predMat = ilrX.train, classification = classification)
     # 1b. on test set #
     result$PEte = getMSEyhat(
       y = y.test, n = n.test, betahat0 = thetahat0, betahat = thetahat,
-      predMat = ilrX.test)
+      predMat = ilrX.test, classification = classification)
   }
   
   if("betaestimation" %in% metrics){
@@ -213,41 +221,41 @@ getMetricsBalanceReg = function(
   return(unlist(result))
 }
 
-# solution paths
-roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
-  TP = sum((abs(beta_hat) > eps) * (abs(beta) > eps))
-  FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
-  FP = sum((abs(beta_hat) > eps) * (abs(beta) <= eps))
-  tpr <- TP/(TP + FN)
-  S_hat <- sum((abs(beta_hat) > eps))
-  prec = TP/(TP + FP)
-  # out <- c(S_hat,tpr)
-  # names(out) <- c('S_hat','tpr')
-  out = c("S_hat" = S_hat, "tpr" = tpr, "TP" = TP, "precision" = prec)
-  return(out)
-}
-roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
-  if (is.null(sbp)){
-    stop('A sequential binary partition tree is needed for roc evaluation!')
-  }
-  # first identify the variable at the LR scale
-  index <- which(abs(beta_hat) > eps)
-  # map to original variable
-  if (length(index)==0){
-    S_hat <- NULL
-  } else  if (length(index)==1){
-    S_hat <- names(which(abs(sbp[,index])>0))
-  } else {
-    S_hat <- names(which(rowSums(abs(sbp[,index]))>0))
-  }
-  S0 <- names(which((abs(beta) > eps)))
-  TP <- intersect(S_hat, S0)
-  tpr <- length(TP)/length(S0) # prob that an actual positive will test positive
-  prec = length(TP)/length(S_hat)
-  # out <- c(length(S_hat),tpr)
-  # names(out) <- c('S_hat','tpr')
-  out = c(
-    "S_hat" = length(S_hat), "tpr" = tpr, "TP" = length(TP), 
-    "precision" = prec)
-  return(out)
-}
+# # solution paths
+# roc.for.coef <- function(beta_hat, beta, eps = 1e-08){
+#   TP = sum((abs(beta_hat) > eps) * (abs(beta) > eps))
+#   FN = sum((abs(beta_hat) <= eps) * (abs(beta) > eps))
+#   FP = sum((abs(beta_hat) > eps) * (abs(beta) <= eps))
+#   tpr <- TP/(TP + FN)
+#   S_hat <- sum((abs(beta_hat) > eps))
+#   prec = TP/(TP + FP)
+#   # out <- c(S_hat,tpr)
+#   # names(out) <- c('S_hat','tpr')
+#   out = c("S_hat" = S_hat, "tpr" = tpr, "TP" = TP, "precision" = prec)
+#   return(out)
+# }
+# roc.for.coef.LR <- function(beta_hat,beta,sbp,eps=1e-08){
+#   if (is.null(sbp)){
+#     stop('A sequential binary partition tree is needed for roc evaluation!')
+#   }
+#   # first identify the variable at the LR scale
+#   index <- which(abs(beta_hat) > eps)
+#   # map to original variable
+#   if (length(index)==0){
+#     S_hat <- NULL
+#   } else  if (length(index)==1){
+#     S_hat <- names(which(abs(sbp[,index])>0))
+#   } else {
+#     S_hat <- names(which(rowSums(abs(sbp[,index]))>0))
+#   }
+#   S0 <- names(which((abs(beta) > eps)))
+#   TP <- intersect(S_hat, S0)
+#   tpr <- length(TP)/length(S0) # prob that an actual positive will test positive
+#   prec = length(TP)/length(S_hat)
+#   # out <- c(length(S_hat),tpr)
+#   # names(out) <- c('S_hat','tpr')
+#   out = c(
+#     "S_hat" = length(S_hat), "tpr" = tpr, "TP" = length(TP), 
+#     "precision" = prec)
+#   return(out)
+# }

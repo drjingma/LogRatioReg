@@ -317,7 +317,9 @@ res = foreach(
   # keras::install_keras()
   
   start.time = Sys.time()
-  codacore0 = codacore(x = X, y = Y, logRatioType = "ILR") # instead of "balance" ?
+  codacore0 = codacore(
+    x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
+    objective = "regression")
   codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
   for(col.idx in 1:ncol(codacore0_SBP)){
     codacore0_SBP[codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1

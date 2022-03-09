@@ -286,7 +286,7 @@ getIlrX = function(X, sbp = NULL, U = NULL){
 # old name: fitILR
 fitBMLasso = function(
   y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
-  intercept = TRUE, standardize = TRUE
+  intercept = TRUE, standardize = TRUE, classification = FALSE
 ){
   n = dim(X)[1]
   p = dim(X)[2]
@@ -306,14 +306,31 @@ fitBMLasso = function(
   ilrX = getIlrX(X = X, sbp = sbp)
   
   # run glmnet
-  glmnet.fit = glmnet(x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
-                      intercept = intercept, standardize = standardize)
+  if(!classification){
+    glmnet.fit = glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
+      intercept = intercept, standardize = standardize)
+  } else{
+    glmnet.fit = glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
+      intercept = intercept, standardize = standardize, 
+      family = binomial(link = "logit"))
+  }
+  
   # check lambda length
   if(nlam != length(glmnet.fit$lambda)){
     lambda <- log(glmnet.fit$lambda)
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    glmnet.fit = glmnet(x = ilrX, y = y, lambda = lambda_new, 
-                        intercept = intercept, standardize = standardize)
+    if(!classification){
+      glmnet.fit = glmnet(
+        x = ilrX, y = y, lambda = lambda_new, 
+        intercept = intercept, standardize = standardize)
+    } else{
+      glmnet.fit = glmnet(
+        x = ilrX, y = y, lambda = lambda_new, 
+        intercept = intercept, standardize = standardize, 
+        family = binomial(link = "logit"))
+    }
   }
   return(list(
     theta0 = glmnet.fit$a0, 
@@ -328,7 +345,7 @@ fitBMLasso = function(
 cvBMLasso = function(
   y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
   nfolds = 10, foldid = NULL, intercept = TRUE, standardize = TRUE, 
-  keep = FALSE
+  keep = FALSE, classification = FALSE
 ){
   n = dim(X)[1]
   p = dim(X)[2]
@@ -348,19 +365,34 @@ cvBMLasso = function(
   ilrX = getIlrX(X = X, sbp = sbp)
   
   # run cv.glmnet
-  cv_exact = cv.glmnet(
-    x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
-    foldid = foldid, intercept = intercept, type.measure = c("mse"), 
-    keep = keep, standardize = standardize)
+  if(!classification){
+    cv_exact = cv.glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+      keep = keep, standardize = standardize)
+  } else{
+    cv_exact = cv.glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+      keep = keep, standardize = standardize, family = binomial(link = "logit"))
+  }
   
   # check lambda length
   if(nlam != length(cv_exact$lambda)){
     lambda <- log(cv_exact$lambda)
     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    cv_exact = cv.glmnet(
-      x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
-      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
-      keep = keep, standardize = standardize)
+    if(!classification){
+      cv_exact = cv.glmnet(
+        x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
+        foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+        keep = keep, standardize = standardize)
+    } else{
+      cv_exact = cv.glmnet(
+        x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
+        foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+        keep = keep, standardize = standardize, 
+        family = binomial(link = "logit"))
+    }
   }
   return(list(
     theta0 = cv_exact$glmnet.fit$a0,

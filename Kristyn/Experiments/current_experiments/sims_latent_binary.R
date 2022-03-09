@@ -406,35 +406,48 @@ res = foreach(
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  # getSlopes(codacore0)
-  # codacore0$ensemble[[1]]$intercept
-  # codacore0$ensemble[[1]]$slope
-  # codacore0 # the printed slope doesn't always match the slopes given above...
-  codacore0_fit = glm(
-    Y ~ getIlrX(X = X, sbp = codacore0_SBP), family = binomial(link = "logit"))
-  # codacore0_fit
-  # glm(Y ~ getLogRatios(codacore0, X), family = binomial(link = "logit"))
-  
-  
-  codacore0.thetahat = coefficients(codacore0_fit)[-1] #########################
-  U.codacore0 = getIlrTrans(sbp = codacore0_SBP)################################
-  codacore0.betahat = U.codacore0 %*% as.matrix(codacore0.thetahat)
-  
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  codacore0.Yhat.train = predict(codacore0, X)
-  codacore0.AUC.train = roc(Y, codacore0.Yhat.train)$auc
-  # get prediction error on test set
-  codacore0.Yhat.test = predict(codacore0, X.test)
-  codacore0.AUC.test = roc(Y.test, codacore0.Yhat.test)$auc
-  # beta estimation accuracy, selection accuracy #
-  codacore0.metrics = getMetricsBalanceReg(
-    thetahat = codacore0.thetahat, betahat = codacore0.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  codacore0.metrics = c(
-    AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
+  if(length(codacore0$ensemble) > 0){
+    
+    # getSlopes(codacore0)
+    # codacore0$ensemble[[1]]$intercept
+    # codacore0$ensemble[[1]]$slope
+    # codacore0 # the printed slope doesn't always match the slopes given above...
+    codacore0_fit = glm(
+      Y ~ getIlrX(X = X, sbp = codacore0_SBP), family = binomial(link = "logit"))
+    # codacore0_fit
+    # glm(Y ~ getLogRatios(codacore0, X), family = binomial(link = "logit"))
+    
+    
+    codacore0.thetahat = coefficients(codacore0_fit)[-1] #########################
+    U.codacore0 = getIlrTrans(sbp = codacore0_SBP)################################
+    codacore0.betahat = U.codacore0 %*% as.matrix(codacore0.thetahat)
+    
+    # compute metrics on the selected model #
+    # prediction errors
+    # get prediction error on training set
+    codacore0.Yhat.train = predict(codacore0, X)
+    codacore0.AUC.train = roc(Y, codacore0.Yhat.train)$auc
+    # get prediction error on test set
+    codacore0.Yhat.test = predict(codacore0, X.test)
+    codacore0.AUC.test = roc(Y.test, codacore0.Yhat.test)$auc
+    # beta estimation accuracy, selection accuracy #
+    codacore0.metrics = getMetricsBalanceReg(
+      thetahat = codacore0.thetahat, betahat = codacore0.betahat,
+      true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+      true.beta = beta.true, metrics = c("betaestimation", "selection"))
+    codacore0.metrics = c(
+      AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
+  } else{
+    codacore0.metrics = c(
+      AUCtr = NA, AUCte = NA, 
+      EA1 = NA, EA2 = NA, EAInfty = NA, 
+      EA1Active = NA, EA2Active = NA, EAInftyActive = NA, 
+      EA1Inactive = NA, EA2Inactive = NA, EAInftyInactive = NA, 
+      FP = 0, FN = p, TPR = 0, precision = NA, Fscore = NA, 
+      "FP+" = 0, "FN+" = p, "TPR+" = 0, 
+      "FP-" = p, "FN-" = 0, "TPR-" = 0
+    )
+  }
   
   saveRDS(c(
     codacore0.metrics,

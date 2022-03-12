@@ -59,7 +59,7 @@ theta.value = 1 # weight on a1: 1
 ##############################################################################
 # generate data
 start.seed = 123
-for(i in 74:200){
+for(i in 1:200){
   print(paste0("sim ", i))
   seed = start.seed + i
   set.seed(seed)

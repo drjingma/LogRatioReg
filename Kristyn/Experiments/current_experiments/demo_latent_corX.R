@@ -88,7 +88,8 @@ is0.beta = !non0.beta
 bspars = sum(non0.beta)
 # solve for beta
 c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-beta.true = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
+beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+  as.vector(ilrtrans.true$ilr.trans)
 
 ##############################################################################
 # Dr. Ma's new slr

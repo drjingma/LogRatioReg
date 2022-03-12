@@ -52,14 +52,14 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0
-b1 = 1 # 1, 0.5, 0.25
+b1 = 2 # 1, 0.5, 0.25
 a0 = 0 # 0
-theta.value = 2 # weight on a1: 1
+theta.value = 1 # weight on a1: 1
 
 ##############################################################################
 # generate data
 start.seed = 123
-for(i in 1:100){
+for(i in 74:200){
   print(paste0("sim ", i))
   seed = start.seed + i
   set.seed(seed)
@@ -91,7 +91,8 @@ for(i in 1:100){
   is0.beta = !non0.beta
   # solve for beta
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-  beta.true = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
+  beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+    as.vector(ilrtrans.true$ilr.trans)
   
   ##############################################################################
   # compositional lasso (a linear log contrast method)
@@ -175,6 +176,5 @@ for(i in 1:100){
       "FP-" = p, "FN-" = 0, "TPR-" = 0
     )
   }
-  
 }
 

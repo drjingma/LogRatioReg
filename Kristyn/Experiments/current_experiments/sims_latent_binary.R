@@ -80,7 +80,7 @@ res = foreach(
   b0 = 0 # 0
   b1 = 1 # 1, 0.5, 0.25
   a0 = 0 # 0
-  theta.value = 2 # weight on a1
+  theta.value = 1 # weight on a1 -- 1
   
   file.end = paste0(
     "_", sigma.settings,
@@ -128,7 +128,8 @@ res = foreach(
   bspars = sum(non0.beta)
   # solve for beta
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-  beta.true = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
+  beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+    as.vector(ilrtrans.true$ilr.trans)
 
   ##############################################################################
   # compositional lasso (a linear log contrast method)

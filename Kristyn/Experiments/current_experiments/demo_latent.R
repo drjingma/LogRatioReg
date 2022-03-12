@@ -42,8 +42,8 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.1
-sigma_eps2 = 0.1
+sigma_eps1 = 0.01
+sigma_eps2 = 0.01
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
@@ -85,8 +85,8 @@ non0.beta = as.vector(SBP.true != 0)
 is0.beta = !non0.beta
 # solve for beta
 c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-beta.true = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
-
+beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+  as.vector(ilrtrans.true$ilr.trans)
 ##############################################################################
 # Dr. Ma's new slr
 ##############################################################################
@@ -105,8 +105,10 @@ slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
 slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
 rownames(slrnew.betahat) = colnames(X)
 slrnew.betahat[slrnew_activevars, ] = as.numeric(slrnew.betahat.nonzero)
+
+beta.true
 as.numeric(slrnew.betahat)
-slrnew$cors
+# slrnew$cors
 
 # ##############################################################################
 # # compositional lasso (a linear log contrast method)

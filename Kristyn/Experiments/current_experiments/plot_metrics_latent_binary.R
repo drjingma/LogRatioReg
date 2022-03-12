@@ -58,6 +58,7 @@ slrnew_sims_list = list()
 slrnew2_sims_list = list()
 slbl_sims_list = list()
 cdcr_sims_list = list()
+dba_sims_list = list()
 for(i in 1:numSims){
   print(i)
   

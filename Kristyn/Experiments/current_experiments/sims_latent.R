@@ -75,7 +75,7 @@ res = foreach(
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
   b1 = 1 # 1, 0.5, 0.25
-  theta.value = 1 # weight on a1
+  theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   
   file.end = paste0(
@@ -123,7 +123,8 @@ res = foreach(
   bspars = sum(non0.beta)
   # solve for beta
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-  beta.true = (b1 / c1plusc2) * theta.value * as.vector(ilrtrans.true$ilr.trans)
+  beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+    as.vector(ilrtrans.true$ilr.trans)
   
   # ##############################################################################
   # # supervised log-ratios (a balance regression method)

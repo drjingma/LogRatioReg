@@ -126,79 +126,6 @@ res = foreach(
   beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
     as.vector(ilrtrans.true$ilr.trans)
   
-  # ##############################################################################
-  # # supervised log-ratios (a balance regression method)
-  # #   -- hierarchical spectral clustering + thresholding with lasso
-  # ##############################################################################
-  # start.time = Sys.time()
-  # # apply hierarchical spectral clustering to the SLR similarity matrix
-  # slrSimMat = getSlrMatrix(
-  #   y = Y, X = X, type = "similarity")
-  # slrhsc_btree = HSClust(
-  #   W = slrSimMat, force_levelMax = TRUE, method = "kmeans")
-  # slrhsc_SBP = sbp.fromHSClust(
-  #   levels_matrix = slrhsc_btree$allLevels, row_names = colnames(X))
-  # # apply supervised log-ratios, using CV to select threshold and also lambda
-  # slrhsc2 = cvBMLassoThresh(
-  #   y = Y, X = X,
-  #   W = slrSimMat, # normalized similarity matrix (all values between 0 & 1)
-  #   hsc_method = "kmeans", # "shimalik", "kmeans"
-  #   force_levelMax = TRUE,
-  #   sbp = slrhsc_SBP,
-  #   lambda = NULL, nlam = nlam,
-  #   eta = NULL, neta = neta,
-  #   nfolds = K, foldid = NULL,
-  #   intercept = intercept,
-  #   standardize = scaling
-  # )
-  # end.time = Sys.time()
-  # slrhsc2.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slrhsc2.eta.min.idx = slrhsc2$min.idx[2]
-  # slrhsc2.lam.min.idx = slrhsc2$min.idx[1]
-  # slrhsc2.a0 = slrhsc2$theta0[[slrhsc2.eta.min.idx]][slrhsc2.lam.min.idx]
-  # slrhsc2.thetahat = slrhsc2$theta[[slrhsc2.eta.min.idx]][, slrhsc2.lam.min.idx]
-  # slrhsc2.SBP = slrhsc2$sbp_thresh[[slrhsc2.eta.min.idx]]
-  # slrhsc2.betahat.nonzero = getBetaFromTheta(slrhsc2.thetahat, sbp = slrhsc2.SBP)
-  # slrhsc2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-  # rownames(slrhsc2.betahat) = colnames(X)
-  # slrhsc2.betahat[slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], ] =
-  #   as.numeric(slrhsc2.betahat.nonzero)
-  # 
-  # # compute metrics on the selected model #
-  # slrhsc2.metrics = getMetricsBalanceReg(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(
-  #     X[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
-  #     sbp = slrhsc2.SBP),
-  #   ilrX.test = getIlrX(
-  #     X.test[, slrhsc2$meets_threshold[[slrhsc2.eta.min.idx]], drop = FALSE],
-  #     sbp = slrhsc2.SBP),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = slrhsc2.a0, thetahat = slrhsc2.thetahat,
-  #   betahat = slrhsc2.betahat,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # # # plot the tree given by slr-hsc, indicating significant covariates
-  # # slrhsc2_leaf_types = rep("covariate", nrow(slrhsc2.SBP))
-  # # slrhsc2_balance_types = rep("balance", ncol(slrhsc2.SBP))
-  # # slrhsc2_nodes_types = data.frame(
-  # #   name = c(colnames(slrhsc2.SBP), rownames(slrhsc2.SBP)),
-  # #   type = c(slrhsc2_balance_types, slrhsc2_leaf_types)
-  # # )
-  # # plotSBP(slrhsc2.SBP, title = "slr-hsc-eta", nodes_types = slrhsc2_nodes_types)
-  # # # fields::image.plot(slrSimMat)
-  # 
-  # saveRDS(c(
-  #   slrhsc2.metrics,
-  #   "betaSparsity" = bspars,
-  # 
-  #   "time" = slrhsc2.timing
-  # ),
-  # paste0(output_dir, "/metrics", "/slr_thresh_lasso_metrics", file.end))
-
   ##############################################################################
   # compositional lasso (a linear log contrast method)
   ##############################################################################
@@ -238,13 +165,14 @@ res = foreach(
   ##############################################################################
   start.time = Sys.time()
   slrnew = slr(x = X, y = Y, rank1approx = TRUE)
-  slrnew_activevars = names(slrnew$index)
-  slrnew_SBP = matrix(slrnew$index)
-  rownames(slrnew_SBP) = slrnew_activevars
   end.time = Sys.time()
   slrnew.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
+  slrnew_activevars = names(slrnew$index)
+  slrnew_SBP = matrix(slrnew$index)
+  rownames(slrnew_SBP) = slrnew_activevars
+  
   slrnew.coefs = coefficients(slrnew$model)
   slrnew.a0 = slrnew.coefs[1]
   slrnew.thetahat = slrnew.coefs[-1]
@@ -279,13 +207,14 @@ res = foreach(
   ##############################################################################
   start.time = Sys.time()
   slrnew2 = slr(x = X, y = Y, rank1approx = FALSE)
-  slrnew2_activevars = names(slrnew2$index)
-  slrnew2_SBP = matrix(slrnew2$index)
-  rownames(slrnew2_SBP) = slrnew2_activevars
   end.time = Sys.time()
   slrnew2.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
+  slrnew2_activevars = names(slrnew2$index)
+  slrnew2_SBP = matrix(slrnew2$index)
+  rownames(slrnew2_SBP) = slrnew2_activevars
+  
   slrnew2.coefs = coefficients(slrnew2$model)
   slrnew2.a0 = slrnew2.coefs[1]
   slrnew2.thetahat = slrnew2.coefs[-1]
@@ -314,61 +243,16 @@ res = foreach(
   ),
   paste0(output_dir, "/metrics", "/slr_metrics", file.end))
 
-  # ##############################################################################
-  # # propr method (a balance regression method)
-  # ##############################################################################
-  # start.time = Sys.time()
-  # pr_res <- suppressMessages(propr(X, metric = "phs"))
-  # pr_btree = hclust(as.dist(pr_res@matrix),method = linkage)
-  # pr_SBP = sbp.fromHclust(pr_btree)
-  # pr = cvBMLasso(y = Y, X = X, sbp = pr_SBP, nlam = nlam,
-  #                nfolds = K, intercept = intercept, standardize = scaling)
-  # end.time = Sys.time()
-  # pr.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # pr.lam.min.idx = which.min(pr$cvm)
-  # pr.a0 = pr$theta0[pr.lam.min.idx]
-  # pr.thetahat = pr$theta[, pr.lam.min.idx]
-  # pr.betahat = getBetaFromTheta(pr.thetahat, sbp = pr$sbp)
-  # 
-  # # compute metrics on the selected model #
-  # pr.metrics = getMetricsBalanceReg(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = pr$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = pr$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = pr.a0, thetahat = pr.thetahat, betahat = pr.betahat,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # # # plot the tree given by slr-hsc, indicating significant covariates
-  # # pr_leaf_types = rep("covariate", nrow(pr$sbp))
-  # # pr_balance_types = rep("balance", ncol(pr$sbp))
-  # # pr_nodes_types = data.frame(
-  # #   name = c(colnames(pr$sbp), rownames(pr$sbp)),
-  # #   type = c(pr_balance_types, pr_leaf_types)
-  # # )
-  # # plotSBP(pr$sbp, title = "propr", nodes_types = pr_nodes_types)
-  # # fields::image.plot(pr_res@matrix)
-  # 
-  # saveRDS(c(
-  #   pr.metrics,
-  #   "betaSparsity" = bspars,
-  # 
-  #   "time" = pr.timing
-  # ),
-  # paste0(output_dir, "/metrics", "/propr_metrics", file.end))
-
   ##############################################################################
   # selbal method (a balance regression method)
   ##############################################################################
   library(selbal) # masks stats::cor()
 
-  start.time = Sys.time()
   X.slbl = X
   rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
   colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+  
+  start.time = Sys.time()
   slbl = selbal.cv(x = X.slbl, y = as.vector(Y), n.fold = K)
   end.time = Sys.time()
   slbl.timing = difftime(
@@ -425,6 +309,29 @@ res = foreach(
   # CoDaCoRe (a balance regression method)
   ##############################################################################
   library(codacore)
+  
+  getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
+    if(!is.matrix(SBP_codacore)) SBP_codacore = matrix(SBP_codacore)
+    if(ncol(SBP_codacore) != length(coeffs_codacore)){
+      stop("getBetaFromCodacore: SBP and coefficients don't match")
+    }
+    kplus = apply(SBP_codacore, 2, function(col) sum(col == 1))
+    kminus = apply(SBP_codacore, 2, function(col) sum(col == -1))
+    reciprocals = matrix(
+      0, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+    for(i in 1:ncol(SBP_codacore)){
+      reciprocals[SBP_codacore[, i] == 1, i] = 1 / kplus[i]
+      reciprocals[SBP_codacore[, i] == -1, i] = -1 / kminus[i]
+    }
+    ReciprocalstimesCoeffs = matrix(
+      NA, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+    for(i in 1:ncol(ReciprocalstimesCoeffs)){
+      ReciprocalstimesCoeffs[, i] = reciprocals[, i] * coeffs_codacore[i]
+    }
+    beta = rowSums(ReciprocalstimesCoeffs)
+    return(beta)
+  }
+  
   if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
     reticulate::use_condaenv("anaconda3")
   }
@@ -434,44 +341,52 @@ res = foreach(
   start.time = Sys.time()
   codacore0 = codacore(
     x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
-    objective = "regression")
-  codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
-  for(col.idx in 1:ncol(codacore0_SBP)){
-    codacore0_SBP[codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-    codacore0_SBP[codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-  }
+    objective = "regression") 
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  # getSlopes(codacore0)
-  # codacore0$ensemble[[1]]$intercept
-  # codacore0$ensemble[[1]]$slope
-  # codacore0 # the printed slope doesn't match the slopes given above...
-  codacore0_fit = lm(Y ~ getIlrX(X = X, sbp = codacore0_SBP))
-  # codacore0_fit
-  # lm(Y ~ getLogRatios(codacore0, X))
-  # lm(Y ~ -1 + getLogRatios(codacore0, X))
-  
-  
-  codacore0.thetahat = coefficients(codacore0_fit)[-1] #########################
-  U.codacore0 = getIlrTrans(sbp = codacore0_SBP)################################
-  codacore0.betahat = U.codacore0 %*% as.matrix(codacore0.thetahat)
-  
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  codacore0.Yhat.train = predict(codacore0, X)
-  codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
-  # get prediction error on test set
-  codacore0.Yhat.test = predict(codacore0, X.test)
-  codacore0.PE.test = crossprod(Y.test - codacore0.Yhat.test) / n
-  # beta estimation accuracy, selection accuracy #
-  codacore0.metrics = getMetricsBalanceReg(
-    thetahat = codacore0.thetahat, betahat = codacore0.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  codacore0.metrics = c(PEtr = codacore0.PE.train, PEte = codacore0.PE.test, codacore0.metrics)
+  if(length(codacore0$ensemble) > 0){
+    
+    codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
+    codacore0_coeffs = rep(NA, length(codacore0$ensemble))
+    for(col.idx in 1:ncol(codacore0_SBP)){
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
+      codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
+    }
+    
+    codacore0.betahat = getBetaFromCodacore(
+      SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
+    
+    # compute metrics on the selected model #
+    # prediction errors
+    # get prediction error on training set
+    codacore0.Yhat.train = predict(codacore0, X)
+    codacore0.AUC.train = roc(Y, codacore0.Yhat.train)$auc
+    # get prediction error on test set
+    codacore0.Yhat.test = predict(codacore0, X.test)
+    codacore0.AUC.test = roc(Y.test, codacore0.Yhat.test)$auc
+    # beta estimation accuracy, selection accuracy #
+    codacore0.metrics = getMetricsBalanceReg(
+      betahat = codacore0.betahat,
+      true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+      true.beta = beta.true, metrics = c("betaestimation", "selection"))
+    codacore0.metrics = c(
+      AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
+  } else{
+    codacore0.metrics = c(
+      AUCtr = NA, AUCte = NA, 
+      EA1 = NA, EA2 = NA, EAInfty = NA, 
+      EA1Active = NA, EA2Active = NA, EAInftyActive = NA, 
+      EA1Inactive = NA, EA2Inactive = NA, EAInftyInactive = NA, 
+      FP = 0, FN = p, TPR = 0, precision = NA, Fscore = NA, 
+      "FP+" = 0, "FN+" = sum(SBP.true != 0), "TPR+" = 0, 
+      "FP-" = p - sum(SBP.true != 0), "FN-" = 0, "TPR-" = 0
+    )
+  }
   
   saveRDS(c(
     codacore0.metrics,

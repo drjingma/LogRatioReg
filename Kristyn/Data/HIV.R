@@ -1,7 +1,9 @@
-# Date: 3/7/2022
+# Date: 3/13/2022
 rm(list=ls())
 
+library(selbal)
 library(zCompositions)
+library(gplots)
 
 source("Kristyn/Functions/supervisedlogratios.R")
 
@@ -26,12 +28,24 @@ X1_0.5 = sweep(W1_0.5, 1, rowSums(W1_0.5), FUN='/')
 slrcor1_0.5 = getSlrMatrix(y = y1, X = X1_0.5, type = "similarity")
 fields::image.plot(slrcor1_0.5)
 
+# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
+heatmap.2(
+  slrcor1_0.5, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
+  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
+  margins = c(0.25, 0.25))
+
 ################################################################################
 # Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
 X1_gbm = cmultRepl2(W1, zero.rep = "bayes")
 
 slrcor1_gbm = getSlrMatrix(y = y1, X = X1_gbm, type = "similarity")
 fields::image.plot(slrcor1_gbm)
+
+# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
+heatmap.2(
+  slrcor1_gbm, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
+  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
+  margins = c(0.25, 0.25))
 
 
 
@@ -63,6 +77,12 @@ X2_0.5 = sweep(W2_0.5, 1, rowSums(W2_0.5), FUN='/')
 slrcor2_0.5 = getSlrMatrix(y = y2, X = X2_0.5, type = "similarity")
 fields::image.plot(slrcor2_0.5)
 
+# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
+heatmap.2(
+  slrcor2_0.5, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
+  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
+  margins = c(0.25, 0.25))
+
 ################################################################################
 # Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
 X2_gbm = cmultRepl2(W2, zero.rep = "bayes")
@@ -70,6 +90,10 @@ X2_gbm = cmultRepl2(W2, zero.rep = "bayes")
 slrcor2_gbm = getSlrMatrix(y = y2, X = X2_gbm, type = "similarity")
 fields::image.plot(slrcor2_gbm)
 
-
+# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
+heatmap.2(
+  slrcor2_gbm, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
+  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
+  margins = c(0.25, 0.25))
 
 

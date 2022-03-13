@@ -191,7 +191,6 @@ getMetricsBalanceReg = function(
       true.beta = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
     }
     # 3. selection accuracy #
-    non0.thetahat = (thetahat != 0)
     non0.betahat = abs(betahat) > 10e-8
     SA = getSelectionAccuracy(
       is0.true.beta = is0.true.beta,

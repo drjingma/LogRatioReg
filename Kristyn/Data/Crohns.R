@@ -1,7 +1,9 @@
-# Date: 3/7/2022
+# Date: 3/13/2022
 rm(list=ls())
 
+library(selbal)
 library(zCompositions)
+library(gplots)
 
 source("Kristyn/Functions/supervisedlogratios.R")
 
@@ -26,6 +28,12 @@ X_0.5 = sweep(W_0.5, 1, rowSums(W_0.5), FUN='/')
 slrcor_0.5 = getSlrMatrix(y = y, X = X_0.5, type = "similarity")
 fields::image.plot(slrcor_0.5)
 
+# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
+heatmap.2(
+  slrcor_0.5, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
+  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
+  margins = c(0.25, 0.25))
+
 ################################################################################
 # Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
 X_gbm = cmultRepl2(W, zero.rep = "bayes")
@@ -33,3 +41,8 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 slrcor_gbm = getSlrMatrix(y = y, X = X_gbm, type = "similarity")
 fields::image.plot(slrcor_gbm)
 
+# heatmap(slrcor_gbm, col = rainbow(256),scale = "none", symm = TRUE)
+heatmap.2(
+  slrcor_gbm, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
+  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
+  margins = c(0.25, 0.25))

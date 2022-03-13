@@ -56,9 +56,9 @@ file.end0 = paste0(
 cl_sims_list = list()
 slrnew_sims_list = list()
 slrnew2_sims_list = list()
+dba_sims_list = list()
 slbl_sims_list = list()
 cdcr_sims_list = list()
-dba_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
@@ -86,6 +86,14 @@ for(i in 1:numSims){
   rownames(slrnew2.sim.tmp) = NULL
   slrnew2_sims_list[[i]] = data.table(slrnew2.sim.tmp)
   
+  # dba
+  dba.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/metrics", "/dba_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(dba.sim.tmp) = NULL
+  dba_sims_list[[i]] = data.table(dba.sim.tmp)
+  
   # selbal
   slbl.sim.tmp = t(data.frame(readRDS(paste0(
     output_dir, "/metrics", "/selbal_metrics", file.end0,
@@ -106,6 +114,7 @@ for(i in 1:numSims){
 cl_sims = as.data.frame(rbindlist(cl_sims_list))
 slrnew_sims = as.data.frame(rbindlist(slrnew_sims_list))
 slrnew2_sims = as.data.frame(rbindlist(slrnew2_sims_list))
+dba_sims = as.data.frame(rbindlist(dba_sims_list))
 slbl_sims = as.data.frame(rbindlist(slbl_sims_list))
 cdcr_sims = as.data.frame(rbindlist(cdcr_sims_list))
 
@@ -125,6 +134,11 @@ slrnew2_summaries = data.frame(
   "sd" = apply(slrnew2_sims, 2, sd), 
   "se" =  apply(slrnew2_sims, 2, sd) / sqrt(numSims)
 )
+dba_summaries = data.frame(
+  "mean" = apply(dba_sims, 2, mean), 
+  "sd" = apply(dba_sims, 2, sd), 
+  "se" =  apply(dba_sims, 2, sd) / sqrt(numSims)
+)
 slbl_summaries = data.frame(
   "mean" = apply(slbl_sims, 2, mean),
   "sd" = apply(slbl_sims, 2, sd),
@@ -143,6 +157,8 @@ slrnew.sims.gg = reshape2::melt(slrnew_sims)
 slrnew.sims.gg$Method = "slr"
 slrnew2.sims.gg = reshape2::melt(slrnew2_sims)
 slrnew2.sims.gg$Method = "slr-approx"
+dba.sims.gg = reshape2::melt(dba_sims)
+dba.sims.gg$Method = "dba"
 slbl.sims.gg = reshape2::melt(slbl_sims)
 slbl.sims.gg$Method = "selbal"
 cdcr.sims.gg = reshape2::melt(cdcr_sims)
@@ -152,6 +168,7 @@ data.gg = rbind(
   cl.sims.gg,
   slrnew.sims.gg, 
   slrnew2.sims.gg, 
+  dba.sims.gg,
   slbl.sims.gg, 
   cdcr.sims.gg)
 
@@ -181,7 +198,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220307",
+    "20220313",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
@@ -209,7 +226,7 @@ plt_main2 = ggplot(
 plt_main2
 ggsave(
   filename = paste0(
-    "20220307",
+    "20220313",
     file.end0,
     "_", "metrics_exclude", ".pdf"),
   plot = plt_main2,
@@ -257,7 +274,7 @@ plt_neg = ggplot(
 ggarrange(plt_pos, plt_neg, nrow = 2)
 ggsave(
   filename = paste0(
-    "20220307",
+    "20220313",
     file.end0, 
     "_", "metrics_posneg", ".pdf"),
   plot = last_plot(),

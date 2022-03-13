@@ -79,8 +79,8 @@ res = foreach(
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
   b1 = 1 # 1, 0.5, 0.25
-  a0 = 0 # 0
   theta.value = 1 # weight on a1 -- 1
+  a0 = 0 # 0
   
   file.end = paste0(
     "_", sigma.settings,
@@ -173,13 +173,14 @@ res = foreach(
   ##############################################################################
   start.time = Sys.time()
   slrnew = slr(x = X, y = Y, rank1approx = TRUE, classification = TRUE)
-  slrnew_activevars = names(slrnew$index)
-  slrnew_SBP = matrix(slrnew$index)
-  rownames(slrnew_SBP) = slrnew_activevars
   end.time = Sys.time()
   slrnew.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
+  slrnew_activevars = names(slrnew$index)
+  slrnew_SBP = matrix(slrnew$index)
+  rownames(slrnew_SBP) = slrnew_activevars
+  
   slrnew.coefs = coefficients(slrnew$model)
   slrnew.a0 = slrnew.coefs[1]
   slrnew.thetahat = slrnew.coefs[-1]
@@ -222,13 +223,14 @@ res = foreach(
   ##############################################################################
   start.time = Sys.time()
   slrnew2 = slr(x = X, y = Y, rank1approx = FALSE, classification = TRUE)
-  slrnew2_activevars = names(slrnew2$index)
-  slrnew2_SBP = matrix(slrnew2$index)
-  rownames(slrnew2_SBP) = slrnew2_activevars
   end.time = Sys.time()
   slrnew2.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
+  slrnew2_activevars = names(slrnew2$index)
+  slrnew2_SBP = matrix(slrnew2$index)
+  rownames(slrnew2_SBP) = slrnew2_activevars
+  
   slrnew2.coefs = coefficients(slrnew2$model)
   slrnew2.a0 = slrnew2.coefs[1]
   slrnew2.thetahat = slrnew2.coefs[-1]
@@ -268,8 +270,9 @@ res = foreach(
   ##############################################################################
   # DBA method (a balance regression method)
   ##############################################################################
-  start.time = Sys.time()
   Y.dba = factor(Y, levels = c(0, 1))
+  
+  start.time = Sys.time()
   dba_SBPfull = sbp.fromADBA(x = X, group = Y.dba)
   dba_SBP = sbp.subset(dba_SBPfull)
   dba = cvBMLasso(
@@ -323,12 +326,13 @@ res = foreach(
   # selbal method (a balance regression method)
   ##############################################################################
   library(selbal) # masks stats::cor()
-
-  start.time = Sys.time()
+  
   X.slbl = X
   Y.slbl = factor(Y, levels = c(0, 1))
   rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
   colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+  
+  start.time = Sys.time()
   slbl = selbal.cv(x = X.slbl, y = Y.slbl, n.fold = K)
   end.time = Sys.time()
   slbl.timing = difftime(
@@ -388,6 +392,29 @@ res = foreach(
   # CoDaCoRe (a balance regression method)
   ##############################################################################
   library(codacore)
+  
+  getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
+    if(!is.matrix(SBP_codacore)) SBP_codacore = matrix(SBP_codacore)
+    if(ncol(SBP_codacore) != length(coeffs_codacore)){
+      stop("getBetaFromCodacore: SBP and coefficients don't match")
+    }
+    kplus = apply(SBP_codacore, 2, function(col) sum(col == 1))
+    kminus = apply(SBP_codacore, 2, function(col) sum(col == -1))
+    reciprocals = matrix(
+      0, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+    for(i in 1:ncol(SBP_codacore)){
+      reciprocals[SBP_codacore[, i] == 1, i] = 1 / kplus[i]
+      reciprocals[SBP_codacore[, i] == -1, i] = -1 / kminus[i]
+    }
+    ReciprocalstimesCoeffs = matrix(
+      NA, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+    for(i in 1:ncol(ReciprocalstimesCoeffs)){
+      ReciprocalstimesCoeffs[, i] = reciprocals[, i] * coeffs_codacore[i]
+    }
+    beta = rowSums(ReciprocalstimesCoeffs)
+    return(beta)
+  }
+  
   if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
     reticulate::use_condaenv("anaconda3")
   }
@@ -398,30 +425,24 @@ res = foreach(
   codacore0 = codacore(
     x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
     objective = "binary classification") 
-  codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
-  for(col.idx in 1:ncol(codacore0_SBP)){
-    codacore0_SBP[codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-    codacore0_SBP[codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-  }
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
   if(length(codacore0$ensemble) > 0){
     
-    # getSlopes(codacore0)
-    # codacore0$ensemble[[1]]$intercept
-    # codacore0$ensemble[[1]]$slope
-    # codacore0 # the printed slope doesn't always match the slopes given above...
-    codacore0_fit = glm(
-      Y ~ getIlrX(X = X, sbp = codacore0_SBP), family = binomial(link = "logit"))
-    # codacore0_fit
-    # glm(Y ~ getLogRatios(codacore0, X), family = binomial(link = "logit"))
+    codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
+    codacore0_coeffs = rep(NA, length(codacore0$ensemble))
+    for(col.idx in 1:ncol(codacore0_SBP)){
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
+      codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
+    }
     
-    
-    codacore0.thetahat = coefficients(codacore0_fit)[-1] #########################
-    U.codacore0 = getIlrTrans(sbp = codacore0_SBP)################################
-    codacore0.betahat = U.codacore0 %*% as.matrix(codacore0.thetahat)
+    codacore0.betahat = getBetaFromCodacore(
+      SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
     
     # compute metrics on the selected model #
     # prediction errors
@@ -433,7 +454,7 @@ res = foreach(
     codacore0.AUC.test = roc(Y.test, codacore0.Yhat.test)$auc
     # beta estimation accuracy, selection accuracy #
     codacore0.metrics = getMetricsBalanceReg(
-      thetahat = codacore0.thetahat, betahat = codacore0.betahat,
+      betahat = codacore0.betahat,
       true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
       true.beta = beta.true, metrics = c("betaestimation", "selection"))
     codacore0.metrics = c(
@@ -445,8 +466,8 @@ res = foreach(
       EA1Active = NA, EA2Active = NA, EAInftyActive = NA, 
       EA1Inactive = NA, EA2Inactive = NA, EAInftyInactive = NA, 
       FP = 0, FN = p, TPR = 0, precision = NA, Fscore = NA, 
-      "FP+" = 0, "FN+" = p, "TPR+" = 0, 
-      "FP-" = p, "FN-" = 0, "TPR-" = 0
+      "FP+" = 0, "FN+" = sum(SBP.true != 0), "TPR+" = 0, 
+      "FP-" = p - sum(SBP.true != 0), "FN-" = 0, "TPR-" = 0
     )
   }
   

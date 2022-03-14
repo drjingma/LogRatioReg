@@ -72,13 +72,13 @@ res = foreach(
   scaling = TRUE
   tol = 1e-4
   # sigma_eps1 = 0.1
-  sigma_eps2 = 0.01
+  sigma_eps2 = 0.1 # 0.1, 0.01
   SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 1 # 1, 0.5, 0.25
+  b1 = 1 # 1, 2
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   

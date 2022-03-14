@@ -13,7 +13,7 @@ library(ggpubr)
 library(data.table)
 library(reshape2)
 
-numSims = 92 #######################################################################
+numSims = 100 
 
 # Settings to toggle with
 sigma.settings = "latentVarModel_binary"
@@ -25,17 +25,16 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-# sigma_eps1 = 0.1 # MUST BE LESS THAN OR EQUAL TO sigma_eps2
-sigma_eps2 = 0.01
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# sigma_eps1 = 0.1
+sigma_eps2 = 0.1
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-b0 = 0
-b1 = 1 # 1, 0.5, 0.25
-a0 = 0
-theta.value = 2 # weight on a1
+b0 = 0 # 0
+b1 = 2 # 1, 0.5, 0.25
+theta.value = 1 # weight on a1 -- 1
+a0 = 0 # 0
 
 file.end0 = paste0(
   "_", sigma.settings,

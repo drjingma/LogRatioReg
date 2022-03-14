@@ -48,7 +48,7 @@ res = foreach(
   
   # helper functions
   source("Kristyn/Functions/metrics.R")
-  source("Kristyn/Functions/simulatedata.R")
+  source("Kristyn/Functions/helper_functions.R")
   
   # for plots
   library(ggraph) # make dendrogram
@@ -96,7 +96,7 @@ res = foreach(
   ##############################################################################
   # generate data
   # get latent variable
-  U.all = matrix(runif(2 * n), ncol = 1)
+  U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
   # simulate y from latent variable
   y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
   # simulate X: 
@@ -309,28 +309,6 @@ res = foreach(
   # CoDaCoRe (a balance regression method)
   ##############################################################################
   library(codacore)
-  
-  getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
-    if(!is.matrix(SBP_codacore)) SBP_codacore = matrix(SBP_codacore)
-    if(ncol(SBP_codacore) != length(coeffs_codacore)){
-      stop("getBetaFromCodacore: SBP and coefficients don't match")
-    }
-    kplus = apply(SBP_codacore, 2, function(col) sum(col == 1))
-    kminus = apply(SBP_codacore, 2, function(col) sum(col == -1))
-    reciprocals = matrix(
-      0, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
-    for(i in 1:ncol(SBP_codacore)){
-      reciprocals[SBP_codacore[, i] == 1, i] = 1 / kplus[i]
-      reciprocals[SBP_codacore[, i] == -1, i] = -1 / kminus[i]
-    }
-    ReciprocalstimesCoeffs = matrix(
-      NA, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
-    for(i in 1:ncol(ReciprocalstimesCoeffs)){
-      ReciprocalstimesCoeffs[, i] = reciprocals[, i] * coeffs_codacore[i]
-    }
-    beta = rowSums(ReciprocalstimesCoeffs)
-    return(beta)
-  }
   
   if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
     reticulate::use_condaenv("anaconda3")

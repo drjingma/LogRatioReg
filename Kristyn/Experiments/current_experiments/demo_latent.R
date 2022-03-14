@@ -23,7 +23,7 @@ source("Kristyn/Functions/slrnew.R")
 
 # helper functions
 source("Kristyn/Functions/metrics.R")
-source("Kristyn/Functions/simulatedata.R")
+source("Kristyn/Functions/helper_functions.R")
 
 # for plots
 library(ggraph) # make dendrogram
@@ -59,7 +59,7 @@ a0 = 0 # 0
 # seed = 5
 # set.seed(seed)
 # get latent variable
-U.all = matrix(runif(2 * n), ncol = 1)
+U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
 # simulate y from latent variable
 y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
 # simulate X: 

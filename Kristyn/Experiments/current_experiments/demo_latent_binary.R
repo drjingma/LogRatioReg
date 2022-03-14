@@ -26,7 +26,7 @@ source("Kristyn/Functions/codalasso.R")
 
 # helper functions
 source("Kristyn/Functions/metrics.R")
-source("Kristyn/Functions/simulatedata.R")
+source("Kristyn/Functions/helper_functions.R")
 
 # for plots
 library(ggraph) # make dendrogram
@@ -45,7 +45,7 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps2 = 0.01
+sigma_eps2 = 0.1
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
@@ -58,117 +58,73 @@ theta.value = 1 # weight on a1: 1
 
 ##############################################################################
 # generate data
-seed = 123
-set.seed(seed)
-# get latent variable
-U.all = matrix(runif(2 * n), ncol = 1)
-# simulate y from latent variable
-sigmoid = function(x) 1 / (1 + exp(-x))
-y.all = rbinom(n = 2 * n, size = 1, p = as.vector(sigmoid(b0 + b1 * U.all)))
-# simulate X: 
-epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
-a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
-#   alpha1j = {
-#     c1=theta*ilr.const/k+   if j \in I+
-#     -c2=-theta*ilr.const/k-  if j \in I-
-#     0                       o/w
-#   }
-alrXj.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
-X.all <- alrinv(alrXj.all)
-colnames(X.all) = paste0('s', 1:p)
 
-# subset out training and test sets
-X = X.all[1:n, ]
-X.test = X.all[-(1:n), ]
-Y <- y.all[1:n]
-Y.test <- y.all[-(1:n)]
-
-# about beta
-non0.beta = as.vector(SBP.true != 0)
-is0.beta = !non0.beta
-# solve for beta
-c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
-  as.vector(ilrtrans.true$ilr.trans)
-
-##############################################################################
-# CoDaCoRe (a balance regression method)
-##############################################################################
-library(codacore)
-getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
-  if(!is.matrix(SBP_codacore)) SBP_codacore = matrix(SBP_codacore)
-  if(ncol(SBP_codacore) != length(coeffs_codacore)){
-    stop("getBetaFromCodacore: SBP and coefficients don't match")
-  }
-  kplus = apply(SBP_codacore, 2, function(col) sum(col == 1))
-  kminus = apply(SBP_codacore, 2, function(col) sum(col == -1))
-  reciprocals = matrix(
-    0, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
-  for(i in 1:ncol(SBP_codacore)){
-    reciprocals[SBP_codacore[, i] == 1, i] = 1 / kplus
-    reciprocals[SBP_codacore[, i] == -1, i] = -1 / kminus
-  }
-  ReciprocalstimesCoeffs = matrix(
-    NA, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
-  for(i in 1:ncol(ReciprocalstimesCoeffs)){
-    ReciprocalstimesCoeffs[, i] = reciprocals[, i] * coeffs_codacore[i]
-  }
-  beta = rowSums(ReciprocalstimesCoeffs)
-  return(beta)
-}
-if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-  reticulate::use_condaenv("anaconda3")
-}
-# tensorflow::install_tensorflow()
-# keras::install_keras()
-
-start.time = Sys.time()
-codacore0 = codacore(
-  x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
-  objective = "binary classification") 
-end.time = Sys.time()
-codacore0.timing = difftime(
-  time1 = end.time, time2 = start.time, units = "secs")
-
-if(length(codacore0$ensemble) > 0){
+for(i in 1:100){
+  print(i)
+  seed = i
+  set.seed(seed)
+  # get latent variable
+  U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
+  # simulate y from latent variable
+  y.all = rbinom(n = 2 * n, size = 1, p = as.vector(sigmoid(b0 + b1 * U.all)))
+  # simulate X: 
+  epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
+  a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+  #   alpha1j = {
+  #     c1=theta*ilr.const/k+   if j \in I+
+  #     -c2=-theta*ilr.const/k-  if j \in I-
+  #     0                       o/w
+  #   }
+  alrXj.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
+  X.all <- alrinv(alrXj.all)
+  colnames(X.all) = paste0('s', 1:p)
   
-  codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
-  codacore0_coeffs = rep(NA, length(codacore0$ensemble))
-  for(col.idx in 1:ncol(codacore0_SBP)){
-    codacore0_SBP[
-      codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-    codacore0_SBP[
-      codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-    codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
-  }
+  # subset out training and test sets
+  X = X.all[1:n, ]
+  X.test = X.all[-(1:n), ]
+  Y <- y.all[1:n]
+  Y.test <- y.all[-(1:n)]
   
-  codacore0.betahat = getBetaFromCodacore(
-    SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
+  # about beta
+  non0.beta = as.vector(SBP.true != 0)
+  is0.beta = !non0.beta
+  # solve for beta
+  c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
+  beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+    as.vector(ilrtrans.true$ilr.trans)
+  beta.true
   
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  codacore0.Yhat.train = predict(codacore0, X)
-  codacore0.AUC.train = roc(Y, codacore0.Yhat.train)$auc
-  # get prediction error on test set
-  codacore0.Yhat.test = predict(codacore0, X.test)
-  codacore0.AUC.test = roc(Y.test, codacore0.Yhat.test)$auc
-  # beta estimation accuracy, selection accuracy #
-  codacore0.metrics = getMetricsBalanceReg(
-    betahat = codacore0.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  codacore0.metrics = c(
-    AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
-} else{
-  codacore0.metrics = c(
-    AUCtr = NA, AUCte = NA, 
-    EA1 = NA, EA2 = NA, EAInfty = NA, 
-    EA1Active = NA, EA2Active = NA, EAInftyActive = NA, 
-    EA1Inactive = NA, EA2Inactive = NA, EAInftyInactive = NA, 
-    FP = 0, FN = p, TPR = 0, precision = NA, Fscore = NA, 
-    "FP+" = 0, "FN+" = sum(SBP.true != 0), "TPR+" = 0, 
-    "FP-" = p - sum(SBP.true != 0), "FN-" = 0, "TPR-" = 0
-  )
+  
+  
+  # plot the logistic regression curve
+  x_seq = U.all
+  y_seq = as.vector(sigmoid(b0 + b1 * U.all))
+  plot(x_seq, y_seq)
+  
+  ##############################################################################
+  # new slr method (a balance regression method)
+  #   -- hierarchical spectral clustering (with rank 1 approximation)
+  ##############################################################################
+  slrnew = slr(x = X, y = Y, rank1approx = TRUE, classification = TRUE)
+  x = X
+  y = Y
+  rank1approx = TRUE
+  classification = TRUE
+  
+  slrnew_activevars = names(slrnew$index)
+  slrnew_SBP = matrix(slrnew$index)
+  rownames(slrnew_SBP) = slrnew_activevars
+  
+  slrnew.coefs = coefficients(slrnew$model)
+  slrnew.a0 = slrnew.coefs[1]
+  slrnew.thetahat = slrnew.coefs[-1]
+  
+  slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
+  slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+  rownames(slrnew.betahat) = colnames(X)
+  slrnew.betahat[slrnew_activevars, ] =
+    as.numeric(slrnew.betahat.nonzero)
+  # as.vector(slrnew.betahat)
+  # round(predict.glm(slrnew$model, newdata = data.frame(X), type = "response"), 1)
 }
 

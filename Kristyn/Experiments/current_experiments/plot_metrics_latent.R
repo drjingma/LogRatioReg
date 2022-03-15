@@ -161,7 +161,7 @@ data.gg_main = data.gg %>%
       "PEtr", "PEte", 
       "EA1", "EA2", "EAInfty",
       "FP", "FN", "TPR", "precision", 
-      "Fscore", "time"
+      "Fscore", "logratios", "time"
     )
   )
 plt_main = ggplot(
@@ -181,7 +181,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220313",
+    "20220315",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
@@ -209,7 +209,7 @@ plt_main2 = ggplot(
 plt_main2
 ggsave(
   filename = paste0(
-    "20220313",
+    "20220315",
     file.end0,
     "_", "metrics_exclude", ".pdf"),
   plot = plt_main2,
@@ -257,7 +257,7 @@ plt_neg = ggplot(
 ggarrange(plt_pos, plt_neg, nrow = 2)
 ggsave(
   filename = paste0(
-    "20220313",
+    "20220315",
     file.end0, 
     "_", "metrics_posneg", ".pdf"),
   plot = last_plot(),

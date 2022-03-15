@@ -32,7 +32,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 2 # 1, 0.5, 0.25
+b1 = 1 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 
@@ -177,7 +177,7 @@ data.gg_main = data.gg %>%
       "AUCtr", "AUCte", 
       "EA1", "EA2", "EAInfty",
       "FP", "FN", "TPR", "precision", 
-      "Fscore", "time"
+      "Fscore", "logratios", "time"
     )
   )
 plt_main = ggplot(
@@ -197,7 +197,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220313",
+    "20220315",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
@@ -225,7 +225,7 @@ plt_main2 = ggplot(
 plt_main2
 ggsave(
   filename = paste0(
-    "20220313",
+    "20220315",
     file.end0,
     "_", "metrics_exclude", ".pdf"),
   plot = plt_main2,
@@ -273,7 +273,7 @@ plt_neg = ggplot(
 ggarrange(plt_pos, plt_neg, nrow = 2)
 ggsave(
   filename = paste0(
-    "20220313",
+    "20220315",
     file.end0, 
     "_", "metrics_posneg", ".pdf"),
   plot = last_plot(),

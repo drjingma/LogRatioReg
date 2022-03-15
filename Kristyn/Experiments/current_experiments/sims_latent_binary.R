@@ -78,7 +78,7 @@ res = foreach(
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 1 # 1, 2
+  b1 = 2 # 1, 2
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   

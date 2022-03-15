@@ -145,10 +145,12 @@ res = foreach(
   # prediction errors
   # get prediction error on training set
   classo.Yhat.train = predict(classo, X)
-  classo.AUC.train = roc(Y, classo.Yhat.train)$auc
+  classo.AUC.train = roc(
+    Y, classo.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   classo.Yhat.test = predict(classo, X.test)
-  classo.AUC.test = roc(Y, classo.Yhat.test)$auc
+  classo.AUC.test = roc(
+    Y, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   cl.metrics = getMetricsLLC(
     betahat = cl.betahat,
@@ -160,8 +162,8 @@ res = foreach(
 
   saveRDS(c(
     cl.metrics,
-    "betaSparsity" = bspars,
-     
+    "betasparsity" = bspars,
+     "logratios" = 0,
     "time" = cl.timing
   ),
   paste0(output_dir, "/metrics", "/classo_metrics", file.end))
@@ -195,11 +197,13 @@ res = foreach(
   # get prediction error on training set
   slrnew.Yhat.train = predict.glm(
     slrnew$model, newdata = data.frame(X), type = "response")
-  slrnew.AUC.train = roc(Y, slrnew.Yhat.train)$auc
+  slrnew.AUC.train = roc(
+    Y, slrnew.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   slrnew.Yhat.test = predict.glm(
     slrnew$model, newdata = data.frame(X.test), type = "response")
-  slrnew.AUC.test = roc(Y, slrnew.Yhat.test)$auc
+  slrnew.AUC.test = roc(
+    Y, slrnew.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   slrnew.metrics = getMetricsBalanceReg(
     thetahat = slrnew.thetahat, betahat = slrnew.betahat,
@@ -210,8 +214,8 @@ res = foreach(
 
   saveRDS(c(
     slrnew.metrics,
-    "betaSparsity" = bspars,
-
+    "betasparsity" = bspars,
+    "logratios" = sum(slrnew.thetahat != 0), 
     "time" = slrnew.timing
   ),
   paste0(output_dir, "/metrics", "/slr_approx_metrics", file.end))
@@ -245,11 +249,13 @@ res = foreach(
   # get prediction error on training set
   slrnew2.Yhat.train = predict.glm(
     slrnew2$model, newdata = data.frame(X), type = "response")
-  slrnew2.AUC.train = roc(Y, slrnew2.Yhat.train)$auc
+  slrnew2.AUC.train = roc(
+    Y, slrnew2.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   slrnew2.Yhat.test = predict.glm(
     slrnew2$model, newdata = data.frame(X.test), type = "response")
-  slrnew2.AUC.test = roc(Y.test, slrnew2.Yhat.test)$auc
+  slrnew2.AUC.test = roc(
+    Y.test, slrnew2.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   slrnew2.metrics = getMetricsBalanceReg(
     thetahat = slrnew2.thetahat, betahat = slrnew2.betahat,
@@ -260,8 +266,8 @@ res = foreach(
 
   saveRDS(c(
     slrnew2.metrics,
-    "betaSparsity" = bspars,
-
+    "betasparsity" = bspars,
+    "logratios" = sum(slrnew2.thetahat != 0), 
     "time" = slrnew2.timing
   ),
   paste0(output_dir, "/metrics", "/slr_metrics", file.end))
@@ -291,11 +297,13 @@ res = foreach(
   # get prediction error on training set
   dba.Yhat.train = as.vector(predict(
     dba$cv.glmnet, newx = balance.fromSBP(X, dba_SBP), s = "lambda.min"))
-  dba.AUC.train = roc(Y, dba.Yhat.train)$auc
+  dba.AUC.train = roc(
+    Y, dba.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   dba.Yhat.test = as.vector(predict(
     dba$cv.glmnet, newx = balance.fromSBP(X.test, dba_SBP), s = "lambda.min"))
-  dba.AUC.test = roc(Y.test, dba.Yhat.test)$auc
+  dba.AUC.test = roc(
+    Y.test, dba.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   dba.metrics = getMetricsBalanceReg(
     thetahat = dba.thetahat, betahat = dba.betahat,
@@ -315,8 +323,8 @@ res = foreach(
 
   saveRDS(c(
     dba.metrics,
-    "betaSparsity" = bspars,
-
+    "betasparsity" = bspars,
+    "logratios" = sum(dba.thetahat != 0), 
     "time" = dba.timing
   ),
   paste0(output_dir, "/metrics", "/dba_metrics", file.end))
@@ -361,17 +369,16 @@ res = foreach(
   # get prediction error on training set
   slbl.Yhat.train = predict.glm(
     slbl$glm, newdata = data.frame(X.slbl), type = "response")
-  # roc_obj = roc(Y, slbl.Yhat.train)
-  # plot(roc_obj)
-  # roc_obj$auc
-  slbl.AUC.train = roc(Y, slbl.Yhat.train)$auc
+  slbl.AUC.train = roc(
+    Y, slbl.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   X.slbl.test = X.test
   rownames(X.slbl.test) = paste("Sample", 1:nrow(X.slbl.test), sep = "_")
   colnames(X.slbl.test) = paste("V", 1:ncol(X.slbl.test), sep = "")
   slbl.Yhat.test = predict.glm(
     slbl$glm, newdata = data.frame(X.slbl.test), type = "response")
-  slbl.AUC.test = roc(Y.test, slbl.Yhat.test)$auc
+  slbl.AUC.test = roc(
+    Y.test, slbl.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   slbl.metrics = getMetricsBalanceReg(
     thetahat = slbl.thetahat, betahat = slbl.betahat,
@@ -381,8 +388,8 @@ res = foreach(
   
   saveRDS(c(
     slbl.metrics,
-    "betaSparsity" = bspars,
-
+    "betasparsity" = bspars,
+    "logratios" = sum(slbl.thetahat != 0), 
     "time" = slbl.timing
   ),
   paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
@@ -401,13 +408,12 @@ res = foreach(
   start.time = Sys.time()
   codacore0 = codacore(
     x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
-    objective = "binary classification") 
+    objective = "binary classification", cvParams = list("numFolds" = K))
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
   if(length(codacore0$ensemble) > 0){
-    
     codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
     codacore0_coeffs = rep(NA, length(codacore0$ensemble))
     for(col.idx in 1:ncol(codacore0_SBP)){
@@ -425,33 +431,43 @@ res = foreach(
     # prediction errors
     # get prediction error on training set
     codacore0.Yhat.train = predict(codacore0, X)
-    codacore0.AUC.train = roc(Y, codacore0.Yhat.train)$auc
+    codacore0.AUC.train = roc(
+      Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
     # get prediction error on test set
     codacore0.Yhat.test = predict(codacore0, X.test)
-    codacore0.AUC.test = roc(Y.test, codacore0.Yhat.test)$auc
-    # beta estimation accuracy, selection accuracy #
-    codacore0.metrics = getMetricsBalanceReg(
-      betahat = codacore0.betahat,
-      true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-      true.beta = beta.true, metrics = c("betaestimation", "selection"))
-    codacore0.metrics = c(
-      AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
+    codacore0.AUC.test = roc(
+      Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+    
   } else{
-    codacore0.metrics = c(
-      AUCtr = NA, AUCte = NA, 
-      EA1 = NA, EA2 = NA, EAInfty = NA, 
-      EA1Active = NA, EA2Active = NA, EAInftyActive = NA, 
-      EA1Inactive = NA, EA2Inactive = NA, EAInftyInactive = NA, 
-      FP = 0, FN = p, TPR = 0, precision = NA, Fscore = NA, 
-      "FP+" = 0, "FN+" = sum(SBP.true != 0), "TPR+" = 0, 
-      "FP-" = p - sum(SBP.true != 0), "FN-" = 0, "TPR-" = 0
-    )
+    print(paste0("sim ", i, " -- codacore has no log-ratios"))
+    codacore0_coeffs = c()
+    codacore0model = stats::glm(Y ~ 1, family = "binomial")
+    codacore0.betahat = rep(0, p)
+    
+    # compute metrics on the selected model #
+    # prediction errors
+    # get prediction error on training set
+    codacore0.Yhat.train = predict(codacore0model, data.frame(X))
+    codacore0.AUC.train = roc(
+      Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
+    # get prediction error on test set
+    codacore0.Yhat.test = predict(codacore0model, data.frame(X.test))
+    codacore0.AUC.test = roc(
+      Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+    
   }
+  # beta estimation accuracy, selection accuracy #
+  codacore0.metrics = getMetricsBalanceReg(
+    betahat = codacore0.betahat,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  codacore0.metrics = c(
+    AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
   
   saveRDS(c(
     codacore0.metrics,
-    "betaSparsity" = bspars,
-    
+    "betasparsity" = bspars,
+    "logratios" = length(codacore0_coeffs), 
     "time" = codacore0.timing
   ),
   paste0(output_dir, "/metrics", "/codacore_metrics", file.end))

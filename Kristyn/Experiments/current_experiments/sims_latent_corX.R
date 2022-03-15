@@ -158,8 +158,8 @@ res = foreach(
   
   saveRDS(c(
     cl.metrics,
-    "betaSparsity" = bspars,
-    
+    "betasparsity" = bspars,
+    "logratios" = 0,
     "time" = cl.timing
   ),
   paste0(output_dir, "/metrics", "/classo_metrics", file.end))
@@ -200,8 +200,8 @@ res = foreach(
   
   saveRDS(c(
     slrnew.metrics,
-    "betaSparsity" = bspars,
-    
+    "betasparsity" = bspars,
+    "logratios" = sum(slrnew.thetahat != 0), 
     "time" = slrnew.timing
   ),
   paste0(output_dir, "/metrics", "/slr_approx_metrics", file.end))
@@ -242,8 +242,8 @@ res = foreach(
   
   saveRDS(c(
     slrnew2.metrics,
-    "betaSparsity" = bspars,
-    
+    "betasparsity" = bspars,
+    "logratios" = sum(slrnew2.thetahat != 0), 
     "time" = slrnew2.timing
   ),
   paste0(output_dir, "/metrics", "/slr_metrics", file.end))
@@ -304,8 +304,8 @@ res = foreach(
   
   saveRDS(c(
     slbl.metrics,
-    "betaSparsity" = bspars,
-    
+    "betasparsity" = bspars,
+    "logratios" = sum(slbl.thetahat != 0), 
     "time" = slbl.timing
   ),
   paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
@@ -348,33 +348,39 @@ res = foreach(
     # prediction errors
     # get prediction error on training set
     codacore0.Yhat.train = predict(codacore0, X)
-    codacore0.AUC.train = roc(Y, codacore0.Yhat.train)$auc
+    codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
     # get prediction error on test set
     codacore0.Yhat.test = predict(codacore0, X.test)
-    codacore0.AUC.test = roc(Y.test, codacore0.Yhat.test)$auc
-    # beta estimation accuracy, selection accuracy #
-    codacore0.metrics = getMetricsBalanceReg(
-      betahat = codacore0.betahat,
-      true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-      true.beta = beta.true, metrics = c("betaestimation", "selection"))
-    codacore0.metrics = c(
-      AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
+    codacore0.PE.test = crossprod(Y - codacore0.Yhat.test) / n
+    
   } else{
-    codacore0.metrics = c(
-      AUCtr = NA, AUCte = NA, 
-      EA1 = NA, EA2 = NA, EAInfty = NA, 
-      EA1Active = NA, EA2Active = NA, EAInftyActive = NA, 
-      EA1Inactive = NA, EA2Inactive = NA, EAInftyInactive = NA, 
-      FP = 0, FN = p, TPR = 0, precision = NA, Fscore = NA, 
-      "FP+" = 0, "FN+" = sum(SBP.true != 0), "TPR+" = 0, 
-      "FP-" = p - sum(SBP.true != 0), "FN-" = 0, "TPR-" = 0
-    )
+    print(paste0("sim ", i, " -- codacore has no log-ratios"))
+    codacore0_coeffs = c()
+    codacore0model = stats::glm(Y ~ 1, family = "gaussian")
+    codacore0.betahat = rep(0, p)
+    
+    # compute metrics on the selected model #
+    # prediction errors
+    # get prediction error on training set
+    codacore0.Yhat.train = predict(codacore0model, data.frame(X))
+    codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
+    # get prediction error on test set
+    codacore0.Yhat.test = predict(codacore0model, data.frame(X.test))
+    codacore0.PE.test = crossprod(Y - codacore0.Yhat.test) / n
+    
   }
+  # beta estimation accuracy, selection accuracy #
+  codacore0.metrics = getMetricsBalanceReg(
+    betahat = codacore0.betahat,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  codacore0.metrics = c(
+    PEtr = codacore0.PE.train, PEte = codacore0.PE.test, codacore0.metrics)
   
   saveRDS(c(
     codacore0.metrics,
-    "betaSparsity" = bspars,
-    
+    "betasparsity" = bspars,
+    "logratios" = length(codacore0_coeffs), 
     "time" = codacore0.timing
   ),
   paste0(output_dir, "/metrics", "/codacore_metrics", file.end))

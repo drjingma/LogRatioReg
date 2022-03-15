@@ -24,40 +24,47 @@ slr <- function(x, y, rank1approx = FALSE, classification = FALSE){
     index <- which(spectral.clustering(rhoMat) == 1)
   }
   
-  ## Perform spectral clustering on each subset of variables using the original correlation matrix
-  subset1 <- spectral.clustering(rhoMat[index, index])
-  subset2 <- spectral.clustering(rhoMat[-index, -index]) 
-  
-  # Since we don't know which subset contains the active variables, 
-  ## we first fit a linear model with balances obtained from both subsets. 
-  sbp.est <- matrix(0, ncol = 2, nrow = p)
-  rownames(sbp.est) <- colnames(x)
-  sbp.est[match(names(subset1),rownames(sbp.est)), 1] <- subset1
-  sbp.est[match(names(subset2),rownames(sbp.est)), 2] <- subset2
-  est.balance <- balance::balance.fromSBP(x = x, y = sbp.est)
-  cors = stats::cor(est.balance, y)
-  
-  # The correct subset should have larger coefficient. 
-  ## We refit the linear model on the balance from the correct subset. 
   out <- list()
-  out$cors = cors
   out$kernel <- rhoMat
   
-  if ( abs(cors[1, ]) > abs(cors[2, ]) ){
-    # pick subset1
-    out$index <- subset1
-    if(!classification){
-      refit <- lm(y~est.balance[, 1])
-    } else{
-      refit = stats::glm(y~est.balance[, 1], family = binomial(link = "logit"))
-    }
-  } else {
-    # pick subset2
-    out$index <- subset2
-    if(!classification){
-      refit <- lm(y~est.balance[, 2])
-    } else{
-      refit = stats::glm(y~est.balance[, 2], family = binomial(link = "logit"))
+  if(length(index) == 1 | length(index) == p - 1){ # no log-ratios were found
+    warning("slr(): Only one covariate was subsetted. No log-ratios can be made.")
+    out$index = NA
+    refit <- lm(y~1)
+  } else{
+    ## Perform spectral clustering on each subset of variables using the original correlation matrix
+    subset1 <- spectral.clustering(rhoMat[index, index])
+    subset2 <- spectral.clustering(rhoMat[-index, -index]) 
+    
+    # Since we don't know which subset contains the active variables, 
+    ## we first fit a linear model with balances obtained from both subsets. 
+    sbp.est <- matrix(0, ncol = 2, nrow = p)
+    rownames(sbp.est) <- colnames(x)
+    sbp.est[match(names(subset1),rownames(sbp.est)), 1] <- subset1
+    sbp.est[match(names(subset2),rownames(sbp.est)), 2] <- subset2
+    est.balance <- balance::balance.fromSBP(x = x, y = sbp.est)
+    cors = stats::cor(est.balance, y)
+    
+    # The correct subset should have larger coefficient. 
+    ## We refit the linear model on the balance from the correct subset. 
+    out$cors = cors
+    
+    if ( abs(cors[1, ]) > abs(cors[2, ]) ){
+      # pick subset1
+      out$index <- subset1
+      if(!classification){
+        refit <- lm(y~est.balance[, 1])
+      } else{
+        refit = stats::glm(y~est.balance[, 1], family = binomial(link = "logit"))
+      }
+    } else {
+      # pick subset2
+      out$index <- subset2
+      if(!classification){
+        refit <- lm(y~est.balance[, 2])
+      } else{
+        refit = stats::glm(y~est.balance[, 2], family = binomial(link = "logit"))
+      }
     }
   }
   

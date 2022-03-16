@@ -1,5 +1,7 @@
-# original, with rank1approx option added and using balances correlations
-#   instead of effect sizes to choose the active subset
+# slr() function with the following changes:
+#   1. rank1approx option added
+#   2. using balances correlations instead of effect sizes to choose active subset
+#   3. spectral.clustering2() instead of spectral.clustering()
 slr <- function(x, y, rank1approx = FALSE, classification = FALSE){
   
   p <- ncol(x)
@@ -19,9 +21,9 @@ slr <- function(x, y, rank1approx = FALSE, classification = FALSE){
     rhoMat.svd <- svd(rhoMat)
     rhoMat_approx_1 <- tcrossprod(
       rhoMat.svd$u[, 1], rhoMat.svd$v[, 1]) * rhoMat.svd$d[1]
-    index <- which(spectral.clustering(rhoMat_approx_1) == 1)
+    index <- which(spectral.clustering2(rhoMat_approx_1) == 1)
   } else{
-    index <- which(spectral.clustering(rhoMat) == 1)
+    index <- which(spectral.clustering2(rhoMat) == 1)
   }
   
   out <- list()
@@ -33,8 +35,8 @@ slr <- function(x, y, rank1approx = FALSE, classification = FALSE){
     refit <- lm(y~1)
   } else{
     ## Perform spectral clustering on each subset of variables using the original correlation matrix
-    subset1 <- spectral.clustering(rhoMat[index, index])
-    subset2 <- spectral.clustering(rhoMat[-index, -index]) 
+    subset1 <- spectral.clustering2(rhoMat[index, index])
+    subset2 <- spectral.clustering2(rhoMat[-index, -index]) 
     
     # Since we don't know which subset contains the active variables, 
     ## we first fit a linear model with balances obtained from both subsets. 
@@ -70,6 +72,28 @@ slr <- function(x, y, rank1approx = FALSE, classification = FALSE){
   
   out$model <- refit
   out
+}
+
+# spectral.clustering() function, with automatic splitting of two things
+spectral.clustering2 <- function(W, n_eig = 2) {
+  L = graph.laplacian(W)          # 2. compute graph laplacian
+  ei = eigen(L, symmetric = TRUE) # 3. Compute the eigenvectors and values of L
+  # we will use k-means to cluster the data
+  # using the leading eigenvalues in absolute values
+  ei$vectors <- ei$vectors[,base::order(abs(ei$values),decreasing=TRUE)]
+  if(nrow(W) == 2){
+    obj = list(cluster= c(1, 2))
+  } else{
+    obj <- kmeans(ei$vectors[, 2:n_eig, drop = FALSE], centers = n_eig, nstart = 100)
+  }
+  if (n_eig==2){
+    cl <- 2*(obj$cluster - 1) - 1 
+  } else {
+    cl <- obj$cluster
+  }
+  names(cl) <- rownames(W)
+  # return the cluster membership
+  return(cl) 
 }
 
 # my version

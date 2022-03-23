@@ -196,12 +196,12 @@ res = foreach(
   # prediction errors
   # get prediction error on training set
   slrnew.Yhat.train = predict.glm(
-    slrnew$model, newdata = data.frame(X), type = "response")
+    slrnew$model, newdata = data.frame(balance::balance.fromSBP(x = X, y = slrnew$sbp)), type = "response")
   slrnew.AUC.train = roc(
     Y, slrnew.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   slrnew.Yhat.test = predict.glm(
-    slrnew$model, newdata = data.frame(X.test), type = "response")
+    slrnew$model, newdata = data.frame(balance::balance.fromSBP(x = X.test, y = slrnew$sbp)), type = "response")
   slrnew.AUC.test = roc(
     Y, slrnew.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
@@ -248,12 +248,16 @@ res = foreach(
   # prediction errors
   # get prediction error on training set
   slrnew2.Yhat.train = predict.glm(
-    slrnew2$model, newdata = data.frame(X), type = "response")
+    slrnew2$model, 
+    newdata = data.frame(balance::balance.fromSBP(x = X, y = slrnew2$sbp)), 
+    type = "response")
   slrnew2.AUC.train = roc(
     Y, slrnew2.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   slrnew2.Yhat.test = predict.glm(
-    slrnew2$model, newdata = data.frame(X.test), type = "response")
+    slrnew2$model, 
+    newdata = data.frame(balance::balance.fromSBP(x = X.test, y = slrnew2$sbp)), 
+    type = "response")
   slrnew2.AUC.test = roc(
     Y.test, slrnew2.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
@@ -287,21 +291,29 @@ res = foreach(
   dba.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
-  dba.lam.min.idx = which.min(dba$cvm)
-  dba.a0 = dba$theta0[dba.lam.min.idx]
-  dba.thetahat = dba$theta[, dba.lam.min.idx]
+  # dba.lam.min.idx = which.min(dba$cvm)
+  oneSErule = min(dba$cvm) + dba$cvsd[which.min(dba$cvm)] * 1
+  dba.lam.idx = which(dba$cvm <= oneSErule)[1]
+  dba.a0 = dba$theta0[dba.lam.idx]
+  dba.thetahat = dba$theta[, dba.lam.idx]
   dba.betahat = getBetaFromTheta(dba.thetahat, sbp = dba$sbp)
+  
+  # # check that it matches glmnet answer
+  # dba$lambda[dba.lam.idx]
+  # dba$cv.glmnet$lambda.1se
+  # c(dba.a0, dba.thetahat)
+  # coef(dba$cv.glmnet, s = "lambda.1se")
 
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
   dba.Yhat.train = as.vector(predict(
-    dba$cv.glmnet, newx = balance.fromSBP(X, dba_SBP), s = "lambda.min"))
+    dba$cv.glmnet, newx = balance::balance.fromSBP(X, dba_SBP), s = "lambda.min"))
   dba.AUC.train = roc(
     Y, dba.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   dba.Yhat.test = as.vector(predict(
-    dba$cv.glmnet, newx = balance.fromSBP(X.test, dba_SBP), s = "lambda.min"))
+    dba$cv.glmnet, newx = balance::balance.fromSBP(X.test, dba_SBP), s = "lambda.min"))
   dba.AUC.test = roc(
     Y.test, dba.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
@@ -408,7 +420,7 @@ res = foreach(
   start.time = Sys.time()
   codacore0 = codacore(
     x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
-    objective = "binary classification", cvParams = list("numFolds" = K))
+    objective = "binary classification", cvParams = list(numFolds = K))
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")

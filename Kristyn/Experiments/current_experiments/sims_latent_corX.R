@@ -142,9 +142,11 @@ res = foreach(
   cl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  cl.lam.min.idx = which.min(classo$cvm)
-  cl.a0 = classo$int[cl.lam.min.idx]
-  cl.betahat = classo$bet[, cl.lam.min.idx]
+  # cl.lam.idx = which.min(classo$cvm)
+  oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
+  cl.lam.idx = which(classo$cvm <= oneSErule)[1]
+  cl.a0 = classo$int[cl.lam.idx]
+  cl.betahat = classo$bet[, cl.lam.idx]
   
   # compute metrics on the selected model #
   cl.metrics = getMetricsLLC(
@@ -324,7 +326,7 @@ res = foreach(
   start.time = Sys.time()
   codacore0 = codacore(
     x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
-    objective = "regression") 
+    objective = "regression", cvParams = list(numFolds = K)) 
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")

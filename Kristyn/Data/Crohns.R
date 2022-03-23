@@ -1,11 +1,31 @@
 # Date: 3/13/2022
 rm(list=ls())
 
+library(mvtnorm)
+
+library(Matrix)
+library(glmnet)
+
+library(balance)
+library(propr)
+
+library(pROC)
+
+source("RCode/func_libs.R")
+source("Kristyn/Functions/supervisedlogratios.R")
+source("Kristyn/Functions/supervisedlogratioseta.R")
+source("Kristyn/Functions/HSClust.R")
+source("Kristyn/Functions/slrnew.R")
+source("Kristyn/Functions/codalasso.R")
+
+# helper functions
+source("Kristyn/Functions/metrics.R")
+source("Kristyn/Functions/helper_functions.R")
+
 library(selbal)
 library(zCompositions)
 library(gplots)
-
-source("Kristyn/Functions/supervisedlogratios.R")
+library(pheatmap)
 
 # Crohn: a data set in selbal package
 #   n = 975 samples, 
@@ -30,9 +50,16 @@ fields::image.plot(slrcor_0.5)
 
 # heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
 heatmap.2(
-  slrcor_0.5, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
-  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
+  slrcor_0.5, 
+  # col = rainbow(256), 
+  scale = "none", symm = TRUE, trace = "none", 
+  # key = FALSE, 
+  cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
   margins = c(0.25, 0.25))
+
+pheatmap(slrcor_0.5)
+
+slrfit = slr(x = X_0.5, y = y, classification = TRUE, rank1approx = TRUE)
 
 ################################################################################
 # Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])

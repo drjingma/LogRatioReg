@@ -17,7 +17,6 @@ library(propr)
 
 source("RCode/func_libs.R")
 source("Kristyn/Functions/supervisedlogratios.R")
-source("Kristyn/Functions/supervisedlogratioseta.R")
 source("Kristyn/Functions/HSClust.R")
 source("Kristyn/Functions/slrnew.R")
 
@@ -42,8 +41,8 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.01
-sigma_eps2 = 0.01
+sigma_eps1 = 0.1
+sigma_eps2 = 0.1
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
@@ -56,8 +55,8 @@ a0 = 0 # 0
 
 ##############################################################################
 # generate data
-# seed = 5
-# set.seed(seed)
+seed = 5
+set.seed(seed)
 # get latent variable
 U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
 # simulate y from latent variable
@@ -87,37 +86,52 @@ is0.beta = !non0.beta
 c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
 beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
   as.vector(ilrtrans.true$ilr.trans)
+
 ##############################################################################
-# Dr. Ma's new slr
+# plain slr
 ##############################################################################
 
-# apply supervised log-ratios, using CV to select threshold
-slrnew = slr(x = X, y = Y, rank1approx = FALSE)
-slrnew_activevars = names(slrnew$index)
-slrnew_SBP = matrix(slrnew$index)
-rownames(slrnew_SBP) = slrnew_activevars
+# using slr
+slrnew1 = slr(x = X, y = Y, num.clusters = 2, approx = FALSE)
+# slrnew1$sbp
 
-slrnew.coefs = coefficients(slrnew$model)
-slrnew.a0 = slrnew.coefs[1]
-slrnew.thetahat = slrnew.coefs[-1]
+# using hslr
+slrnew2 = hslr(x = X, y = Y, max.levels = 1, approx = FALSE)
+slrnew2fit = slrnew2$fits[[1]]
+# slrnew2fit$sbp
 
-slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
-slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-rownames(slrnew.betahat) = colnames(X)
-slrnew.betahat[slrnew_activevars, ] = as.numeric(slrnew.betahat.nonzero)
+##############################################################################
+# slr with max.clusters = 5, model selection with Rsq
+##############################################################################
+# note: chose 5 = floor(sqrt(p))
+slrmult0 = slrmult(x = X, y = Y, max.clusters = 5, approx = FALSE)
+which_fit_slrmult0 = which.max(slrmult0$max.Rsqs)
+slrmult0fit = slrmult0$fits[[which_fit_slrmult0]]
+# slrmult0fit$sbp
 
-beta.true
-as.numeric(slrnew.betahat)
-# slrnew$cors
+##############################################################################
+# slr with max.clusters = 5, model selection with cv
+##############################################################################
+cvslr0 = cv.slr(x = X, y = Y, max.clusters = 5, approx = FALSE, nfolds = K)
+cvslr0fit = cvslr0$models[[cvslr0$nclusters_1se_idx]]
+# cvslr0fit$sbp
 
-# ##############################################################################
-# # compositional lasso (a linear log contrast method)
-# ##############################################################################
-# classo = cv.func(
-#   method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
-#   nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
-# 
-# cl.lam.min.idx = which.min(classo$cvm)
-# cl.a0 = classo$int[cl.lam.min.idx]
-# cl.betahat = classo$bet[, cl.lam.min.idx]
-# round(cl.betahat, 5)
+
+##############################################################################
+# hslr with max.levels = 5, model selection with Rsq
+##############################################################################
+hslr0 = hslr(x = X, y = Y, max.levels = 5, approx = FALSE)
+# which_fit = which(slrnew5$Rsqs == max(slrnew5$Rsqs, na.rm = TRUE), arr.ind = TRUE)
+which_fit_hslr0 = which.max(hslr0$max.Rsqs)
+hslr0fit = hslr0$fits[[which_fit_hslr0]]
+
+##############################################################################
+# hslr with max.levels = 5, model selection with cv
+##############################################################################
+
+
+
+
+
+
+

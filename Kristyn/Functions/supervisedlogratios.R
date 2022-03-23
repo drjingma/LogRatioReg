@@ -401,6 +401,7 @@ cvBMLasso = function(
     cv.glmnet = cv_exact,
     glmnet = cv_exact$glmnet.fit,
     cvm = cv_exact$cvm,
+    cvsd = cv_exact$cvsd,
     sbp = sbp
   ))
 }

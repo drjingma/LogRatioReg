@@ -1,99 +1,189 @@
-# Date: 3/13/2022
+# Purpose: compare slr to selbal on data sets
+# Date: 3/24/2022
 rm(list=ls())
 
-library(selbal)
-library(zCompositions)
-library(gplots)
+################################################################################
+# libraries and settings
 
-source("Kristyn/Functions/supervisedlogratios.R")
+output_dir = "Kristyn/Data/outputs"
+
+library(mvtnorm)
+
+library(Matrix)
+library(glmnet)
+
+library(balance)
+library(propr)
+library(selbal)
+
+library(pROC)
+
+library(zCompositions)
+library(pheatmap)
+
+source("RCode/func_libs.R")
+source("Kristyn/Functions/slr.R")
+source("Kristyn/Functions/codalasso.R")
+
+# helper functions
+source("Kristyn/Functions/util.R")
+
+# tuning parameter settings
+K = 10
+
+
 
 ################################################################################
-# HIV: a data set in selbal package
+# HIV: one of the HIV data sets in selbal package
 #   n = 155 samples, 
 #   p = 60 taxa (counts for microbial taxa at genus level), 
 #   1 covariate (MSM), 
 #   1 response (HIV_Status - binary)
+W = selbal::HIV[, 1:60]
+X = sweep(W, 1, rowSums(W), FUN='/')
+Y = selbal::HIV[, 62]
+Y2 = ifelse(Y == "Pos", 1, 0)
 ################################################################################
-W1 = selbal::HIV[, 1:60]
-X1 = sweep(W1, 1, rowSums(W1), FUN='/')
-y1 = ifelse(as.character(selbal::HIV[, 62]) == "Pos", 1, 0)
-
-################################################################################
-# Strategy 1: Replace 0's with 0.5 (used in Lin et al. 2014 [classo])
-W1_0.5 = W1
-W1_0.5[W1_0.5 == 0] = 0.5
-# any(as.vector(W1_0.5) == 0)
-X1_0.5 = sweep(W1_0.5, 1, rowSums(W1_0.5), FUN='/')
-
-slrcor1_0.5 = getSlrMatrix(y = y1, X = X1_0.5, type = "similarity")
-fields::image.plot(slrcor1_0.5)
-
-# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
-heatmap.2(
-  slrcor1_0.5, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
-  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
-  margins = c(0.25, 0.25))
-
-################################################################################
-# Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
-X1_gbm = cmultRepl2(W1, zero.rep = "bayes")
-
-slrcor1_gbm = getSlrMatrix(y = y1, X = X1_gbm, type = "similarity")
-fields::image.plot(slrcor1_gbm)
-
-# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
-heatmap.2(
-  slrcor1_gbm, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
-  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
-  margins = c(0.25, 0.25))
+# need to handle 0's
 
 
 
-
-################################################################################
-################################################################################
-################################################################################
-
-
-
-
-################################################################################
-# sCD14: a data set in selbal package
-#   n = 151 samples (a subset from HIV data set), 
-#   p = 60 taxa (counts for microbial taxa at genus level), 
-#   1 response (sCD14 - continuous)
-################################################################################
-W2 = selbal::sCD14[, 1:60]
-X2 = sweep(W2, 1, rowSums(W2), FUN='/')
-y2 = selbal::sCD14[, 61]
 
 ################################################################################
 # Strategy 1: Replace 0's with 0.5 (used in Lin et al. 2014 [classo])
-W2_0.5 = W2
-W2_0.5[W2_0.5 == 0] = 0.5
-# any(as.vector(W2_0.5) == 0)
-X2_0.5 = sweep(W2_0.5, 1, rowSums(W2_0.5), FUN='/')
+W_0.5 = W
+W_0.5[W_0.5 == 0] = 0.5
+X_0.5 = sweep(W_0.5, 1, rowSums(W_0.5), FUN='/')
 
-slrcor2_0.5 = getSlrMatrix(y = y2, X = X2_0.5, type = "similarity")
-fields::image.plot(slrcor2_0.5)
+slrcor_0.5 = slrmatrix(x = X_0.5, y = Y2)
+pheatmap(slrcor_0.5)
 
-# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
-heatmap.2(
-  slrcor2_0.5, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
-  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
-  margins = c(0.25, 0.25))
+##### slr with approximation step #####
+# slr0approx_0.5 = slr(
+#   x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE)
+# saveRDS(
+#   slr0approx_0.5,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_slr_approx",
+#     "_0.5",
+#     ".rds"))
+slr0approx_0.5 = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slr_approx",
+    "_0.5",
+    ".rds"))
+slr0approx_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0approx_0.5$model), sbp = slr0approx_0.5$sbp)
+rownames(slr0approx_0.5_coefs$llc.coefs)[slr0approx_0.5_coefs$llc.coefs != 0]
+
+##### slr (no approximation step) #####
+# slr0_0.5 = slr(
+#   x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE)
+# saveRDS(
+#   slr0_0.5,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_slr",
+#     "_0.5",
+#     ".rds"))
+slr0_0.5 = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slr",
+    "_0.5",
+    ".rds"))
+slr0_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0_0.5$model), sbp = slr0_0.5$sbp)
+rownames(slr0_0.5_coefs$llc.coefs)[slr0_0.5_coefs$llc.coefs != 0]
+
+##### selbal #####
+# slbl_0.5 = selbal.cv(x = X_0.5, y = Y, n.fold = K)
+# saveRDS(
+#   slbl_0.5,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_selbal",
+#     "_0.5",
+#     ".rds"))
+slbl_0.5 = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_selbal",
+    "_0.5",
+    ".rds"))
+slbl_0.5_coefs = getCoefsSelbal(
+  X = X_0.5, y = Y, selbal.fit = slbl_0.5, classification = TRUE, check = TRUE)
+rownames(slbl_0.5_coefs$llc.coefs)[slbl_0.5_coefs$llc.coefs != 0]
+
+
 
 ################################################################################
 # Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
-X2_gbm = cmultRepl2(W2, zero.rep = "bayes")
+X_gbm = cmultRepl2(W, zero.rep = "bayes")
 
-slrcor2_gbm = getSlrMatrix(y = y2, X = X2_gbm, type = "similarity")
-fields::image.plot(slrcor2_gbm)
+slrcor_gbm = slrmatrix(x = X_gbm, y = Y2)
+pheatmap(slrcor_gbm)
 
-# heatmap(slrcor_0.5, col = rainbow(256),scale = "none", symm = TRUE)
-heatmap.2(
-  slrcor2_gbm, col = rainbow(256), scale = "none", symm = TRUE, trace = "none", 
-  key = FALSE, cexRow = 0.5, cexCol = 0.5, offsetRow = -0.25, offsetCol = -0.25, 
-  margins = c(0.25, 0.25))
+##### slr with approximation step #####
+# slr0approx_gbm = slr(
+#   x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE)
+# saveRDS(
+#   slr0approx_gbm,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_slr_approx",
+#     "_gbm",
+#     ".rds"))
+slr0approx_gbm = readRDS(
+  paste0(
+    output_dir, "/HIV", 
+    "_slr_approx", 
+    "_gbm", 
+    ".rds"))
+slr0approx_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0approx_gbm$model), sbp = slr0approx_gbm$sbp)
+rownames(slr0approx_gbm_coefs$llc.coefs)[slr0approx_gbm_coefs$llc.coefs != 0]
+
+##### slr (no approximation step) #####
+# slr0_gbm = slr(
+#   x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE)
+# saveRDS(
+#   slr0_gbm,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_slr",
+#     "_gbm",
+#     ".rds"))
+slr0_gbm = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slr",
+    "_gbm",
+    ".rds"))
+slr0_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0_gbm$model), sbp = slr0_gbm$sbp)
+rownames(slr0_gbm_coefs$llc.coefs)[slr0_gbm_coefs$llc.coefs != 0]
+
+##### selbal #####
+# slbl_gbm = selbal.cv(x = X_gbm, y = Y, n.fold = K)
+# saveRDS(
+#   slbl_gbm,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_selbal",
+#     "_gbm",
+#     ".rds"))
+slbl_gbm = readRDS(
+  paste0(
+    output_dir, "/HIV", 
+    "_selbal", 
+    "_gbm", 
+    ".rds"))
+slbl_gbm_coefs = getCoefsSelbal(
+  X = X_gbm, y = Y, selbal.fit = slbl_gbm, classification = TRUE, check = TRUE)
+rownames(slbl_gbm_coefs$llc.coefs)[slbl_gbm_coefs$llc.coefs != 0]
+
 
 

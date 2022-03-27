@@ -1,4 +1,322 @@
-# metrics
+
+
+sigmoid = function(x) 1 / (1 + exp(-x))
+
+alrinv <- function(y) {
+  x <- cbind(exp(y), 1)
+  x / rowSums(x)
+}
+
+
+
+##### extract coefficients #####################################################
+
+getCoefsBM = function(coefs, sbp){
+  if(names(coefs)[1] == "(Intercept)"){
+    a0 = coefs[1]
+    bm.coefs = coefs[-1]
+  } else{
+    a0 = NA
+    bm.coefs = coefs
+  }
+  llc.coefs = getBetaFromTheta(bm.coefs, sbp)
+  return(list(
+    a0 = a0, 
+    bm.coefs = bm.coefs,
+    llc.coefs = llc.coefs
+  ))
+}
+
+getCoefsSelbal = function(
+  X, y, selbal.fit, classification = FALSE, check = TRUE){
+  p = ncol(X)
+  
+  # U (transformation) matrix
+  ilrU = rep(0, p)
+  names(ilrU) = colnames(X)
+  pba.pos = unlist(subset(
+    selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
+  num.pos = length(pba.pos)
+  pba.neg = unlist(subset(
+    selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
+  num.neg = length(pba.neg)
+  ilrU[pba.pos] = 1 / num.pos
+  ilrU[pba.neg] = -1 / num.neg
+  norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
+  ilrU = norm.const * ilrU
+  if(check){
+    if(!classification){
+      supposed.fit = lm(y ~ log(as.matrix(X)) %*% as.matrix(ilrU))
+    } else{
+      supposed.fit = glm(
+        y ~ log(as.matrix(X)) %*% matrix(ilrU), family = binomial(link = "logit"))
+    }
+    if(!isTRUE(all.equal(as.numeric(coefficients(selbal.fit$glm)), 
+                  as.numeric(coefficients(supposed.fit))))){
+      warning("getCoefsSelbal(): coefficients of given model and supposed model don't match!")
+    }
+  }
+  a0 = coefficients(selbal.fit$glm)[1]
+  bm.coefs = coefficients(selbal.fit$glm)[-1]
+  llc.coefs = ilrU %*% as.matrix(bm.coefs)
+  rownames(llc.coefs) = colnames(X)
+  return(list(
+    a0 = a0, 
+    bm.coefs = bm.coefs,
+    llc.coefs = llc.coefs
+  ))
+}
+
+
+##### transform coefficients for linear log contrasts model ####################
+
+getBetaFromTheta = function(
+  theta, sbp = NULL
+){
+  # get U
+  U = getIlrTrans(sbp = sbp)
+  # calculate beta
+  beta = U %*% theta
+  return(beta)
+}
+
+getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
+  if(!is.matrix(SBP_codacore)) SBP_codacore = matrix(SBP_codacore)
+  if(ncol(SBP_codacore) != length(coeffs_codacore)){
+    stop("getBetaFromCodacore: SBP and coefficients don't match")
+  }
+  kplus = apply(SBP_codacore, 2, function(col) sum(col == 1))
+  kminus = apply(SBP_codacore, 2, function(col) sum(col == -1))
+  reciprocals = matrix(
+    0, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+  for(i in 1:ncol(SBP_codacore)){
+    reciprocals[SBP_codacore[, i] == 1, i] = 1 / kplus[i]
+    reciprocals[SBP_codacore[, i] == -1, i] = -1 / kminus[i]
+  }
+  ReciprocalstimesCoeffs = matrix(
+    NA, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+  for(i in 1:ncol(ReciprocalstimesCoeffs)){
+    ReciprocalstimesCoeffs[, i] = reciprocals[, i] * coeffs_codacore[i]
+  }
+  beta = rowSums(ReciprocalstimesCoeffs)
+  return(beta)
+}
+
+
+
+##### other selbal helper functions ############################################
+
+getSelbalData = function(X = X, y = y, classification = TRUE, levels, labels){
+  if(is.null(rownames(X)) && is.null(colnames(X))){
+    X.slbl = X
+    rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
+    colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+  }
+  if(classificatin && !is.factor(y)){
+    if(is.null(levels) | is.null(labels)){
+      stop("getSelbalData(): classification = TRUE, but levels and labels were not provided. Will let factor() choose them.")
+    }
+    y.slbl = factor(y, levels = levels, labels = labels)
+  } else{
+    y.slbl = y
+  }
+  return(list(X = X.slbl, y = y.slbl))
+}
+
+
+
+
+##### balance regression model tools ###########################################
+
+# Compute the transformation matrix U
+#   using a hierarchical tree or SBP matrix
+# old name: getU
+getIlrTrans = function(sbp = NULL, detailed = FALSE){
+  # normalize SBP matrix to get U
+  pos.vec = colSums(sbp == 1)
+  neg.vec = colSums(sbp == -1)
+  U = sbp
+  for(i in 1:ncol(U)){
+    # divide 1s by r
+    U[(U[, i] == 1), i] = 1 / pos.vec[i]
+    # divide -1s by s
+    U[(U[, i] == -1), i] = -1 / neg.vec[i]
+  }
+  # multiply by sqrt(rs / (r + s))
+  norm.const = sqrt((pos.vec * neg.vec) / (pos.vec + neg.vec))
+  U = sweep(U, MARGIN = 2, STATS = norm.const, FUN = "*")
+  # U2 = t(t(U) * norm.const) # equal to U
+  if(detailed){
+    return(
+      list(
+        ilr.trans = U, 
+        const = norm.const, 
+        pos.vec = pos.vec, 
+        neg.vec = neg.vec
+      )
+    )
+  } else{
+    return(U)
+  }
+}
+
+getIlrX = function(X, sbp = NULL, U = NULL){
+  p = dim(X)[2]
+  
+  # checks
+  if(!("matrix" %in% class(X))){
+    if("numeric" %in% class(X)){
+      X = matrix(X, ncol = length(X))
+    } else{
+      warning("getIlrX: X is neither of class matrix nor numeric!!")
+    }
+  }
+  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+  
+  # get U
+  if(is.null(U)){
+    U = getIlrTrans(sbp = sbp)
+  }
+  
+  # calculate balances from U
+  ilr_balances = log(X) %*% U
+  
+  return(ilr_balances)
+}
+
+# Fit any balance regression model to compositional data X and response y
+#   using the balances' associated binary tree, SBP matrix, or 
+#   transformation matrix U
+# old name: fitILR
+fitBMLasso = function(
+  y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
+  intercept = TRUE, standardize = TRUE, classification = FALSE
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  # checks
+  if(length(y) != n){
+    stop("fitBMLasso(): dimensions of y and X don't match!!")
+  }
+  if(is.null(colnames(X))){
+    colnames(X) = paste("V", 1:p, sep = "")
+  }
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
+  
+  # compute balances
+  ilrX = getIlrX(X = X, sbp = sbp)
+  
+  # run glmnet
+  if(!classification){
+    glmnet.fit = glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
+      intercept = intercept, standardize = standardize)
+  } else{
+    glmnet.fit = glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
+      intercept = intercept, standardize = standardize, 
+      family = binomial(link = "logit"))
+  }
+  
+  # check lambda length
+  if(nlam != length(glmnet.fit$lambda)){
+    lambda <- log(glmnet.fit$lambda)
+    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    if(!classification){
+      glmnet.fit = glmnet(
+        x = ilrX, y = y, lambda = lambda_new, 
+        intercept = intercept, standardize = standardize)
+    } else{
+      glmnet.fit = glmnet(
+        x = ilrX, y = y, lambda = lambda_new, 
+        intercept = intercept, standardize = standardize, 
+        family = binomial(link = "logit"))
+    }
+  }
+  return(list(
+    theta0 = glmnet.fit$a0, 
+    theta = glmnet.fit$beta, 
+    lambda = glmnet.fit$lambda,
+    glmnet = glmnet.fit, 
+    sbp = sbp
+  ))
+}
+
+# old name: cvILR
+cvBMLasso = function(
+  y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
+  nfolds = 10, foldid = NULL, intercept = TRUE, standardize = TRUE, 
+  keep = FALSE, classification = FALSE
+){
+  n = dim(X)[1]
+  p = dim(X)[2]
+  
+  # checks
+  if(length(y) != n){
+    stop("cvBMLasso(): dimensions of y and X don't match!!")
+  }
+  if(is.null(colnames(X))){
+    colnames(X) = paste("V", 1:p, sep = "")
+  }
+  if(!is.null(lambda)){ # lambda is given
+    nlam = length(lambda)
+  }
+  
+  # compute balances
+  ilrX = getIlrX(X = X, sbp = sbp)
+  
+  # run cv.glmnet
+  if(!classification){
+    cv_exact = cv.glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+      keep = keep, standardize = standardize)
+  } else{
+    cv_exact = cv.glmnet(
+      x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+      keep = keep, standardize = standardize, family = binomial(link = "logit"))
+  }
+  
+  # check lambda length
+  if(nlam != length(cv_exact$lambda)){
+    lambda <- log(cv_exact$lambda)
+    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+    if(!classification){
+      cv_exact = cv.glmnet(
+        x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
+        foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+        keep = keep, standardize = standardize)
+    } else{
+      cv_exact = cv.glmnet(
+        x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
+        foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+        keep = keep, standardize = standardize, 
+        family = binomial(link = "logit"))
+    }
+  }
+  return(list(
+    theta0 = cv_exact$glmnet.fit$a0,
+    theta = cv_exact$glmnet.fit$beta,
+    lambda = cv_exact$lambda,
+    cv.glmnet = cv_exact,
+    glmnet = cv_exact$glmnet.fit,
+    cvm = cv_exact$cvm,
+    cvsd = cv_exact$cvsd,
+    sbp = sbp
+  ))
+}
+
+
+
+
+
+
+##### metrics ##################################################################
+
 getMSEyhat = function(y, n, betahat0, betahat, predMat, classification = FALSE){
   if(!classification){
     yhat = betahat0 + predMat %*% betahat
@@ -44,8 +362,8 @@ getSelectionAccuracy = function(is0.true.beta, non0.true.beta, non0.betahat){
 getMetricsLLC = function(
   y.train = NULL, y.test = NULL, logX.train = NULL, logX.test = NULL, 
   n.train = NULL, n.test = NULL,
-  betahat0 = NULL, betahat, true.sbp = NULL,
-  true.beta = NULL, is0.true.beta, non0.true.beta,
+  betahat0 = NULL, betahat, 
+  true.sbp = NULL, true.beta = NULL, is0.true.beta, non0.true.beta,
   metrics = c("prediction", "betaestimation", "selection"), 
   classification = FALSE
 ){
@@ -131,7 +449,7 @@ getMetricsLLC = function(
   }
   return(unlist(result))
 }
-getMetricsBalanceReg = function(
+getMetricsBM = function(
   y.train = NULL, y.test = NULL, ilrX.train = NULL, ilrX.test = NULL, 
   n.train = NULL, n.test = NULL,
   thetahat0 = NULL, thetahat, betahat, true.sbp = NULL,

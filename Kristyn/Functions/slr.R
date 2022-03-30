@@ -2,7 +2,7 @@
 #   1. rank1approx option added
 #   2. using balances correlations instead of effect sizes to choose active subset
 #   3. spectral.clustering2() instead of spectral.clustering()
-slr_old <- function(
+slrT2 <- function(
   x, y, rank1approx = FALSE, classification = FALSE, alpha = 0.05){
   p <- ncol(x)
   
@@ -162,7 +162,6 @@ slr <- function(
   }
   cluster.lengths = table(clusters1)
   valid.clusters = names(which(cluster.lengths >= 2)) # sets that can make log-ratios
-  valid.cluster.lengths = cluster.lengths[valid.clusters]
   out$num.clusters = num.clusters
   out$num.valid.clusters = length(valid.clusters)
   
@@ -208,37 +207,6 @@ slr <- function(
   return(out)
 }
 
-slrmult = function(
-  x, y, max.clusters = 5, classification = FALSE, approx = TRUE, 
-  check.significance = FALSE, alpha = 0.05
-){
-  n = nrow(x)
-  p = ncol(x)
-  
-  # fit slr on the original data set for each cluster size
-  models = list()
-  cors = matrix(NA, nrow = max.clusters, ncol = max.clusters)
-  Rsqs = matrix(NA, nrow = max.clusters, ncol = max.clusters)
-  numclusters_candidates = 1:max.clusters
-  for(i in numclusters_candidates){
-    model_i = slr(
-      x = x, y = y, num.clusters = i, classification = classification, 
-      approx = approx, check.significance = check.significance, alpha = alpha)
-    models[[i]] = model_i
-    cors[i, ] = c(model_i$cors, rep(NA, max.clusters - length(model_i$cors)))
-    Rsqs[i, ] = c(model_i$Rsqs, rep(NA, max.clusters - length(model_i$Rsqs)))
-  }
-  
-  # return the slr object
-  return(list(
-    models = models, 
-    cors = cors, 
-    Rsqs = Rsqs, 
-    max.cors = rowMaxs(cors, na.rm = TRUE),
-    max.Rsqs = rowMaxs(Rsqs, na.rm = TRUE)
-  ))
-}
-
 cv.slr = function(
   x, y, max.clusters = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
   check.significance = FALSE, alpha = 0.05
@@ -248,9 +216,12 @@ cv.slr = function(
   
   # fit slr on the original data set for each cluster size
   numclusters_candidates = 1:max.clusters
-  slrmultmodels = slrmult(
-    x = x, y = y, max.clusters = max.clusters, classification = classification, 
-    approx = approx, check.significance = check.significance, alpha = alpha)
+  slrmodels = list()
+  for(i in numclusters_candidates){
+    slrmodels[[i]] = slr(
+      x = x, y = y, num.clusters = i, classification = classification, 
+      approx = approx, check.significance = check.significance, alpha = alpha)
+  }
   
   # split the data into nfolds folds
   shuffle = sample(1:n)
@@ -258,8 +229,7 @@ cv.slr = function(
   n_fold = table(idfold)
   
   # calculate lasso for each fold removed
-  cvm_sqerror = matrix(NA, nfolds, max.clusters) # squared error for each fold
-  cvse_errorsd =  matrix(NA, nfolds, max.clusters) # sd of error for each fold
+  cvm_sqerr = matrix(NA, nfolds, max.clusters) # squared error for each fold
   for(j in 1:nfolds){
     # Training data
     xtr = x[idfold != j, ]
@@ -277,23 +247,22 @@ cv.slr = function(
         fit_jm.coefs = coefficients(fit_jm$model)
         ypred = fit_jm.coefs[1] + fit_jm.coefs[-1] * 
           balance::balance.fromSBP(x = xte, y = fit_jm$sbp)
-        cvm_sqerror[j, m] = sum(crossprod(yte - ypred))
-        cvse_errorsd[j, m] = cvm_sqerror[j, m] / n_fold[j]
+        cvm_sqerr[j, m] = mean(crossprod(yte - ypred))
       } else{
-        # how to do for classification? use auc? accuracy? #################################################
+        # how to do for classification? use auc? accuracy? see selbal.cv #################################################
         ypred = predict.glm(
           fit_jm$model,
           newdata = data.frame(balance::balance.fromSBP(x = xte, y = fit_jm$sbp)),
           type = "response")
-        cvm_sqerror[j, m] = sum(crossprod(yte - ypred))
-        cvse_errorsd[j, m] = cvm_sqerror[j, m] / n_fold[j]
+        cvm_sqerr[j, m] = sum(crossprod(yte - ypred))
       }
     }
   }
   # Calculate CV(numclusters) and SE_CV(numclusters) for each possible 
   #   number of clusters, up to max.clusters
-  cvse = sqrt(apply(cvse_errorsd, 2, var)) / sqrt(nfolds)
-  cvm = colMeans(cvm_sqerror)
+  # scores = -sqrt(cvm_sqerr) # codacore:::findBestCutoff.CoDaBaseLearner
+  cvse = apply(cvm_sqerr, 2, stats::sd)/sqrt(K)
+  cvm = colMeans(cvm_sqerr)
   
   # Find numclust_min = argmin{CV(numclusters)}
   numclust_min_index = which.min(cvm)
@@ -307,8 +276,7 @@ cv.slr = function(
     list(
       nclusters = numclusters_candidates,
       max.clusters = max.clusters, 
-      slrmult = slrmultmodels, 
-      models = slrmultmodels$models,
+      models = slrmodels,
       nclusters_min = numclust_min, 
       nclusters_1se = numclust_1se, 
       cvm = cvm, 
@@ -320,16 +288,17 @@ cv.slr = function(
 }
 
 hslr <- function(
-  x, y, max.levels = 1, classification = FALSE, approx = TRUE
+  x, y, num.levels = 1, classification = FALSE, approx = TRUE, 
+  check.significance = FALSE, alpha = 0.05
 ){
   n = nrow(x)
   p = ncol(x)
   
-  fits = list()
+  hslrmodels = list()
   Rsqs = matrix(NA, nrow = max.levels, ncol = 2)
   cors = matrix(NA, nrow = max.levels, ncol = 2)
   vars.cur = colnames(x)
-  num.levels = max.levels
+  true.max.levels = max.levels
   for(i in 1:max.levels){
     fit_i = slr(
       x = x[, vars.cur, drop = FALSE], 
@@ -342,12 +311,12 @@ hslr <- function(
     full.sbp.est[activevars, ] = c(fit_i$sbp)
     fit_i$sbp = full.sbp.est
     # save the fit
-    fits[[i]] = fit_i
-    vars.cur = names(fit_i$index)[fit_i$index != 0]
+    hslrmodels[[i]] = fit_i
+    vars.cur = names(fit_i$index)[fit_i$index != 0] ############
     cors[i, ] = fit_i$cors
     Rsqs[i, ] = fit_i$Rsqs
     if(length(vars.cur) <= 2){
-      num.levels = i
+      true.max.levels = i
       # warning(paste0("asked for max.levels = ", max.levels, " splits, but could only make up to ", i, " splits."))
       break
     }
@@ -355,93 +324,98 @@ hslr <- function(
   
   # return the slr object
   return(list(
-    models = fits, 
+    models = hslrmodels, 
     cors = cors, 
     Rsqs = Rsqs, 
-    max.cors = rowMaxs(cors, na.rm = TRUE),
-    max.Rsqs = rowMaxs(Rsqs, na.rm = TRUE), 
-    num.levels = num.levels,
+    true.max.levels = true.max.levels,
     max.levels = max.levels
   ))
 }
 
-# cv.hslr = function(
-#   x, y, max.levels = 5, classification = FALSE, approx = TRUE, nfolds = 5
-# ){
-#   n = nrow(x)
-#   p = ncol(x)
-#   
-#   # fit slr on the original data set for each cluster size
-#   fits = list()
-#   numclusters_candidates = 1:max.clusters
-#   for(i in numclusters_candidates){
-#     fits[[i]] = slr(
-#       x = x, y = y, num.clusters = i, classification = classification, 
-#       approx = approx)
-#   }
-#   
-#   # split the data into nfolds folds
-#   shuffle = sample(1:n)
-#   idfold = (shuffle %% nfolds) + 1
-#   n_fold = table(idfold)
-#   
-#   # calculate lasso for each fold removed
-#   cvm_sqerror = matrix(NA, nfolds, max.clusters) # squared error for each fold
-#   cvse_errorsd =  matrix(NA, nfolds, max.clusters) # sd of error for each fold
-#   for(j in 1:nfolds){
-#     # Training data
-#     xtr = x[idfold != j, ]
-#     ytr = y[idfold != j]
-#     # Test data
-#     xte = x[idfold == j, ]
-#     yte = y[idfold == j]
-#     
-#     # for num.clusters = 1, ..., max.clusters, calculate squared error
-#     for(m in numclusters_candidates){
-#       fit_jm = slr(
-#         x = xtr, y = ytr, num.clusters = m, classification = classification, 
-#         approx = approx)
-#       if(!classification){
-#         fit_jm.coefs = coefficients(fit_jm$model)
-#         ypred = fit_jm.coefs[1] + fit_jm.coefs[-1] * 
-#           balance::balance.fromSBP(x = xte, y = fit_jm$sbp)
-#         cvm_sqerror[j, m] = sum(crossprod(yte - ypred))
-#         cvse_errorsd[j, m] = cvm_sqerror[j, m] / n_fold[j]
-#       } else{
-#         # how to do for classification? use auc? #################################################
-#         ypred = predict.glm(
-#           fit_jm$model,
-#           newdata = data.frame(balance::balance.fromSBP(x = xte, y = fit_jm$sbp)),
-#           type = "response")
-#         cvm_sqerror[j, m] = sum(crossprod(yte - ypred))
-#         cvse_errorsd[j, m] = cvm_sqerror[j, m] / n_fold[j]
-#       }
-#     }
-#   }
-#   # Calculate CV(numclusters) and SE_CV(numclusters) for each possible 
-#   #   number of clusters, up to max.clusters
-#   cvse = sqrt(apply(cvse_errorsd, 2, var)) / sqrt(nfolds)
-#   cvm = colMeans(cvm_sqerror)
-#   
-#   # Find numclust_min = argmin{CV(numclusters)}
-#   numclust_min_index = which.min(cvm)
-#   numclust_min = numclusters_candidates[numclust_min_index]
-#   
-#   # Find numclust_1se = maximal numclusters s.t. CV(numclusters) <= CV(nclust_min) + CV_SE(nclust_min)
-#   oneserule = cvm[numclust_min_index] + cvse[numclust_min_index]
-#   numclust_1se_index = which(cvm <= oneserule)
-#   numclust_1se = numclusters_candidates[min(numclust_1se_index)]
-#   return(
-#     list(
-#       nclusters = numclusters_candidates,
-#       max.clusters = max.clusters, 
-#       models = fits, 
-#       nclusters_min = numclust_min, 
-#       nclusters_1se = numclust_1se, 
-#       cvm = cvm, 
-#       nclusters_min_idx = numclust_min_index,
-#       cvse = cvse,
-#       nclusters_1se_idx = numclust_1se_index
-#     )
-#   )
-# }
+cv.hslr = function(
+  x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
+  check.significance = FALSE, alpha = 0.05
+){
+  n = nrow(x)
+  p = ncol(x)
+  
+  # fit slr on the original data set for each cluster size
+  hslrfit = hslr(
+    x = x, y = y, num.levels = max.levels, classification = classification, 
+    approx = approx, check.significance = check.significance, alpha = alpha)
+  numlevels.candidates = 1:hslrfit$true.max.levels
+  hslrmodels = hslrfit$models
+  
+  # split the data into nfolds folds
+  shuffle = sample(1:n)
+  idfold = (shuffle %% nfolds) + 1
+  n_fold = table(idfold)
+  
+  # calculate lasso for each fold removed
+  cvm_sqerr = matrix(NA, nfolds, max.clusters) # squared error for each fold
+  for(j in 1:nfolds){
+    # Training data
+    xtr = x[idfold != j, ]
+    ytr = y[idfold != j]
+    # Test data
+    xte = x[idfold == j, ]
+    yte = y[idfold == j]
+    
+    fit_j = hslr(
+      x = xtr, y = ytr, num.clusters = hslrfit$true.max.levels, 
+      classification = classification, 
+      approx = approx, check.significance = check.significance, alpha = alpha)
+    
+    # for num.clusters = 1, ..., max.clusters, calculate squared error
+    for(m in numlevels.candidates){
+      fit_jm = fit_j$models[[m]]
+      if(!is.null(fit_jm)){
+        if(!classification){
+          fit_jm.coefs = coefficients(fit_jm$model)
+          ypred = fit_jm.coefs[1] + fit_jm.coefs[-1] * 
+            balance::balance.fromSBP(x = xte, y = fit_jm$sbp)
+          cvm_sqerr[j, m] = mean(crossprod(yte - ypred))
+        } else{
+          # how to do for classification? use auc? accuracy? see selbal.cv #################################################
+          ypred = predict.glm(
+            fit_jm$model,
+            newdata = data.frame(balance::balance.fromSBP(x = xte, y = fit_jm$sbp)),
+            type = "response")
+          cvm_sqerr[j, m] = sum(crossprod(yte - ypred))
+        }
+      } else{
+        cvm_sqerr[j, m] = NA
+        warning("cv.hslr(): cvm_sqerr has NA values.")
+      }
+    }
+  }
+  # Calculate CV(numclusters) and SE_CV(numclusters) for each possible 
+  #   number of clusters, up to max.clusters
+  # scores = -sqrt(cvm_sqerr) # codacore:::findBestCutoff.CoDaBaseLearner
+  cvse = apply(cvm_sqerr, 2, stats::sd)/sqrt(K)
+  cvm = colMeans(cvm_sqerr)
+  
+  # Find numclust_min = argmin{CV(numclusters)}
+  numclust_min_index = which.min(cvm)
+  numclust_min = numlevels.candidates[numclust_min_index]
+  
+  # Find numclust_1se = maximal numclusters s.t. CV(numclusters) <= CV(nclust_min) + CV_SE(nclust_min)
+  oneserule = cvm[numclust_min_index] + cvse[numclust_min_index]
+  numclust_1se_index = which(cvm <= oneserule)[1]
+  numclust_1se = numlevels.candidates[numclust_1se_index]
+  return(
+    list(
+      nclusters = numlevels.candidates,
+      max.clusters = max.clusters, 
+      models = hslrmodels,
+      nclusters_min = numclust_min, 
+      nclusters_1se = numclust_1se, 
+      cvm = cvm, 
+      nclusters_min_idx = numclust_min_index,
+      cvse = cvse,
+      nclusters_1se_idx = numclust_1se_index
+    )
+  )
+}
+
+

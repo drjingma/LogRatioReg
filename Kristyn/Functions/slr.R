@@ -190,11 +190,12 @@ slr <- function(
   ##    largest correlation magnitude.
   selected.cluster = which.max(Rsqs)
   out$index = sbp.ests[, selected.cluster]
+  refit_data = data.frame(V1 = bal.ests[, selected.cluster], y = y)
   if(!classification){
-    refit <- lm(y~bal.ests[, selected.cluster])
+    refit <- lm(y~V1, data = refit_data)
   } else{
     refit = stats::glm(
-      y~bal.ests[, selected.cluster], family = binomial(link = "logit"))
+      y~V1, data = refit_data, family = binomial(link = "logit"))
   }
   out$model <- refit
   
@@ -252,7 +253,8 @@ cv.slr = function(
         # how to do for classification? use auc? accuracy? see selbal.cv #################################################
         ypred = predict.glm(
           fit_jm$model,
-          newdata = data.frame(balance::balance.fromSBP(x = xte, y = fit_jm$sbp)),
+          newdata = data.frame(
+            V1 = balance::balance.fromSBP(x = xte, y = fit_jm$sbp)),
           type = "response")
         cvm_sqerr[j, m] = sum(crossprod(yte - ypred))
       }
@@ -295,11 +297,11 @@ hslr <- function(
   p = ncol(x)
   
   hslrmodels = list()
-  Rsqs = matrix(NA, nrow = max.levels, ncol = 2)
-  cors = matrix(NA, nrow = max.levels, ncol = 2)
+  Rsqs = matrix(NA, nrow = num.levels, ncol = 2)
+  cors = matrix(NA, nrow = num.levels, ncol = 2)
   vars.cur = colnames(x)
-  true.max.levels = max.levels
-  for(i in 1:max.levels){
+  true.num.levels = num.levels
+  for(i in 1:num.levels){
     fit_i = slr(
       x = x[, vars.cur, drop = FALSE], 
       y = y, num.clusters = 2, classification = classification, 
@@ -316,8 +318,8 @@ hslr <- function(
     cors[i, ] = fit_i$cors
     Rsqs[i, ] = fit_i$Rsqs
     if(length(vars.cur) <= 2){
-      true.max.levels = i
-      # warning(paste0("asked for max.levels = ", max.levels, " splits, but could only make up to ", i, " splits."))
+      true.num.levels = i
+      # warning(paste0("asked for num.levels = ", num.levels, " splits, but could only make up to ", i, " splits."))
       break
     }
   }
@@ -327,8 +329,8 @@ hslr <- function(
     models = hslrmodels, 
     cors = cors, 
     Rsqs = Rsqs, 
-    true.max.levels = true.max.levels,
-    max.levels = max.levels
+    true.num.levels = true.num.levels,
+    num.levels = num.levels
   ))
 }
 
@@ -343,7 +345,7 @@ cv.hslr = function(
   hslrfit = hslr(
     x = x, y = y, num.levels = max.levels, classification = classification, 
     approx = approx, check.significance = check.significance, alpha = alpha)
-  numlevels.candidates = 1:hslrfit$true.max.levels
+  num.levels.candidates = 1:hslrfit$true.num.levels
   hslrmodels = hslrfit$models
   
   # split the data into nfolds folds
@@ -352,7 +354,7 @@ cv.hslr = function(
   n_fold = table(idfold)
   
   # calculate lasso for each fold removed
-  cvm_sqerr = matrix(NA, nfolds, max.clusters) # squared error for each fold
+  cvm_sqerr = matrix(NA, nfolds, hslrfit$true.num.levels) # squared error for each fold
   for(j in 1:nfolds){
     # Training data
     xtr = x[idfold != j, ]
@@ -362,14 +364,14 @@ cv.hslr = function(
     yte = y[idfold == j]
     
     fit_j = hslr(
-      x = xtr, y = ytr, num.clusters = hslrfit$true.max.levels, 
+      x = xtr, y = ytr, num.levels = hslrfit$true.num.levels, 
       classification = classification, 
-      approx = approx, check.significance = check.significance, alpha = alpha)
+      approx = FALSE, check.significance = check.significance, alpha = alpha)
     
-    # for num.clusters = 1, ..., max.clusters, calculate squared error
-    for(m in numlevels.candidates){
-      fit_jm = fit_j$models[[m]]
-      if(!is.null(fit_jm)){
+    # for num.clusters = 1, ..., max.levels, calculate squared error
+    for(m in num.levels.candidates){
+      if(length(fit_j$models) >= m){
+        fit_jm = fit_j$models[[m]]
         if(!classification){
           fit_jm.coefs = coefficients(fit_jm$model)
           ypred = fit_jm.coefs[1] + fit_jm.coefs[-1] * 
@@ -379,34 +381,38 @@ cv.hslr = function(
           # how to do for classification? use auc? accuracy? see selbal.cv #################################################
           ypred = predict.glm(
             fit_jm$model,
-            newdata = data.frame(balance::balance.fromSBP(x = xte, y = fit_jm$sbp)),
+            newdata = data.frame(
+              V1 = balance::balance.fromSBP(x = xte, y = fit_jm$sbp)),
             type = "response")
           cvm_sqerr[j, m] = sum(crossprod(yte - ypred))
         }
       } else{
         cvm_sqerr[j, m] = NA
-        warning("cv.hslr(): cvm_sqerr has NA values.")
+        # warning("cv.hslr(): cvm_sqerr has NA values.")
       }
     }
   }
   # Calculate CV(numclusters) and SE_CV(numclusters) for each possible 
-  #   number of clusters, up to max.clusters
+  #   number of clusters, up to max.levels
   # scores = -sqrt(cvm_sqerr) # codacore:::findBestCutoff.CoDaBaseLearner
-  cvse = apply(cvm_sqerr, 2, stats::sd)/sqrt(K)
-  cvm = colMeans(cvm_sqerr)
+  cvse = apply(
+    cvm_sqerr, 2, 
+    function(x) stats::sd(x, na.rm = TRUE) / sqrt(length(x) - sum(is.na(x))))
+  cvm = apply(
+    cvm_sqerr, 2, function(x) mean(x, na.rm = TRUE))
   
   # Find numclust_min = argmin{CV(numclusters)}
   numclust_min_index = which.min(cvm)
-  numclust_min = numlevels.candidates[numclust_min_index]
+  numclust_min = num.levels.candidates[numclust_min_index]
   
   # Find numclust_1se = maximal numclusters s.t. CV(numclusters) <= CV(nclust_min) + CV_SE(nclust_min)
   oneserule = cvm[numclust_min_index] + cvse[numclust_min_index]
   numclust_1se_index = which(cvm <= oneserule)[1]
-  numclust_1se = numlevels.candidates[numclust_1se_index]
+  numclust_1se = num.levels.candidates[numclust_1se_index]
   return(
     list(
-      nclusters = numlevels.candidates,
-      max.clusters = max.clusters, 
+      nclusters = num.levels.candidates,
+      max.levels = max.levels, 
       models = hslrmodels,
       nclusters_min = numclust_min, 
       nclusters_1se = numclust_1se, 

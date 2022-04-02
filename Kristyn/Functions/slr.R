@@ -272,7 +272,8 @@ cv.slr = function(
   
   # Find numclust_1se = maximal numclusters s.t. CV(numclusters) <= CV(nclust_min) + CV_SE(nclust_min)
   oneserule = cvm[numclust_min_index] + cvse[numclust_min_index]
-  numclust_1se_index = which(cvm <= oneserule)[1]
+  which_numclust_1se = which(cvm <= oneserule)
+  numclust_1se_index = which_numclust_1se[length(which_numclust_1se)]
   numclust_1se = numclusters_candidates[numclust_1se_index]
   return(
     list(
@@ -307,14 +308,13 @@ hslr <- function(
       y = y, num.clusters = 2, classification = classification, 
       approx = approx)
     # recalculate full SBP
-    activevars = vars.cur
     full.sbp.est = matrix(0, nrow = p, ncol = 1)
     rownames(full.sbp.est) = colnames(x)
-    full.sbp.est[activevars, ] = c(fit_i$sbp)
+    full.sbp.est[vars.cur, ] = c(fit_i$sbp)
     fit_i$sbp = full.sbp.est
     # save the fit
     hslrmodels[[i]] = fit_i
-    vars.cur = names(fit_i$index)[fit_i$index != 0] ############
+    vars.cur = rownames(fit_i$sbp)[fit_i$sbp != 0]
     cors[i, ] = fit_i$cors
     Rsqs[i, ] = fit_i$Rsqs
     if(length(vars.cur) <= 2){
@@ -407,7 +407,8 @@ cv.hslr = function(
   
   # Find numclust_1se = maximal numclusters s.t. CV(numclusters) <= CV(nclust_min) + CV_SE(nclust_min)
   oneserule = cvm[numclust_min_index] + cvse[numclust_min_index]
-  numclust_1se_index = which(cvm <= oneserule)[1]
+  which_numclust_1se = which(cvm <= oneserule)
+  numclust_1se_index = which_numclust_1se[length(which_numclust_1se)]
   numclust_1se = num.levels.candidates[numclust_1se_index]
   return(
     list(

@@ -74,6 +74,7 @@ slr0approx_0.5 = readRDS(
 slr0approx_0.5_coefs = getCoefsBM(
   coefs = coefficients(slr0approx_0.5$model), sbp = slr0approx_0.5$sbp)
 rownames(slr0approx_0.5_coefs$llc.coefs)[slr0approx_0.5_coefs$llc.coefs != 0]
+sum(slr0approx_0.5_coefs$llc.coefs != 0)
 
 ##### slr (no approximation step) #####
 # slr0_0.5 = slr(
@@ -94,6 +95,7 @@ slr0_0.5 = readRDS(
 slr0_0.5_coefs = getCoefsBM(
   coefs = coefficients(slr0_0.5$model), sbp = slr0_0.5$sbp)
 rownames(slr0_0.5_coefs$llc.coefs)[slr0_0.5_coefs$llc.coefs != 0]
+sum(slr0_0.5_coefs$llc.coefs != 0)
 
 ##### cv.slr with approximation step #####
 # slrcv0approx_0.5 = cv.slr(
@@ -261,7 +263,7 @@ slbl_0.5 = readRDS(
 slbl_0.5_coefs = getCoefsSelbal(
   X = X_0.5, y = Y, selbal.fit = slbl_0.5, classification = FALSE, check = TRUE)
 rownames(slbl_0.5_coefs$llc.coefs)[slbl_0.5_coefs$llc.coefs != 0]
-
+sum(slbl_0.5_coefs$llc.coefs != 0)
 
 
 ################################################################################
@@ -290,6 +292,7 @@ slr0approx_gbm = readRDS(
 slr0approx_gbm_coefs = getCoefsBM(
   coefs = coefficients(slr0approx_gbm$model), sbp = slr0approx_gbm$sbp)
 rownames(slr0approx_gbm_coefs$llc.coefs)[slr0approx_gbm_coefs$llc.coefs != 0]
+sum(slr0approx_gbm_coefs$llc.coefs != 0)
 
 ##### slr (no approximation step) #####
 # slr0_gbm = slr(
@@ -310,6 +313,7 @@ slr0_gbm = readRDS(
 slr0_gbm_coefs = getCoefsBM(
   coefs = coefficients(slr0_gbm$model), sbp = slr0_gbm$sbp)
 rownames(slr0_gbm_coefs$llc.coefs)[slr0_gbm_coefs$llc.coefs != 0]
+sum(slr0_gbm_coefs$llc.coefs != 0)
 
 ##### cv.slr with approximation step #####
 # slrcv0approx_gbm = cv.slr(
@@ -477,5 +481,5 @@ slbl_gbm = readRDS(
 slbl_gbm_coefs = getCoefsSelbal(
   X = X_gbm, y = Y, selbal.fit = slbl_gbm, classification = FALSE, check = TRUE)
 rownames(slbl_gbm_coefs$llc.coefs)[slbl_gbm_coefs$llc.coefs != 0]
-
+sum(slbl_gbm_coefs$llc.coefs != 0)
 

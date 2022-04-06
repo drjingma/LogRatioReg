@@ -79,33 +79,6 @@ res = for(b in 101:200){
     as.vector(ilrtrans.true$ilr.trans)
   
   ##############################################################################
-  # compositional lasso (a linear log contrast method)
-  ##############################################################################
-  start.time = Sys.time()
-  classo = cv.func(
-    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
-    nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
-  end.time = Sys.time()
-  cl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # cl.lam.idx = which.min(classo$cvm)
-  oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
-  cl.lam.idx = which(classo$cvm <= oneSErule)[1]
-  cl.a0 = classo$int[cl.lam.idx]
-  cl.betahat = classo$bet[, cl.lam.idx]
-  
-  # compute metrics on the selected model #
-  cl.metrics = getMetricsLLC(
-    y.train = Y, y.test = Y.test,
-    logX.train = log(X),
-    logX.test = log(X.test),
-    n.train = n, n.test = n,
-    betahat0 = cl.a0, betahat = cl.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
-    true.beta = beta.true)
-  
-  ##############################################################################
   # plain slr method (a balance regression method)
   #   -- spectral clustering (with rank 1 approximation)
   ##############################################################################
@@ -150,62 +123,6 @@ res = for(b in 101:200){
     n.train = n, n.test = n,
     thetahat0 = slr0.coefs$a0, thetahat = slr0.coefs$bm.coefs, 
     betahat = slr0.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  ##############################################################################
-  # cv.slr method (a balance regression method)
-  #   -- spectral clustering (with rank 1 approximation)
-  #   -- use CV to select T = # of clusters in 1st application of spectral
-  #       clustering
-  ##############################################################################
-  start.time = Sys.time()
-  slrcv0approx = cv.slr(
-    x = X, y = Y, max.clusters = slrmax, nfolds = K, approx = TRUE)
-  end.time = Sys.time()
-  slrcv0approx.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slrcv0approx_fit = slrcv0approx$models[[slrcv0approx$nclusters_1se_idx]]
-  slrcv0approx.coefs = getCoefsBM(
-    coefs = coefficients(slrcv0approx_fit$model), sbp = slrcv0approx_fit$sbp)
-  
-  # compute metrics on the selected model #
-  slrcv0approx.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slrcv0approx_fit$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slrcv0approx_fit$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slrcv0approx.coefs$a0, thetahat = slrcv0approx.coefs$bm.coefs, 
-    betahat = slrcv0approx.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  ##############################################################################
-  # cv.slr method (a balance regression method)
-  #   -- spectral clustering (no approximation)
-  #   -- use CV to select T = # of clusters in 1st application of spectral
-  #       clustering
-  ##############################################################################
-  start.time = Sys.time()
-  slrcv0 = cv.slr(
-    x = X, y = Y, max.clusters = slrmax, nfolds = K, approx = FALSE)
-  end.time = Sys.time()
-  slrcv0.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slrcv0_fit = slrcv0$models[[slrcv0$nclusters_1se_idx]]
-  slrcv0.coefs = getCoefsBM(
-    coefs = coefficients( slrcv0_fit$model), sbp = slrcv0_fit$sbp)
-  
-  # compute metrics on the selected model #
-  slrcv0.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slrcv0_fit$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slrcv0_fit$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slrcv0.coefs$a0, thetahat = slrcv0.coefs$bm.coefs, 
-    betahat = slrcv0.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
   

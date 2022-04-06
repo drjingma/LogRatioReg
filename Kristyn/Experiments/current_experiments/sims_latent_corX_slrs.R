@@ -219,6 +219,70 @@ res = foreach(
     "time" = slr0.timing
   ),
   paste0(output_dir, "/slr_metrics", file.end))
+  
+  ##############################################################################
+  # slr1sc method (a balance regression method)
+  #   -- spectral clustering (with rank 1 approximation)
+  ##############################################################################
+  start.time = Sys.time()
+  slr1sc0approx = slr1sc(x = X, y = Y, approx = TRUE)
+  end.time = Sys.time()
+  slr1sc0approx.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr1sc0approx.coefs = getCoefsBM(
+    coefs = coefficients(slr1sc0approx$model), sbp = slr1sc0approx$sbp)
+  
+  # compute metrics on the selected model #
+  slr1sc0approx.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr1sc0approx$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr1sc0approx$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr1sc0approx.coefs$a0, thetahat = slr1sc0approx.coefs$bm.coefs,
+    betahat = slr1sc0approx.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr1sc0approx.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr1sc0approx.coefs$bm.coefs != 0),
+    "time" = slr1sc0approx.timing
+  ),
+  paste0(output_dir, "/slr1sc_approx_metrics", file.end))
+  
+  ##############################################################################
+  # slr1sc method (a balance regression method)
+  #   -- spectral clustering (no approximation)
+  ##############################################################################
+  start.time = Sys.time()
+  slr1sc0 = slr1sc(x = X, y = Y, approx = FALSE)
+  end.time = Sys.time()
+  slr1sc0.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr1sc0.coefs = getCoefsBM(
+    coefs = coefficients(slr1sc0$model), sbp = slr1sc0$sbp)
+  
+  # compute metrics on the selected model #
+  slr1sc0.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr1sc0$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr1sc0$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr1sc0.coefs$a0, thetahat = slr1sc0.coefs$bm.coefs,
+    betahat = slr1sc0.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr1sc0.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr1sc0.coefs$bm.coefs != 0),
+    "time" = slr1sc0.timing
+  ),
+  paste0(output_dir, "/slr1sc_metrics", file.end))
 
   ##############################################################################
   # cv.slr method (a balance regression method)

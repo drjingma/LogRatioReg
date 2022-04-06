@@ -423,7 +423,6 @@ getEdgesFromSBP = function(sbp){
   return(edges.df)
 }
 
-# still need to figure out how to label!
 plotSBP = function(
   sbp = NULL, edges = NULL, title = NULL, 
   nodes_types = NULL, 

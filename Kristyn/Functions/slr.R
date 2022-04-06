@@ -139,7 +139,7 @@ spectral.clustering2 <- function(W, n_eig = 2, reindex = FALSE) {
 
 slr <- function(
   x, y, num.clusters = 2, classification = FALSE, approx = TRUE, 
-  check.significance = FALSE, alpha = 0.05
+  handle.invalid = FALSE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -156,30 +156,41 @@ slr <- function(
       rhoMat.svd$u[, 1], 
       rhoMat.svd$v[, 1]) *
       rhoMat.svd$d[1]
+    rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
     clusters1 <- spectral.clustering2(rhoMat_approx, n_eig = num.clusters)
   } else{
     clusters1 <- spectral.clustering2(rhoMat, n_eig = num.clusters)
   }
   cluster.lengths = table(clusters1)
-  valid.clusters = names(which(cluster.lengths >= 2)) # sets that can make log-ratios
+  clusters = names(cluster.lengths)
   out$num.clusters = num.clusters
-  out$num.valid.clusters = length(valid.clusters)
   
   ## Find which set has the more predictive balance
-  cors = rep(NA, length(valid.clusters))
-  Rsqs = rep(NA, length(valid.clusters))
-  sbp.ests = matrix(0, nrow = p, ncol = length(valid.clusters))
-  bal.ests = matrix(NA, nrow = n, ncol = length(valid.clusters))
+  cors = rep(NA, num.clusters)
+  Rsqs = rep(NA, num.clusters)
+  sbp.ests = matrix(0, nrow = p, ncol = num.clusters)
+  bal.ests = matrix(NA, nrow = n, ncol = num.clusters)
   rownames(sbp.ests) <- colnames(x)
-  for(i in 1:length(valid.clusters)){ # what if there is just one valid cluster? ################
-    cluster.label = as.numeric(valid.clusters[i])
+  for(i in 1:num.clusters){ 
+    cluster.label = as.numeric(clusters[i])
     index = which(clusters1 == cluster.label)
-    ## Perform spectral clustering to get the numerator/denominator groups
-    subset = spectral.clustering2(rhoMat[index, index], reindex = TRUE)
-    ## calculate balance and its correlation with y
-    sbp.ests[match(names(subset), rownames(sbp.ests)), i] = subset
-    bal.ests[, i] = balance::balance.fromSBP(
-      x = x, y = sbp.ests[, i, drop = FALSE])
+    if(length(index) >= 2){ # if a log-ratio can be made from the variables in this cluster
+      ## Perform spectral clustering to get the numerator/denominator groups
+      subset = spectral.clustering2(rhoMat[index, index], reindex = TRUE)
+      ## calculate balance and its correlation with y
+      sbp.ests[match(names(subset), rownames(sbp.ests)), i] = subset
+      bal.ests[, i] = balance::balance.fromSBP(
+        x = x, y = sbp.ests[, i, drop = FALSE])
+    } else{ # otherwise, if there's just one variable in the cluster, set all other variables as -1
+      if(handle.invalid){
+        sbp.ests[index, i] = 1
+        sbp.ests[-index, i] = -1
+        bal.ests[, i] = balance::balance.fromSBP(
+          x = x, y = sbp.ests[, i, drop = FALSE])
+      } else{
+        sbp.ests[, i] = rep(NA, p)
+      }
+    }
     cors[i] = stats::cor(bal.ests[, i], y)
     Rsqs[i] = cors[i]^2
   }
@@ -209,8 +220,7 @@ slr <- function(
 }
 
 cv.slr = function(
-  x, y, max.clusters = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
-  check.significance = FALSE, alpha = 0.05
+  x, y, max.clusters = 5, nfolds = 5, classification = FALSE, approx = TRUE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -221,7 +231,7 @@ cv.slr = function(
   for(i in numclusters_candidates){
     slrmodels[[i]] = slr(
       x = x, y = y, num.clusters = i, classification = classification, 
-      approx = approx, check.significance = check.significance, alpha = alpha)
+      approx = approx)
   }
   
   # split the data into nfolds folds
@@ -243,7 +253,7 @@ cv.slr = function(
     for(m in numclusters_candidates){
       fit_jm = slr(
         x = xtr, y = ytr, num.clusters = m, classification = classification, 
-        approx = approx, check.significance = check.significance, alpha = alpha)
+        approx = approx)
       if(!classification){
         fit_jm.coefs = coefficients(fit_jm$model)
         ypred = fit_jm.coefs[1] + fit_jm.coefs[-1] * 
@@ -291,8 +301,7 @@ cv.slr = function(
 }
 
 hslr <- function(
-  x, y, num.levels = 1, classification = FALSE, approx = TRUE, 
-  check.significance = FALSE, alpha = 0.05
+  x, y, num.levels = 1, classification = FALSE, approx = TRUE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -335,8 +344,7 @@ hslr <- function(
 }
 
 cv.hslr = function(
-  x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
-  check.significance = FALSE, alpha = 0.05
+  x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -344,7 +352,7 @@ cv.hslr = function(
   # fit slr on the original data set for each cluster size
   hslrfit = hslr(
     x = x, y = y, num.levels = max.levels, classification = classification, 
-    approx = approx, check.significance = check.significance, alpha = alpha)
+    approx = approx)
   num.levels.candidates = 1:hslrfit$true.num.levels
   hslrmodels = hslrfit$models
   
@@ -365,8 +373,7 @@ cv.hslr = function(
     
     fit_j = hslr(
       x = xtr, y = ytr, num.levels = hslrfit$true.num.levels, 
-      classification = classification, 
-      approx = FALSE, check.significance = check.significance, alpha = alpha)
+      classification = classification, approx = FALSE)
     
     # for num.clusters = 1, ..., max.levels, calculate squared error
     for(m in num.levels.candidates){

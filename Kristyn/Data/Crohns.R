@@ -31,31 +31,31 @@ source("Kristyn/Functions/codalasso.R")
 # helper functions
 source("Kristyn/Functions/util.R")
 
-getTPlots = function(slrcv){
+getTPlots = function(cvslr_fit){
   cv_data = data.frame(
-    `T` = slrcv$nclusters, 
-    cvm = slrcv$cvm, 
-    cvse = slrcv$cvse,
-    Valid.Clusters = sapply(
-      slrcv$models, function(elt) elt$num.valid.clusters),
+    `T` = cvslr_fit$nclusters, 
+    cvm = cvslr_fit$cvm, 
+    cvse = cvslr_fit$cvse,
     Active.Size = sapply(
-      slrcv$models, function(elt) sum(elt$sbp != 0))
+      cvslr_fit$models, function(elt) sum(elt$sbp != 0))
   )
   cvm.plt = ggplot(cv_data, aes(x = `T`, y = cvm)) + 
     geom_path() + 
     geom_point() + 
     geom_errorbar(aes(ymin = cvm - cvse, ymax = cvm + cvse), width = 0.5) + 
     scale_x_continuous(breaks = c(cv_data$`T`))
-  valid.plt = ggplot(cv_data, aes(x = `T`, y = Valid.Clusters)) + 
-    geom_path() + 
-    geom_point() + 
-    scale_x_continuous(breaks = c(cv_data$`T`))
   size.plt = ggplot(cv_data, aes(x = `T`, y = Active.Size)) + 
     geom_path() + 
     geom_point() + 
     scale_x_continuous(breaks = c(cv_data$`T`))
-  return(ggarrange(cvm.plt, valid.plt, size.plt, nrow = 1, widths = c(2, 1, 1)))
+  return(ggarrange(cvm.plt, size.plt, nrow = 1))
 }
+
+# for hslr tree plot
+library(ggraph) # make tree/dendrogram
+library(igraph) # transform dataframe to graph object: graph_from_data_frame()
+library(tidyverse)
+library(tidygraph)
 
 # tuning parameter settings
 K = 10
@@ -106,6 +106,7 @@ slr0approx_0.5_coefs = getCoefsBM(
   coefs = coefficients(slr0approx_0.5$model), sbp = slr0approx_0.5$sbp)
 rownames(slr0approx_0.5_coefs$llc.coefs)[slr0approx_0.5_coefs$llc.coefs != 0]
 sum(slr0approx_0.5_coefs$llc.coefs != 0)
+slr0approx_0.5$sbp[slr0approx_0.5$sbp != 0, , drop = FALSE]
 
 ##### slr (no approximation step) #####
 # slr0_0.5 = slr(
@@ -127,6 +128,7 @@ slr0_0.5_coefs = getCoefsBM(
   coefs = coefficients(slr0_0.5$model), sbp = slr0_0.5$sbp)
 rownames(slr0_0.5_coefs$llc.coefs)[slr0_0.5_coefs$llc.coefs != 0]
 sum(slr0_0.5_coefs$llc.coefs != 0)
+slr0_0.5$sbp[slr0_0.5$sbp != 0, , drop = FALSE]
 
 ##### cv.slr with approximation step #####
 # slrcv0approx_0.5 = cv.slr(
@@ -156,6 +158,9 @@ slrcv0approx_0.5_coefs = getCoefsBM(
 rownames(slrcv0approx_0.5_coefs$llc.coefs)[
   slrcv0approx_0.5_coefs$llc.coefs != 0]
 sum(slrcv0approx_0.5_coefs$llc.coefs != 0)
+slrcv0approx_0.5$models[[slrcv0approx_0.5$nclusters_1se_idx]]$sbp[
+  slrcv0approx_0.5$models[[slrcv0approx_0.5$nclusters_1se_idx]]$sbp != 0, , 
+  drop = FALSE]
 
 ##### cv.slr (no approximation step) #####
 # slrcv0_0.5 = cv.slr(
@@ -185,6 +190,9 @@ slrcv0_0.5_coefs = getCoefsBM(
 rownames(slrcv0_0.5_coefs$llc.coefs)[
   slrcv0_0.5_coefs$llc.coefs != 0]
 sum(slrcv0_0.5_coefs$llc.coefs != 0)
+slrcv0_0.5$models[[slrcv0_0.5$nclusters_1se_idx]]$sbp[
+  slrcv0_0.5$models[[slrcv0_0.5$nclusters_1se_idx]]$sbp != 0, , 
+  drop = FALSE]
 
 ##### cv.hslr with approximation step #####
 # hslrcv0approx_0.5 = cv.hslr(
@@ -216,12 +224,9 @@ sum(hslrcv0approx_0.5_coefs$llc.coefs != 0)
 
 hslrcv0approx_0.5_sbps = sapply(hslrcv0approx_0.5$models, function(model) model$sbp)
 rownames(hslrcv0approx_0.5_sbps) = rownames(hslrcv0approx_0.5$models[[1]]$sbp)
+hslrcv0approx_0.5_sbps
 
-hslrcv0approx_0.5$models[[1]]$sbp
-
-
-
-
+hslrcv0approx_0.5_cors = sapply(hslrcv0approx_0.5$models, function(model) model$cors)
 
 ##### cv.hslr (no approximation step) #####
 # hslrcv0_0.5 = cv.hslr(

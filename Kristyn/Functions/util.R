@@ -1,4 +1,5 @@
 
+##### help generate data #######################################################
 
 sigmoid = function(x) 1 / (1 + exp(-x))
 
@@ -9,7 +10,28 @@ alrinv <- function(y) {
 
 
 
-##### extract coefficients #####################################################
+##### preprocess data for selbal ###############################################
+
+getSelbalData = function(X = X, y = y, classification = TRUE, levels, labels){
+  if(is.null(rownames(X)) && is.null(colnames(X))){
+    X.slbl = X
+    rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
+    colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+  }
+  if(classificatin && !is.factor(y)){
+    if(is.null(levels) | is.null(labels)){
+      stop("getSelbalData(): classification = TRUE, but levels and labels were not provided. Will let factor() choose them.")
+    }
+    y.slbl = factor(y, levels = levels, labels = labels)
+  } else{
+    y.slbl = y
+  }
+  return(list(X = X.slbl, y = y.slbl))
+}
+
+
+
+##### extract balance regression coefficients ##################################
 
 getCoefsBM = function(coefs, sbp){
   if(names(coefs)[1] == "(Intercept)"){
@@ -52,7 +74,7 @@ getCoefsSelbal = function(
         y ~ log(as.matrix(X)) %*% matrix(ilrU), family = binomial(link = "logit"))
     }
     if(!isTRUE(all.equal(as.numeric(coefficients(selbal.fit$glm)), 
-                  as.numeric(coefficients(supposed.fit))))){
+                         as.numeric(coefficients(supposed.fit))))){
       warning("getCoefsSelbal(): coefficients of given model and supposed model don't match!")
     }
   }
@@ -66,6 +88,7 @@ getCoefsSelbal = function(
     llc.coefs = llc.coefs
   ))
 }
+
 
 
 ##### transform coefficients for linear log contrasts model ####################
@@ -104,48 +127,24 @@ getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
 
 
 
-##### other selbal helper functions ############################################
-
-getSelbalData = function(X = X, y = y, classification = TRUE, levels, labels){
-  if(is.null(rownames(X)) && is.null(colnames(X))){
-    X.slbl = X
-    rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
-    colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
-  }
-  if(classificatin && !is.factor(y)){
-    if(is.null(levels) | is.null(labels)){
-      stop("getSelbalData(): classification = TRUE, but levels and labels were not provided. Will let factor() choose them.")
-    }
-    y.slbl = factor(y, levels = levels, labels = labels)
-  } else{
-    y.slbl = y
-  }
-  return(list(X = X.slbl, y = y.slbl))
-}
-
-
-
-
 ##### balance regression model tools ###########################################
 
-# Compute the transformation matrix U
-#   using a hierarchical tree or SBP matrix
-# old name: getU
+# Compute the transformation vector/matrix from SBP vector/matrix
 getIlrTrans = function(sbp = NULL, detailed = FALSE){
-  # normalize SBP matrix to get U
+  # check that sbp is in matrix form, even if it's just a p-vector
+  # normalize SBP
   pos.vec = colSums(sbp == 1)
   neg.vec = colSums(sbp == -1)
   U = sbp
   for(i in 1:ncol(U)){
-    # divide 1s by r
+    # divide 1s by pos.vec
     U[(U[, i] == 1), i] = 1 / pos.vec[i]
-    # divide -1s by s
+    # divide -1s by neg.vec
     U[(U[, i] == -1), i] = -1 / neg.vec[i]
   }
   # multiply by sqrt(rs / (r + s))
   norm.const = sqrt((pos.vec * neg.vec) / (pos.vec + neg.vec))
   U = sweep(U, MARGIN = 2, STATS = norm.const, FUN = "*")
-  # U2 = t(t(U) * norm.const) # equal to U
   if(detailed){
     return(
       list(
@@ -309,9 +308,6 @@ cvBMLasso = function(
     sbp = sbp
   ))
 }
-
-
-
 
 
 
@@ -576,3 +572,190 @@ getMetricsBM = function(
 #     "precision" = prec)
 #   return(out)
 # }
+
+
+
+##### plot hierarchical slr ####################################################
+
+# plot the hslr tree of active/inactive variables
+#   (not balances! that fluctuates at each level)
+#   up to the last tree, which makes a balance
+hslrCompleteBTree = function(hslr_fit = NULL, cvhslr_fit = NULL){
+  if(is.null(hslr_fit) && is.null(cvhslr_fit)){
+    stop("hslrTree(): must provide either hslr_fit or cvhslr_fit.")
+  }
+  if(!is.null(cvhslr_fit)){
+    if(!is.null(hslr_fit)){
+      warning("hslrTree(): both hslr_fit and cvhslr_fit were provided -- will overwrite hslr_fit = cvhslr_fit$models")
+    }
+    hslr_fit = cvhslr_fit$models
+  }
+  if(is.null(hslr_fit[[1]])){
+    stop("hslrTree(): hslr_fit is NULL.")
+  }
+  component_names = rownames(hslr_fit[[1]]$sbp)
+  p = length(component_names)
+  cors = t(sapply(hslr_fit, function(level) level$cors))
+  Rsqs = t(sapply(hslr_fit, function(level) level$cors))
+  sbps = sapply(hslr_fit, function(level) level$sbp)
+  rownames(sbps) = component_names
+  colnames(sbps) <- rownames(cors) <- rownames(Rsqs) <- paste("T", 1:length(hslr_fit), sep = "")
+  
+  # fill in the rest of the sbp matrix to get a p x (p - 1) matrix
+  sbp_full = matrix(0, nrow = p, ncol = 1)
+  rownames(sbp_full) = rownames(sbps)
+  colname_counter = 1
+  # go through the hslr sbps to fill in the rows in-between
+  for(i in 1:ncol(sbps)){
+    # current active variables
+    active_vars_tmp = as.numeric(which(sbps[, i] != 0))
+    # current inactive variables (relative to previous sbp column)
+    if(i == 1){
+      prev_active_vars.tmp = 1:p
+    } else{
+      prev_active_vars.tmp = as.numeric(which(sbps[, i - 1] != 0))
+    }
+    inactive_vars_tmp = setdiff(prev_active_vars.tmp, active_vars_tmp)
+    if(length(inactive_vars_tmp) == 1){ # 1 invalid cluster
+      # if just 1 variable has been left out, it wasn't a valid cluster
+      # let sbp vector indicate which variable was left out
+      sbp_tmp = matrix(0, nrow = p, ncol = 1)
+      sbp_tmp[inactive_vars_tmp, 1] = -1
+      sbp_tmp[active_vars_tmp, 1] = 1
+      colnames(sbp_tmp) = colnames(sbps)[i]
+      colname_counter = colname_counter + 1
+    } else{
+      sbp_tmp = matrix(0, nrow = p, ncol = length(inactive_vars_tmp))
+      # one column is the active/inactive variables
+      sbp_tmp[inactive_vars_tmp, 1] = -1
+      sbp_tmp[active_vars_tmp, 1] = 1
+      # the rest are the inactive variables, 1 left out at a time
+      for(j in 2:ncol(sbp_tmp)){
+        sbp_tmp[inactive_vars_tmp[j - 1], j] = 1
+        sbp_tmp[inactive_vars_tmp[j:length(inactive_vars_tmp)], j] = -1
+      }
+      colnames(sbp_tmp) = c(
+        colnames(sbps)[i], 
+        paste(
+          "z", colname_counter + 0:(ncol(sbp_tmp) - 2), sep = ""))
+      colname_counter = colname_counter + length(inactive_vars_tmp) - 1
+    }
+    sbp_full = cbind(sbp_full, sbp_tmp)
+    if(i == 1){
+      sbp_full = sbp_full[, -1]
+    }
+    if(i == ncol(sbps) && length(active_vars_tmp) == 2){
+      sbp_tmp = matrix(0, nrow = p, ncol = 1)
+      sbp_tmp[active_vars_tmp[1], 1] = 1
+      sbp_tmp[active_vars_tmp[2], 1] = -1
+      colnames(sbp_tmp) = colnames(sbps)[i]
+      sbp_full = cbind(sbp_full, sbp_tmp)
+    }
+  }
+  return(list(sbp_complete = sbp_full, Rsqs = Rsqs, cors = cors))
+}
+
+plotSBP = function(
+  sbp = NULL, edges = NULL, title = NULL, 
+  nodes_types = NULL, 
+  # a data frame of the nodes/vertices (column = "name") labeled as 
+  #   "balance", "covariate", "significant covariate" (column = "type")
+  text_size = 2
+){
+  # get edges data frame, if one isn't given
+  if(is.null(sbp) & is.null(edges)){
+    stop("plotSBP: provide either sbp or edges arguments!!")
+  }
+  if(is.null(edges) & !is.null(sbp)){
+    edges = getEdgesFromSBP(sbp)
+  }
+  
+  # make the graph input for ggraph plot
+  if(!is.null(nodes_types)){
+    # check nodes_types data frame
+    if(!all(unname(nodes_types[, 1]) %in% unique(unlist(edges))) ||
+       !all(unique(unlist(edges)) %in% unname(nodes_types[, 1]))){
+      stop("names of nodes in nodes_types data frame don't match the row names of sbp matrix")
+    } 
+    mygraph <- as_tbl_graph(graph_from_data_frame(
+      d = edges, 
+      vertices = nodes_types
+    ),
+    directed = TRUE)
+  } else{
+    mygraph <- as_tbl_graph(graph_from_data_frame(
+      d = edges, vertices = data.frame(nodes = unique(unlist(edges)))),
+      directed = TRUE)
+  }
+  
+  # make the plot
+  plt = ggraph(mygraph, layout = 'igraph', algorithm = 'tree') +
+    geom_edge_diagonal() +
+    geom_node_point()
+  if(!is.null(title)){
+    plt = plt + ggtitle(title)
+  }
+  if(!is.null(nodes_types)){
+    plt = plt + 
+      geom_node_label(aes(label = name, fill = type), size = text_size)
+  } else{
+    plt = plt + 
+      geom_node_label(aes(label = name), size = text_size)
+  }
+  plt = plt + theme_void()
+  return(plt)
+}
+
+getEdgesFromSBP = function(sbp){
+  # make sure the rows (leaf nodes) and & columns (inner nodes) are named
+  if(is.null(rownames(sbp))){
+    rownames(sbp) = paste("s", 1:nrow(sbp), sep = "")
+  }
+  if(is.null(colnames(sbp))){
+    colnames(sbp) = paste("z", 1:ncol(sbp), sep = "")
+  }
+  leafs = rownames(sbp)
+  inners = colnames(sbp)
+  
+  # make edges data frame
+  edges.df = data.frame(from = character(), to = character())
+  for(j in 1:ncol(sbp)){
+    from.tmp = rep(inners[j], 2) # because binary tree
+    # left child - "1"'s
+    if(sum(sbp[, j] == 1) == 1){ # if one "1", it's a leaf node
+      left.tmp = leafs[which(sbp[, j] == 1)]
+    } else{ # if multiple "1"'s, it's an inner node
+      is.left.tmp = rep(FALSE, ncol(sbp))
+      for(k in 1:ncol(sbp)){
+        # there is only one column with the same locations of non-zeroes as 
+        #   there are "1"'s in sbp[, j] -- that column has the left child node
+        if(isTRUE(all.equal((sbp[, k] != 0), (sbp[, j] == 1)))){
+          is.left.tmp[k] = TRUE
+        }
+      }
+      left.tmp = inners[is.left.tmp]
+    }
+    # right child - "-1"'s
+    if(sum(sbp[, j] == -1) == 1){ 
+      right.tmp = leafs[which(sbp[, j] == -1)]
+    } else{ 
+      is.right.tmp = rep(FALSE, ncol(sbp))
+      for(k in 1:ncol(sbp)){
+        if(isTRUE(all.equal((sbp[, k] != 0), (sbp[, j] == -1)))){
+          is.right.tmp[k] = TRUE
+        }
+      }
+      right.tmp = inners[is.right.tmp]
+    }
+    to.tmp = c(left.tmp, right.tmp) # left & right children -- swap for ggraph
+    if(length(to.tmp) == 2 & length(from.tmp) == 2){
+      edges.df = rbind(edges.df, data.frame(from = from.tmp, to = to.tmp))
+    }
+  }
+  return(edges.df)
+}
+
+
+
+
+

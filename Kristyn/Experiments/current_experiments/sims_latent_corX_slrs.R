@@ -133,8 +133,7 @@ res = foreach(
     time1 = end.time, time2 = start.time, units = "secs")
 
   # cl.lam.idx = which.min(classo$cvm)
-  oneSErule = min(classo$cvm) + 
-    (classo$cvsd[which.min(classo$cvm)] / classo$lambda) * 1
+  oneSErule = min(classo$cvm) + (classo$cvsd[which.min(classo$cvm)] / K) * 1
   cl.lam.idx = which(classo$cvm <= oneSErule)[1]
   cl.a0 = classo$int[cl.lam.idx]
   cl.betahat = classo$bet[, cl.lam.idx]

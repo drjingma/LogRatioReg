@@ -1,102 +1,102 @@
-# slr() function with the following changes:
-#   1. rank1approx option added
-#   2. using balances correlations instead of effect sizes to choose active subset
-#   3. spectral.clustering2() instead of spectral.clustering()
-slrT2 <- function(
-  x, y, rank1approx = FALSE, classification = FALSE, alpha = 0.05){
-  p <- ncol(x)
-  
-  ## Compute pairwise correlation 
-  rhoMat <- slrmatrix(x = x, y = y)
-  out <- list()
-  out$kernel <- rhoMat
-  
-  ## Split into active/inactive sets
-  if(rank1approx){
-    rhoMat.svd <- svd(rhoMat)
-    rhoMat_approx_1 <- tcrossprod(
-      rhoMat.svd$u[, 1], rhoMat.svd$v[, 1]) * rhoMat.svd$d[1]
-    index <- which(spectral.clustering2(rhoMat_approx_1, reindex = TRUE) == 1)
-  } else{
-    index <- which(spectral.clustering2(rhoMat, reindex = TRUE) == 1)
-  }
-  
-  ## Find which set has the more predictive balance
-  # if(length(index) == 1 | length(index) == p - 1){ # one valid cluster
-  #   warning("slr(): Only one covariate was subsetted. No log-ratios can be made.")
-  #   # fit the subset with length p - 1
-  #   if(length(index) == p - 1){
-  #     subset <- spectral.clustering2(rhoMat[index, index], reindex = TRUE)
-  #   } else{
-  #     subset <- spectral.clustering2(rhoMat[-index, -index], reindex = TRUE)
-  #   }
-  #   sbp.est <- matrix(0, nrow = p, ncol = 1)
-  #   rownames(sbp.est) <- colnames(x)
-  #   sbp.est[match(names(subset),rownames(sbp.est)), 1] <- subset
-  #   est.balance <- balance::balance.fromSBP(x = x, y = sbp.est)
-  #   if(!classification){
-  #     refit2 <- lm(y~est.balance)
-  #     pval = summary(refit2)$coefficients["est.balance", "Pr(>|t|)"]
-  #   } else{
-  #     refit2 = stats::glm(
-  #       y~est.balance, family = binomial(link = "logit"))
-  #     pval = summary(refit2)$coefficients["est.balance", "Pr(>|z|)"]
-  #   }
-  #   if(pval < alpha){
-  #     out$index = subset
-  #     refit = refit2
-  #   } else{
-  #     # fit only the intercept
-  #     out$index = NA
-  #     if(!classification){
-  #       refit <- lm(y~1)
-  #     } else{
-  #       refit = stats::glm(y~1, family = binomial(link = "logit"))
-  #     }
-  #   }
-  # } else{
-  ## Perform spectral clustering to get the numerator/denominator groups
-  ##    for the active/inactive sets
-  subset1 <- spectral.clustering2(rhoMat[index, index], reindex = TRUE)
-  subset2 <- spectral.clustering2(rhoMat[-index, -index], reindex = TRUE) 
-  
-  # Since we don't know which subset contains the active variables, 
-  ## we first fit a linear model with balances obtained from both subsets. 
-  sbp.est <- matrix(0, ncol = 2, nrow = p)
-  rownames(sbp.est) <- colnames(x)
-  sbp.est[match(names(subset1),rownames(sbp.est)), 1] <- subset1
-  sbp.est[match(names(subset2),rownames(sbp.est)), 2] <- subset2
-  est.balance <- balance::balance.fromSBP(x = x, y = sbp.est)
-  cors = stats::cor(est.balance, y)
-  
-  # The correct subset should have larger coefficient. 
-  ## We refit the linear model on the balance from the correct subset. 
-  out$cors = cors
-  
-  if ( abs(cors[1, ]) > abs(cors[2, ]) ){
-    # pick subset1
-    out$index <- subset1
-    if(!classification){
-      refit <- lm(y~est.balance[, 1])
-    } else{
-      refit = stats::glm(
-        y~est.balance[, 1], family = binomial(link = "logit"))
-    }
-  } else {
-    # pick subset2
-    out$index <- subset2
-    if(!classification){
-      refit <- lm(y~est.balance[, 2])
-    } else{
-      refit = stats::glm(
-        y~est.balance[, 2], family = binomial(link = "logit"))
-    }
-  }
-  # }
-  
-  out$model <- refit
-  out
-}
+# # slr() function with the following changes:
+# #   1. rank1approx option added
+# #   2. using balances correlations instead of effect sizes to choose active subset
+# #   3. spectral.clustering2() instead of spectral.clustering()
+# slrT2 <- function(
+#   x, y, rank1approx = FALSE, classification = FALSE, alpha = 0.05){
+#   p <- ncol(x)
+#   
+#   ## Compute pairwise correlation 
+#   rhoMat <- slrmatrix(x = x, y = y)
+#   out <- list()
+#   out$kernel <- rhoMat
+#   
+#   ## Split into active/inactive sets
+#   if(rank1approx){
+#     rhoMat.svd <- svd(rhoMat)
+#     rhoMat_approx_1 <- tcrossprod(
+#       rhoMat.svd$u[, 1], rhoMat.svd$v[, 1]) * rhoMat.svd$d[1]
+#     index <- which(spectral.clustering2(rhoMat_approx_1, reindex = TRUE) == 1)
+#   } else{
+#     index <- which(spectral.clustering2(rhoMat, reindex = TRUE) == 1)
+#   }
+#   
+#   ## Find which set has the more predictive balance
+#   # if(length(index) == 1 | length(index) == p - 1){ # one valid cluster
+#   #   warning("slr(): Only one covariate was subsetted. No log-ratios can be made.")
+#   #   # fit the subset with length p - 1
+#   #   if(length(index) == p - 1){
+#   #     subset <- spectral.clustering2(rhoMat[index, index], reindex = TRUE)
+#   #   } else{
+#   #     subset <- spectral.clustering2(rhoMat[-index, -index], reindex = TRUE)
+#   #   }
+#   #   sbp.est <- matrix(0, nrow = p, ncol = 1)
+#   #   rownames(sbp.est) <- colnames(x)
+#   #   sbp.est[match(names(subset),rownames(sbp.est)), 1] <- subset
+#   #   est.balance <- balance::balance.fromSBP(x = x, y = sbp.est)
+#   #   if(!classification){
+#   #     refit2 <- lm(y~est.balance)
+#   #     pval = summary(refit2)$coefficients["est.balance", "Pr(>|t|)"]
+#   #   } else{
+#   #     refit2 = stats::glm(
+#   #       y~est.balance, family = binomial(link = "logit"))
+#   #     pval = summary(refit2)$coefficients["est.balance", "Pr(>|z|)"]
+#   #   }
+#   #   if(pval < alpha){
+#   #     out$index = subset
+#   #     refit = refit2
+#   #   } else{
+#   #     # fit only the intercept
+#   #     out$index = NA
+#   #     if(!classification){
+#   #       refit <- lm(y~1)
+#   #     } else{
+#   #       refit = stats::glm(y~1, family = binomial(link = "logit"))
+#   #     }
+#   #   }
+#   # } else{
+#   ## Perform spectral clustering to get the numerator/denominator groups
+#   ##    for the active/inactive sets
+#   subset1 <- spectral.clustering2(rhoMat[index, index], reindex = TRUE)
+#   subset2 <- spectral.clustering2(rhoMat[-index, -index], reindex = TRUE) 
+#   
+#   # Since we don't know which subset contains the active variables, 
+#   ## we first fit a linear model with balances obtained from both subsets. 
+#   sbp.est <- matrix(0, ncol = 2, nrow = p)
+#   rownames(sbp.est) <- colnames(x)
+#   sbp.est[match(names(subset1),rownames(sbp.est)), 1] <- subset1
+#   sbp.est[match(names(subset2),rownames(sbp.est)), 2] <- subset2
+#   est.balance <- balance::balance.fromSBP(x = x, y = sbp.est)
+#   cors = stats::cor(est.balance, y)
+#   
+#   # The correct subset should have larger coefficient. 
+#   ## We refit the linear model on the balance from the correct subset. 
+#   out$cors = cors
+#   
+#   if ( abs(cors[1, ]) > abs(cors[2, ]) ){
+#     # pick subset1
+#     out$index <- subset1
+#     if(!classification){
+#       refit <- lm(y~est.balance[, 1])
+#     } else{
+#       refit = stats::glm(
+#         y~est.balance[, 1], family = binomial(link = "logit"))
+#     }
+#   } else {
+#     # pick subset2
+#     out$index <- subset2
+#     if(!classification){
+#       refit <- lm(y~est.balance[, 2])
+#     } else{
+#       refit = stats::glm(
+#         y~est.balance[, 2], family = binomial(link = "logit"))
+#     }
+#   }
+#   # }
+#   
+#   out$model <- refit
+#   out
+# }
 
 slrmatrix = function(x, y){
   p = ncol(x)
@@ -138,8 +138,7 @@ spectral.clustering2 <- function(W, n_eig = 2, reindex = FALSE) {
 }
 
 slr <- function(
-  x, y, num.clusters = 2, classification = FALSE, approx = TRUE, 
-  handle.invalid = FALSE
+  x, y, num.clusters = 2, classification = FALSE, approx = TRUE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -182,14 +181,7 @@ slr <- function(
       bal.ests[, i] = balance::balance.fromSBP(
         x = x, y = sbp.ests[, i, drop = FALSE])
     } else{ # otherwise, if there's just one variable in the cluster, set all other variables as -1
-      if(handle.invalid){
-        sbp.ests[index, i] = 1
-        sbp.ests[-index, i] = -1
-        bal.ests[, i] = balance::balance.fromSBP(
-          x = x, y = sbp.ests[, i, drop = FALSE])
-      } else{
-        sbp.ests[, i] = rep(NA, p)
-      }
+      sbp.ests[, i] = rep(NA, p)
     }
     cors[i] = stats::cor(bal.ests[, i], y)
     Rsqs[i] = cors[i]^2
@@ -212,6 +204,79 @@ slr <- function(
   
   # return the full SBP vector (with entries for all p variables)
   full.sbp.est = sbp.ests[, selected.cluster, drop = FALSE]
+  rownames(full.sbp.est) = colnames(x)
+  out$sbp = full.sbp.est
+  
+  # return the slr object
+  return(out)
+}
+
+# slr with 1 application of spectral clustering (with 3 clusters instead of 2)
+slr1sc <- function(
+  x, y, classification = FALSE, approx = TRUE
+){
+  num.clusters = 3
+  n = nrow(x)
+  p = ncol(x)
+  
+  ## Compute pairwise correlation
+  rhoMat <- slrmatrix(x = x, y = y)
+  out <- list()
+  out$kernel <- rhoMat
+  
+  ## Split into active/inactive sets
+  if(approx){
+    rhoMat.svd <- svd(rhoMat)
+    rhoMat_approx <- tcrossprod(
+      rhoMat.svd$u[, 1], 
+      rhoMat.svd$v[, 1]) *
+      rhoMat.svd$d[1]
+    rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
+    cluster.labels <- spectral.clustering2(rhoMat_approx, n_eig = num.clusters)
+  } else{
+    cluster.labels <- spectral.clustering2(rhoMat, n_eig = num.clusters)
+  }
+  cluster.lengths = table(cluster.labels)
+  clusters = names(cluster.lengths)
+  out$num.clusters = num.clusters
+  
+  ## Find which set has the more predictive balance
+  all.pairs = t(combn(clusters, 2))
+  cors = rep(NA, nrow(all.pairs))
+  Rsqs = rep(NA, nrow(all.pairs))
+  sbp.ests = matrix(0, nrow = p, ncol = nrow(all.pairs))
+  bal.ests = matrix(NA, nrow = n, ncol = nrow(all.pairs))
+  rownames(sbp.ests) <- colnames(x)
+  for(i in 1:nrow(all.pairs)){
+    cluster1.label = all.pairs[i, 1]
+    subset1 = which(cluster.labels == cluster1.label)
+    cluster2.label = all.pairs[i, 2]
+    subset2 = which(cluster.labels == cluster2.label)
+    sbp.ests[match(names(subset1), rownames(sbp.ests)), i] = 1
+    sbp.ests[match(names(subset2), rownames(sbp.ests)), i] = -1
+    bal.ests[, i] = balance::balance.fromSBP(
+      x = x, y = sbp.ests[, i, drop = FALSE])
+    cors[i] = stats::cor(bal.ests[, i], y)
+    Rsqs[i] = cors[i]^2
+  }
+  out$cors = cors
+  out$Rsqs = Rsqs
+  # The correct active set should have largest correlation magnitude, i.e. Rsq.
+  ## We refit the linear model on the balance from the set with the 
+  ##    largest correlation magnitude.
+  selected.bal = which.max(Rsqs)
+  out$index = sbp.ests[, selected.bal]
+  refit_data = data.frame(V1 = bal.ests[, selected.bal], y = y)
+  if(!classification){
+    refit <- lm(y~V1, data = refit_data)
+  } else{
+    refit = stats::glm(
+      y~V1, data = refit_data, family = binomial(link = "logit"))
+  }
+  out$model <- refit
+  
+  # return the full SBP vector (with entries for all p variables)
+  full.sbp.est = sbp.ests[, selected.bal, drop = FALSE]
   rownames(full.sbp.est) = colnames(x)
   out$sbp = full.sbp.est
   
@@ -273,7 +338,7 @@ cv.slr = function(
   # Calculate CV(numclusters) and SE_CV(numclusters) for each possible 
   #   number of clusters, up to max.clusters
   # scores = -sqrt(cvm_sqerr) # codacore:::findBestCutoff.CoDaBaseLearner
-  cvse = apply(cvm_sqerr, 2, stats::sd)/sqrt(K)
+  cvse = apply(cvm_sqerr, 2, stats::sd)/sqrt(nfolds)
   cvm = colMeans(cvm_sqerr)
   
   # Find numclust_min = argmin{CV(numclusters)}
@@ -414,9 +479,14 @@ cv.hslr = function(
   
   # Find numclust_1se = maximal numclusters s.t. CV(numclusters) <= CV(nclust_min) + CV_SE(nclust_min)
   oneserule = cvm[numclust_min_index] + cvse[numclust_min_index]
-  which_numclust_1se = which(cvm <= oneserule)
-  numclust_1se_index = which_numclust_1se[length(which_numclust_1se)]
-  numclust_1se = num.levels.candidates[numclust_1se_index]
+  if(!is.na(oneserule)){
+    which_numclust_1se = which(cvm <= oneserule)
+    numclust_1se_index = which_numclust_1se[length(which_numclust_1se)]
+    numclust_1se = num.levels.candidates[numclust_1se_index]
+  } else{
+    numclust_1se_index = numclust_min_index
+    numclust_1se = numclust_min
+  }
   return(
     list(
       nclusters = num.levels.candidates,
@@ -424,6 +494,7 @@ cv.hslr = function(
       models = hslrmodels,
       nclusters_min = numclust_min, 
       nclusters_1se = numclust_1se, 
+      cvm_sqerr = cvm_sqerr,
       cvm = cvm, 
       nclusters_min_idx = numclust_min_index,
       cvse = cvse,

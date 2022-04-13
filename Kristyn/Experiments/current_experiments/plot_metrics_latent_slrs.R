@@ -17,7 +17,7 @@ library(reshape2)
 
 numSims = 100
 
-sigma.settings = "latentVarModel_corX"
+sigma.settings = "latentVarModel"
 n = 100
 p = 30
 K = 10
@@ -26,7 +26,6 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-slrmax = 10
 sigma_eps1 = 0.1
 sigma_eps2 = 0.1
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
@@ -34,10 +33,9 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 0.5 # 1, 0.5, 0.25
+b1 = 0.25 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
-rho_alrXj = 0.2
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -45,14 +43,12 @@ file.end0 = paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
   "_dim", n, "x", p, 
-  "_slrmax", slrmax,
   "_noisey", sigma_eps1, 
-  "_noisex", sigma_eps2,
+  "_noisex", sigma_eps2, 
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
-  "_theta", theta.value, 
-  "_rho", rho_alrXj)
+  "_theta", theta.value)
 
 ################################################################################
 # plot metrics

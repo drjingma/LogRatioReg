@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 4/6/2022
+# Date: 4/13/2022
 
 ################################################################################
 # libraries and settings
@@ -129,13 +129,13 @@ res = foreach(
   end.time = Sys.time()
   cl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
-
+  
   # cl.lam.idx = which.min(classo$cvm)
   oneSErule = min(classo$cvm) + (classo$cvsd[which.min(classo$cvm)] / K) * 1
   cl.lam.idx = which(classo$cvm <= oneSErule)[1]
   cl.a0 = classo$int[cl.lam.idx]
   cl.betahat = classo$bet[, cl.lam.idx]
-
+  
   # compute metrics on the selected model #
   cl.metrics = getMetricsLLC(
     y.train = Y, y.test = Y.test,
@@ -145,7 +145,7 @@ res = foreach(
     betahat0 = cl.a0, betahat = cl.betahat,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
-
+  
   saveRDS(c(
     cl.metrics,
     "betasparsity" = bspars,
@@ -153,52 +153,100 @@ res = foreach(
     "time" = cl.timing
   ),
   paste0(output_dir, "/classo_metrics", file.end))
-
+  
   ##############################################################################
-  # plain slr method (a balance regression method)
-  #   -- spectral clustering (with rank 1 approximation)
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- FALSE
+  #   include leading eigenvector -- FALSE
   ##############################################################################
   start.time = Sys.time()
-  slr0approx = slr(x = X, y = Y, approx = TRUE)
+  slr0amap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
   end.time = Sys.time()
-  slr0approx.timing = difftime(
+  slr0amap.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
-
-  slr0approx.coefs = getCoefsBM(
-    coefs = coefficients(slr0approx$model), sbp = slr0approx$sbp)
-
+  
+  slr0amap.coefs = getCoefsBM(
+    coefs = coefficients(slr0amap$model), sbp = slr0amap$sbp)
+  
   # compute metrics on the selected model #
-  slr0approx.metrics = getMetricsBM(
+  slr0amap.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0approx$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0approx$sbp),
+    ilrX.train = getIlrX(X, sbp = slr0amap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0amap$sbp),
     n.train = n, n.test = n,
-    thetahat0 = slr0approx.coefs$a0, thetahat = slr0approx.coefs$bm.coefs,
-    betahat = slr0approx.coefs$llc.coefs,
+    thetahat0 = slr0amap.coefs$a0, thetahat = slr0amap.coefs$bm.coefs,
+    betahat = slr0amap.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
-
+  
   saveRDS(c(
-    slr0approx.metrics,
+    slr0amap.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slr0approx.coefs$bm.coefs != 0),
-    "time" = slr0approx.timing
+    "logratios" = sum(slr0amap.coefs$bm.coefs != 0),
+    "time" = slr0amap.timing
   ),
-  paste0(output_dir, "/slr_approx_metrics", file.end))
-
+  paste0(output_dir, "/slr_amini_approx_metrics", file.end))
+  
   ##############################################################################
-  # plain slr method (a balance regression method)
-  #   -- spectral clustering (no approximation)
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- FALSE
+  #   include leading eigenvector -- FALSE
   ##############################################################################
   start.time = Sys.time()
-  slr0 = slr(x = X, y = Y, approx = FALSE)
+  slr0am = slr(
+    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0am.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0am.coefs = getCoefsBM(
+    coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
+  
+  # compute metrics on the selected model #
+  slr0am.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0am$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0am$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0am.coefs$a0, thetahat = slr0am.coefs$bm.coefs,
+    betahat = slr0am.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0am.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0am.coefs$bm.coefs != 0),
+    "time" = slr0am.timing
+  ),
+  paste0(output_dir, "/slr_amini_metrics", file.end))
+  
+  
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  #   include leading eigenvector -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0 = slr(
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
   end.time = Sys.time()
   slr0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
-
+  
   slr0.coefs = getCoefsBM(
     coefs = coefficients(slr0$model), sbp = slr0$sbp)
-
+  
   # compute metrics on the selected model #
   slr0.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
@@ -209,7 +257,7 @@ res = foreach(
     betahat = slr0.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
-
+  
   saveRDS(c(
     slr0.metrics,
     "betasparsity" = bspars,
@@ -218,289 +266,83 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_metrics", file.end))
   
-  # ##############################################################################
-  # # slr1sc method (a balance regression method)
-  # #   -- spectral clustering (with rank 1 approximation)
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slr1sc0approx = slr1sc(x = X, y = Y, approx = TRUE)
-  # end.time = Sys.time()
-  # slr1sc0approx.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slr1sc0approx.coefs = getCoefsBM(
-  #   coefs = coefficients(slr1sc0approx$model), sbp = slr1sc0approx$sbp)
-  # 
-  # # compute metrics on the selected model #
-  # slr1sc0approx.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = slr1sc0approx$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = slr1sc0approx$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = slr1sc0approx.coefs$a0, thetahat = slr1sc0approx.coefs$bm.coefs,
-  #   betahat = slr1sc0approx.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #   slr1sc0approx.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(slr1sc0approx.coefs$bm.coefs != 0),
-  #   "time" = slr1sc0approx.timing
-  # ),
-  # paste0(output_dir, "/slr1sc_approx_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # slr1sc method (a balance regression method)
-  # #   -- spectral clustering (no approximation)
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slr1sc0 = slr1sc(x = X, y = Y, approx = FALSE)
-  # end.time = Sys.time()
-  # slr1sc0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slr1sc0.coefs = getCoefsBM(
-  #   coefs = coefficients(slr1sc0$model), sbp = slr1sc0$sbp)
-  # 
-  # # compute metrics on the selected model #
-  # slr1sc0.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = slr1sc0$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = slr1sc0$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = slr1sc0.coefs$a0, thetahat = slr1sc0.coefs$bm.coefs,
-  #   betahat = slr1sc0.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #   slr1sc0.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(slr1sc0.coefs$bm.coefs != 0),
-  #   "time" = slr1sc0.timing
-  # ),
-  # paste0(output_dir, "/slr1sc_metrics", file.end))
-
-  # ##############################################################################
-  # # cv.slr method (a balance regression method)
-  # #   -- spectral clustering (with rank 1 approximation)
-  # #   -- use CV to select T = # of clusters in 1st application of spectral
-  # #       clustering
-  # ##############################################################################
-  # start.time = Sys.time()
-  #  slrcv0approx = cv.slr(
-  #   x = X, y = Y, max.clusters = slrmax, nfolds = K, approx = TRUE)
-  # end.time = Sys.time()
-  #  slrcv0approx.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  #  slrcv0approx_fit = slrcv0approx$models[[slrcv0approx$nclusters_1se_idx]]
-  #  slrcv0approx.coefs = getCoefsBM(
-  #    coefs = coefficients(slrcv0approx_fit$model), sbp = slrcv0approx_fit$sbp)
-  # 
-  # # compute metrics on the selected model #
-  #  slrcv0approx.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = slrcv0approx_fit$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = slrcv0approx_fit$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = slrcv0approx.coefs$a0, thetahat = slrcv0approx.coefs$bm.coefs,
-  #   betahat = slrcv0approx.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #    slrcv0approx.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(slrcv0approx.coefs$bm.coefs != 0),
-  #   "time" = slrcv0approx.timing
-  # ),
-  # paste0(output_dir, "/slrcv_approx_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # cv.slr method (a balance regression method)
-  # #   -- spectral clustering (no approximation)
-  # #   -- use CV to select T = # of clusters in 1st application of spectral
-  # #       clustering
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slrcv0 = cv.slr(
-  #   x = X, y = Y, max.clusters = slrmax, nfolds = K, approx = FALSE)
-  # end.time = Sys.time()
-  #  slrcv0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  #  slrcv0_fit = slrcv0$models[[slrcv0$nclusters_1se_idx]]
-  #  slrcv0.coefs = getCoefsBM(
-  #   coefs = coefficients( slrcv0_fit$model), sbp = slrcv0_fit$sbp)
-  # 
-  # # compute metrics on the selected model #
-  #  slrcv0.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = slrcv0_fit$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = slrcv0_fit$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = slrcv0.coefs$a0, thetahat = slrcv0.coefs$bm.coefs,
-  #   betahat = slrcv0.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #    slrcv0.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(slrcv0.coefs$bm.coefs != 0),
-  #   "time" = slrcv0.timing
-  # ),
-  # paste0(output_dir, "/slrcv_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # cv.hslr method (a balance regression method)
-  # #   -- spectral clustering (with rank 1 approximation)
-  # #   -- use CV to select T = # of levels i.e. hierarchical splits
-  # ##############################################################################
-  # start.time = Sys.time()
-  # hslrcv0approx = cv.hslr(
-  #   x = X, y = Y, max.levels = slrmax, nfolds = K, approx = TRUE)
-  # end.time = Sys.time()
-  # hslrcv0approx.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # hslrcv0approx_fit = hslrcv0approx$models[[hslrcv0approx$nclusters_1se_idx]]
-  # hslrcv0approx.coefs = getCoefsBM(
-  #   coefs = coefficients(hslrcv0approx_fit$model), sbp = hslrcv0approx_fit$sbp)
-  # 
-  # # compute metrics on the selected model #
-  # hslrcv0approx.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = hslrcv0approx_fit$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = hslrcv0approx_fit$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = hslrcv0approx.coefs$a0, thetahat = hslrcv0approx.coefs$bm.coefs,
-  #   betahat = hslrcv0approx.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #   hslrcv0approx.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(hslrcv0approx.coefs$bm.coefs != 0),
-  #   "time" = hslrcv0approx.timing
-  # ),
-  # paste0(output_dir, "/hslrcv_approx_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # cv.hslr method (a balance regression method)
-  # #   -- spectral clustering (no approximation)
-  # #   -- use CV to select T = # of clusters in 1st application of spectral
-  # #       clustering
-  # ##############################################################################
-  # start.time = Sys.time()
-  # hslrcv0 = cv.hslr(
-  #   x = X, y = Y, max.levels = slrmax, nfolds = K, approx = FALSE)
-  # end.time = Sys.time()
-  # hslrcv0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # hslrcv0_fit = hslrcv0$models[[hslrcv0$nclusters_1se_idx]]
-  # hslrcv0.coefs = getCoefsBM(
-  #   coefs = coefficients( hslrcv0_fit$model), sbp = hslrcv0_fit$sbp)
-  # 
-  # # compute metrics on the selected model #
-  # hslrcv0.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = hslrcv0_fit$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = hslrcv0_fit$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = hslrcv0.coefs$a0, thetahat = hslrcv0.coefs$bm.coefs,
-  #   betahat = hslrcv0.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #   hslrcv0.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(hslrcv0.coefs$bm.coefs != 0),
-  #   "time" = hslrcv0.timing
-  # ),
-  # paste0(output_dir, "/hslrcv_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # cv.hslr1sc method (a balance regression method)
-  # #   -- spectral clustering (with rank 1 approximation), just once
-  # #   -- use CV to select T = # of levels i.e. hierarchical splits
-  # ##############################################################################
-  # start.time = Sys.time()
-  # hslr1sccvapprox = cv.hslr1sc(
-  #   x = X, y = Y, max.levels = slrmax, nfolds = K, approx = TRUE)
-  # end.time = Sys.time()
-  # hslr1sccvapprox.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # hslr1sccvapprox_fit = hslr1sccvapprox$models[[hslr1sccvapprox$nclusters_1se_idx]]
-  # hslr1sccvapprox.coefs = getCoefsBM(
-  #   coefs = coefficients(hslr1sccvapprox_fit$model), sbp = hslr1sccvapprox_fit$sbp)
-  # 
-  # # compute metrics on the selected model #
-  # hslr1sccvapprox.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = hslr1sccvapprox_fit$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = hslr1sccvapprox_fit$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = hslr1sccvapprox.coefs$a0, thetahat = hslr1sccvapprox.coefs$bm.coefs,
-  #   betahat = hslr1sccvapprox.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #   hslr1sccvapprox.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(hslr1sccvapprox.coefs$bm.coefs != 0),
-  #   "time" = hslr1sccvapprox.timing
-  # ),
-  # paste0(output_dir, "/hslr1sccv_approx_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # cv.hslr1sc method (a balance regression method)
-  # #   -- spectral clustering (no approximation), just once
-  # #   -- use CV to select T = # of clusters in 1st application of spectral
-  # #       clustering
-  # ##############################################################################
-  # start.time = Sys.time()
-  # hslr1sccv = cv.hslr1sc(
-  #   x = X, y = Y, max.levels = slrmax, nfolds = K, approx = FALSE)
-  # end.time = Sys.time()
-  # hslr1sccv.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # hslr1sccv_fit = hslr1sccv$models[[hslr1sccv$nclusters_1se_idx]]
-  # hslr1sccv.coefs = getCoefsBM(
-  #   coefs = coefficients( hslr1sccv_fit$model), sbp = hslr1sccv_fit$sbp)
-  # 
-  # # compute metrics on the selected model #
-  # hslr1sccv.metrics = getMetricsBM(
-  #   y.train = Y, y.test = Y.test,
-  #   ilrX.train = getIlrX(X, sbp = hslr1sccv_fit$sbp),
-  #   ilrX.test = getIlrX(X.test, sbp = hslr1sccv_fit$sbp),
-  #   n.train = n, n.test = n,
-  #   thetahat0 = hslr1sccv.coefs$a0, thetahat = hslr1sccv.coefs$bm.coefs,
-  #   betahat = hslr1sccv.coefs$llc.coefs,
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #   hslr1sccv.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(hslr1sccv.coefs$bm.coefs != 0),
-  #   "time" = hslr1sccv.timing
-  # ),
-  # paste0(output_dir, "/hslr1sccv_metrics", file.end))
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- TRUE
+  #   include leading eigenvector -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0hdr = slr(
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = TRUE, include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0hdr.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
   
+  slr0hdr.coefs = getCoefsBM(
+    coefs = coefficients(slr0hdr$model), sbp = slr0hdr$sbp)
+  
+  # compute metrics on the selected model #
+  slr0hdr.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0hdr$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0hdr$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0hdr.coefs$a0, thetahat = slr0hdr.coefs$bm.coefs,
+    betahat = slr0hdr.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0hdr.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0hdr.coefs$bm.coefs != 0),
+    "time" = slr0hdr.timing
+  ),
+  paste0(output_dir, "/slr_hdr_metrics", file.end))
+  
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  #   include leading eigenvector -- TRUE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0eig12 = slr(
+    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0eig12.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0eig12.coefs = getCoefsBM(
+    coefs = coefficients(slr0eig12$model), sbp = slr0eig12$sbp)
+  
+  # compute metrics on the selected model #
+  slr0eig12.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0eig12$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0eig12$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0eig12.coefs$a0, thetahat = slr0eig12.coefs$bm.coefs,
+    betahat = slr0eig12.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0eig12.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0eig12.coefs$bm.coefs != 0),
+    "time" = slr0eig12.timing
+  ),
+  paste0(output_dir, "/slr_eig12_metrics", file.end))
   
   ##############################################################################
   ##############################################################################
   ##############################################################################
   ### fin ###
 }
-
 

@@ -162,7 +162,7 @@ graph.laplacian2 <- function(
   stopifnot(nrow(W) == ncol(W)) 
   n = nrow(W)    # number of vertices
   degrees <- colSums(W) # degrees of vertices
-  maximaldegree = max(n * degrees)
+  maximaldegree = max(n * W)
   W.tmp = W
   
   # regularization.method == 1: perturb the network by adding some links with 

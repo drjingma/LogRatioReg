@@ -116,7 +116,7 @@ for(i in 1:numSims){
 classo_sims.gg = reshape2::melt(as.data.frame(rbindlist(classo_sims_list)))
 classo_sims.gg$Method = "classo"
 #
-slr_sims.gg = reshape2::melt(as.data.frame(rbindlist(classo_sims_list)))
+slr_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_sims_list)))
 slr_sims.gg$Method = "slr"
 #
 slr_am_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_am_sims_list)))
@@ -165,85 +165,85 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220406",
+    "20220413",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
   width = 8, height = 6, units = c("in")
 )
 
-data.gg_main2 = data.gg_main %>%
-  dplyr::filter(
-    !(Method %in% c("mslr-cv", "mslr-cv-appr") & variable == "time")
-  )
-plt_main2 = ggplot(
-  data.gg_main2, 
-  aes(x = Method, y = value, color = Method)) +
-  facet_wrap(vars(variable), scales = "free_y") +
-  geom_boxplot() +
-  stat_summary(
-    fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(), 
-    # axis.text.x = element_blank(),
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
-plt_main2
-ggsave(
-  filename = paste0(
-    "20220406",
-    file.end0,
-    "_", "metrics_exclude", ".pdf"),
-  plot = plt_main2,
-  width = 8, height = 6, units = c("in")
-)
-
-data.gg_pos = data.gg %>% dplyr::filter(
-  variable %in% c(
-    "FP+", "FN+", "TPR+"
-  )
-)
-plt_pos = ggplot(
-  data.gg_pos, 
-  aes(x = Method, y = value, color = Method)) +
-  facet_wrap(vars(variable), scales = "free_y") +
-  geom_boxplot() +
-  stat_summary(
-    fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(), 
-    # axis.text.x = element_blank(),
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
-data.gg_neg = data.gg %>% dplyr::filter(
-  variable %in% c(
-    "FP-", "FN-", "TPR-"
-  )
-)
-plt_neg = ggplot(
-  data.gg_neg, 
-  aes(x = Method, y = value, color = Method)) +
-  facet_wrap(vars(variable), scales = "free_y") +
-  geom_boxplot() +
-  stat_summary(
-    fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(), 
-    # axis.text.x = element_blank(),
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
-ggarrange(plt_pos, plt_neg, nrow = 2)
-ggsave(
-  filename = paste0(
-    "20220315",
-    file.end0, 
-    "_", "metrics_posneg", ".pdf"),
-  plot = last_plot(),
-  width = 8, height = 5, units = c("in")
-)
+# data.gg_main2 = data.gg_main %>%
+#   dplyr::filter(
+#     !(Method %in% c("mslr-cv", "mslr-cv-appr") & variable == "time")
+#   )
+# plt_main2 = ggplot(
+#   data.gg_main2, 
+#   aes(x = Method, y = value, color = Method)) +
+#   facet_wrap(vars(variable), scales = "free_y") +
+#   geom_boxplot() +
+#   stat_summary(
+#     fun = mean, geom = "point", shape = 4, size = 1.5,
+#     color = "red") +
+#   theme_bw() +
+#   theme(
+#     axis.title.x = element_blank(), 
+#     # axis.text.x = element_blank(),
+#     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+#     axis.title.y = element_blank())
+# plt_main2
+# ggsave(
+#   filename = paste0(
+#     "20220406",
+#     file.end0,
+#     "_", "metrics_exclude", ".pdf"),
+#   plot = plt_main2,
+#   width = 8, height = 6, units = c("in")
+# )
+# 
+# data.gg_pos = data.gg %>% dplyr::filter(
+#   variable %in% c(
+#     "FP+", "FN+", "TPR+"
+#   )
+# )
+# plt_pos = ggplot(
+#   data.gg_pos, 
+#   aes(x = Method, y = value, color = Method)) +
+#   facet_wrap(vars(variable), scales = "free_y") +
+#   geom_boxplot() +
+#   stat_summary(
+#     fun = mean, geom = "point", shape = 4, size = 1.5,
+#     color = "red") +
+#   theme_bw() +
+#   theme(
+#     axis.title.x = element_blank(), 
+#     # axis.text.x = element_blank(),
+#     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+#     axis.title.y = element_blank())
+# data.gg_neg = data.gg %>% dplyr::filter(
+#   variable %in% c(
+#     "FP-", "FN-", "TPR-"
+#   )
+# )
+# plt_neg = ggplot(
+#   data.gg_neg, 
+#   aes(x = Method, y = value, color = Method)) +
+#   facet_wrap(vars(variable), scales = "free_y") +
+#   geom_boxplot() +
+#   stat_summary(
+#     fun = mean, geom = "point", shape = 4, size = 1.5,
+#     color = "red") +
+#   theme_bw() +
+#   theme(
+#     axis.title.x = element_blank(), 
+#     # axis.text.x = element_blank(),
+#     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+#     axis.title.y = element_blank())
+# ggarrange(plt_pos, plt_neg, nrow = 2)
+# ggsave(
+#   filename = paste0(
+#     "20220315",
+#     file.end0, 
+#     "_", "metrics_posneg", ".pdf"),
+#   plot = last_plot(),
+#   width = 8, height = 5, units = c("in")
+# )

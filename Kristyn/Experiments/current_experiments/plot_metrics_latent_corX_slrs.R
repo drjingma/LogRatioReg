@@ -33,7 +33,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 0.5 # 1, 0.5, 0.25
+b1 = 0.25 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 rho_alrXj = 0.2
@@ -59,8 +59,10 @@ file.end0 = paste0(
 classo_sims_list = list()
 slr_sims_list = list()
 slr_am_sims_list = list()
+slr_ap_sims_list = list()
 slr_am_ap_sims_list = list()
 slr_hdr_sims_list = list()
+slr_hdr_ap_sims_list = list()
 slr_eig12_sims_list = list()
 for(i in 1:numSims){
   print(i)
@@ -89,6 +91,14 @@ for(i in 1:numSims){
   rownames(slr_am_sim_tmp) = NULL
   slr_am_sims_list[[i]] = data.table(slr_am_sim_tmp)
   
+  # slr - approx
+  slr_ap_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_approx_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_ap_sim_tmp) = NULL
+  slr_ap_sims_list[[i]] = data.table(slr_ap_sim_tmp)
+  
   # slr - amini + approx
   slr_am_ap_sim_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/slr_amini_approx_metrics", file.end0,
@@ -104,6 +114,14 @@ for(i in 1:numSims){
   ))))
   rownames(slr_hdr_sim_tmp) = NULL
   slr_hdr_sims_list[[i]] = data.table(slr_hdr_sim_tmp)
+  
+  # slr - high-degree reg + approx
+  slr_hdr_ap_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_hdr_approx_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_hdr_ap_sim_tmp) = NULL
+  slr_hdr_ap_sims_list[[i]] = data.table(slr_hdr_ap_sim_tmp)
   
   # slr - 2 leading eigenvectors
   slr_eig12_sim_tmp = t(data.frame(readRDS(paste0(
@@ -124,11 +142,17 @@ slr_sims.gg$Method = "slr"
 slr_am_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_am_sims_list)))
 slr_am_sims.gg$Method = "slr-am"
 #
+slr_ap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_ap_sims_list)))
+slr_ap_sims.gg$Method = "slr-ap"
+#
 slr_am_ap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_am_ap_sims_list)))
 slr_am_ap_sims.gg$Method = "slr-am-ap"
 #
 slr_hdr_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_hdr_sims_list)))
 slr_hdr_sims.gg$Method = "slr-hdr"
+#
+slr_hdr_ap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_hdr_ap_sims_list)))
+slr_hdr_ap_sims.gg$Method = "slr-hdr-ap"
 #
 slr_eig12_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_eig12_sims_list)))
 slr_eig12_sims.gg$Method = "slr-eig12"
@@ -137,8 +161,10 @@ data.gg = rbind(
   classo_sims.gg,
   slr_sims.gg,
   slr_am_sims.gg, 
+  slr_ap_sims.gg, 
   slr_am_ap_sims.gg,
   slr_hdr_sims.gg,
+  slr_hdr_ap_sims.gg,
   slr_eig12_sims.gg)
 
 data.gg_main = data.gg %>% 

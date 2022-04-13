@@ -115,17 +115,33 @@ slrmatrix = function(x, y){
 }
 
 # spectral.clustering() function, with automatic splitting of two things
-spectral.clustering2 <- function(W, n_eig = 2, reindex = FALSE) {
-  L = graph.laplacian(W)          # 2. compute graph laplacian
-  ei = eigen(L, symmetric = TRUE) # 3. Compute the eigenvectors and values of L
+spectral.clustering2 <- function(
+  W, n_eig = 2, reindex = FALSE, 
+  amini.regularization = TRUE, 
+  highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE
+  ) {
+  # compute graph laplacian
+  L = graph.laplacian2(
+    W = W, amini.regularization = amini.regularization, 
+    highdegree.regularization = highdegree.regularization)          
+  ei = eigen(L, symmetric = TRUE)
+  # compute the eigenvectors and values of L
   # we will use k-means to cluster the data
   # using the leading eigenvalues in absolute values
   ei$vectors <- ei$vectors[,base::order(abs(ei$values),decreasing=TRUE)]
   if(nrow(W) == n_eig){
     obj = list(cluster= 1:n_eig)
   } else{
+    if(include.leading.eigenvector){
+      eigenvector.indices = 1:n_eig
+    } else{ # just the second largest eigenvector
+      eigenvector.indices = 2:n_eig
+    }
     obj <- kmeans(
-      ei$vectors[, 2:n_eig, drop = FALSE], centers = n_eig, nstart = 100)
+      # ei$vectors[, 2:n_eig, drop = FALSE], centers = n_eig, nstart = 100)
+      ei$vectors[, eigenvector.indices, drop = FALSE], centers = n_eig, 
+      nstart = 100)
   }
   if (reindex){
     cl <- 2*(obj$cluster - 1) - 1
@@ -137,8 +153,52 @@ spectral.clustering2 <- function(W, n_eig = 2, reindex = FALSE) {
   return(cl)
 }
 
+graph.laplacian2 <- function(
+  W, # normalized = TRUE, 
+  amini.regularization = TRUE, 
+  highdegree.regularization = FALSE,
+  zeta = 0.01
+){
+  stopifnot(nrow(W) == ncol(W)) 
+  n = nrow(W)    # number of vertices
+  degrees <- colSums(W) # degrees of vertices
+  maximaldegree = max(n * degrees)
+  W.tmp = W
+  
+  # regularization.method == 1: perturb the network by adding some links with 
+  #   low edge weights
+  if(!amini.regularization){
+    zeta = 0
+  }
+  W.tmp <- W.tmp + zeta * mean(degrees) / n * tcrossprod(rep(1,n))
+  
+  # regularization.method == 2: reduce the weights of edges proportionally to 
+  #   the excess of degrees
+  if(highdegree.regularization){
+    for(i in 1:n){
+      for(j in 1:n){
+        if(i != j){
+          lambda_i = min(2 * maximaldegree / degrees[i])
+          lambda_j = min(2 * maximaldegree / degrees[j])
+          weight_ij = sqrt(lambda_i * lambda_j)
+          W.tmp[i, j] = weight_ij * W.tmp[i, j]
+        }
+      }
+    }
+  }
+  
+  # if(normalized){
+  D_half = diag(1 / sqrt(degrees))
+  # } else {
+  #   return(W.tmp)
+  # }
+  return(D_half %*% W.tmp %*% D_half)
+}
+
 slr <- function(
-  x, y, num.clusters = 2, classification = FALSE, approx = TRUE
+  x, y, num.clusters = 2, classification = FALSE, approx = TRUE, 
+  amini.regularization = TRUE, highdegree.regularization = FALSE, 
+  include.leading.eigenvector = FALSE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -156,9 +216,16 @@ slr <- function(
       rhoMat.svd$v[, 1]) *
       rhoMat.svd$d[1]
     rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
-    clusters1 <- spectral.clustering2(rhoMat_approx, n_eig = num.clusters)
+    clusters1 <- spectral.clustering2(
+      rhoMat_approx, n_eig = num.clusters, 
+      amini.regularization = amini.regularization,
+      highdegree.regularization = highdegree.regularization, 
+      include.leading.eigenvector = include.leading.eigenvector)
   } else{
-    clusters1 <- spectral.clustering2(rhoMat, n_eig = num.clusters)
+    clusters1 <- spectral.clustering2(
+      rhoMat, n_eig = num.clusters, amini.regularization = amini.regularization,
+      highdegree.regularization = highdegree.regularization, 
+      include.leading.eigenvector = include.leading.eigenvector)
   }
   cluster.lengths = table(clusters1)
   clusters = names(cluster.lengths)
@@ -175,7 +242,11 @@ slr <- function(
     index = which(clusters1 == cluster.label)
     if(length(index) >= 2){ # if a log-ratio can be made from the variables in this cluster
       ## Perform spectral clustering to get the numerator/denominator groups
-      subset = spectral.clustering2(rhoMat[index, index], reindex = TRUE)
+      subset = spectral.clustering2(
+        rhoMat[index, index], n_eig = 2, reindex = TRUE, 
+        amini.regularization = amini.regularization,
+        highdegree.regularization = highdegree.regularization, 
+        include.leading.eigenvector = include.leading.eigenvector)
       ## calculate balance and its correlation with y
       sbp.ests[match(names(subset), rownames(sbp.ests)), i] = subset
       bal.ests[, i] = balance::balance.fromSBP(
@@ -213,7 +284,9 @@ slr <- function(
 
 # slr with 1 application of spectral clustering (with 3 clusters instead of 2)
 slr1sc <- function(
-  x, y, classification = FALSE, approx = TRUE
+  x, y, classification = FALSE, approx = TRUE, 
+  amini.regularization = TRUE, highdegree.regularization = FALSE, 
+  include.leading.eigenvector = FALSE
 ){
   num.clusters = 3
   n = nrow(x)
@@ -232,15 +305,23 @@ slr1sc <- function(
       rhoMat.svd$v[, 1]) *
       rhoMat.svd$d[1]
     rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
-    cluster.labels <- spectral.clustering2(rhoMat_approx, n_eig = num.clusters)
+    cluster.labels <- spectral.clustering2(
+      rhoMat_approx, n_eig = num.clusters, 
+      amini.regularization = amini.regularization,
+      highdegree.regularization = highdegree.regularization, 
+      include.leading.eigenvector = include.leading.eigenvector)
   } else{
-    cluster.labels <- spectral.clustering2(rhoMat, n_eig = num.clusters)
+    cluster.labels <- spectral.clustering2(
+      rhoMat, n_eig = num.clusters, 
+      amini.regularization = amini.regularization,
+      highdegree.regularization = highdegree.regularization, 
+      include.leading.eigenvector = include.leading.eigenvector)
   }
   cluster.lengths = table(cluster.labels)
   clusters = names(cluster.lengths)
   out$num.clusters = num.clusters
   
-  ## Find which set has the more predictive balance
+  ## Find which pair of the 3 clusters has the most predictive balance
   all.pairs = t(combn(clusters, 2))
   cors = rep(NA, nrow(all.pairs))
   Rsqs = rep(NA, nrow(all.pairs))
@@ -285,7 +366,9 @@ slr1sc <- function(
 }
 
 cv.slr = function(
-  x, y, max.clusters = 5, nfolds = 5, classification = FALSE, approx = TRUE
+  x, y, max.clusters = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
+  amini.regularization = TRUE, highdegree.regularization = FALSE, 
+  include.leading.eigenvector = FALSE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -366,7 +449,9 @@ cv.slr = function(
 }
 
 hslr <- function(
-  x, y, num.levels = 1, classification = FALSE, approx = TRUE
+  x, y, num.levels = 1, classification = FALSE, approx = TRUE, 
+  amini.regularization = TRUE, highdegree.regularization = FALSE, 
+  include.leading.eigenvector = FALSE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -378,9 +463,8 @@ hslr <- function(
   true.num.levels = num.levels
   for(i in 1:num.levels){
     fit_i = slr(
-      x = x[, vars.cur, drop = FALSE], 
-      y = y, num.clusters = 2, classification = classification, 
-      approx = approx)
+      x = x[, vars.cur, drop = FALSE], y = y, num.clusters = 2, 
+      classification = classification, approx = approx)
     # recalculate full SBP
     full.sbp.est = matrix(0, nrow = p, ncol = 1)
     rownames(full.sbp.est) = colnames(x)
@@ -409,7 +493,9 @@ hslr <- function(
 }
 
 hslr1sc <- function(
-  x, y, num.levels = 1, classification = FALSE, approx = TRUE
+  x, y, num.levels = 1, classification = FALSE, approx = TRUE, 
+  amini.regularization = TRUE, highdegree.regularization = FALSE, 
+  include.leading.eigenvector = FALSE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -452,7 +538,9 @@ hslr1sc <- function(
 }
 
 cv.hslr = function(
-  x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE
+  x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
+  amini.regularization = TRUE, highdegree.regularization = FALSE, 
+  include.leading.eigenvector = FALSE
 ){
   n = nrow(x)
   p = ncol(x)
@@ -547,7 +635,9 @@ cv.hslr = function(
 }
 
 cv.hslr1sc = function(
-  x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE
+  x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
+  amini.regularization = TRUE, highdegree.regularization = FALSE, 
+  include.leading.eigenvector = FALSE
 ){
   n = nrow(x)
   p = ncol(x)

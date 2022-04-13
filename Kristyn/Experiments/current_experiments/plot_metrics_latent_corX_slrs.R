@@ -61,6 +61,8 @@ file.end0 = paste0(
 classo_sims_list = list()
 slr0_sims_list = list()
 slr0approx_sims_list = list()
+slr1sc0_sims_list = list()
+slr1sc0approx_sims_list = list()
 slrcv0_sims_list = list()
 slrcv0approx_sims_list = list()
 hslrcv0_sims_list = list()
@@ -93,6 +95,22 @@ for(i in 1:numSims){
   ))))
   rownames(slr0.sim.tmp) = NULL
   slr0_sims_list[[i]] = data.table(slr0.sim.tmp)
+  
+  # slr1sc - approx
+  slr1sc0a.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_approx_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr1sc0a.sim.tmp) = NULL
+  slr1sc0approx_sims_list[[i]] = data.table(slr1sc0a.sim.tmp)
+  
+  # slr1sc - no approx
+  slr1sc0.sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr1sc0.sim.tmp) = NULL
+  slr1sc0_sims_list[[i]] = data.table(slr1sc0.sim.tmp)
   
   # cv.slr - approx
   slrcv0a.sim.tmp = t(data.frame(readRDS(paste0(
@@ -146,6 +164,8 @@ for(i in 1:numSims){
 classo_sims = as.data.frame(rbindlist(classo_sims_list))
 slr0_sims = as.data.frame(rbindlist(slr0_sims_list))
 slr0approx_sims = as.data.frame(rbindlist(slr0approx_sims_list))
+slr1sc0_sims = as.data.frame(rbindlist(slr1sc0_sims_list))
+slr1sc0approx_sims = as.data.frame(rbindlist(slr1sc0approx_sims_list))
 slrcv0_sims = as.data.frame(rbindlist(slrcv0_sims_list))
 slrcv0approx_sims = as.data.frame(rbindlist(slrcv0approx_sims_list))
 hslrcv0_sims = as.data.frame(rbindlist(hslrcv0_sims_list))
@@ -168,6 +188,10 @@ slr0_sims.gg = reshape2::melt(slr0_sims)
 slr0_sims.gg$Method = "slr"
 slr0approx_sims.gg = reshape2::melt(slr0approx_sims)
 slr0approx_sims.gg$Method = "slr-a"
+slr1sc0_sims.gg = reshape2::melt(slr1sc0_sims)
+slr1sc0_sims.gg$Method = "slr1sc"
+slr1sc0approx_sims.gg = reshape2::melt(slr1sc0approx_sims)
+slr1sc0approx_sims.gg$Method = "slr1sc-a"
 slrcv0_sims.gg = reshape2::melt(slrcv0_sims)
 slrcv0_sims.gg$Method = "cv-slr"
 slrcv0approx_sims.gg = reshape2::melt(slrcv0approx_sims)
@@ -185,6 +209,8 @@ data.gg = rbind(
   classo_sims.gg,
   slr0_sims.gg,
   slr0approx_sims.gg, 
+  slr1sc0_sims.gg,
+  slr1sc0approx_sims.gg,
   slrcv0_sims.gg, 
   slrcv0approx_sims.gg, 
   hslrcv0_sims.gg, 
@@ -198,7 +224,7 @@ data.gg_main = data.gg %>%
       "PEtr", "PEte", 
       "EA1", "EA2", "EAInfty",
       "FP", "FN", "TPR", "precision", 
-      "Fscore", "logratios", "time"
+      "Fscore", "time"
     )
   )
 plt_main = ggplot(

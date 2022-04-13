@@ -41,7 +41,7 @@ res = foreach(
   library(propr)
   
   source("RCode/func_libs.R")
-  source("Kristyn/Functions/supervisedlogratios.R")
+  source("Kristyn/Functions/util.R")
   source("Kristyn/Functions/supervisedlogratioseta.R")
   source("Kristyn/Functions/HSClust.R")
   source("Kristyn/Functions/slrnew.R")
@@ -69,7 +69,8 @@ res = foreach(
   tol = 1e-4
   sigma_eps1 = 0.1
   sigma_eps2 = 0.1
-  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  SBP.true = matrix(c(1, -1, -1, -1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)

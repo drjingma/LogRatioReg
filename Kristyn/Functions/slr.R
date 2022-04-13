@@ -162,27 +162,24 @@ graph.laplacian2 <- function(
   stopifnot(nrow(W) == ncol(W)) 
   n = nrow(W)    # number of vertices
   degrees <- colSums(W) # degrees of vertices
-  maximaldegree = max(n * W)
+  maximaldegree = max(n * W) # * zeta
   W.tmp = W
   
   # regularization.method == 1: perturb the network by adding some links with 
   #   low edge weights
-  if(!amini.regularization){
-    zeta = 0
+  if(amini.regularization){
+    W.tmp <- W.tmp + zeta * mean(degrees) / n * tcrossprod(rep(1,n))
   }
-  W.tmp <- W.tmp + zeta * mean(degrees) / n * tcrossprod(rep(1,n))
   
   # regularization.method == 2: reduce the weights of edges proportionally to 
   #   the excess of degrees
   if(highdegree.regularization){
+    lambdas = sapply(degrees, function(x) min(2 * maximaldegree / x, 1))
     for(i in 1:n){
       for(j in 1:n){
-        if(i != j){
-          lambda_i = min(2 * maximaldegree / degrees[i])
-          lambda_j = min(2 * maximaldegree / degrees[j])
-          weight_ij = sqrt(lambda_i * lambda_j)
-          W.tmp[i, j] = weight_ij * W.tmp[i, j]
-        }
+        # if(i != j){
+          W.tmp[i, j] = sqrt(lambdas[i] * lambdas[j]) * W.tmp[i, j]
+        # }
       }
     }
   }

@@ -77,15 +77,15 @@ Y2 = ifelse(Y == "CD", 1, 0)
 
 
 
-# ################################################################################
-# # Strategy 1: Replace 0's with 0.5 (used in Lin et al. 2014 [classo])
-# W_0.5 = W
-# W_0.5[W_0.5 == 0] = 0.5
-# X_0.5 = sweep(W_0.5, 1, rowSums(W_0.5), FUN='/')
-# 
-# slrcor_0.5 = slrmatrix(x = X_0.5, y = Y2)
-# pheatmap(slrcor_0.5)
-# 
+################################################################################
+# Strategy 1: Replace 0's with 0.5 (used in Lin et al. 2014 [classo])
+W_0.5 = W
+W_0.5[W_0.5 == 0] = 0.5
+X_0.5 = sweep(W_0.5, 1, rowSums(W_0.5), FUN='/')
+
+slrcor_0.5 = slrmatrix(x = X_0.5, y = Y2)
+pheatmap(slrcor_0.5)
+
 # ##### slr with approximation step #####
 # # slr0approx_0.5 = slr(
 # #   x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE)
@@ -118,11 +118,11 @@ Y2 = ifelse(Y == "CD", 1, 0)
 # #     "_slr",
 # #     "_0.5",
 # #     ".rds"))
-# slr0_0.5 = readRDS( 
+# slr0_0.5 = readRDS(
 #   paste0(
-#     output_dir, "/Crohns", 
-#     "_slr", 
-#     "_0.5", 
+#     output_dir, "/Crohns",
+#     "_slr",
+#     "_0.5",
 #     ".rds"))
 # slr0_0.5_coefs = getCoefsBM(
 #   coefs = coefficients(slr0_0.5$model), sbp = slr0_0.5$sbp)
@@ -153,13 +153,13 @@ Y2 = ifelse(Y == "CD", 1, 0)
 # slrcv0approx_0.5_selected = slrcv0approx_0.5$models[[
 #   slrcv0approx_0.5$nclusters_1se_idx]]
 # slrcv0approx_0.5_coefs = getCoefsBM(
-#   coefs = coefficients(slrcv0approx_0.5_selected$model), 
+#   coefs = coefficients(slrcv0approx_0.5_selected$model),
 #   sbp = slrcv0approx_0.5_selected$sbp)
 # rownames(slrcv0approx_0.5_coefs$llc.coefs)[
 #   slrcv0approx_0.5_coefs$llc.coefs != 0]
 # sum(slrcv0approx_0.5_coefs$llc.coefs != 0)
 # slrcv0approx_0.5$models[[slrcv0approx_0.5$nclusters_1se_idx]]$sbp[
-#   slrcv0approx_0.5$models[[slrcv0approx_0.5$nclusters_1se_idx]]$sbp != 0, , 
+#   slrcv0approx_0.5$models[[slrcv0approx_0.5$nclusters_1se_idx]]$sbp != 0, ,
 #   drop = FALSE]
 # 
 # ##### cv.slr (no approximation step) #####
@@ -185,13 +185,13 @@ Y2 = ifelse(Y == "CD", 1, 0)
 # slrcv0_0.5_selected = slrcv0_0.5$models[[
 #   slrcv0_0.5$nclusters_1se_idx]]
 # slrcv0_0.5_coefs = getCoefsBM(
-#   coefs = coefficients(slrcv0_0.5_selected$model), 
+#   coefs = coefficients(slrcv0_0.5_selected$model),
 #   sbp = slrcv0_0.5_selected$sbp)
 # rownames(slrcv0_0.5_coefs$llc.coefs)[
 #   slrcv0_0.5_coefs$llc.coefs != 0]
 # sum(slrcv0_0.5_coefs$llc.coefs != 0)
 # slrcv0_0.5$models[[slrcv0_0.5$nclusters_1se_idx]]$sbp[
-#   slrcv0_0.5$models[[slrcv0_0.5$nclusters_1se_idx]]$sbp != 0, , 
+#   slrcv0_0.5$models[[slrcv0_0.5$nclusters_1se_idx]]$sbp != 0, ,
 #   drop = FALSE]
 # 
 # ##### cv.hslr with approximation step #####
@@ -216,7 +216,7 @@ Y2 = ifelse(Y == "CD", 1, 0)
 # getTPlots(hslrcv0approx_0.5)
 # hslrcv0approx_0.5_selected = hslrcv0approx_0.5$models[[6]]
 # hslrcv0approx_0.5_coefs = getCoefsBM(
-#   coefs = coefficients(hslrcv0approx_0.5_selected$model), 
+#   coefs = coefficients(hslrcv0approx_0.5_selected$model),
 #   sbp = hslrcv0approx_0.5_selected$sbp)
 # rownames(hslrcv0approx_0.5_coefs$llc.coefs)[
 #   hslrcv0approx_0.5_coefs$llc.coefs != 0]
@@ -251,214 +251,383 @@ Y2 = ifelse(Y == "CD", 1, 0)
 # hslrcv0_0.5_selected = hslrcv0_0.5$models[[
 #   hslrcv0_0.5$nclusters_1se_idx]]
 # hslrcv0_0.5_coefs = getCoefsBM(
-#   coefs = coefficients(hslrcv0_0.5_selected$model), 
+#   coefs = coefficients(hslrcv0_0.5_selected$model),
 #   sbp = hslrcv0_0.5_selected$sbp)
 # rownames(hslrcv0_0.5_coefs$llc.coefs)[
 #   hslrcv0_0.5_coefs$llc.coefs != 0]
 # sum(hslrcv0_0.5_coefs$llc.coefs != 0)
-# 
-# ##### selbal #####
-# # slbl_0.5 = selbal.cv(x = X_0.5, y = Y, n.fold = K)
-# # saveRDS(
-# #   slbl_0.5, 
-# #   paste0(
-# #     output_dir, "/Crohns", 
-# #     "_selbal", 
-# #     "_0.5", 
-# #     ".rds"))
-# slbl_0.5 = readRDS( 
-#   paste0(
-#     output_dir, "/Crohns", 
-#     "_selbal", 
-#     "_0.5", 
-#     ".rds"))
-# slbl_0.5_coefs = getCoefsSelbal(
-#   X = X_0.5, y = Y, selbal.fit = slbl_0.5, classification = TRUE, check = TRUE)
-# rownames(slbl_0.5_coefs$llc.coefs)[slbl_0.5_coefs$llc.coefs != 0]
-# sum(slbl_0.5_coefs$llc.coefs != 0)
 
-
-
-################################################################################
-# Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
-X_gbm = cmultRepl2(W, zero.rep = "bayes")
-
-slrcor_gbm = slrmatrix(x = X_gbm, y = Y2)
-pheatmap(slrcor_gbm)
-
-##### slr with approximation step #####
-slr0approx_gbm = slr(
-  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE, 
-  amini.regularization = TRUE, highdegree.regularization = TRUE, 
-  include.leading.eigenvector = TRUE)
+##### selbal #####
+# slbl_0.5 = selbal.cv(x = X_0.5, y = Y, n.fold = K)
 # saveRDS(
-#   slr0approx_gbm,
+#   slbl_0.5,
 #   paste0(
 #     output_dir, "/Crohns",
-#     "_slr_approx",
-#     "_gbm",
+#     "_selbal",
+#     "_0.5",
 #     ".rds"))
-# slr0approx_gbm = readRDS(
-#   paste0(
-#     output_dir, "/Crohns", 
-#     "_slr_approx", 
-#     "_gbm", 
-#     ".rds"))
-slr0approx_gbm_coefs = getCoefsBM(
-  coefs = coefficients(slr0approx_gbm$model), sbp = slr0approx_gbm$sbp)
-rownames(slr0approx_gbm_coefs$llc.coefs)[slr0approx_gbm_coefs$llc.coefs != 0]
-sum(slr0approx_gbm_coefs$llc.coefs != 0)
-
-##### slr (no approximation step) #####
-# slr0_gbm = slr(
-#   x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE)
-# saveRDS(
-#   slr0_gbm, 
-#   paste0(
-#     output_dir, "/Crohns", 
-#     "_slr", 
-#     "_gbm", 
-#     ".rds"))
-slr0_gbm = readRDS(
+slbl_0.5 = readRDS(
   paste0(
     output_dir, "/Crohns",
-    "_slr",
-    "_gbm",
+    "_selbal",
+    "_0.5",
     ".rds"))
-slr0_gbm_coefs = getCoefsBM(
-  coefs = coefficients(slr0_gbm$model), sbp = slr0_gbm$sbp)
-rownames(slr0_gbm_coefs$llc.coefs)[slr0_gbm_coefs$llc.coefs != 0]
-sum(slr0_gbm_coefs$llc.coefs != 0)
+slbl_0.5_coefs = getCoefsSelbal(
+  X = X_0.5, y = Y, selbal.fit = slbl_0.5, classification = TRUE, check = TRUE)
+rownames(slbl_0.5_coefs$llc.coefs)[slbl_0.5_coefs$llc.coefs != 0]
+sum(slbl_0.5_coefs$llc.coefs != 0) # 12
 
-##### cv.slr with approximation step #####
-# slrcv0approx_gbm = cv.slr(
-#   x = X_gbm, y = Y2, max.clusters = ceiling(sqrt(ncol(X))), nfolds = K,
-#   classification = TRUE, approx = TRUE)
-# saveRDS(
-#   slrcv0approx_gbm,
+##### slr #####
+slr0_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE)
+slr0_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0_0.5$model), sbp = slr0_0.5$sbp)
+rownames(slr0_0.5_coefs$llc.coefs)[slr0_0.5_coefs$llc.coefs != 0]
+sum(slr0_0.5_coefs$llc.coefs != 0) # 27
+
+##### slr - amini #####
+slr0am_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE)
+slr0am_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0am_0.5$model), sbp = slr0am_0.5$sbp)
+rownames(slr0am_0.5_coefs$llc.coefs)[slr0am_0.5_coefs$llc.coefs != 0]
+sum(slr0am_0.5_coefs$llc.coefs != 0) # 27
+
+##### slr - rank 1 approx #####
+slr0ap_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE)
+slr0ap_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0ap_0.5$model), sbp = slr0ap_0.5$sbp)
+rownames(slr0ap_0.5_coefs$llc.coefs)[slr0ap_0.5_coefs$llc.coefs != 0]
+sum(slr0ap_0.5_coefs$llc.coefs != 0) # 47!!
+
+##### slr - high-degree reg #####
+slr0hdr_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = FALSE)
+slr0hdr_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
+rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
+sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
+
+##### slr - high-degree reg smaller parameter #####
+slr0hdr_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  highdegree.regularization.parameter = 0.1, 
+  include.leading.eigenvector = FALSE)
+slr0hdr_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
+rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
+sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
+
+##### slr - 2 leading eigenvectors #####
+slr0eig12_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = TRUE)
+slr0eig12_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
+rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
+sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
+
+########## combinations with rank 1 approx #####################################
+
+##### slr - amini + rank 1 approx #####
+slr0am_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE)
+slr0am_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0am_0.5$model), sbp = slr0am_0.5$sbp)
+rownames(slr0am_0.5_coefs$llc.coefs)[slr0am_0.5_coefs$llc.coefs != 0]
+sum(slr0am_0.5_coefs$llc.coefs != 0) # 22
+
+##### slr - high-degree reg + rank 1 approx #####
+slr0hdr_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = FALSE)
+slr0hdr_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
+rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
+sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 47
+
+##### slr - high-degree reg smaller parameter + rank 1 approx #####
+slr0hdr_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  highdegree.regularization.parameter = 0.1, 
+  include.leading.eigenvector = FALSE)
+slr0hdr_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
+rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
+sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 47!!
+
+##### slr - 2 leading eigenvectors + rank 1 approx #####
+slr0eig12_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = TRUE)
+slr0eig12_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
+rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
+sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 47
+
+########## combinations with Amini regularization ##############################
+
+##### slr - high-degree reg + amini #####
+slr0hdr_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = FALSE)
+slr0hdr_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
+rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
+sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
+
+##### slr - high-degree reg smaller parameter + amini #####
+slr0hdr_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = TRUE,
+  highdegree.regularization.parameter = 0.1, 
+  include.leading.eigenvector = FALSE)
+slr0hdr_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
+rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
+sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
+
+##### slr - 2 leading eigenvectors + amini #####
+slr0eig12_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = TRUE)
+slr0eig12_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
+rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
+sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
+
+########## combinations with high-degree regularization ########################
+
+##### slr - 2 leading eigenvectors + hi-degree reg #####
+slr0eig12_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = TRUE)
+slr0eig12_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
+rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
+sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
+
+##### slr - 2 leading eigenvectors + hi-degree reg smaller parameter #####
+slr0eig12_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  highdegree.regularization.parameter = 0.1,
+  include.leading.eigenvector = TRUE)
+slr0eig12_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
+rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
+sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
+
+########## all regularizations #################################################
+
+slr0all_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = FALSE)
+slr0all_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0all_0.5$model), sbp = slr0all_0.5$sbp)
+rownames(slr0all_0.5_coefs$llc.coefs)[slr0all_0.5_coefs$llc.coefs != 0]
+sum(slr0all_0.5_coefs$llc.coefs != 0) # 22
+
+ # ################################################################################
+# # Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
+# X_gbm = cmultRepl2(W, zero.rep = "bayes")
+# 
+# slrcor_gbm = slrmatrix(x = X_gbm, y = Y2)
+# pheatmap(slrcor_gbm)
+# 
+# ##### slr with approximation step #####
+# slr0approx_gbm = slr(
+#   x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE, 
+#   amini.regularization = TRUE, highdegree.regularization = TRUE, 
+#   include.leading.eigenvector = TRUE)
+# # saveRDS(
+# #   slr0approx_gbm,
+# #   paste0(
+# #     output_dir, "/Crohns",
+# #     "_slr_approx",
+# #     "_gbm",
+# #     ".rds"))
+# # slr0approx_gbm = readRDS(
+# #   paste0(
+# #     output_dir, "/Crohns", 
+# #     "_slr_approx", 
+# #     "_gbm", 
+# #     ".rds"))
+# slr0approx_gbm_coefs = getCoefsBM(
+#   coefs = coefficients(slr0approx_gbm$model), sbp = slr0approx_gbm$sbp)
+# rownames(slr0approx_gbm_coefs$llc.coefs)[slr0approx_gbm_coefs$llc.coefs != 0]
+# sum(slr0approx_gbm_coefs$llc.coefs != 0)
+# 
+# ##### slr (no approximation step) #####
+# # slr0_gbm = slr(
+# #   x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, approx = TRUE)
+# # saveRDS(
+# #   slr0_gbm, 
+# #   paste0(
+# #     output_dir, "/Crohns", 
+# #     "_slr", 
+# #     "_gbm", 
+# #     ".rds"))
+# slr0_gbm = readRDS(
+#   paste0(
+#     output_dir, "/Crohns",
+#     "_slr",
+#     "_gbm",
+#     ".rds"))
+# slr0_gbm_coefs = getCoefsBM(
+#   coefs = coefficients(slr0_gbm$model), sbp = slr0_gbm$sbp)
+# rownames(slr0_gbm_coefs$llc.coefs)[slr0_gbm_coefs$llc.coefs != 0]
+# sum(slr0_gbm_coefs$llc.coefs != 0)
+# 
+# ##### cv.slr with approximation step #####
+# # slrcv0approx_gbm = cv.slr(
+# #   x = X_gbm, y = Y2, max.clusters = ceiling(sqrt(ncol(X))), nfolds = K,
+# #   classification = TRUE, approx = TRUE)
+# # saveRDS(
+# #   slrcv0approx_gbm,
+# #   paste0(
+# #     output_dir, "/Crohns",
+# #     "_slrcv_approx",
+# #     "_gbm",
+# #     ".rds"))
+# slrcv0approx_gbm = readRDS(
 #   paste0(
 #     output_dir, "/Crohns",
 #     "_slrcv_approx",
 #     "_gbm",
 #     ".rds"))
-slrcv0approx_gbm = readRDS(
-  paste0(
-    output_dir, "/Crohns",
-    "_slrcv_approx",
-    "_gbm",
-    ".rds"))
-slrcv0approx_gbm$nclusters_1se_idx
-slrcv0approx_gbm$nclusters_min_idx
-getTPlots(slrcv0approx_gbm)
-slrcv0approx_gbm_selected = slrcv0approx_gbm$models[[
-  slrcv0approx_gbm$nclusters_1se_idx]]
-slrcv0approx_gbm_coefs = getCoefsBM(
-  coefs = coefficients(slrcv0approx_gbm_selected$model), 
-  sbp = slrcv0approx_gbm_selected$sbp)
-rownames(slrcv0approx_gbm_coefs$llc.coefs)[
-  slrcv0approx_gbm_coefs$llc.coefs != 0]
-
-##### cv.slr (no approximation step) #####
-# slrcv0_gbm = cv.slr(
-#   x = X_gbm, y = Y2, max.clusters = ceiling(sqrt(ncol(X))), nfolds = K,
-#   classification = TRUE, approx = FALSE)
-# saveRDS(
-#   slrcv0_gbm,
+# slrcv0approx_gbm$nclusters_1se_idx
+# slrcv0approx_gbm$nclusters_min_idx
+# getTPlots(slrcv0approx_gbm)
+# slrcv0approx_gbm_selected = slrcv0approx_gbm$models[[
+#   slrcv0approx_gbm$nclusters_1se_idx]]
+# slrcv0approx_gbm_coefs = getCoefsBM(
+#   coefs = coefficients(slrcv0approx_gbm_selected$model), 
+#   sbp = slrcv0approx_gbm_selected$sbp)
+# rownames(slrcv0approx_gbm_coefs$llc.coefs)[
+#   slrcv0approx_gbm_coefs$llc.coefs != 0]
+# 
+# ##### cv.slr (no approximation step) #####
+# # slrcv0_gbm = cv.slr(
+# #   x = X_gbm, y = Y2, max.clusters = ceiling(sqrt(ncol(X))), nfolds = K,
+# #   classification = TRUE, approx = FALSE)
+# # saveRDS(
+# #   slrcv0_gbm,
+# #   paste0(
+# #     output_dir, "/Crohns",
+# #     "_slrcv",
+# #     "_gbm",
+# #     ".rds"))
+# slrcv0_gbm = readRDS(
 #   paste0(
 #     output_dir, "/Crohns",
 #     "_slrcv",
 #     "_gbm",
 #     ".rds"))
-slrcv0_gbm = readRDS(
-  paste0(
-    output_dir, "/Crohns",
-    "_slrcv",
-    "_gbm",
-    ".rds"))
-slrcv0_gbm$nclusters_1se_idx
-slrcv0_gbm$nclusters_min_idx
-getTPlots(slrcv0_gbm)
-slrcv0_gbm_selected = slrcv0_gbm$models[[
-  slrcv0_gbm$nclusters_1se_idx]]
-slrcv0_gbm_coefs = getCoefsBM(
-  coefs = coefficients(slrcv0_gbm_selected$model), 
-  sbp = slrcv0_gbm_selected$sbp)
-rownames(slrcv0_gbm_coefs$llc.coefs)[
-  slrcv0_gbm_coefs$llc.coefs != 0]
-
-##### cv.hslr with approximation step #####
-# hslrcv0approx_gbm = cv.hslr(
-#   x = X_gbm, y = Y2, max.levels = ceiling(sqrt(ncol(X))), nfolds = K,
-#   classification = TRUE, approx = TRUE)
-# saveRDS(
-#   hslrcv0approx_gbm,
+# slrcv0_gbm$nclusters_1se_idx
+# slrcv0_gbm$nclusters_min_idx
+# getTPlots(slrcv0_gbm)
+# slrcv0_gbm_selected = slrcv0_gbm$models[[
+#   slrcv0_gbm$nclusters_1se_idx]]
+# slrcv0_gbm_coefs = getCoefsBM(
+#   coefs = coefficients(slrcv0_gbm_selected$model), 
+#   sbp = slrcv0_gbm_selected$sbp)
+# rownames(slrcv0_gbm_coefs$llc.coefs)[
+#   slrcv0_gbm_coefs$llc.coefs != 0]
+# 
+# ##### cv.hslr with approximation step #####
+# # hslrcv0approx_gbm = cv.hslr(
+# #   x = X_gbm, y = Y2, max.levels = ceiling(sqrt(ncol(X))), nfolds = K,
+# #   classification = TRUE, approx = TRUE)
+# # saveRDS(
+# #   hslrcv0approx_gbm,
+# #   paste0(
+# #     output_dir, "/Crohns",
+# #     "_hslrcv_approx",
+# #     "_gbm",
+# #     ".rds"))
+# hslrcv0approx_gbm = readRDS(
 #   paste0(
 #     output_dir, "/Crohns",
 #     "_hslrcv_approx",
 #     "_gbm",
 #     ".rds"))
-hslrcv0approx_gbm = readRDS(
-  paste0(
-    output_dir, "/Crohns",
-    "_hslrcv_approx",
-    "_gbm",
-    ".rds"))
-hslrcv0approx_gbm$nclusters_1se_idx
-hslrcv0approx_gbm$nclusters_min_idx
-getTPlots(hslrcv0approx_gbm)
-hslrcv0approx_gbm_selected = hslrcv0approx_gbm$models[[
-  hslrcv0approx_gbm$nclusters_1se_idx]]
-hslrcv0approx_gbm_coefs = getCoefsBM(
-  coefs = coefficients(hslrcv0approx_gbm_selected$model), 
-  sbp = hslrcv0approx_gbm_selected$sbp)
-rownames(hslrcv0approx_gbm_coefs$llc.coefs)[
-  hslrcv0approx_gbm_coefs$llc.coefs != 0]
-
-##### cv.hslr (no approximation step) #####
-# hslrcv0_gbm = cv.hslr(
-#   x = X_gbm, y = Y2, max.levels = ceiling(sqrt(ncol(X))), nfolds = K,
-#   classification = TRUE, approx = FALSE)
-# saveRDS(
-#   hslrcv0_gbm,
+# hslrcv0approx_gbm$nclusters_1se_idx
+# hslrcv0approx_gbm$nclusters_min_idx
+# getTPlots(hslrcv0approx_gbm)
+# hslrcv0approx_gbm_selected = hslrcv0approx_gbm$models[[
+#   hslrcv0approx_gbm$nclusters_1se_idx]]
+# hslrcv0approx_gbm_coefs = getCoefsBM(
+#   coefs = coefficients(hslrcv0approx_gbm_selected$model), 
+#   sbp = hslrcv0approx_gbm_selected$sbp)
+# rownames(hslrcv0approx_gbm_coefs$llc.coefs)[
+#   hslrcv0approx_gbm_coefs$llc.coefs != 0]
+# 
+# ##### cv.hslr (no approximation step) #####
+# # hslrcv0_gbm = cv.hslr(
+# #   x = X_gbm, y = Y2, max.levels = ceiling(sqrt(ncol(X))), nfolds = K,
+# #   classification = TRUE, approx = FALSE)
+# # saveRDS(
+# #   hslrcv0_gbm,
+# #   paste0(
+# #     output_dir, "/Crohns",
+# #     "_hslrcv",
+# #     "_gbm",
+# #     ".rds"))
+# hslrcv0_gbm = readRDS(
 #   paste0(
 #     output_dir, "/Crohns",
 #     "_hslrcv",
 #     "_gbm",
 #     ".rds"))
-hslrcv0_gbm = readRDS(
-  paste0(
-    output_dir, "/Crohns",
-    "_hslrcv",
-    "_gbm",
-    ".rds"))
-hslrcv0_gbm$nclusters_1se_idx
-hslrcv0_gbm$nclusters_min_idx
-getTPlots(hslrcv0_gbm)
-hslrcv0_gbm_selected = hslrcv0_gbm$models[[
-  hslrcv0_gbm$nclusters_1se_idx]]
-hslrcv0_gbm_coefs = getCoefsBM(
-  coefs = coefficients(hslrcv0_gbm_selected$model), 
-  sbp = hslrcv0_gbm_selected$sbp)
-rownames(hslrcv0_gbm_coefs$llc.coefs)[
-  hslrcv0_gbm_coefs$llc.coefs != 0]
-
-##### selbal #####
-# slbl_gbm = selbal.cv(x = X_gbm, y = Y, n.fold = K)
-# saveRDS(
-#   slbl_gbm, 
+# hslrcv0_gbm$nclusters_1se_idx
+# hslrcv0_gbm$nclusters_min_idx
+# getTPlots(hslrcv0_gbm)
+# hslrcv0_gbm_selected = hslrcv0_gbm$models[[
+#   hslrcv0_gbm$nclusters_1se_idx]]
+# hslrcv0_gbm_coefs = getCoefsBM(
+#   coefs = coefficients(hslrcv0_gbm_selected$model), 
+#   sbp = hslrcv0_gbm_selected$sbp)
+# rownames(hslrcv0_gbm_coefs$llc.coefs)[
+#   hslrcv0_gbm_coefs$llc.coefs != 0]
+# 
+# ##### selbal #####
+# # slbl_gbm = selbal.cv(x = X_gbm, y = Y, n.fold = K)
+# # saveRDS(
+# #   slbl_gbm, 
+# #   paste0(
+# #     output_dir, "/Crohns", 
+# #     "_selbal", 
+# #     "_gbm", 
+# #     ".rds"))
+# slbl_gbm = readRDS(
 #   paste0(
 #     output_dir, "/Crohns", 
 #     "_selbal", 
 #     "_gbm", 
 #     ".rds"))
-slbl_gbm = readRDS(
-  paste0(
-    output_dir, "/Crohns", 
-    "_selbal", 
-    "_gbm", 
-    ".rds"))
-slbl_gbm_coefs = getCoefsSelbal(
-  X = X_gbm, y = Y, selbal.fit = slbl_gbm, classification = TRUE, check = TRUE)
-rownames(slbl_gbm_coefs$llc.coefs)[slbl_gbm_coefs$llc.coefs != 0]
-sum(slbl_gbm_coefs$llc.coefs != 0)
+# slbl_gbm_coefs = getCoefsSelbal(
+#   X = X_gbm, y = Y, selbal.fit = slbl_gbm, classification = TRUE, check = TRUE)
+# rownames(slbl_gbm_coefs$llc.coefs)[slbl_gbm_coefs$llc.coefs != 0]
+# sum(slbl_gbm_coefs$llc.coefs != 0)
 

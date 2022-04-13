@@ -342,7 +342,7 @@ res = foreach(
   
   ##############################################################################
   # slr method (a balance regression method)
-  #   rank 1 approximation -- FALSE
+  #   rank 1 approximation -- TRUE
   #   amini regularization -- FALSE
   #   high degree regularization -- TRUE
   #   include leading eigenvector -- FALSE
@@ -379,6 +379,43 @@ res = foreach(
   
   ##############################################################################
   # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- TRUE
+  #   include leading eigenvector -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0hdramap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
+    highdegree.regularization = TRUE, include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0hdramap.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0hdramap.coefs = getCoefsBM(
+    coefs = coefficients(slr0hdramap$model), sbp = slr0hdramap$sbp)
+  
+  # compute metrics on the selected model #
+  slr0hdramap.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0hdramap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0hdramap$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0hdramap.coefs$a0, thetahat = slr0hdramap.coefs$bm.coefs,
+    betahat = slr0hdramap.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0hdramap.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0hdramap.coefs$bm.coefs != 0),
+    "time" = slr0hdramap.timing
+  ),
+  paste0(output_dir, "/slr_hdr_amini_approx_metrics", file.end))
+  
+  ##############################################################################
+  # slr method (a balance regression method)
   #   rank 1 approximation -- FALSE
   #   amini regularization -- FALSE
   #   high degree regularization -- FALSE
@@ -386,8 +423,8 @@ res = foreach(
   ##############################################################################
   start.time = Sys.time()
   slr0eig12 = slr(
-    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-    highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = FALSE, include.leading.eigenvector = TRUE)
   end.time = Sys.time()
   slr0eig12.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -413,6 +450,80 @@ res = foreach(
     "time" = slr0eig12.timing
   ),
   paste0(output_dir, "/slr_eig12_metrics", file.end))
+  
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  #   include leading eigenvector -- TRUE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0eig12ap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = FALSE, 
+    highdegree.regularization = FALSE, include.leading.eigenvector = TRUE)
+  end.time = Sys.time()
+  slr0eig12ap.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0eig12ap.coefs = getCoefsBM(
+    coefs = coefficients(slr0eig12ap$model), sbp = slr0eig12ap$sbp)
+  
+  # compute metrics on the selected model #
+  slr0eig12ap.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0eig12ap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0eig12ap$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0eig12ap.coefs$a0, thetahat = slr0eig12ap.coefs$bm.coefs,
+    betahat = slr0eig12ap.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0eig12ap.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0eig12ap.coefs$bm.coefs != 0),
+    "time" = slr0eig12ap.timing
+  ),
+  paste0(output_dir, "/slr_eig12_approx_metrics", file.end))
+  
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- TRUE
+  #   include leading eigenvector -- TRUE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0eig12ap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
+    highdegree.regularization = TRUE, include.leading.eigenvector = TRUE)
+  end.time = Sys.time()
+  slr0eig12ap.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0eig12ap.coefs = getCoefsBM(
+    coefs = coefficients(slr0eig12ap$model), sbp = slr0eig12ap$sbp)
+  
+  # compute metrics on the selected model #
+  slr0eig12ap.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0eig12ap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0eig12ap$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0eig12ap.coefs$a0, thetahat = slr0eig12ap.coefs$bm.coefs,
+    betahat = slr0eig12ap.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0eig12ap.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0eig12ap.coefs$bm.coefs != 0),
+    "time" = slr0eig12ap.timing
+  ),
+  paste0(output_dir, "/slr_eig12_hdr_amini_approx_metrics", file.end))
   
   ##############################################################################
   ##############################################################################

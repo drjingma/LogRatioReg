@@ -115,20 +115,20 @@ slrmatrix = function(x, y){
 }
 
 # spectral.clustering() function, with automatic splitting of two things
-spectral.clustering2 <- function(
+spectral.clustering2 = function(
   W, n_eig = 2, reindex = FALSE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01,
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = FALSE
   ) {
   # compute graph laplacian
   L = graph.laplacian2(
     W = W, amini.regularization = amini.regularization, 
     amini.regularization.parameter = amini.regularization.parameter,
-    highdegree.regularization = highdegree.regularization, 
-    highdegree.regularization.parameter = highdegree.regularization.parameter)          
+    highdegree.regularization.summary = highdegree.regularization.summary,
+    highdegree.regularization = highdegree.regularization)          
   ei = eigen(L, symmetric = TRUE)
   # compute the eigenvectors and values of L
   # we will use k-means to cluster the data
@@ -157,17 +157,23 @@ spectral.clustering2 <- function(
   return(cl)
 }
 
-graph.laplacian2 <- function(
+graph.laplacian2 = function(
   W, # normalized = TRUE, 
   amini.regularization = TRUE, 
-  amini.regularization.parameter = 0.01, 
-  highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1
+  amini.regularization.parameter = 0.01,
+  highdegree.regularization.summary = "mean",
+  highdegree.regularization = FALSE
 ){
   stopifnot(nrow(W) == ncol(W)) 
   n = nrow(W)    # number of vertices
   degrees <- colSums(W) # degrees of vertices
-  maximaldegree = highdegree.regularization.parameter * max(n * W)
+  if(highdegree.regularization){
+    if(highdegree.regularization.summary == "maximal"){
+      maximaldegree = max(n * W) #* highdegree.regularization.parameter
+    } else{
+      maximaldegree = do.call(highdegree.regularization.summary, list(degrees))
+    }
+  }
   W.tmp = W
   
   # regularization.method == 1: perturb the network by adding some links with 
@@ -202,8 +208,8 @@ slr <- function(
   x, y, num.clusters = 2, classification = FALSE, approx = TRUE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01, 
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = TRUE
 ){
   n = nrow(x)
@@ -226,15 +232,16 @@ slr <- function(
       rhoMat_approx, n_eig = num.clusters, 
       amini.regularization = amini.regularization,
       amini.regularization.parameter = amini.regularization.parameter,
+      highdegree.regularization.summary = highdegree.regularization.summary,
       highdegree.regularization = highdegree.regularization,
-      highdegree.regularization.parameter = highdegree.regularization.parameter,
       include.leading.eigenvector = include.leading.eigenvector)
   } else{
     clusters1 <- spectral.clustering2(
-      rhoMat, n_eig = num.clusters, amini.regularization = amini.regularization,
+      rhoMat, n_eig = num.clusters, 
+      amini.regularization = amini.regularization,
       amini.regularization.parameter = amini.regularization.parameter,
+      highdegree.regularization.summary = highdegree.regularization.summary,
       highdegree.regularization = highdegree.regularization,
-      highdegree.regularization.parameter = highdegree.regularization.parameter,
       include.leading.eigenvector = include.leading.eigenvector)
   }
   cluster.lengths = table(clusters1)
@@ -256,8 +263,8 @@ slr <- function(
         rhoMat[index, index], n_eig = 2, reindex = TRUE, 
         amini.regularization = amini.regularization,
         amini.regularization.parameter = amini.regularization.parameter,
+        highdegree.regularization.summary = highdegree.regularization.summary, 
         highdegree.regularization = highdegree.regularization,
-        highdegree.regularization.parameter = highdegree.regularization.parameter,
         include.leading.eigenvector = include.leading.eigenvector)
       ## calculate balance and its correlation with y
       sbp.ests[match(names(subset), rownames(sbp.ests)), i] = subset
@@ -299,8 +306,8 @@ slr1sc <- function(
   x, y, classification = FALSE, approx = TRUE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01, 
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = TRUE
 ){
   num.clusters = 3
@@ -324,16 +331,16 @@ slr1sc <- function(
       rhoMat_approx, n_eig = num.clusters, 
       amini.regularization = amini.regularization,
       amini.regularization.parameter = amini.regularization.parameter,
+      highdegree.regularization.summary = highdegree.regularization.summary, 
       highdegree.regularization = highdegree.regularization,
-      highdegree.regularization.parameter = highdegree.regularization.parameter,
       include.leading.eigenvector = include.leading.eigenvector)
   } else{
     cluster.labels <- spectral.clustering2(
       rhoMat, n_eig = num.clusters, 
       amini.regularization = amini.regularization,
       amini.regularization.parameter = amini.regularization.parameter,
+      highdegree.regularization.summary = highdegree.regularization.summary,
       highdegree.regularization = highdegree.regularization,
-      highdegree.regularization.parameter = highdegree.regularization.parameter,
       include.leading.eigenvector = include.leading.eigenvector)
   }
   cluster.lengths = table(cluster.labels)
@@ -388,8 +395,8 @@ cv.slr = function(
   x, y, max.clusters = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01, 
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = TRUE
 ){
   n = nrow(x)
@@ -404,8 +411,8 @@ cv.slr = function(
       approx = approx, 
       amini.regularization = amini.regularization, 
       amini.regularization.parameter = amini.regularization.parameter, 
+      highdegree.regularization.summary = highdegree.regularization.summary,
       highdegree.regularization = highdegree.regularization,
-      highdegree.regularization.parameter = highdegree.regularization.parameter,
       include.leading.eigenvector = include.leading.eigenvector)
   }
   
@@ -431,8 +438,8 @@ cv.slr = function(
         approx = approx, 
         amini.regularization = amini.regularization, 
         amini.regularization.parameter = amini.regularization.parameter, 
+        highdegree.regularization.summary = highdegree.regularization.summary,
         highdegree.regularization = highdegree.regularization,
-        highdegree.regularization.parameter = highdegree.regularization.parameter,
         include.leading.eigenvector = include.leading.eigenvector)
       if(!classification){
         fit_jm.coefs = coefficients(fit_jm$model)
@@ -484,8 +491,8 @@ hslr <- function(
   x, y, num.levels = 1, classification = FALSE, approx = TRUE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01, 
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = TRUE
 ){
   n = nrow(x)
@@ -502,8 +509,8 @@ hslr <- function(
       classification = classification, approx = approx, 
       amini.regularization = amini.regularization, 
       amini.regularization.parameter = amini.regularization.parameter, 
+      highdegree.regularization.summary = highdegree.regularization.summary, 
       highdegree.regularization = highdegree.regularization,
-      highdegree.regularization.parameter = highdegree.regularization.parameter,
       include.leading.eigenvector = include.leading.eigenvector)
     # recalculate full SBP
     full.sbp.est = matrix(0, nrow = p, ncol = 1)
@@ -536,8 +543,8 @@ hslr1sc <- function(
   x, y, num.levels = 1, classification = FALSE, approx = TRUE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01, 
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = TRUE
 ){
   n = nrow(x)
@@ -555,8 +562,8 @@ hslr1sc <- function(
       approx = approx, 
       amini.regularization = amini.regularization, 
       amini.regularization.parameter = amini.regularization.parameter, 
+      highdegree.regularization.summary = highdegree.regularization.summary, 
       highdegree.regularization = highdegree.regularization,
-      highdegree.regularization.parameter = highdegree.regularization.parameter,
       include.leading.eigenvector = include.leading.eigenvector)
     # recalculate full SBP
     full.sbp.est = matrix(0, nrow = p, ncol = 1)
@@ -589,8 +596,8 @@ cv.hslr = function(
   x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01, 
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = TRUE
 ){
   n = nrow(x)
@@ -602,8 +609,8 @@ cv.hslr = function(
     approx = approx, 
     amini.regularization = amini.regularization, 
     amini.regularization.parameter = amini.regularization.parameter, 
+    highdegree.regularization.summary = highdegree.regularization.summary, 
     highdegree.regularization = highdegree.regularization,
-    highdegree.regularization.parameter = highdegree.regularization.parameter,
     include.leading.eigenvector = include.leading.eigenvector)
   num.levels.candidates = 1:hslrfit$true.num.levels
   hslrmodels = hslrfit$models
@@ -694,8 +701,8 @@ cv.hslr1sc = function(
   x, y, max.levels = 5, nfolds = 5, classification = FALSE, approx = TRUE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01, 
+  highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  highdegree.regularization.parameter = 1,
   include.leading.eigenvector = TRUE
 ){
   n = nrow(x)
@@ -707,8 +714,8 @@ cv.hslr1sc = function(
     approx = approx, 
     amini.regularization = amini.regularization, 
     amini.regularization.parameter = amini.regularization.parameter, 
+    highdegree.regularization.summary = highdegree.regularization.summary,
     highdegree.regularization = highdegree.regularization,
-    highdegree.regularization.parameter = highdegree.regularization.parameter,
     include.leading.eigenvector = include.leading.eigenvector)
   num.levels.candidates = 1:hslrfit$true.num.levels
   hslrmodels = hslrfit$models

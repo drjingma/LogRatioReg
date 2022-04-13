@@ -297,15 +297,15 @@ slr0am_0.5_coefs = getCoefsBM(
 rownames(slr0am_0.5_coefs$llc.coefs)[slr0am_0.5_coefs$llc.coefs != 0]
 sum(slr0am_0.5_coefs$llc.coefs != 0) # 27
 
-##### slr - rank 1 approx #####
-slr0ap_0.5 = slr(
+##### slr - amini + rank 1 approx #####
+slr0amap_0.5 = slr(
   x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = FALSE,
+  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = FALSE,
   include.leading.eigenvector = FALSE)
-slr0ap_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0ap_0.5$model), sbp = slr0ap_0.5$sbp)
-rownames(slr0ap_0.5_coefs$llc.coefs)[slr0ap_0.5_coefs$llc.coefs != 0]
-sum(slr0ap_0.5_coefs$llc.coefs != 0) # 47!!
+slr0amap_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0amap_0.5$model), sbp = slr0amap_0.5$sbp)
+rownames(slr0amap_0.5_coefs$llc.coefs)[slr0amap_0.5_coefs$llc.coefs != 0]
+sum(slr0amap_0.5_coefs$llc.coefs != 0) # 22
 
 ##### slr - high-degree reg #####
 slr0hdr_0.5 = slr(
@@ -317,143 +317,42 @@ slr0hdr_0.5_coefs = getCoefsBM(
 rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
 sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
 
-##### slr - high-degree reg smaller parameter #####
-slr0hdr_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
-  highdegree.regularization.parameter = 0.1, 
-  include.leading.eigenvector = FALSE)
-slr0hdr_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
-rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
-sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
-
-##### slr - 2 leading eigenvectors #####
-slr0eig12_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = FALSE,
-  include.leading.eigenvector = TRUE)
-slr0eig12_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
-rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
-sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
-
-########## combinations with rank 1 approx #####################################
-
-##### slr - amini + rank 1 approx #####
-slr0am_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = FALSE,
-  include.leading.eigenvector = FALSE)
-slr0am_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0am_0.5$model), sbp = slr0am_0.5$sbp)
-rownames(slr0am_0.5_coefs$llc.coefs)[slr0am_0.5_coefs$llc.coefs != 0]
-sum(slr0am_0.5_coefs$llc.coefs != 0) # 22
-
 ##### slr - high-degree reg + rank 1 approx #####
-slr0hdr_0.5 = slr(
+slr0hdrap_0.5 = slr(
   x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
   approx = TRUE, amini.regularization = FALSE, highdegree.regularization = TRUE,
   include.leading.eigenvector = FALSE)
-slr0hdr_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
-rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
-sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 47
+slr0hdrap_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdrap_0.5$model), sbp = slr0hdrap_0.5$sbp)
+rownames(slr0hdrap_0.5_coefs$llc.coefs)[slr0hdrap_0.5_coefs$llc.coefs != 0]
+sum(slr0hdrap_0.5_coefs$llc.coefs != 0) # 47
 
-##### slr - high-degree reg smaller parameter + rank 1 approx #####
-slr0hdr_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = TRUE,
-  highdegree.regularization.parameter = 0.1, 
-  include.leading.eigenvector = FALSE)
-slr0hdr_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
-rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
-sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 47!!
-
-##### slr - 2 leading eigenvectors + rank 1 approx #####
-slr0eig12_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = FALSE,
-  include.leading.eigenvector = TRUE)
-slr0eig12_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
-rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
-sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 47
-
-########## combinations with Amini regularization ##############################
-
-##### slr - high-degree reg + amini #####
-slr0hdr_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = TRUE,
-  include.leading.eigenvector = FALSE)
-slr0hdr_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
-rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
-sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
-
-##### slr - high-degree reg smaller parameter + amini #####
-slr0hdr_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = TRUE,
-  highdegree.regularization.parameter = 0.1, 
-  include.leading.eigenvector = FALSE)
-slr0hdr_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0hdr_0.5$model), sbp = slr0hdr_0.5$sbp)
-rownames(slr0hdr_0.5_coefs$llc.coefs)[slr0hdr_0.5_coefs$llc.coefs != 0]
-sum(slr0hdr_0.5_coefs$llc.coefs != 0) # 27
-
-##### slr - 2 leading eigenvectors + amini #####
-slr0eig12_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = FALSE,
-  include.leading.eigenvector = TRUE)
-slr0eig12_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
-rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
-sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
-
-########## combinations with high-degree regularization ########################
-
-##### slr - 2 leading eigenvectors + hi-degree reg #####
-slr0eig12_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
-  include.leading.eigenvector = TRUE)
-slr0eig12_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
-rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
-sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
-
-##### slr - 2 leading eigenvectors + hi-degree reg smaller parameter #####
-slr0eig12_0.5 = slr(
-  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
-  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
-  highdegree.regularization.parameter = 0.1,
-  include.leading.eigenvector = TRUE)
-slr0eig12_0.5_coefs = getCoefsBM(
-  coefs = coefficients(slr0eig12_0.5$model), sbp = slr0eig12_0.5$sbp)
-rownames(slr0eig12_0.5_coefs$llc.coefs)[slr0eig12_0.5_coefs$llc.coefs != 0]
-sum(slr0eig12_0.5_coefs$llc.coefs != 0) # 27
-
-########## all regularizations #################################################
-
-slr0all_0.5 = slr(
+##### slr - high-degree reg + amini + rank 1 approx #####
+slr0hdramap_0.5 = slr(
   x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
   approx = TRUE, amini.regularization = TRUE, highdegree.regularization = TRUE,
   include.leading.eigenvector = FALSE)
+slr0hdramap_0.5_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdramap_0.5$model), sbp = slr0hdramap_0.5$sbp)
+rownames(slr0hdramap_0.5_coefs$llc.coefs)[slr0hdramap_0.5_coefs$llc.coefs != 0]
+sum(slr0hdramap_0.5_coefs$llc.coefs != 0) # 22
+
+##### slr - eig12 + high-degree reg + amini + approx #####
+slr0all_0.5 = slr(
+  x = X_0.5, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = TRUE)
 slr0all_0.5_coefs = getCoefsBM(
   coefs = coefficients(slr0all_0.5$model), sbp = slr0all_0.5$sbp)
 rownames(slr0all_0.5_coefs$llc.coefs)[slr0all_0.5_coefs$llc.coefs != 0]
 sum(slr0all_0.5_coefs$llc.coefs != 0) # 22
 
- # ################################################################################
-# # Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
-# X_gbm = cmultRepl2(W, zero.rep = "bayes")
-# 
-# slrcor_gbm = slrmatrix(x = X_gbm, y = Y2)
-# pheatmap(slrcor_gbm)
+################################################################################
+# Strategy 2: GBM (used in Rivera-Pinto et al. 2018 [selbal])
+X_gbm = cmultRepl2(W, zero.rep = "bayes")
+
+slrcor_gbm = slrmatrix(x = X_gbm, y = Y2)
+pheatmap(slrcor_gbm)
 # 
 # ##### slr with approximation step #####
 # slr0approx_gbm = slr(
@@ -611,23 +510,92 @@ sum(slr0all_0.5_coefs$llc.coefs != 0) # 22
 # rownames(hslrcv0_gbm_coefs$llc.coefs)[
 #   hslrcv0_gbm_coefs$llc.coefs != 0]
 # 
-# ##### selbal #####
-# # slbl_gbm = selbal.cv(x = X_gbm, y = Y, n.fold = K)
-# # saveRDS(
-# #   slbl_gbm, 
-# #   paste0(
-# #     output_dir, "/Crohns", 
-# #     "_selbal", 
-# #     "_gbm", 
-# #     ".rds"))
-# slbl_gbm = readRDS(
+##### selbal #####
+# slbl_gbm = selbal.cv(x = X_gbm, y = Y, n.fold = K)
+# saveRDS(
+#   slbl_gbm,
 #   paste0(
-#     output_dir, "/Crohns", 
-#     "_selbal", 
-#     "_gbm", 
+#     output_dir, "/Crohns",
+#     "_selbal",
+#     "_gbm",
 #     ".rds"))
-# slbl_gbm_coefs = getCoefsSelbal(
-#   X = X_gbm, y = Y, selbal.fit = slbl_gbm, classification = TRUE, check = TRUE)
-# rownames(slbl_gbm_coefs$llc.coefs)[slbl_gbm_coefs$llc.coefs != 0]
-# sum(slbl_gbm_coefs$llc.coefs != 0)
+slbl_gbm = readRDS(
+  paste0(
+    output_dir, "/Crohns",
+    "_selbal",
+    "_gbm",
+    ".rds"))
+slbl_gbm_coefs = getCoefsSelbal(
+  X = X_gbm, y = Y, selbal.fit = slbl_gbm, classification = TRUE, check = TRUE)
+rownames(slbl_gbm_coefs$llc.coefs)[slbl_gbm_coefs$llc.coefs != 0]
+sum(slbl_gbm_coefs$llc.coefs != 0)
 
+##### slr #####
+slr0_gbm = slr(
+  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE)
+slr0_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0_gbm$model), sbp = slr0_gbm$sbp)
+rownames(slr0_gbm_coefs$llc.coefs)[slr0_gbm_coefs$llc.coefs != 0]
+sum(slr0_gbm_coefs$llc.coefs != 0) # 25
+
+##### slr - amini #####
+slr0am_gbm = slr(
+  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = TRUE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE)
+slr0am_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0am_gbm$model), sbp = slr0am_gbm$sbp)
+rownames(slr0am_gbm_coefs$llc.coefs)[slr0am_gbm_coefs$llc.coefs != 0]
+sum(slr0am_gbm_coefs$llc.coefs != 0) # 25
+
+##### slr - amini + rank 1 approx #####
+slr0amap_gbm = slr(
+  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = FALSE,
+  include.leading.eigenvector = FALSE)
+slr0amap_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0amap_gbm$model), sbp = slr0amap_gbm$sbp)
+rownames(slr0amap_gbm_coefs$llc.coefs)[slr0amap_gbm_coefs$llc.coefs != 0]
+sum(slr0amap_gbm_coefs$llc.coefs != 0) # 15
+
+##### slr - high-degree reg #####
+slr0hdr_gbm = slr(
+  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = FALSE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = FALSE)
+slr0hdr_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdr_gbm$model), sbp = slr0hdr_gbm$sbp)
+rownames(slr0hdr_gbm_coefs$llc.coefs)[slr0hdr_gbm_coefs$llc.coefs != 0]
+sum(slr0hdr_gbm_coefs$llc.coefs != 0) # 25
+
+##### slr - high-degree reg + rank 1 approx #####
+slr0hdrap_gbm = slr(
+  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = FALSE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = FALSE)
+slr0hdrap_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdrap_gbm$model), sbp = slr0hdrap_gbm$sbp)
+rownames(slr0hdrap_gbm_coefs$llc.coefs)[slr0hdrap_gbm_coefs$llc.coefs != 0]
+sum(slr0hdrap_gbm_coefs$llc.coefs != 0) # 29
+
+##### slr - high-degree reg + amini + rank 1 approx #####
+slr0hdramap_gbm = slr(
+  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = FALSE)
+slr0hdramap_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0hdramap_gbm$model), sbp = slr0hdramap_gbm$sbp)
+rownames(slr0hdramap_gbm_coefs$llc.coefs)[slr0hdramap_gbm_coefs$llc.coefs != 0]
+sum(slr0hdramap_gbm_coefs$llc.coefs != 0) # 15
+
+##### slr - eig12 + high-degree reg + amini + approx #####
+slr0all_gbm = slr(
+  x = X_gbm, y = Y2, num.clusters = 2, classification = TRUE, 
+  approx = TRUE, amini.regularization = TRUE, highdegree.regularization = TRUE,
+  include.leading.eigenvector = TRUE)
+slr0all_gbm_coefs = getCoefsBM(
+  coefs = coefficients(slr0all_gbm$model), sbp = slr0all_gbm$sbp)
+rownames(slr0all_gbm_coefs$llc.coefs)[slr0all_gbm_coefs$llc.coefs != 0]
+sum(slr0all_gbm_coefs$llc.coefs != 0) # 15

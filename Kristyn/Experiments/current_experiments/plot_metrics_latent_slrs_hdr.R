@@ -28,8 +28,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -60,6 +60,9 @@ slr_sims_list = list()
 slr_hdr_original_sims_list = list()
 slr_hdr_mean_sims_list = list()
 slr_hdr_median_sims_list = list()
+slr_hdr_original_amap_sims_list = list()
+slr_hdr_mean_amap_sims_list = list()
+slr_hdr_median_amap_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
@@ -103,6 +106,30 @@ for(i in 1:numSims){
   rownames(slr_hdr_median_sim_tmp) = NULL
   slr_hdr_median_sims_list[[i]] = data.table(slr_hdr_median_sim_tmp)
   
+  # slr - hi-degree reg original + amini reg + approx
+  slr_hdr_original_amap_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_hdr_original_amini_approx_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_hdr_original_amap_sim_tmp) = NULL
+  slr_hdr_original_amap_sims_list[[i]] = data.table(slr_hdr_original_amap_sim_tmp)
+  
+  # slr - hi-degree reg mean + amini reg + approx
+  slr_hdr_mean_amap_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_hdr_mean_amini_approx_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_hdr_mean_amap_sim_tmp) = NULL
+  slr_hdr_mean_amap_sims_list[[i]] = data.table(slr_hdr_mean_amap_sim_tmp)
+  
+  # slr - hi-degree reg median + amini reg + approx
+  slr_hdr_median_amap_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_hdr_median_amini_approx_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_hdr_median_amap_sim_tmp) = NULL
+  slr_hdr_median_amap_sims_list[[i]] = data.table(slr_hdr_median_amap_sim_tmp)
+  
 }
 # metrics boxplots
 classo_sims.gg = reshape2::melt(as.data.frame(rbindlist(classo_sims_list)))
@@ -119,13 +146,26 @@ slr_hdr_mean_sims.gg$Method = "slr-hdr-mean"
 #
 slr_hdr_median_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_hdr_median_sims_list)))
 slr_hdr_median_sims.gg$Method = "slr-hdr-med"
+#
+slr_hdr_original_amap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_hdr_original_amap_sims_list)))
+slr_hdr_original_amap_sims.gg$Method = "slr-hdr-orig2"
+#
+slr_hdr_mean_amap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_hdr_mean_amap_sims_list)))
+slr_hdr_mean_amap_sims.gg$Method = "slr-hdr-mean2"
+#
+slr_hdr_median_amap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_hdr_median_amap_sims_list)))
+slr_hdr_median_amap_sims.gg$Method = "slr-hdr-med2"
 
 data.gg = rbind(
   classo_sims.gg,
   slr_sims.gg,
   slr_hdr_original_sims.gg, 
   slr_hdr_mean_sims.gg, 
-  slr_hdr_median_sims.gg)
+  slr_hdr_median_sims.gg, 
+  slr_hdr_original_amap_sims.gg, 
+  slr_hdr_mean_amap_sims.gg, 
+  slr_hdr_median_amap_sims.gg
+)
 
 data.gg_main = data.gg %>% 
   dplyr::filter(

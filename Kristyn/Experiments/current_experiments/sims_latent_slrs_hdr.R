@@ -304,7 +304,166 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_hdr_median_metrics", file.end))
   
+  ##############################################################################
+  ##############################################################################
+  ##############################################################################
+  ##############################################################################
+  ##############################################################################
+  ##############################################################################
   
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- FALSE
+  #   include leading eigenvector -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0amap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0amap.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0amap.coefs = getCoefsBM(
+    coefs = coefficients(slr0amap$model), sbp = slr0amap$sbp)
+  
+  # compute metrics on the selected model #
+  slr0amap.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0amap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0amap$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0amap.coefs$a0, thetahat = slr0amap.coefs$bm.coefs,
+    betahat = slr0amap.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0amap.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0amap.coefs$bm.coefs != 0),
+    "time" = slr0amap.timing
+  ),
+  paste0(output_dir, "/slr_amini_approx_metrics", file.end))
+  
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- TRUE, maximal
+  #   include leading eigenvector -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0hdrmaxamap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
+    highdegree.regularization = TRUE, 
+    highdegree.regularization.summary = "maximal",
+    include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0hdrmaxamap.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0hdrmaxamap.coefs = getCoefsBM(
+    coefs = coefficients(slr0hdrmaxamap$model), sbp = slr0hdrmaxamap$sbp)
+  
+  # compute metrics on the selected model #
+  slr0hdrmaxamap.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0hdrmaxamap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0hdrmaxamap$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0hdrmaxamap.coefs$a0, thetahat = slr0hdrmaxamap.coefs$bm.coefs,
+    betahat = slr0hdrmaxamap.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0hdrmaxamap.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0hdrmaxamap.coefs$bm.coefs != 0),
+    "time" = slr0hdrmaxamap.timing
+  ),
+  paste0(output_dir, "/slr_hdr_original_amini_approx_metrics", file.end))
+  
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- TRUE, mean
+  #   include leading eigenvector -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0hdrmeanamap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
+    highdegree.regularization = TRUE, 
+    highdegree.regularization.summary = "mean",
+    include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0hdrmeanamap.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0hdrmeanamap.coefs = getCoefsBM(
+    coefs = coefficients(slr0hdrmeanamap$model), sbp = slr0hdrmeanamap$sbp)
+  
+  # compute metrics on the selected model #
+  slr0hdrmeanamap.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0hdrmeanamap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0hdrmeanamap$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0hdrmeanamap.coefs$a0, thetahat = slr0hdrmeanamap.coefs$bm.coefs,
+    betahat = slr0hdrmeanamap.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0hdrmeanamap.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0hdrmeanamap.coefs$bm.coefs != 0),
+    "time" = slr0hdrmeanamap.timing
+  ),
+  paste0(output_dir, "/slr_hdr_mean_amini_approx_metrics", file.end))
+  
+  ##############################################################################
+  # slr method (a balance regression method)
+  #   rank 1 approximation -- TRUE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- TRUE, mean
+  #   include leading eigenvector -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr0hdrmedamap = slr(
+    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
+    highdegree.regularization = TRUE, 
+    highdegree.regularization.summary = "median",
+    include.leading.eigenvector = FALSE)
+  end.time = Sys.time()
+  slr0hdrmedamap.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slr0hdrmedamap.coefs = getCoefsBM(
+    coefs = coefficients(slr0hdrmedamap$model), sbp = slr0hdrmedamap$sbp)
+  
+  # compute metrics on the selected model #
+  slr0hdrmedamap.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slr0hdrmedamap$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr0hdrmedamap$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slr0hdrmedamap.coefs$a0, thetahat = slr0hdrmedamap.coefs$bm.coefs,
+    betahat = slr0hdrmedamap.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slr0hdrmedamap.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slr0hdrmedamap.coefs$bm.coefs != 0),
+    "time" = slr0hdrmedamap.timing
+  ),
+  paste0(output_dir, "/slr_hdr_median_amini_approx_metrics", file.end))
   
   
   ##############################################################################

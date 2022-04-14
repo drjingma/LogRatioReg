@@ -176,14 +176,14 @@ graph.laplacian2 = function(
   }
   W.tmp = W
   
-  # regularization.method == 1: perturb the network by adding some links with 
-  #   low edge weights
+  # Amini et al., 2016 regularization method: perturb the network by adding 
+  #   some links with low edge weights
   if(amini.regularization){
     W.tmp <- W.tmp + 
       amini.regularization.parameter * mean(degrees) / n * tcrossprod(rep(1,n))
   }
   
-  # regularization.method == 2: reduce the weights of edges proportionally to 
+  # high-degree regularization: reduce the weights of edges proportionally to 
   #   the excess of degrees
   if(highdegree.regularization){
     lambdas = sapply(degrees, function(x) min(2 * maximaldegree / x, 1))

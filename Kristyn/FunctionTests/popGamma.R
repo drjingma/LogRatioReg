@@ -1,4 +1,4 @@
-# date: 4/19/2022
+# date: 4/20/2022
 # purpose: apply spectral clustering to population Gamma to see if we can 
 #   recover the active set
 rm(list=ls())
@@ -32,8 +32,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -44,7 +44,7 @@ a0 = 0 # 0
 
 ##############################################################################
 # generate data
-set.seed(123)
+# set.seed(123)
 
 # get latent variable
 U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
@@ -78,27 +78,18 @@ beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) *
   as.vector(ilrtrans.true$ilr.trans)
 
 ##############################################################################
-# apply spectral clustering to population Gamma
+# population Gamma
 
-popGammajk1 = function(
+popGammajk = function(
   alpha1j, alpha1k, beta1, var_epsilon, var_epsilonj, var_epsilonk, U){
-  varU = stats::var(U)
+  varU = stats::var(U) #(1 / 12) * (0.5 - (-0.5))
   corrjk = ((alpha1j - alpha1k) * beta1 * varU) / 
-    ((beta1^2 * varU + var_epsilon) * 
-       ((alpha1j - alpha1k)^2 * varU + var_epsilonj + var_epsilonk))
-  return(abs(corrjk))
-}
-popGammajk2 = function(
-  alpha1j, alpha1k, beta1, var_epsilon, var_epsilonj, var_epsilonk){
-  varU = (1 / 12) * (0.5 - (-0.5))
-  corrjk = ((alpha1j - alpha1k) * beta1 * varU) / 
-    ((beta1^2 * varU + var_epsilon) * 
-       ((alpha1j - alpha1k)^2 * varU + var_epsilonj + var_epsilonk))
+    sqrt((beta1^2 * varU + var_epsilon) * 
+           ((alpha1j - alpha1k)^2 * varU + var_epsilonj + var_epsilonk))
   return(abs(corrjk))
 }
 popGamma = function(
-  alpha1, beta1, var_epsilon, var_epsilon2, U = NULL, 
-  type = 1
+  alpha1, beta1, var_epsilon, var_epsilon2, U
 ){
   p = length(alpha1)
   if(length(var_epsilon2) == 1) var_epsilon2 = rep(var_epsilon2, p)
@@ -108,38 +99,126 @@ popGamma = function(
     for (k in 1:p){
       if (k==j){next}
       else {
-        if(type == 1){
-          if(is.null(U)){
-            stop("popGamma(): need to provide U argument when type == 1")
-          }
-          rhoMat[j, k] = popGammajk1(
-            alpha1j = alpha1[j], alpha1k = alpha1[k], beta1 = beta1, 
-            var_epsilon = var_epsilon, var_epsilonj = var_epsilon2[j], 
-            var_epsilonk = var_epsilon2[k], U = U)
-        } else if(type == 2){
-          rhoMat[j, k] = popGammajk2(
-            alpha1j = alpha1[j], alpha1k = alpha1[k], beta1 = beta1, 
-            var_epsilon = var_epsilon, var_epsilonj = var_epsilon2[j], 
-            var_epsilonk = var_epsilon2[k])
-        } else{
-          stop("popGamma(): invalid type argument!!")
-        }
+        rhoMat[j, k] = popGammajk(
+          alpha1j = alpha1[j], alpha1k = alpha1[k], beta1 = beta1, 
+          var_epsilon = var_epsilon, var_epsilonj = var_epsilon2[j], 
+          var_epsilonk = var_epsilon2[k], U = U)
       }
     }
   }
   return(rhoMat)
 }
 
+##############################################################################
+# apply spectral clustering to Gamma and 1 - Gamma
+
 popGamma1 = popGamma(
   alpha1 = c(a1, 0), beta1 = b1, var_epsilon = sigma_eps1^2, 
-  var_epsilon2 = sigma_eps2^2, U = U.all[1:n, ], type = 1)
+  var_epsilon2 = sigma_eps2^2, U = U.all[1:n, ])
+rownames(popGamma1) <- colnames(popGamma1) <- colnames(X)
 pheatmap(popGamma1)
-popGamma2 = popGamma(
-  alpha1 = c(a1, 0), beta1 = b1, var_epsilon = sigma_eps1^2, 
-  var_epsilon2 = sigma_eps2^2, type = 2)
-pheatmap(popGamma2)
-spectral.clustering2(
+pheatmap(1 - popGamma1)
+# popGamma2 = popGamma(
+#   alpha1 = c(a1, 0), beta1 = b1, var_epsilon = sigma_eps1^2, 
+#   var_epsilon2 = sigma_eps2^2, type = 2)
+# pheatmap(popGamma2)
+sc_Gamma = spectral.clustering2(
   W = popGamma1, n_eig = 2, amini.regularization = FALSE, 
   highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+table(sc_Gamma)
+sc_Gamma
+sc_1minusGamma = spectral.clustering2(
+  W = 1 - popGamma1, n_eig = 2, amini.regularization = FALSE, 
+  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+table(sc_1minusGamma)
+sc_1minusGamma
+sc_Gamma_amini = spectral.clustering2(
+  W = popGamma1, n_eig = 2, amini.regularization = TRUE, 
+  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+table(sc_Gamma_amini)
+sc_Gamma_amini
+sc_1minusGamma_amini = spectral.clustering2(
+  W = 1 - popGamma1, n_eig = 2, amini.regularization = TRUE, 
+  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+table(sc_1minusGamma_amini)
+sc_1minusGamma_amini
 
+##############################################################################
+##############################################################################
+##############################################################################
+# SLR with (population) Gamma and 1 - Gamma
+##############################################################################
+##############################################################################
+##############################################################################
 
+##############################################################################
+# slr method (a balance regression method)
+#   rank 1 approximation -- TRUE
+#   amini regularization -- TRUE
+#   high degree regularization -- FALSE
+#   include leading eigenvector -- FALSE
+#   Population Gamma -- subtractFrom1 = FALSE
+##############################################################################
+slr0amap = slr_popGamma(
+  x = X, y = Y, popGamma = popGamma1, subtractFrom1 = FALSE, 
+  approx = TRUE, amini.regularization = TRUE, 
+  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+
+slr0amap.coefs = getCoefsBM(
+  coefs = coefficients(slr0amap$model), sbp = slr0amap$sbp)
+all(which(slr0amap.coefs$llc.coefs != 0) == which(SBP.true != 0))
+all(which(slr0amap.coefs$llc.coefs > 0) == which(SBP.true > 0))
+
+##############################################################################
+# slr method (a balance regression method)
+#   rank 1 approximation -- TRUE
+#   amini regularization -- TRUE
+#   high degree regularization -- FALSE
+#   include leading eigenvector -- FALSE
+#   Population Gamma -- subtractFrom1 = TRUE
+##############################################################################
+slr1amap = slr_popGamma(
+  x = X, y = Y, popGamma = popGamma1, subtractFrom1 = TRUE, 
+  approx = TRUE, amini.regularization = TRUE, 
+  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+
+slr1amap.coefs = getCoefsBM(
+  coefs = coefficients(slr1amap$model), sbp = slr1amap$sbp)
+all(which(slr1amap.coefs$llc.coefs != 0) == which(SBP.true != 0))
+all(which(slr1amap.coefs$llc.coefs > 0) == which(SBP.true > 0))
+
+##############################################################################
+# slr method (a balance regression method)
+#   rank 1 approximation -- FALSE
+#   amini regularization -- TRUE
+#   high degree regularization -- FALSE
+#   include leading eigenvector -- FALSE
+#   Population Gamma -- subtractFrom1 = FALSE
+##############################################################################
+slr0am = slr_popGamma(
+  x = X, y = Y, popGamma = popGamma1, subtractFrom1 = FALSE, 
+  approx = FALSE, amini.regularization = TRUE, 
+  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+
+slr0am.coefs = getCoefsBM(
+  coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
+all(which(slr0am.coefs$llc.coefs != 0) == which(SBP.true != 0))
+all(which(slr0am.coefs$llc.coefs > 0) == which(SBP.true > 0))
+
+##############################################################################
+# slr method (a balance regression method)
+#   rank 1 approximation -- FALSE
+#   amini regularization -- TRUE
+#   high degree regularization -- FALSE
+#   include leading eigenvector -- FALSE
+#   Population Gamma -- subtractFrom1 = TRUE
+##############################################################################
+slr1am = slr_popGamma(
+  x = X, y = Y, popGamma = popGamma1, subtractFrom1 = TRUE, 
+  approx = FALSE, amini.regularization = TRUE, 
+  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+
+slr1am.coefs = getCoefsBM(
+  coefs = coefficients(slr1am$model), sbp = slr1am$sbp)
+all(which(slr1am.coefs$llc.coefs != 0) == which(SBP.true != 0))
+all(which(slr1am.coefs$llc.coefs > 0) == which(SBP.true > 0))

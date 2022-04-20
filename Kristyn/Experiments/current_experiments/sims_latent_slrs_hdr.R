@@ -43,6 +43,8 @@ res = foreach(
   source("Kristyn/Functions/slr.R")
   source("Kristyn/Functions/util.R")
   
+  library(ggplot2)
+  
   # Tuning parameters###########################################################
   
   # Settings to toggle with
@@ -57,8 +59,8 @@ res = foreach(
   tol = 1e-4
   sigma_eps1 = 0.1
   sigma_eps2 = 0.1
-  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -165,6 +167,11 @@ res = foreach(
   slr0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
+  # slr0test = slr_testing(
+  #   x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
+  #   highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
+  # all.equal(slr0test$spectralclustering1$L$W, slr0test$spectralclustering1$L$W.tmp)
+  
   slr0.coefs = getCoefsBM(
     coefs = coefficients(slr0$model), sbp = slr0$sbp)
   
@@ -203,6 +210,17 @@ res = foreach(
   end.time = Sys.time()
   slr0hdrmax.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
+  
+  # slr0hdrmaxtest = slr_testing(
+  #   x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
+  #   highdegree.regularization = TRUE,
+  #   highdegree.regularization.summary = "maximal",
+  #   include.leading.eigenvector = FALSE)
+  # ggplot(
+  #   data.frame(
+  #     Weights = as.numeric(slr0hdrmaxtest$spectralclustering1$L$weights)),
+  #   aes(x = Weights)) +
+  #     geom_histogram() + ggtitle("slr-hdr-original")
   
   slr0hdrmax.coefs = getCoefsBM(
     coefs = coefficients(slr0hdrmax$model), sbp = slr0hdrmax$sbp)
@@ -243,6 +261,17 @@ res = foreach(
   slr0hdrmean.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
+  # slr0hdrmeantest = slr_testing(
+  #   x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
+  #   highdegree.regularization = TRUE,
+  #   highdegree.regularization.summary = "mean",
+  #   include.leading.eigenvector = FALSE)
+  # ggplot(
+  #   data.frame(
+  #     Weights = as.numeric(slr0hdrmeantest$spectralclustering1$L$weights)),
+  #   aes(x = Weights)) +
+  #   geom_histogram() + ggtitle("slr-hdr-mean")
+  
   slr0hdrmean.coefs = getCoefsBM(
     coefs = coefficients(slr0hdrmean$model), sbp = slr0hdrmean$sbp)
   
@@ -281,6 +310,17 @@ res = foreach(
   end.time = Sys.time()
   slr0hdrmed.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
+  
+  # slr0hdrmedtest = slr_testing(
+  #   x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
+  #   highdegree.regularization = TRUE,
+  #   highdegree.regularization.summary = "median",
+  #   include.leading.eigenvector = FALSE)
+  # ggplot(
+  #   data.frame(
+  #     Weights = as.numeric(slr0hdrmedtest$spectralclustering1$L$weights)),
+  #   aes(x = Weights)) +
+  #   geom_histogram() + ggtitle("slr-hdr-median")
   
   slr0hdrmed.coefs = getCoefsBM(
     coefs = coefficients(slr0hdrmed$model), sbp = slr0hdrmed$sbp)
@@ -365,6 +405,17 @@ res = foreach(
   slr0hdrmaxamap.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
+  # slr0hdramapmaxtest = slr_testing(
+  #   x = X, y = Y, approx = TRUE, amini.regularization = TRUE,
+  #   highdegree.regularization = TRUE,
+  #   highdegree.regularization.summary = "maximal",
+  #   include.leading.eigenvector = FALSE)
+  # ggplot(
+  #   data.frame(
+  #     Weights = as.numeric(slr0hdramapmaxtest$spectralclustering1$L$weights)),
+  #   aes(x = Weights)) +
+  #   geom_histogram() + ggtitle("slr-hdr-amini-rank1approx-original")
+  
   slr0hdrmaxamap.coefs = getCoefsBM(
     coefs = coefficients(slr0hdrmaxamap$model), sbp = slr0hdrmaxamap$sbp)
   
@@ -404,6 +455,17 @@ res = foreach(
   slr0hdrmeanamap.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
+  # slr0hdramapmeantest = slr_testing(
+  #   x = X, y = Y, approx = TRUE, amini.regularization = TRUE,
+  #   highdegree.regularization = TRUE,
+  #   highdegree.regularization.summary = "mean",
+  #   include.leading.eigenvector = FALSE)
+  # ggplot(
+  #   data.frame(
+  #     Weights = as.numeric(slr0hdramapmeantest$spectralclustering1$L$weights)),
+  #   aes(x = Weights)) +
+  #   geom_histogram() + ggtitle("slr-hdr-amini-rank1approx-mean")
+  
   slr0hdrmeanamap.coefs = getCoefsBM(
     coefs = coefficients(slr0hdrmeanamap$model), sbp = slr0hdrmeanamap$sbp)
   
@@ -442,6 +504,17 @@ res = foreach(
   end.time = Sys.time()
   slr0hdrmedamap.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
+  
+  # slr0hdramapmedtest = slr_testing(
+  #   x = X, y = Y, approx = TRUE, amini.regularization = TRUE,
+  #   highdegree.regularization = TRUE,
+  #   highdegree.regularization.summary = "median",
+  #   include.leading.eigenvector = FALSE)
+  # ggplot(
+  #   data.frame(
+  #     Weights = as.numeric(slr0hdramapmedtest$spectralclustering1$L$weights)),
+  #   aes(x = Weights)) +
+  #   geom_histogram() + ggtitle("slr-hdr-amini-rank1approx-median")
   
   slr0hdrmedamap.coefs = getCoefsBM(
     coefs = coefficients(slr0hdrmedamap$model), sbp = slr0hdrmedamap$sbp)

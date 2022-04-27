@@ -17,7 +17,7 @@ slrmatrix = function(x, y){
 }
 
 # spectral.clustering() function, with automatic splitting of two things
-spectral.clustering2 = function(
+spectral.clustering.kmeans = function(
   W, n_eig = 2, reindex = FALSE, 
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01,
@@ -104,15 +104,60 @@ graph.laplacian2 = function(
   return(D_half %*% W.tmp %*% D_half)
 }
 
-slr <- function(
-  x, y, num.clusters = 2, classification = FALSE, approx = TRUE, 
+# spectral clustering using sign check method
+spectral.clustering.cut = function(
+  W, reindex = FALSE, 
   amini.regularization = TRUE, 
+  amini.regularization.parameter = 0.01,
+  highdegree.regularization.summary = "mean",
+  highdegree.regularization = FALSE
+) {
+  stopifnot(nrow(W) == ncol(W)) 
+  n = nrow(W)    # number of vertices
+  
+  # compute graph laplacian
+  L = graph.laplacian2(
+    W = W, amini.regularization = amini.regularization, 
+    amini.regularization.parameter = amini.regularization.parameter,
+    highdegree.regularization.summary = highdegree.regularization.summary,
+    highdegree.regularization = highdegree.regularization)
+  IminusL = diag(n) - L
+  
+  ei = eigen(IminusL, symmetric = TRUE)
+  # compute the eigenvectors and values of L
+  # we will use k-means to cluster the data
+  # using the leading eigenvalues in absolute values
+  ei$vectors <- ei$vectors[,base::order(abs(ei$values),decreasing = TRUE)]
+  if(nrow(W) == 2){
+    obj = list(cluster = 1:2)
+  } else{
+    eigenvector2 = ei$vectors[, 2, drop = FALSE]
+    obj  = list(cluster = as.numeric(eigenvector2 < 0) + 1)
+  }
+  if (reindex){
+    cl <- 2*(obj$cluster - 1) - 1
+  } else{
+    cl = obj$cluster
+  }
+  names(cl) <- rownames(W)
+  # return the cluster membership
+  return(cl)
+}
+
+
+slr <- function(
+  x, y, num.clusters = 2, classification = FALSE, approx = FALSE, 
+  amini.regularization = FALSE, 
   amini.regularization.parameter = 0.01, 
   highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  include.leading.eigenvector = TRUE, 
-  subtractFrom1 = FALSE
+  subtractFrom1 = TRUE, 
+  spectral.clustering.method = "kmeans" # "kmeans" or "cut"
 ){
+  if(spectral.clustering.method == "cut" & num.clusters != 2){
+    stop("spectral.clustering.method == cut requires num.clusters == 2")
+  }
+  
   n = nrow(x)
   p = ncol(x)
   
@@ -132,21 +177,25 @@ slr <- function(
       rhoMat.svd$v[, 1]) *
       rhoMat.svd$d[1]
     rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
-    clusters1 <- spectral.clustering2(
-      rhoMat_approx, n_eig = num.clusters, 
-      amini.regularization = amini.regularization,
-      amini.regularization.parameter = amini.regularization.parameter,
-      highdegree.regularization.summary = highdegree.regularization.summary,
-      highdegree.regularization = highdegree.regularization,
-      include.leading.eigenvector = include.leading.eigenvector)
+    affinityMat = rhoMat_approx
   } else{
-    clusters1 <- spectral.clustering2(
-      rhoMat, n_eig = num.clusters, 
+    affinityMat = rhoMat
+  }
+  if(spectral.clustering.method == "kmeans"){
+    clusters1 <- spectral.clustering.kmeans(
+      affinityMat, n_eig = num.clusters, 
       amini.regularization = amini.regularization,
       amini.regularization.parameter = amini.regularization.parameter,
       highdegree.regularization.summary = highdegree.regularization.summary,
       highdegree.regularization = highdegree.regularization,
-      include.leading.eigenvector = include.leading.eigenvector)
+      include.leading.eigenvector = TRUE)
+  } else if(spectral.clustering.method == "cut"){
+    clusters1 <- spectral.clustering.cut(
+      affinityMat, 
+      amini.regularization = amini.regularization,
+      amini.regularization.parameter = amini.regularization.parameter,
+      highdegree.regularization.summary = highdegree.regularization.summary,
+      highdegree.regularization = highdegree.regularization)
   }
   cluster.lengths = table(clusters1)
   clusters = names(cluster.lengths)
@@ -163,13 +212,22 @@ slr <- function(
     index = which(clusters1 == cluster.label)
     if(length(index) >= 2){ # if a log-ratio can be made from the variables in this cluster
       ## Perform spectral clustering to get the numerator/denominator groups
-      subset = spectral.clustering2(
-        rhoMat[index, index], n_eig = 2, reindex = TRUE, 
-        amini.regularization = amini.regularization,
-        amini.regularization.parameter = amini.regularization.parameter,
-        highdegree.regularization.summary = highdegree.regularization.summary, 
-        highdegree.regularization = highdegree.regularization,
-        include.leading.eigenvector = include.leading.eigenvector)
+      if(spectral.clustering.method == "kmeans"){
+        subset = spectral.clustering.kmeans(
+          rhoMat[index, index], n_eig = 2, reindex = TRUE, 
+          amini.regularization = amini.regularization,
+          amini.regularization.parameter = amini.regularization.parameter,
+          highdegree.regularization.summary = highdegree.regularization.summary, 
+          highdegree.regularization = highdegree.regularization,
+          include.leading.eigenvector = TRUE)
+      } else if(spectral.clustering.method == "cut"){
+        subset = spectral.clustering.cut(
+          rhoMat[index, index], reindex = TRUE, 
+          amini.regularization = amini.regularization,
+          amini.regularization.parameter = amini.regularization.parameter,
+          highdegree.regularization.summary = highdegree.regularization.summary, 
+          highdegree.regularization = highdegree.regularization)
+      }
       ## calculate balance and its correlation with y
       sbp.ests[match(names(subset), rownames(sbp.ests)), i] = subset
       bal.ests[, i] = balance::balance.fromSBP(

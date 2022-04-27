@@ -1,4 +1,4 @@
-# date: 4/20/2022
+# date: 4/27/2022
 # purpose: apply spectral clustering to population Gamma to see if we can 
 #   recover the active set
 rm(list=ls())
@@ -118,30 +118,28 @@ popGamma1 = popGamma(
 rownames(popGamma1) <- colnames(popGamma1) <- colnames(X)
 pheatmap(popGamma1)
 pheatmap(1 - popGamma1)
-# popGamma2 = popGamma(
-#   alpha1 = c(a1, 0), beta1 = b1, var_epsilon = sigma_eps1^2, 
-#   var_epsilon2 = sigma_eps2^2, type = 2)
-# pheatmap(popGamma2)
-sc_Gamma = spectral.clustering2(
+
+sck_Gamma = spectral.clustering.kmeans(
   W = popGamma1, n_eig = 2, amini.regularization = FALSE, 
-  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
-table(sc_Gamma)
-sc_Gamma
-sc_1minusGamma = spectral.clustering2(
+  highdegree.regularization = FALSE, include.leading.eigenvector = TRUE)
+table(sck_Gamma)
+sck_Gamma
+sck_1minusGamma = spectral.clustering.kmeans(
   W = 1 - popGamma1, n_eig = 2, amini.regularization = FALSE, 
-  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
-table(sc_1minusGamma)
-sc_1minusGamma
-sc_Gamma_amini = spectral.clustering2(
-  W = popGamma1, n_eig = 2, amini.regularization = TRUE, 
-  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
-table(sc_Gamma_amini)
-sc_Gamma_amini
-sc_1minusGamma_amini = spectral.clustering2(
-  W = 1 - popGamma1, n_eig = 2, amini.regularization = TRUE, 
-  highdegree.regularization = FALSE, include.leading.eigenvector = FALSE)
-table(sc_1minusGamma_amini)
-sc_1minusGamma_amini
+  highdegree.regularization = FALSE, include.leading.eigenvector = TRUE)
+table(sck_1minusGamma)
+sck_1minusGamma
+
+scc_Gamma = spectral.clustering.cut(
+  W = popGamma1, amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(scc_Gamma)
+scc_Gamma
+scc_1minusGamma = spectral.clustering.kmeans(
+  W = 1 - popGamma1, n_eig = 2, amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(scc_1minusGamma)
+scc_1minusGamma
 
 ##############################################################################
 ##############################################################################

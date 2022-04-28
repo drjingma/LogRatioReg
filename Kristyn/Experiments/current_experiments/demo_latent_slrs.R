@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 4/21/2022
+# Date: 4/27/2022
 
 rm(list=ls())
 library(mvtnorm)
@@ -11,6 +11,8 @@ library(balance)
 
 source("RCode/func_libs.R")
 source("Kristyn/Functions/slr.R")
+source("Kristyn/Functions/slr1sc.R")
+source("Kristyn/Functions/slrtesting.R")
 source("Kristyn/Functions/util.R")
 
 source("Kristyn/Functions/slrtesting.R")
@@ -42,7 +44,7 @@ a0 = 0 # 0
 
 ##############################################################################
 # generate data
-set.seed(123)
+set.seed(1)
 
 # get latent variable
 U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
@@ -76,174 +78,50 @@ beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) *
   as.vector(ilrtrans.true$ilr.trans)
 
 ##############################################################################
-# slr method using population Gamma (subtractFrom1 = FALSE)
+# slr method
+#   similarity.matrix -- TRUE
+#   maxGamma -- FALSE
+#   spectral.clustering.algorithm == "kmeans"
 #   rank 1 approximation -- FALSE
 #   amini regularization -- FALSE
 #   high degree regularization -- FALSE
 ##############################################################################
-slr0 = slr_testing(
-  subtractFrom1 = FALSE, 
+slrk = slr_testing(
+  similarity.matrix = TRUE, maxGamma = TRUE,
+  x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+  highdegree.regularization = FALSE, spectral.clustering.method = "kmeans")
+
+Gamma = slrmatrix(x = X, y = Y)
+par(mfrow = c(1, 1))
+fields::image.plot(max(Gamma) - Gamma)
+
+slrk.coefs = getCoefsBM(
+  coefs = coefficients(slrk$model), sbp = slrk$sbp)
+
+par(mfrow = c(1,1))
+fields::image.plot(slrk$kernel)
+pheatmap(slrk$spectralclustering1$L$W)
+pheatmap(slrk$spectralclustering1$L$W.tmp)
+par(mfrow = c(1, 3))
+# plot(slrk$spectralclustering1$ei$values, ylab = "eigenvalues")
+plot(slrk$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
+plot(slrk$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
+plot(slrk$spectralclustering1$ei$vectors[, 3], ylab = "3nd eigenvector")
+
+
+##############################################################################
+# slr method using k-means spectral clustering with K = 3
+#   similarity.matrix -- TRUE
+#   maxGamma -- TRUE
+#   rank 1 approximation -- FALSE
+#   amini regularization -- FALSE
+#   high degree regularization -- FALSE
+##############################################################################
+slr1sc = slr1sc(
+  similarity.matrix = TRUE, maxGamma = TRUE,
   x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
   highdegree.regularization = FALSE)
 
-slr0.coefs = getCoefsBM(
-  coefs = coefficients(slr0$model), sbp = slr0$sbp)
-pheatmap(slr0$spectralclustering1$L$W)
-pheatmap(slr0$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr0$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr0$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr0$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-##############################################################################
-# slr method using population Gamma (subtractFrom1 = TRUE)
-#   rank 1 approximation -- FALSE
-#   amini regularization -- FALSE
-#   high degree regularization -- FALSE
-##############################################################################
-slr1 = slr_testing(
-  subtractFrom1 = TRUE, 
-  x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
-  highdegree.regularization = FALSE)
-
-slr1.coefs = getCoefsBM(
-  coefs = coefficients(slr1$model), sbp = slr1$sbp)
-pheatmap(slr1$spectralclustering1$L$W)
-pheatmap(slr1$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr1$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr1$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr1$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-##############################################################################
-# slr method using population Gamma (subtractFrom1 = FALSE)
-#   rank 1 approximation -- FALSE
-#   amini regularization -- TRUE
-#   high degree regularization -- FALSE
-##############################################################################
-slr0am = slr_testing(
-  subtractFrom1 = FALSE, 
-  x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-  highdegree.regularization = FALSE)
-
-slr0am.coefs = getCoefsBM(
-  coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
-pheatmap(slr0am$spectralclustering1$L$W)
-pheatmap(slr0am$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr0am$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr0am$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr0am$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-##############################################################################
-# slr method using population Gamma (subtractFrom1 = TRUE)
-#   rank 1 approximation -- FALSE
-#   amini regularization -- TRUE
-#   high degree regularization -- FALSE
-##############################################################################
-slr1am = slr_testing(
-  subtractFrom1 = TRUE, 
-  x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-  highdegree.regularization = FALSE)
-
-slr1am.coefs = getCoefsBM(
-  coefs = coefficients(slr1am$model), sbp = slr1am$sbp)
-pheatmap(slr1am$spectralclustering1$L$W)
-pheatmap(slr1am$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr1am$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr1am$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr1am$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-##############################################################################
-# slr method using population Gamma (subtractFrom1 = FALSE)
-#   rank 1 approximation -- TRUE
-#   amini regularization -- FALSE
-#   high degree regularization -- FALSE
-##############################################################################
-slr0ap = slr_testing(
-  subtractFrom1 = FALSE, 
-  x = X, y = Y, approx = TRUE, amini.regularization = FALSE, 
-  highdegree.regularization = FALSE)
-
-slr0ap.coefs = getCoefsBM(
-  coefs = coefficients(slr0ap$model), sbp = slr0ap$sbp)
-pheatmap(slr0ap$spectralclustering1$L$W)
-pheatmap(slr0ap$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr0ap$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr0ap$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr0ap$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-##############################################################################
-# slr method using population Gamma (subtractFrom1 = TRUE)
-#   rank 1 approximation -- TRUE
-#   amini regularization -- FALSE
-#   high degree regularization -- FALSE
-##############################################################################
-slr1ap = slr_testing(
-  subtractFrom1 = TRUE, 
-  x = X, y = Y, approx = TRUE, amini.regularization = FALSE, 
-  highdegree.regularization = FALSE)
-
-slr1ap.coefs = getCoefsBM(
-  coefs = coefficients(slr1ap$model), sbp = slr1ap$sbp)
-pheatmap(slr1ap$spectralclustering1$L$W)
-pheatmap(slr1ap$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr1ap$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr1ap$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr1ap$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-##############################################################################
-# slr method using population Gamma (subtractFrom1 = FALSE)
-#   rank 1 approximation -- TRUE
-#   amini regularization -- TRUE
-#   high degree regularization -- FALSE
-##############################################################################
-slr0amap = slr_testing(
-  subtractFrom1 = FALSE, 
-  x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
-  highdegree.regularization = FALSE)
-
-slr0amap.coefs = getCoefsBM(
-  coefs = coefficients(slr0amap$model), sbp = slr0amap$sbp)
-pheatmap(slr0amap$spectralclustering1$L$W)
-pheatmap(slr0amap$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr0amap$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr0amap$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr0amap$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-##############################################################################
-# slr method using population Gamma (subtractFrom1 = TRUE)
-#   rank 1 approximation -- TRUE
-#   amini regularization -- TRUE
-#   high degree regularization -- FALSE
-##############################################################################
-slr1amap = slr_testing(
-  subtractFrom1 = TRUE, 
-  x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
-  highdegree.regularization = FALSE)
-
-slr1amap.coefs = getCoefsBM(
-  coefs = coefficients(slr1amap$model), sbp = slr1amap$sbp)
-pheatmap(slr1amap$spectralclustering1$L$W)
-pheatmap(slr1amap$spectralclustering1$L$W.tmp)
-par(mfrow = c(1, 3))
-plot(slr1amap$spectralclustering1$ei$values, ylab = "eigenvalues")
-plot(slr1amap$spectralclustering1$ei$vectors[, 1], ylab = "1st eigenvector")
-plot(slr1amap$spectralclustering1$ei$vectors[, 2], ylab = "2nd eigenvector")
-
-
-
-
-
-
-
-
-
-
-
-
-
+slr1sc.coefs = getCoefsBM(
+  coefs = coefficients(slr1sc$model), sbp = slr1sc$sbp)
+slr1sc.coefs$llc.coefs

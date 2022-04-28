@@ -12,6 +12,7 @@ library(balance)
 
 source("RCode/func_libs.R")
 source("Kristyn/Functions/slr.R")
+source("Kristyn/Functions/slrtesting.R")
 source("Kristyn/Functions/util.R")
 
 library(ggplot2)
@@ -117,29 +118,111 @@ popGamma1 = popGamma(
   var_epsilon2 = sigma_eps2^2, U = U.all[1:n, ])
 rownames(popGamma1) <- colnames(popGamma1) <- colnames(X)
 pheatmap(popGamma1)
-pheatmap(1 - popGamma1)
+pheatmap(max(popGamma1) - popGamma1)
 
-sck_Gamma = spectral.clustering.kmeans(
+# spectral clustering via k-means (k = 2)
+#
+sck_Gamma = spectral.clustering.kmeans_testing( # on Gamma
   W = popGamma1, n_eig = 2, amini.regularization = FALSE, 
-  highdegree.regularization = FALSE, include.leading.eigenvector = TRUE)
-table(sck_Gamma)
-sck_Gamma
-sck_1minusGamma = spectral.clustering.kmeans(
+  highdegree.regularization = FALSE)
+table(sck_Gamma$cl) # separates active/inactive
+# sck_Gamma$cl
+layout(mat=matrix(c(1, 1, 1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(sck_Gamma$ei$values)
+plot(sck_Gamma$ei$vectors[, 1])
+plot(sck_Gamma$ei$vectors[, 2])
+plot(sck_Gamma$ei$vectors[, 3])
+#
+sck_1minusGamma = spectral.clustering.kmeans_testing( # on 1 - Gamma
   W = 1 - popGamma1, n_eig = 2, amini.regularization = FALSE, 
-  highdegree.regularization = FALSE, include.leading.eigenvector = TRUE)
-table(sck_1minusGamma)
-sck_1minusGamma
+  highdegree.regularization = FALSE)
+table(sck_1minusGamma$cl)
+# sck_1minusGamma$cl
+layout(mat=matrix(c(1, 1, 1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(sck_1minusGamma$ei$values, main = "1 minus Gamma")
+plot(sck_1minusGamma$ei$vectors[, 1])
+plot(sck_1minusGamma$ei$vectors[, 2])
+plot(sck_1minusGamma$ei$vectors[, 3])
+# 
+sck_maxGamma = spectral.clustering.kmeans_testing( # on maxGamma - Gamma
+  W = max(popGamma1) - popGamma1, n_eig = 2, amini.regularization = TRUE, 
+  amini.regularization.parameter = 0.01,
+  highdegree.regularization = FALSE)
+pheatmap(sck_maxGamma$L$W.tmp)
+table(sck_maxGamma$cl)
+# sck_maxGamma$cl
+layout(mat=matrix(c(1, 1, 1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(sck_maxGamma$ei$values, main = "maxGamma minus Gamma")
+plot(sck_maxGamma$ei$vectors[, 1])
+plot(sck_maxGamma$ei$vectors[, 2])
+plot(sck_maxGamma$ei$vectors[, 3])
 
-scc_Gamma = spectral.clustering.cut(
-  W = popGamma1, amini.regularization = FALSE, 
+sck_maxGamma = spectral.clustering.kmeans_testing( # on maxGamma - Gamma
+  W = max(Gamma) - popGamma1, n_eig = 2, amini.regularization = FALSE, 
   highdegree.regularization = FALSE)
-table(scc_Gamma)
-scc_Gamma
-scc_1minusGamma = spectral.clustering.kmeans(
+sck_maxGamma$ei$values[1:4]
+sck_1minusGamma = spectral.clustering.kmeans_testing( # on maxGamma - Gamma
   W = 1 - popGamma1, n_eig = 2, amini.regularization = FALSE, 
   highdegree.regularization = FALSE)
-table(scc_1minusGamma)
-scc_1minusGamma
+sck_1minusGamma$ei$values[1:4]
+
+# spectral clustering via k-means (k = 3)
+sck3_Gamma = spectral.clustering.kmeans_testing( # on Gamma
+  W = popGamma1, n_eig = 3, amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(sck3_Gamma$cl)
+# sck3_Gamma$cl
+layout(mat=matrix(c(1, 1, 1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(sck3_Gamma$ei$values)
+plot(sck3_Gamma$ei$vectors[, 1])
+plot(sck3_Gamma$ei$vectors[, 2])
+plot(sck3_Gamma$ei$vectors[, 3])
+#
+sck3_1minusGamma = spectral.clustering.kmeans_testing( # on 1 - Gamma
+  W = 1 - popGamma1, n_eig = 3, amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(sck3_1minusGamma$cl)
+# sck3_1minusGamma$cl
+par(mfrow=c(1,3))
+layout(mat=matrix(c(1, 1, 1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(sck3_1minusGamma$ei$values)
+plot(sck3_1minusGamma$ei$vectors[, 1])
+plot(sck3_1minusGamma$ei$vectors[, 2])
+plot(sck3_1minusGamma$ei$vectors[, 3])
+#
+sck3_maxGamma = spectral.clustering.kmeans_testing( # on maxGamma - Gamma
+  W = max(popGamma1) - popGamma1, n_eig = 3, amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(sck3_maxGamma$cl)
+# sck3_maxGamma$cl
+par(mfrow=c(1,3))
+layout(mat=matrix(c(1, 1, 1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(sck3_maxGamma$ei$values)
+plot(sck3_maxGamma$ei$vectors[, 1])
+plot(sck3_maxGamma$ei$vectors[, 2])
+plot(sck3_maxGamma$ei$vectors[, 3])
+
+# spectral clustering via normalized cut
+scc_Gamma = spectral.clustering.cut_testing(
+  W = crossprod(popGamma1) - diag(diag(crossprod(popGamma1))),
+  amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(scc_Gamma$cl)
+scc_Gamma$cl
+#
+scc_1minusGamma = spectral.clustering.cut_testing(
+  W = crossprod(1 - popGamma1) - diag(diag(crossprod(1 - popGamma1))), 
+  amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(scc_1minusGamma$cl)
+scc_1minusGamma$cl
+#
+scc_maxGamma = spectral.clustering.cut_testing(
+  W = crossprod(max(popGamma1) - popGamma1) - diag(diag(crossprod(max(popGamma1) - popGamma1))), 
+  amini.regularization = FALSE, 
+  highdegree.regularization = FALSE)
+table(scc_maxGamma$cl)
+scc_maxGamma$cl
 
 ##############################################################################
 ##############################################################################
@@ -220,3 +303,11 @@ slr1am.coefs = getCoefsBM(
   coefs = coefficients(slr1am$model), sbp = slr1am$sbp)
 all(which(slr1am.coefs$llc.coefs != 0) == which(SBP.true != 0))
 all(which(slr1am.coefs$llc.coefs > 0) == which(SBP.true > 0))
+
+
+# slr with spectral clustering with k = 3
+# hierarchical spectral clustering with k = 2
+#   -- two levels 
+
+
+

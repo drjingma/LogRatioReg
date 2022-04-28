@@ -22,8 +22,7 @@ spectral.clustering.kmeans = function(
   amini.regularization = TRUE, 
   amini.regularization.parameter = 0.01,
   highdegree.regularization.summary = "mean",
-  highdegree.regularization = FALSE,
-  include.leading.eigenvector = TRUE
+  highdegree.regularization = FALSE
   ) {
   # compute graph laplacian
   L = graph.laplacian2(
@@ -39,14 +38,8 @@ spectral.clustering.kmeans = function(
   if(nrow(W) == n_eig){
     obj = list(cluster= 1:n_eig)
   } else{
-    if(include.leading.eigenvector){
-      eigenvector.indices = 1:n_eig
-    } else{ # just the second largest eigenvector
-      eigenvector.indices = 2:n_eig
-    }
     obj <- kmeans(
-      # ei$vectors[, 2:n_eig, drop = FALSE], centers = n_eig, nstart = 100)
-      ei$vectors[, eigenvector.indices, drop = FALSE], centers = n_eig, 
+      ei$vectors[, 1:n_eig, drop = FALSE], centers = n_eig, 
       nstart = 100)
   }
   if (reindex){
@@ -151,7 +144,8 @@ slr <- function(
   amini.regularization.parameter = 0.01, 
   highdegree.regularization.summary = "mean",
   highdegree.regularization = FALSE,
-  subtractFrom1 = TRUE, 
+  similarity.matrix = TRUE, 
+  maxGamma = FALSE,
   spectral.clustering.method = "kmeans" # "kmeans" or "cut"
 ){
   if(spectral.clustering.method == "cut" & num.clusters != 2){
@@ -163,8 +157,12 @@ slr <- function(
   
   ## Compute pairwise correlation
   rhoMat <- slrmatrix(x = x, y = y)
-  if(subtractFrom1){
-    rhoMat = 1 - rhoMat
+  if(similarity.matrix){
+    if(maxGamma){
+      rhoMat = max(rhoMat) - rhoMat
+    } else{
+      rhoMat = 1 - rhoMat
+    }
   }
   out <- list()
   out$kernel <- rhoMat
@@ -187,8 +185,7 @@ slr <- function(
       amini.regularization = amini.regularization,
       amini.regularization.parameter = amini.regularization.parameter,
       highdegree.regularization.summary = highdegree.regularization.summary,
-      highdegree.regularization = highdegree.regularization,
-      include.leading.eigenvector = TRUE)
+      highdegree.regularization = highdegree.regularization)
   } else if(spectral.clustering.method == "cut"){
     clusters1 <- spectral.clustering.cut(
       affinityMat, 
@@ -218,8 +215,7 @@ slr <- function(
           amini.regularization = amini.regularization,
           amini.regularization.parameter = amini.regularization.parameter,
           highdegree.regularization.summary = highdegree.regularization.summary, 
-          highdegree.regularization = highdegree.regularization,
-          include.leading.eigenvector = TRUE)
+          highdegree.regularization = highdegree.regularization)
       } else if(spectral.clustering.method == "cut"){
         subset = spectral.clustering.cut(
           rhoMat[index, index], reindex = TRUE, 

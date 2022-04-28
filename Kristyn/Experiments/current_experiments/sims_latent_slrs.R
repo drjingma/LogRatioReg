@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 4/13/2022
+# Date: 4/27/2022
 
 ################################################################################
 # libraries and settings
@@ -41,6 +41,7 @@ res = foreach(
   
   source("RCode/func_libs.R")
   source("Kristyn/Functions/slr.R")
+  source("Kristyn/Functions/slr1sc.R")
   source("Kristyn/Functions/util.R")
   
   # Tuning parameters###########################################################
@@ -63,7 +64,7 @@ res = foreach(
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 0.25 # 1, 0.5, 0.25
+  b1 = 1 # 1, 0.5, 0.25
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   
@@ -116,307 +117,617 @@ res = foreach(
     as.vector(ilrtrans.true$ilr.trans)
   
   ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = FALSE)
+  # compositional lasso (a linear log contrast method)
+  ##############################################################################
+  start.time = Sys.time()
+  classo = cv.func(
+    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
+    nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
+  end.time = Sys.time()
+  cl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  cl.lam.min.idx = which.min(classo$cvm)
+  cl.a0 = classo$int[cl.lam.min.idx]
+  cl.betahat = classo$bet[, cl.lam.min.idx]
+  
+  # compute metrics on the selected model #
+  cl.metrics = getMetricsLLC(
+    y.train = Y, y.test = Y.test,
+    logX.train = log(X),
+    logX.test = log(X.test),
+    n.train = n, n.test = n,
+    betahat0 = cl.a0, betahat = cl.betahat,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    cl.metrics,
+    "betasparsity" = bspars,
+    "logratios" = 0,
+    "time" = cl.timing
+  ),
+  paste0(output_dir, "/classo_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- FALSE
+  #   spectral.clustering.algorithm == "kmeans"
   #   rank 1 approximation -- FALSE
   #   amini regularization -- FALSE
   #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
   ##############################################################################
   start.time = Sys.time()
-  slr0 = slr(
-    subtractFrom1 = FALSE, 
+  slrk = slr(
+    similarity.matrix = TRUE, maxGamma = FALSE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "kmeans")
+  end.time = Sys.time()
+  slrk.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrk.coefs = getCoefsBM(
+    coefs = coefficients(slrk$model), sbp = slrk$sbp)
+  
+  # compute metrics on the selected model #
+  slrk.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrk$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrk$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrk.coefs$a0, thetahat = slrk.coefs$bm.coefs,
+    betahat = slrk.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrk.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrk.coefs$bm.coefs != 0),
+    "time" = slrk.timing
+  ),
+  paste0(output_dir, "/slr_kmeans_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- FALSE
+  #   spectral.clustering.algorithm == "kmeans"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrk = slr(
+    similarity.matrix = TRUE, maxGamma = FALSE,
+    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "kmeans")
+  end.time = Sys.time()
+  slrk.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrk.coefs = getCoefsBM(
+    coefs = coefficients(slrk$model), sbp = slrk$sbp)
+  
+  # compute metrics on the selected model #
+  slrk.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrk$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrk$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrk.coefs$a0, thetahat = slrk.coefs$bm.coefs,
+    betahat = slrk.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrk.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrk.coefs$bm.coefs != 0),
+    "time" = slrk.timing
+  ),
+  paste0(output_dir, "/slr_kmeans_amini_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- FALSE
+  #   spectral.clustering.algorithm == "kmeans"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- TRUE
+  ##############################################################################
+  start.time = Sys.time()
+  slrk = slr(
+    similarity.matrix = TRUE, maxGamma = FALSE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = TRUE, spectral.clustering.method = "kmeans")
+  end.time = Sys.time()
+  slrk.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrk.coefs = getCoefsBM(
+    coefs = coefficients(slrk$model), sbp = slrk$sbp)
+  
+  # compute metrics on the selected model #
+  slrk.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrk$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrk$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrk.coefs$a0, thetahat = slrk.coefs$bm.coefs,
+    betahat = slrk.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrk.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrk.coefs$bm.coefs != 0),
+    "time" = slrk.timing
+  ),
+  paste0(output_dir, "/slr_kmeans_hdr_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- FALSE
+  #   spectral.clustering.algorithm == "cut"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrc = slr(
+    similarity.matrix = TRUE, maxGamma = FALSE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "cut")
+  end.time = Sys.time()
+  slrc.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrc.coefs = getCoefsBM(
+    coefs = coefficients(slrc$model), sbp = slrc$sbp)
+  
+  # compute metrics on the selected model #
+  slrc.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrc$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrc.coefs$a0, thetahat = slrc.coefs$bm.coefs,
+    betahat = slrc.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrc.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrc.coefs$bm.coefs != 0),
+    "time" = slrc.timing
+  ),
+  paste0(output_dir, "/slr_cut_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- FALSE
+  #   spectral.clustering.algorithm == "cut"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrc = slr(
+    similarity.matrix = TRUE, maxGamma = FALSE,
+    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "cut")
+  end.time = Sys.time()
+  slrc.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrc.coefs = getCoefsBM(
+    coefs = coefficients(slrc$model), sbp = slrc$sbp)
+  
+  # compute metrics on the selected model #
+  slrc.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrc$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrc.coefs$a0, thetahat = slrc.coefs$bm.coefs,
+    betahat = slrc.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrc.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrc.coefs$bm.coefs != 0),
+    "time" = slrc.timing
+  ),
+  paste0(output_dir, "/slr_cut_amini_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- FALSE
+  #   spectral.clustering.algorithm == "cut"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrc = slr(
+    similarity.matrix = TRUE, maxGamma = FALSE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = TRUE, spectral.clustering.method = "cut")
+  end.time = Sys.time()
+  slrc.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrc.coefs = getCoefsBM(
+    coefs = coefficients(slrc$model), sbp = slrc$sbp)
+  
+  # compute metrics on the selected model #
+  slrc.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrc$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrc.coefs$a0, thetahat = slrc.coefs$bm.coefs,
+    betahat = slrc.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrc.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrc.coefs$bm.coefs != 0),
+    "time" = slrc.timing
+  ),
+  paste0(output_dir, "/slr_cut_hdr_metrics", file.end))
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- TRUE
+  #   spectral.clustering.algorithm == "kmeans"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrk = slr(
+    similarity.matrix = TRUE, maxGamma = TRUE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "kmeans")
+  end.time = Sys.time()
+  slrk.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrk.coefs = getCoefsBM(
+    coefs = coefficients(slrk$model), sbp = slrk$sbp)
+  
+  # compute metrics on the selected model #
+  slrk.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrk$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrk$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrk.coefs$a0, thetahat = slrk.coefs$bm.coefs,
+    betahat = slrk.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrk.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrk.coefs$bm.coefs != 0),
+    "time" = slrk.timing
+  ),
+  paste0(output_dir, "/slr_maxGamma_kmeans_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- TRUE
+  #   spectral.clustering.algorithm == "kmeans"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrk = slr(
+    similarity.matrix = TRUE, maxGamma = TRUE,
+    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "kmeans")
+  end.time = Sys.time()
+  slrk.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrk.coefs = getCoefsBM(
+    coefs = coefficients(slrk$model), sbp = slrk$sbp)
+  
+  # compute metrics on the selected model #
+  slrk.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrk$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrk$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrk.coefs$a0, thetahat = slrk.coefs$bm.coefs,
+    betahat = slrk.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrk.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrk.coefs$bm.coefs != 0),
+    "time" = slrk.timing
+  ),
+  paste0(output_dir, "/slr_maxGamma_kmeans_amini_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- TRUE
+  #   spectral.clustering.algorithm == "kmeans"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- TRUE
+  ##############################################################################
+  start.time = Sys.time()
+  slrk = slr(
+    similarity.matrix = TRUE, maxGamma = TRUE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = TRUE, spectral.clustering.method = "kmeans")
+  end.time = Sys.time()
+  slrk.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrk.coefs = getCoefsBM(
+    coefs = coefficients(slrk$model), sbp = slrk$sbp)
+  
+  # compute metrics on the selected model #
+  slrk.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrk$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrk$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrk.coefs$a0, thetahat = slrk.coefs$bm.coefs,
+    betahat = slrk.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrk.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrk.coefs$bm.coefs != 0),
+    "time" = slrk.timing
+  ),
+  paste0(output_dir, "/slr_maxGamma_kmeans_hdr_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- TRUE
+  #   spectral.clustering.algorithm == "cut"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrc = slr(
+    similarity.matrix = TRUE, maxGamma = TRUE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "cut")
+  end.time = Sys.time()
+  slrc.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrc.coefs = getCoefsBM(
+    coefs = coefficients(slrc$model), sbp = slrc$sbp)
+  
+  # compute metrics on the selected model #
+  slrc.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrc$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrc.coefs$a0, thetahat = slrc.coefs$bm.coefs,
+    betahat = slrc.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrc.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrc.coefs$bm.coefs != 0),
+    "time" = slrc.timing
+  ),
+  paste0(output_dir, "/slr_maxGamma_cut_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- TRUE
+  #   spectral.clustering.algorithm == "cut"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- TRUE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrc = slr(
+    similarity.matrix = TRUE, maxGamma = TRUE,
+    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+    highdegree.regularization = FALSE, spectral.clustering.method = "cut")
+  end.time = Sys.time()
+  slrc.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrc.coefs = getCoefsBM(
+    coefs = coefficients(slrc$model), sbp = slrc$sbp)
+  
+  # compute metrics on the selected model #
+  slrc.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrc$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrc.coefs$a0, thetahat = slrc.coefs$bm.coefs,
+    betahat = slrc.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrc.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrc.coefs$bm.coefs != 0),
+    "time" = slrc.timing
+  ),
+  paste0(output_dir, "/slr_maxGamma_cut_amini_metrics", file.end))
+  
+  ##############################################################################
+  # slr method
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- TRUE
+  #   spectral.clustering.algorithm == "cut"
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slrc = slr(
+    similarity.matrix = TRUE, maxGamma = TRUE,
+    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+    highdegree.regularization = TRUE, spectral.clustering.method = "cut")
+  end.time = Sys.time()
+  slrc.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrc.coefs = getCoefsBM(
+    coefs = coefficients(slrc$model), sbp = slrc$sbp)
+  
+  # compute metrics on the selected model #
+  slrc.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slrc$sbp),
+    n.train = n, n.test = n,
+    thetahat0 = slrc.coefs$a0, thetahat = slrc.coefs$bm.coefs,
+    betahat = slrc.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrc.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrc.coefs$bm.coefs != 0),
+    "time" = slrc.timing
+  ),
+  paste0(output_dir, "/slr_maxGamma_cut_hdr_metrics", file.end))
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  ##############################################################################
+  # slr method using k-means spectral clustering with K = 3
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- FALSE
+  #   rank 1 approximation -- FALSE
+  #   amini regularization -- FALSE
+  #   high degree regularization -- FALSE
+  ##############################################################################
+  start.time = Sys.time()
+  slr1sc = slr1sc(
+    similarity.matrix = TRUE, maxGamma = FALSE,
     x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
     highdegree.regularization = FALSE)
   end.time = Sys.time()
-  slr0.timing = difftime(
+  slr1sc.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slr0.coefs = getCoefsBM(
-    coefs = coefficients(slr0$model), sbp = slr0$sbp)
+  slr1sc.coefs = getCoefsBM(
+    coefs = coefficients(slr1sc$model), sbp = slr1sc$sbp)
   
   # compute metrics on the selected model #
-  slr0.metrics = getMetricsBM(
+  slr1sc.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0$sbp),
+    ilrX.train = getIlrX(X, sbp = slr1sc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr1sc$sbp),
     n.train = n, n.test = n,
-    thetahat0 = slr0.coefs$a0, thetahat = slr0.coefs$bm.coefs,
-    betahat = slr0.coefs$llc.coefs,
+    thetahat0 = slr1sc.coefs$a0, thetahat = slr1sc.coefs$bm.coefs,
+    betahat = slr1sc.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slr0.metrics,
+    slr1sc.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slr0.coefs$bm.coefs != 0),
-    "time" = slr0.timing
+    "logratios" = sum(slr1sc.coefs$bm.coefs != 0),
+    "time" = slr1sc.timing
   ),
-  paste0(output_dir, "/slr_metrics", file.end))
+  paste0(output_dir, "/slr_1sc_metrics", file.end))
   
   ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = TRUE)
+  # slr method using k-means spectral clustering with K = 3
+  #   similarity.matrix -- TRUE
+  #   maxGamma -- TRUE
   #   rank 1 approximation -- FALSE
   #   amini regularization -- FALSE
   #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
   ##############################################################################
   start.time = Sys.time()
-  slr1 = slr(
-    subtractFrom1 = TRUE, 
+  slr1sc = slr1sc(
+    similarity.matrix = TRUE, maxGamma = TRUE,
     x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
     highdegree.regularization = FALSE)
   end.time = Sys.time()
-  slr1.timing = difftime(
+  slr1sc.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slr1.coefs = getCoefsBM(
-    coefs = coefficients(slr1$model), sbp = slr1$sbp)
+  slr1sc.coefs = getCoefsBM(
+    coefs = coefficients(slr1sc$model), sbp = slr1sc$sbp)
   
   # compute metrics on the selected model #
-  slr1.metrics = getMetricsBM(
+  slr1sc.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr1$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr1$sbp),
+    ilrX.train = getIlrX(X, sbp = slr1sc$sbp),
+    ilrX.test = getIlrX(X.test, sbp = slr1sc$sbp),
     n.train = n, n.test = n,
-    thetahat0 = slr1.coefs$a0, thetahat = slr1.coefs$bm.coefs,
-    betahat = slr1.coefs$llc.coefs,
+    thetahat0 = slr1sc.coefs$a0, thetahat = slr1sc.coefs$bm.coefs,
+    betahat = slr1sc.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slr1.metrics,
+    slr1sc.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slr1.coefs$bm.coefs != 0),
-    "time" = slr1.timing
+    "logratios" = sum(slr1sc.coefs$bm.coefs != 0),
+    "time" = slr1sc.timing
   ),
-  paste0(output_dir, "/slr_subtractfrom1_metrics", file.end))
+  paste0(output_dir, "/slr_1sc_maxGamma_metrics", file.end))
   
-  ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = FALSE)
-  #   rank 1 approximation -- FALSE
-  #   amini regularization -- TRUE
-  #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
-  ##############################################################################
-  start.time = Sys.time()
-  slr0am = slr(
-    subtractFrom1 = FALSE, 
-    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-    highdegree.regularization = FALSE)
-  end.time = Sys.time()
-  slr0am.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0am.coefs = getCoefsBM(
-    coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
-  
-  # compute metrics on the selected model #
-  slr0am.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0am$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0am$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0am.coefs$a0, thetahat = slr0am.coefs$bm.coefs,
-    betahat = slr0am.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0am.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0am.coefs$bm.coefs != 0),
-    "time" = slr0am.timing
-  ),
-  paste0(output_dir, "/slr_amini_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = TRUE)
-  #   rank 1 approximation -- FALSE
-  #   amini regularization -- TRUE
-  #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
-  ##############################################################################
-  start.time = Sys.time()
-  slr1am = slr(
-    subtractFrom1 = TRUE, 
-    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-    highdegree.regularization = FALSE)
-  end.time = Sys.time()
-  slr1am.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr1am.coefs = getCoefsBM(
-    coefs = coefficients(slr1am$model), sbp = slr1am$sbp)
-  
-  # compute metrics on the selected model #
-  slr1am.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr1am$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr1am$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr1am.coefs$a0, thetahat = slr1am.coefs$bm.coefs,
-    betahat = slr1am.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr1am.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr1am.coefs$bm.coefs != 0),
-    "time" = slr1am.timing
-  ),
-  paste0(output_dir, "/slr_subtractfrom1_amini_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = FALSE)
-  #   rank 1 approximation -- TRUE
-  #   amini regularization -- FALSE
-  #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
-  ##############################################################################
-  start.time = Sys.time()
-  slr0ap = slr(
-    subtractFrom1 = FALSE, 
-    x = X, y = Y, approx = TRUE, amini.regularization = FALSE, 
-    highdegree.regularization = FALSE)
-  end.time = Sys.time()
-  slr0ap.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0ap.coefs = getCoefsBM(
-    coefs = coefficients(slr0ap$model), sbp = slr0ap$sbp)
-  
-  # compute metrics on the selected model #
-  slr0ap.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0ap$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0ap$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0ap.coefs$a0, thetahat = slr0ap.coefs$bm.coefs,
-    betahat = slr0ap.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0ap.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0ap.coefs$bm.coefs != 0),
-    "time" = slr0ap.timing
-  ),
-  paste0(output_dir, "/slr_approx_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = TRUE)
-  #   rank 1 approximation -- TRUE
-  #   amini regularization -- FALSE
-  #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
-  ##############################################################################
-  start.time = Sys.time()
-  slr1ap = slr(
-    subtractFrom1 = TRUE, 
-    x = X, y = Y, approx = TRUE, amini.regularization = FALSE, 
-    highdegree.regularization = FALSE)
-  end.time = Sys.time()
-  slr1ap.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr1ap.coefs = getCoefsBM(
-    coefs = coefficients(slr1ap$model), sbp = slr1ap$sbp)
-  
-  # compute metrics on the selected model #
-  slr1ap.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr1ap$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr1ap$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr1ap.coefs$a0, thetahat = slr1ap.coefs$bm.coefs,
-    betahat = slr1ap.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr1ap.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr1ap.coefs$bm.coefs != 0),
-    "time" = slr1ap.timing
-  ),
-  paste0(output_dir, "/slr_subtractfrom1_approx_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = FALSE)
-  #   rank 1 approximation -- TRUE
-  #   amini regularization -- TRUE
-  #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
-  ##############################################################################
-  start.time = Sys.time()
-  slr0amap = slr(
-    subtractFrom1 = FALSE, 
-    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
-    highdegree.regularization = FALSE)
-  end.time = Sys.time()
-  slr0amap.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0amap.coefs = getCoefsBM(
-    coefs = coefficients(slr0amap$model), sbp = slr0amap$sbp)
-  
-  # compute metrics on the selected model #
-  slr0amap.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0amap$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0amap$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0amap.coefs$a0, thetahat = slr0amap.coefs$bm.coefs,
-    betahat = slr0amap.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0amap.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0amap.coefs$bm.coefs != 0),
-    "time" = slr0amap.timing
-  ),
-  paste0(output_dir, "/slr_amini_approx_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using population Gamma (subtractFrom1 = TRUE)
-  #   rank 1 approximation -- TRUE
-  #   amini regularization -- TRUE
-  #   high degree regularization -- FALSE
-  #   include leading eigenvector -- TRUE
-  ##############################################################################
-  start.time = Sys.time()
-  slr1amap = slr(
-    subtractFrom1 = TRUE, 
-    x = X, y = Y, approx = TRUE, amini.regularization = TRUE, 
-    highdegree.regularization = FALSE)
-  end.time = Sys.time()
-  slr1amap.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr1amap.coefs = getCoefsBM(
-    coefs = coefficients(slr1amap$model), sbp = slr1amap$sbp)
-  
-  # compute metrics on the selected model #
-  slr1amap.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr1amap$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr1amap$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr1amap.coefs$a0, thetahat = slr1amap.coefs$bm.coefs,
-    betahat = slr1amap.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr1amap.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr1amap.coefs$bm.coefs != 0),
-    "time" = slr1amap.timing
-  ),
-  paste0(output_dir, "/slr_subtractfrom1_amini_approx_metrics", file.end))
 }
 

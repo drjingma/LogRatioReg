@@ -1,7 +1,7 @@
 rm(list=ls())
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
 #   explore various sigma_eps & rho values to get specified Rsquared values
-# Date: 4/13/2022
+# Date: 4/27/2022
 
 ################################################################################
 # libraries and settings
@@ -12,7 +12,7 @@ source("Kristyn/Functions/util.R")
 
 library(ggplot2)
 library(ggpubr)
-library(data.table)
+library(tidyverse)
 library(reshape2)
 
 numSims = 100
@@ -34,7 +34,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 0.25 # 1, 0.5, 0.25
+b1 = 1 # 1, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 
@@ -55,144 +55,307 @@ file.end0 = paste0(
 # plot metrics
 
 # import metrics
-slr_sims_list = list()
-slr_am_sims_list = list()
-slr_ap_sims_list = list()
-slr_am_ap_sims_list = list()
-slr_s1_sims_list = list()
-slr_s1_am_sims_list = list()
-slr_s1_ap_sims_list = list()
-slr_s1_am_ap_sims_list = list()
+classo_sims_list = list()
+slrk_sims_list = list()
+slrk_am_sims_list = list()
+slrk_hdr_sims_list = list()
+slrk_mg_sims_list = list()
+slrk_mg_am_sims_list = list()
+slrk_mg_hdr_sims_list = list()
+slrc_sims_list = list()
+slrc_am_sims_list = list()
+slrc_hdr_sims_list = list()
+slrc_mg_sims_list = list()
+slrc_mg_am_sims_list = list()
+slrc_mg_hdr_sims_list = list()
+slr1sc_sims_list = list()
+slr1sc_mg_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
-  # slr
-  slr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_metrics", file.end0,
+  # compositional lasso
+  cl_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/classo_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_sim_tmp) = NULL
-  slr_sims_list[[i]] = data.table(slr_sim_tmp)
+  rownames(cl_sim_tmp) = NULL
+  classo_sims_list[[i]] = data.table::data.table(cl_sim_tmp)
   
-  # slr - subtractfrom1
-  slr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_subtractfrom1_metrics", file.end0,
+  ###
+  
+  # slr - 1minusGamma - kmeans
+  slrk_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_kmeans_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_sim_tmp) = NULL
-  slr_s1_sims_list[[i]] = data.table(slr_sim_tmp)
+  rownames(slrk_sim_tmp) = NULL
+  slrk_sims_list[[i]] = data.table::data.table(slrk_sim_tmp)
   
-  # slr - amini
-  slr_am_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_amini_metrics", file.end0,
+  # slr - 1minusGamma - kmeans - amini
+  slrk_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_kmeans_amini_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_am_sim_tmp) = NULL
-  slr_am_sims_list[[i]] = data.table(slr_am_sim_tmp)
+  rownames(slrk_sim_tmp) = NULL
+  slrk_am_sims_list[[i]] = data.table::data.table(slrk_sim_tmp)
   
-  # slr - amini, subtractfrom1
-  slr_am_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_subtractfrom1_amini_metrics", file.end0,
+  # slr - 1minusGamma - kmeans - hdr
+  slrk_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_kmeans_hdr_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_am_sim_tmp) = NULL
-  slr_s1_am_sims_list[[i]] = data.table(slr_am_sim_tmp)
+  rownames(slrk_sim_tmp) = NULL
+  slrk_hdr_sims_list[[i]] = data.table::data.table(slrk_sim_tmp)
   
-  # slr - rank1approx
-  slr_ap_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_approx_metrics", file.end0,
+  #
+  
+  # slr - maxGammaMinusGamma - kmeans
+  slrk_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_maxGamma_kmeans_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_ap_sim_tmp) = NULL
-  slr_ap_sims_list[[i]] = data.table(slr_ap_sim_tmp)
+  rownames(slrk_sim_tmp) = NULL
+  slrk_mg_sims_list[[i]] = data.table::data.table(slrk_sim_tmp)
   
-  # slr - rank1approx, subtractfrom1
-  slr_ap_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_subtractfrom1_approx_metrics", file.end0,
+  # slr - maxGammaMinusGamma - kmeans - amini
+  slrk_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_maxGamma_kmeans_amini_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_ap_sim_tmp) = NULL
-  slr_s1_ap_sims_list[[i]] = data.table(slr_ap_sim_tmp)
+  rownames(slrk_sim_tmp) = NULL
+  slrk_mg_am_sims_list[[i]] = data.table::data.table(slrk_sim_tmp)
   
-  # slr - amini + approx
-  slr_am_ap_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_amini_approx_metrics", file.end0,
+  # slr - maxGammaMinusGamma - kmeans - hdr
+  slrk_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_maxGamma_kmeans_hdr_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_am_ap_sim_tmp) = NULL
-  slr_am_ap_sims_list[[i]] = data.table(slr_am_ap_sim_tmp)
+  rownames(slrk_sim_tmp) = NULL
+  slrk_mg_hdr_sims_list[[i]] = data.table::data.table(slrk_sim_tmp)
   
-  # slr - amini + approx, subtractfrom1
-  slr_am_ap_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_subtractfrom1_amini_approx_metrics", file.end0,
+  ###
+  
+  # slr - 1minusGamma - cut
+  slrc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_cut_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_am_ap_sim_tmp) = NULL
-  slr_s1_am_ap_sims_list[[i]] = data.table(slr_am_ap_sim_tmp)
+  rownames(slrc_sim_tmp) = NULL
+  slrc_sims_list[[i]] = data.table::data.table(slrc_sim_tmp)
   
+  # slr - 1minusGamma - cut - amini
+  slrc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_cut_amini_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrc_sim_tmp) = NULL
+  slrc_am_sims_list[[i]] = data.table::data.table(slrc_sim_tmp)
+  
+  # slr - 1minusGamma - cut - hdr
+  slrc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_cut_hdr_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrc_sim_tmp) = NULL
+  slrc_hdr_sims_list[[i]] = data.table::data.table(slrc_sim_tmp)
+  
+  #
+  
+  # slr - maxGammaMinusGamma - cut
+  slrc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_maxGamma_cut_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrc_sim_tmp) = NULL
+  slrc_mg_sims_list[[i]] = data.table::data.table(slrc_sim_tmp)
+  
+  # slr - maxGammaMinusGamma - cut - amini
+  slrc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_maxGamma_cut_amini_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrc_sim_tmp) = NULL
+  slrc_mg_am_sims_list[[i]] = data.table::data.table(slrc_sim_tmp)
+  
+  # slr - maxGammaMinusGamma - cut - hdr
+  slrc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_maxGamma_cut_hdr_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrc_sim_tmp) = NULL
+  slrc_mg_hdr_sims_list[[i]] = data.table::data.table(slrc_sim_tmp)
+  
+  ###
+  
+  # slr1sc - 1minusGamma - cut
+  slr1sc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_1sc_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr1sc_sim_tmp) = NULL
+  slr1sc_sims_list[[i]] = data.table::data.table(slr1sc_sim_tmp)
+  
+  # slr1sc - maxGammaMinusGamma - cut
+  slr1sc_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_1sc_maxGamma_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr1sc_sim_tmp) = NULL
+  slr1sc_mg_sims_list[[i]] = data.table::data.table(slr1sc_sim_tmp)
 }
+
+
 # metrics boxplots
-slr_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_sims_list)))
-slr_sims.gg$Method = "slr"
 #
-slr_s1_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_s1_sims_list)))
-slr_s1_sims.gg$Method = "slr-s1"
+classo_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(classo_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "classo")
+###
+slrk_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrk_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrk")
 #
-slr_am_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_am_sims_list)))
-slr_am_sims.gg$Method = "slr-am"
+slrk_am_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrk_am_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrk-am")
 #
-slr_s1_am_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_s1_am_sims_list)))
-slr_s1_am_sims.gg$Method = "slr-am-s1"
+slrk_hdr_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrk_hdr_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrk-hdr")
+###
+slrk_mg_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrk_mg_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrk-mg")
 #
-slr_ap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_ap_sims_list)))
-slr_ap_sims.gg$Method = "slr-ap"
+slrk_mg_am_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrk_mg_am_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrk-mg-am")
 #
-slr_s1_ap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_s1_ap_sims_list)))
-slr_s1_ap_sims.gg$Method = "slr-ap-s1"
+slrk_mg_hdr_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrk_mg_hdr_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrk-mg-hdr")
+###
+###
+slrc_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrc_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrc")
+slrc_am_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrc_am_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrc-am")
 #
-slr_am_ap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_am_ap_sims_list)))
-slr_am_ap_sims.gg$Method = "slr-am-ap"
+slrc_hdr_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrc_hdr_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrc-hdr")
+###
+slrc_mg_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrc_mg_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrc-mg")
 #
-slr_s1_am_ap_sims.gg = reshape2::melt(as.data.frame(rbindlist(slr_s1_am_ap_sims_list)))
-slr_s1_am_ap_sims.gg$Method = "slr-am-ap-s1"
+slrc_mg_am_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrc_mg_am_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrc-mg-am")
+#
+slrc_mg_hdr_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrc_mg_hdr_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrc-mg-hdr")
+###
+###
+slr1sc_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr1sc_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slr1sc")
+#
+slr1sc_mg_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr1sc_mg_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slr1sc-mg")
+###
 
 data.gg = rbind(
-  slr_sims.gg,
-  slr_s1_sims.gg,
-  slr_am_sims.gg, 
-  slr_s1_am_sims.gg, 
-  slr_ap_sims.gg, 
-  slr_s1_ap_sims.gg, 
-  slr_am_ap_sims.gg,
-  slr_s1_am_ap_sims.gg
-)
+  classo_sims.gg,
+  slrk_sims.gg,
+  slrk_am_sims.gg,
+  slrk_hdr_sims.gg,
+  slrk_mg_sims.gg,
+  slrk_mg_am_sims.gg,
+  slrk_mg_hdr_sims.gg,
+  slrc_sims.gg, 
+  slrc_am_sims.gg,
+  slrc_hdr_sims.gg,
+  slrc_mg_sims.gg,
+  slrc_mg_am_sims.gg,
+  slrc_mg_hdr_sims.gg,
+  slr1sc_sims.gg,
+  slr1sc_mg_sims.gg
+) %>%
+  mutate(
+    Metric = factor(
+      Metric, levels = c(
+        "PEtr", "PEte", 
+        "EA1", "EA2", "EAInfty", 
+        "EA1Active", "EA2Active", "EAInftyActive",
+        "EA1Inactive", "EA2Inactive", "EAInftyInactive",
+        "FP", "FN", "TPR", "precision", "Fscore",
+        "FP+", "FN+", "TPR+", 
+        "FP-", "FN-", "TPR-", 
+        "betasparsity", "logratios", "time"
+        ))
+  )
 
 data.gg_main = data.gg %>% 
   dplyr::filter(
-    variable %in% c(
+    Metric %in% c(
       "PEtr", "PEte", 
       "EA1", "EA2", "EAInfty",
       "FP", "FN", "TPR", "precision", 
       "Fscore", "time"
     )
-  ) %>%
-  mutate(
-    Method = factor(Method, levels = c(
-      "slr", "slr-s1",
-      "slr-am", "slr-am-s1",
-      "slr-ap", "slr-ap-s1",
-      "slr-am-ap", "slr-am-ap-s1"
-    ), labels = c(
-      "slr", "slr-s1",
-      "slr-am", "slr-am-s1",
-      "slr-ap", "slr-ap-s1",
-      "slr-am-ap", "slr-am-ap-s1"
-    ))
+  # ) %>%
+  # mutate(
+  #   Method = factor(Method, levels = c(
+  #     "slr", "slr-s1",
+  #     "slr-am", "slr-am-s1",
+  #     "slr-ap", "slr-ap-s1",
+  #     "slr-am-ap", "slr-am-ap-s1"
+  #   ), labels = c(
+  #     "slr", "slr-s1",
+  #     "slr-am", "slr-am-s1",
+  #     "slr-ap", "slr-ap-s1",
+  #     "slr-am-ap", "slr-am-ap-s1"
+  #   ))
   )
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
-  facet_wrap(vars(variable), scales = "free_y") +
+  facet_wrap(vars(Metric), scales = "free_y") +
   geom_boxplot() +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
@@ -212,7 +375,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220420",
+    "20220427",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

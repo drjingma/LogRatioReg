@@ -38,22 +38,17 @@ res = foreach(
   library(glmnet)
   
   library(balance)
-  library(propr)
+  # library(propr)
   
   source("RCode/func_libs.R")
-  source("Kristyn/Functions/supervisedlogratios.R")
-  source("Kristyn/Functions/supervisedlogratioseta.R")
-  source("Kristyn/Functions/HSClust.R")
-  source("Kristyn/Functions/slrnew.R")
-  
-  # helper functions
-  source("Kristyn/Functions/metrics.R")
-  source("Kristyn/Functions/helper_functions.R")
+  source("Kristyn/Functions/slr.R")
+  source("Kristyn/Functions/slr1sc.R")
+  source("Kristyn/Functions/util.R")
   
   # for plots
-  library(ggraph) # make dendrogram
-  library(igraph) # transform dataframe to graph object: graph_from_data_frame()
-  library(tidygraph)
+  # library(ggraph) # make dendrogram
+  # library(igraph) # transform dataframe to graph object: graph_from_data_frame()
+  # library(tidygraph)
   
   # Tuning parameters###########################################################
   
@@ -310,9 +305,9 @@ res = foreach(
   ##############################################################################
   library(codacore)
   
-  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-    reticulate::use_condaenv("anaconda3")
-  }
+  # if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+  #   reticulate::use_condaenv("anaconda3")
+  # }
   # tensorflow::install_tensorflow()
   # keras::install_keras()
   

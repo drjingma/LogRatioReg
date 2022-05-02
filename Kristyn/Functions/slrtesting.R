@@ -130,7 +130,7 @@ spectral.clustering.cut_testing = function(
   return(list(cl = cl, L = L, ei = ei))
 }
 
-slr_testing <- function(
+slr2sc_testing <- function(
   x, y, num.clusters = 2, classification = FALSE, approx = FALSE, 
   amini.regularization = FALSE, 
   amini.regularization.parameter = 0.01, 
@@ -254,118 +254,87 @@ slr_testing <- function(
   return(out)
 }
 
-# slr_testing <- function(
-#   x, y, num.clusters = 2, classification = FALSE, approx = TRUE,
-#   amini.regularization = TRUE,
-#   amini.regularization.parameter = 0.01,
-#   highdegree.regularization.summary = "mean",
-#   highdegree.regularization = FALSE,
-#   include.leading.eigenvector = TRUE, 
-#   subtractFrom1 = FALSE
-# ){
-#   n = nrow(x)
-#   p = ncol(x)
-# 
-#   ## Compute pairwise correlation
-#   rhoMat <- slrmatrix(x = x, y = y)
-#   if(subtractFrom1){
-#     rhoMat = 1 - rhoMat
-#   }
-#   out <- list()
-#   out$kernel <- rhoMat
-# 
-#   ## Split into active/inactive sets
-#   if(approx){
-#     rhoMat.svd <- svd(rhoMat)
-#     rhoMat_approx <- tcrossprod(
-#       rhoMat.svd$u[, 1],
-#       rhoMat.svd$v[, 1]) *
-#       rhoMat.svd$d[1]
-#     rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
-#     clusters1 <- spectral.clustering2_testing(
-#       rhoMat_approx, n_eig = num.clusters,
-#       amini.regularization = amini.regularization,
-#       amini.regularization.parameter = amini.regularization.parameter,
-#       highdegree.regularization.summary = highdegree.regularization.summary,
-#       highdegree.regularization = highdegree.regularization,
-#       include.leading.eigenvector = include.leading.eigenvector)
-#     out$kernelapprox = rhoMat_approx
-#   } else{
-#     clusters1 <- spectral.clustering2_testing(
-#       rhoMat, n_eig = num.clusters,
-#       amini.regularization = amini.regularization,
-#       amini.regularization.parameter = amini.regularization.parameter,
-#       highdegree.regularization.summary = highdegree.regularization.summary,
-#       highdegree.regularization = highdegree.regularization,
-#       include.leading.eigenvector = include.leading.eigenvector)
-#   }
-#   out$spectralclustering1 = clusters1
-#   cluster.lengths = table(clusters1$cl)
-#   clusters = names(cluster.lengths)
-#   out$num.clusters = num.clusters
-# 
-#   ## Find which set has the more predictive balance
-#   cors = rep(NA, num.clusters)
-#   Rsqs = rep(NA, num.clusters)
-#   sbp.ests = matrix(0, nrow = p, ncol = num.clusters)
-#   bal.ests = matrix(NA, nrow = n, ncol = num.clusters)
-#   rownames(sbp.ests) <- colnames(x)
-#   for(i in 1:num.clusters){
-#     cluster.label = as.numeric(clusters[i])
-#     index = which(clusters1$cl == cluster.label)
-#     if(length(index) >= 2){ # if a log-ratio can be made from the variables in this cluster
-#       ## Perform spectral clustering to get the numerator/denominator groups
-#       subset = spectral.clustering2_testing(
-#         rhoMat[index, index], n_eig = 2, reindex = TRUE,
-#         amini.regularization = amini.regularization,
-#         amini.regularization.parameter = amini.regularization.parameter,
-#         highdegree.regularization.summary = highdegree.regularization.summary,
-#         highdegree.regularization = highdegree.regularization,
-#         include.leading.eigenvector = include.leading.eigenvector)
-#       ## calculate balance and its correlation with y
-#       sbp.ests[match(names(subset$cl), rownames(sbp.ests)), i] = subset$cl
-#       bal.ests[, i] = balance::balance.fromSBP(
-#         x = x, y = sbp.ests[, i, drop = FALSE])
-#     } else{ # otherwise, if there's just one variable in the cluster, set all other variables as -1
-#       sbp.ests[, i] = rep(NA, p)
-#     }
-#     cors[i] = stats::cor(bal.ests[, i], y)
-#     Rsqs[i] = cors[i]^2
-#   }
-#   out$cors = cors
-#   out$Rsqs = Rsqs
-#   # The correct active set should have largest correlation magnitude, i.e. Rsq.
-#   ## We refit the linear model on the balance from the set with the
-#   ##    largest correlation magnitude.
-#   selected.cluster = which.max(Rsqs)
-#   out$index = sbp.ests[, selected.cluster]
-#   refit_data = data.frame(V1 = bal.ests[, selected.cluster], y = y)
-#   if(!classification){
-#     refit <- lm(y~V1, data = refit_data)
-#   } else{
-#     refit = stats::glm(
-#       y~V1, data = refit_data, family = binomial(link = "logit"))
-#   }
-#   out$model <- refit
-# 
-#   # return the full SBP vector (with entries for all p variables)
-#   full.sbp.est = sbp.ests[, selected.cluster, drop = FALSE]
-#   rownames(full.sbp.est) = colnames(x)
-#   out$sbp = full.sbp.est
-# 
-#   # return the slr object
-#   return(out)
-# }
-
-
-
-
-
-
-
-
-
-
-
-
-
+slr1sc <- function(
+    x, y, classification = FALSE, approx = FALSE, 
+    amini.regularization = FALSE, 
+    amini.regularization.parameter = 0.01, 
+    highdegree.regularization.summary = "mean",
+    highdegree.regularization = FALSE
+){
+  
+  num.clusters = 3
+  n = nrow(x)
+  p = ncol(x)
+  
+  ## Compute pairwise correlation
+  rhoMat0 <- slrmatrix(x = x, y = y)
+  rhoMat = max(rhoMat0) - rhoMat0
+  
+  out <- list()
+  out$kernel <- rhoMat
+  
+  ## Split into active/inactive sets
+  if(approx){
+    rhoMat.svd <- svd(rhoMat)
+    rhoMat_approx <- tcrossprod(
+      rhoMat.svd$u[, 1], 
+      rhoMat.svd$v[, 1]) *
+      rhoMat.svd$d[1]
+    rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
+    affinityMat = rhoMat_approx
+  } else{
+    affinityMat = rhoMat
+  }
+  cluster.labels <- spectral.clustering.kmeans_testing(
+    affinityMat, n_eig = num.clusters, 
+    amini.regularization = amini.regularization,
+    amini.regularization.parameter = amini.regularization.parameter,
+    highdegree.regularization.summary = highdegree.regularization.summary,
+    highdegree.regularization = highdegree.regularization)
+  cluster.lengths = table(cluster.labels$cl)
+  clusters = names(cluster.lengths)
+  out$num.clusters = num.clusters
+  
+  ## Find which pair of the 3 clusters has the most predictive balance
+  all.pairs = t(combn(clusters, 2))
+  cors = rep(NA, nrow(all.pairs))
+  Rsqs = rep(NA, nrow(all.pairs))
+  sbp.ests = matrix(0, nrow = p, ncol = nrow(all.pairs))
+  bal.ests = matrix(NA, nrow = n, ncol = nrow(all.pairs))
+  rownames(sbp.ests) <- colnames(x)
+  for(i in 1:nrow(all.pairs)){
+    cluster1.label = all.pairs[i, 1]
+    subset1 = which(cluster.labels$cl == cluster1.label)
+    cluster2.label = all.pairs[i, 2]
+    subset2 = which(cluster.labels$cl == cluster2.label)
+    sbp.ests[match(names(subset1), rownames(sbp.ests)), i] = 1
+    sbp.ests[match(names(subset2), rownames(sbp.ests)), i] = -1
+    bal.ests[, i] = balance::balance.fromSBP(
+      x = x, y = sbp.ests[, i, drop = FALSE])
+    cors[i] = stats::cor(bal.ests[, i], y)
+    Rsqs[i] = cors[i]^2
+  }
+  out$cors = cors
+  out$Rsqs = Rsqs
+  # The correct active set should have largest correlation magnitude, i.e. Rsq.
+  ## We refit the linear model on the balance from the set with the 
+  ##    largest correlation magnitude.
+  selected.bal = which.max(Rsqs)
+  out$index = sbp.ests[, selected.bal]
+  refit_data = data.frame(V1 = bal.ests[, selected.bal], y = y)
+  if(!classification){
+    refit <- lm(y~V1, data = refit_data)
+  } else{
+    refit = stats::glm(
+      y~V1, data = refit_data, family = binomial(link = "logit"))
+  }
+  out$model <- refit
+  
+  # return the full SBP vector (with entries for all p variables)
+  full.sbp.est = sbp.ests[, selected.bal, drop = FALSE]
+  rownames(full.sbp.est) = colnames(x)
+  out$sbp = full.sbp.est
+  
+  # return the slr object
+  return(out)
+}

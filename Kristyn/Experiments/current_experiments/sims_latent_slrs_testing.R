@@ -1,5 +1,6 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
 # Date: 5/2/2022
+rm(list=ls())
 
 ################################################################################
 # libraries and settings
@@ -24,12 +25,9 @@ registerDoRNG(rng.seed)
 numSims = 100
 
 ################################################################################
-# Simulations #
+# Simulation Libraries and Settings #
 ################################################################################
 
-b = 1
-
-# rm(list=ls())
 library(mvtnorm)
 
 library(Matrix)
@@ -39,6 +37,7 @@ library(balance)
 
 source("RCode/func_libs.R")
 source("Kristyn/Functions/slr.R")
+source("Kristyn/Functions/slrtesting.R")
 source("Kristyn/Functions/util.R")
 
 # Tuning parameters###########################################################
@@ -64,6 +63,11 @@ b0 = 0 # 0
 b1 = 0.25 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
+
+################################################################################
+# Simulations #
+################################################################################
+b = 3
 
 file.end = paste0(
   "_", sigma.settings,
@@ -126,31 +130,26 @@ non0.beta = data.tmp$non0.beta
 ##############################################################################
 # compositional lasso (a linear log contrast method)
 ##############################################################################
-classo = cv.func(
-  method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
-  nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
+# classo = cv.func(
+#   method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
+#   nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
+# 
+# cl.lam.min.idx = which.min(classo$cvm)
+# cl.a0 = classo$int[cl.lam.min.idx]
+# cl.betahat = classo$bet[, cl.lam.min.idx]
+# 
+# # compute metrics on the selected model #
+# cl.metrics = getMetricsLLC(
+#   y.train = Y, y.test = Y.test,
+#   logX.train = log(X),
+#   logX.test = log(X.test),
+#   n.train = n, n.test = n,
+#   betahat0 = cl.a0, betahat = cl.betahat,
+#   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+#   true.beta = beta.true)
 
-cl.lam.min.idx = which.min(classo$cvm)
-cl.a0 = classo$int[cl.lam.min.idx]
-cl.betahat = classo$bet[, cl.lam.min.idx]
-
-# compute metrics on the selected model #
-cl.metrics = getMetricsLLC(
-  y.train = Y, y.test = Y.test,
-  logX.train = log(X),
-  logX.test = log(X.test),
-  n.train = n, n.test = n,
-  betahat0 = cl.a0, betahat = cl.betahat,
-  true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
-  true.beta = beta.true)
-
-# saveRDS(c(
-#   cl.metrics,
-#   "betasparsity" = bspars,
-#   "logratios" = 0,
-#   "time" = cl.timing
-# ),
-# paste0(output_dir, "/classo_metrics", file.end))
+classo_metrics = readRDS(paste0(output_dir, "/classo_metrics", file.end))
+classo_metrics["Fscore"]
 
 ##############################################################################
 # slr method using k-means spectral clustering with K = 3
@@ -158,31 +157,37 @@ cl.metrics = getMetricsLLC(
 #   amini regularization -- FALSE
 #   high degree regularization -- FALSE
 ##############################################################################
-slr0 = slr(
-  x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+# slr0 = slr(
+#   x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+#   highdegree.regularization = FALSE)
+# 
+# slr0.coefs = getCoefsBM(
+#   coefs = coefficients(slr0$model), sbp = slr0$sbp)
+# 
+# # compute metrics on the selected model #
+# slr0.metrics = getMetricsBM(
+#   y.train = Y, y.test = Y.test,
+#   ilrX.train = getIlrX(X, sbp = slr0$sbp),
+#   ilrX.test = getIlrX(X.test, sbp = slr0$sbp),
+#   n.train = n, n.test = n,
+#   thetahat0 = slr0.coefs$a0, thetahat = slr0.coefs$bm.coefs,
+#   betahat = slr0.coefs$llc.coefs,
+#   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+#   true.beta = beta.true)
+
+slr0_metrics = readRDS(paste0(output_dir, "/slr_metrics", file.end))
+slr0_metrics["Fscore"]
+
+slr0test = slr_testing(
+  x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
   highdegree.regularization = FALSE)
-
-slr0.coefs = getCoefsBM(
-  coefs = coefficients(slr0$model), sbp = slr0$sbp)
-
-# compute metrics on the selected model #
-slr0.metrics = getMetricsBM(
-  y.train = Y, y.test = Y.test,
-  ilrX.train = getIlrX(X, sbp = slr0$sbp),
-  ilrX.test = getIlrX(X.test, sbp = slr0$sbp),
-  n.train = n, n.test = n,
-  thetahat0 = slr0.coefs$a0, thetahat = slr0.coefs$bm.coefs,
-  betahat = slr0.coefs$llc.coefs,
-  true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  true.beta = beta.true)
-
-# saveRDS(c(
-#   slr0.metrics,
-#   "betasparsity" = bspars,
-#   "logratios" = sum(slr0.coefs$bm.coefs != 0),
-#   "time" = slr0.timing
-# ),
-# paste0(output_dir, "/slr_metrics", file.end))
+fields::image.plot(slr0test$kernel)
+fields::image.plot(slr0test$spectralclustering$L$W)
+fields::image.plot(slr0test$spectralclustering$L$W.tmp)
+slr0test$cors
+slr0test$Rsqs
+slr0test$spectralclustering$cl
+slr0test$sbp
 
 ##############################################################################
 # slr method using k-means spectral clustering with K = 3
@@ -190,31 +195,25 @@ slr0.metrics = getMetricsBM(
 #   amini regularization -- TRUE
 #   high degree regularization -- FALSE
 ##############################################################################
-slr0am = slr(
-  x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-  highdegree.regularization = FALSE)
+# slr0am = slr(
+#   x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
+#   highdegree.regularization = FALSE)
+# 
+# slr0am.coefs = getCoefsBM(
+#   coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
+# 
+# # compute metrics on the selected model #
+# slr0am.metrics = getMetricsBM(
+#   y.train = Y, y.test = Y.test,
+#   ilrX.train = getIlrX(X, sbp = slr0am$sbp),
+#   ilrX.test = getIlrX(X.test, sbp = slr0am$sbp),
+#   n.train = n, n.test = n,
+#   thetahat0 = slr0am.coefs$a0, thetahat = slr0am.coefs$bm.coefs,
+#   betahat = slr0am.coefs$llc.coefs,
+#   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+#   true.beta = beta.true)
 
-slr0am.coefs = getCoefsBM(
-  coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
-
-# compute metrics on the selected model #
-slr0am.metrics = getMetricsBM(
-  y.train = Y, y.test = Y.test,
-  ilrX.train = getIlrX(X, sbp = slr0am$sbp),
-  ilrX.test = getIlrX(X.test, sbp = slr0am$sbp),
-  n.train = n, n.test = n,
-  thetahat0 = slr0am.coefs$a0, thetahat = slr0am.coefs$bm.coefs,
-  betahat = slr0am.coefs$llc.coefs,
-  true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  true.beta = beta.true)
-
-# saveRDS(c(
-#   slr0am.metrics,
-#   "betasparsity" = bspars,
-#   "logratios" = sum(slr0am.coefs$bm.coefs != 0),
-#   "time" = slr0am.timing
-# ),
-# paste0(output_dir, "/slr_amini_metrics", file.end))
-
+slr0am_metrics = readRDS(paste0(output_dir, "/slr_amini_metrics", file.end))
+slr0am_metrics["Fscore"]
 
 

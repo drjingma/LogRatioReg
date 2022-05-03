@@ -254,7 +254,7 @@ slr2sc_testing <- function(
   return(out)
 }
 
-slr1sc <- function(
+slr_testing <- function(
     x, y, classification = FALSE, approx = FALSE, 
     amini.regularization = FALSE, 
     amini.regularization.parameter = 0.01, 
@@ -291,6 +291,7 @@ slr1sc <- function(
     amini.regularization.parameter = amini.regularization.parameter,
     highdegree.regularization.summary = highdegree.regularization.summary,
     highdegree.regularization = highdegree.regularization)
+  out$spectralclustering = cluster.labels
   cluster.lengths = table(cluster.labels$cl)
   clusters = names(cluster.lengths)
   out$num.clusters = num.clusters

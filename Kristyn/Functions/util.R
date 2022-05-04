@@ -8,17 +8,24 @@ alrinv <- function(y) {
   x / rowSums(x)
 }
 
+geometric.mean = function(x, na.rm = TRUE){
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
 
 
 ##### preprocess data for selbal ###############################################
 
 getSelbalData = function(X = X, y = y, classification = TRUE, levels, labels){
-  if(is.null(rownames(X)) && is.null(colnames(X))){
+  if(is.null(rownames(X)) || is.null(colnames(X))){
     X.slbl = X
-    rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
-    colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+    if(is.null(rownames(X))){
+      rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
+    }
+    if(is.null(colnames(X))){
+      colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+    }
   }
-  if(classificatin && !is.factor(y)){
+  if(classification && !is.factor(y)){
     if(is.null(levels) | is.null(labels)){
       stop("getSelbalData(): classification = TRUE, but levels and labels were not provided. Will let factor() choose them.")
     }
@@ -49,21 +56,47 @@ getCoefsBM = function(coefs, sbp){
   ))
 }
 
-getCoefsSelbal = function(
-  X, y, selbal.fit, classification = FALSE, check = TRUE){
-  p = ncol(X)
+getSBPSelbal = function(
+    p, selbal.fit){
   
   # U (transformation) matrix
-  ilrU = rep(0, p)
-  names(ilrU) = colnames(X)
+  sbp = rep(0, p)
+  names(sbp) = colnames(X)
   pba.pos = unlist(subset(
     selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
   num.pos = length(pba.pos)
   pba.neg = unlist(subset(
     selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
   num.neg = length(pba.neg)
-  ilrU[pba.pos] = 1 / num.pos
-  ilrU[pba.neg] = -1 / num.neg
+  sbp[pba.pos] = 1
+  sbp[pba.neg] = -1
+  if(!is.null(rownames(X))) rownames(sbp) = rownames(X)
+  return(matrix(sbp))
+}
+
+getCoefsSelbal = function(
+  X, y, selbal.fit, classification = FALSE, check = TRUE){
+  p = ncol(X)
+  
+  # U (transformation) matrix
+  sbp = getSBPSelbal(X = X, selbal.fit = selbal.fit)
+  # ilrU = rep(0, p)
+  # names(ilrU) = colnames(X)
+  # pba.pos = unlist(subset(
+  #   selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
+  # num.pos = length(pba.pos)
+  # pba.neg = unlist(subset(
+  #   selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
+  # num.neg = length(pba.neg)
+  # ilrU[pba.pos] = 1 / num.pos
+  # ilrU[pba.neg] = -1 / num.neg
+  is.pos = (sbp == 1)
+  is.neg = (sbp == -1)
+  num.pos = sum(is.pos)
+  num.neg = sum(is.neg)
+  ilrU = sbp
+  ilrU[is.pos] = 1 / num.pos
+  ilrU[is.neg] = -1 / num.neg
   norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
   ilrU = norm.const * ilrU
   if(check){

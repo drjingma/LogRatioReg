@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 5/2/2022
+# Date: 5/3/2022
 rm(list=ls())
 
 ################################################################################
@@ -19,7 +19,8 @@ output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_slrs"
 # library(rngtools)
 # library(doRNG)
 rng.seed = 123 # 123, 345
-registerDoRNG(rng.seed)
+# registerDoRNG(rng.seed)
+set.seed(123)
 
 # Other simulation settings
 numSims = 100
@@ -158,7 +159,7 @@ classo_metrics["Fscore"]
 #   high degree regularization -- FALSE
 ##############################################################################
 # slr0 = slr(
-#   x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+#   x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
 #   highdegree.regularization = FALSE)
 # 
 # slr0.coefs = getCoefsBM(
@@ -179,15 +180,18 @@ slr0_metrics = readRDS(paste0(output_dir, "/slr_metrics", file.end))
 slr0_metrics["Fscore"]
 
 slr0test = slr_testing(
-  x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
-  highdegree.regularization = FALSE)
+  x = X, y = Y, approx = FALSE, amini.regularization = FALSE)
 fields::image.plot(slr0test$kernel)
 fields::image.plot(slr0test$spectralclustering$L$W)
 fields::image.plot(slr0test$spectralclustering$L$W.tmp)
 slr0test$cors
 slr0test$Rsqs
 slr0test$spectralclustering$cl
-slr0test$sbp
+as.numeric(slr0test$sbp)
+
+slr0slbl = slr(
+  x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+  selection.crit = "selbal")
 
 ##############################################################################
 # slr method using k-means spectral clustering with K = 3

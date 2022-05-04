@@ -20,16 +20,12 @@ slrmatrix = function(x, y){
 spectral.clustering.kmeans = function(
   W, n_eig = 2, reindex = FALSE, 
   amini.regularization = TRUE, 
-  amini.regularization.parameter = 0.01,
-  highdegree.regularization.summary = "mean",
-  highdegree.regularization = FALSE
+  amini.regularization.parameter = 0.01
   ) {
   # compute graph laplacian
   L = graph.laplacian2(
     W = W, amini.regularization = amini.regularization, 
-    amini.regularization.parameter = amini.regularization.parameter,
-    highdegree.regularization.summary = highdegree.regularization.summary,
-    highdegree.regularization = highdegree.regularization)          
+    amini.regularization.parameter = amini.regularization.parameter)          
   ei = eigen(L, symmetric = TRUE)
   # compute the eigenvectors and values of L
   # we will use k-means to cluster the data
@@ -55,20 +51,11 @@ spectral.clustering.kmeans = function(
 graph.laplacian2 = function(
   W, # normalized = TRUE, 
   amini.regularization = TRUE, 
-  amini.regularization.parameter = 0.01,
-  highdegree.regularization.summary = "mean",
-  highdegree.regularization = FALSE
+  amini.regularization.parameter = 0.01
 ){
   stopifnot(nrow(W) == ncol(W)) 
   n = nrow(W)    # number of vertices
   degrees <- colSums(W) # degrees of vertices
-  if(highdegree.regularization){
-    if(highdegree.regularization.summary == "maximal"){
-      maximaldegree = max(n * W) #* highdegree.regularization.parameter
-    } else{
-      maximaldegree = do.call(highdegree.regularization.summary, list(degrees))
-    }
-  }
   W.tmp = W
   
   # Amini et al., 2016 regularization method: perturb the network by adding 
@@ -76,17 +63,6 @@ graph.laplacian2 = function(
   if(amini.regularization){
     W.tmp <- W.tmp + 
       amini.regularization.parameter * mean(degrees) / n * tcrossprod(rep(1,n))
-  }
-  
-  # high-degree regularization: reduce the weights of edges proportionally to 
-  #   the excess of degrees
-  if(highdegree.regularization){
-    lambdas = sapply(degrees, function(x) min(2 * maximaldegree / x, 1))
-    for(i in 1:n){
-      for(j in 1:n){
-          W.tmp[i, j] = sqrt(lambdas[i] * lambdas[j]) * W.tmp[i, j]
-      }
-    }
   }
   
   # if(normalized){
@@ -101,9 +77,7 @@ graph.laplacian2 = function(
 spectral.clustering.cut = function(
   W, reindex = FALSE, 
   amini.regularization = TRUE, 
-  amini.regularization.parameter = 0.01,
-  highdegree.regularization.summary = "mean",
-  highdegree.regularization = FALSE
+  amini.regularization.parameter = 0.01
 ) {
   stopifnot(nrow(W) == ncol(W)) 
   n = nrow(W)    # number of vertices
@@ -111,9 +85,7 @@ spectral.clustering.cut = function(
   # compute graph laplacian
   L = graph.laplacian2(
     W = W, amini.regularization = amini.regularization, 
-    amini.regularization.parameter = amini.regularization.parameter,
-    highdegree.regularization.summary = highdegree.regularization.summary,
-    highdegree.regularization = highdegree.regularization)
+    amini.regularization.parameter = amini.regularization.parameter)
   IminusL = diag(n) - L
   
   ei = eigen(IminusL, symmetric = TRUE)
@@ -142,9 +114,7 @@ slr <- function(
     x, y, classification = FALSE, approx = FALSE, 
     amini.regularization = FALSE, 
     amini.regularization.parameter = 0.01, 
-    highdegree.regularization.summary = "mean",
-    highdegree.regularization = FALSE, 
-    selection.crit = "Rsq"
+    selection.crit = "Rsq" # "cor", "Rsq", "selbal"
 ){
   
   num.clusters = 3
@@ -173,9 +143,7 @@ slr <- function(
   cluster.labels <- spectral.clustering.kmeans(
     affinityMat, n_eig = num.clusters, 
     amini.regularization = amini.regularization,
-    amini.regularization.parameter = amini.regularization.parameter,
-    highdegree.regularization.summary = highdegree.regularization.summary,
-    highdegree.regularization = highdegree.regularization)
+    amini.regularization.parameter = amini.regularization.parameter)
   cluster.lengths = table(cluster.labels)
   clusters = names(cluster.lengths)
   out$num.clusters = num.clusters
@@ -223,9 +191,30 @@ slr <- function(
   # The correct active set should have largest correlation magnitude, i.e. Rsq.
   ## We refit the linear model on the balance from the set with the 
   ##    largest correlation magnitude.
-  selected.bal = which.max(Rsqs)
-  out$index = sbp.ests[, selected.bal] # redundant
-  refit_data = data.frame(V1 = bal.ests[, selected.bal], y = y)
+  if(selection.crit %in% c("selbal")){
+    # calculate geometric means of I+, I-, inactive set I0
+    geometric.means = matrix(NA, nrow = nrow(x), ncol = num.clusters)
+    colnames(geometric.means) = clusters
+    for(i in 1:num.clusters){
+      geometric.means[, i] =  apply(
+        x[, which(cluster.labels == clusters[i])], 1,
+        function(row) geometric.mean(row))
+    }
+    # fit selbal
+    data_slbl = getSelbalData(
+      X = geometric.means, y = y, classification = classification)
+    fit_slbl = selbal::selbal.aux(
+      x = data_slbl$X, y = data_slbl$y, logt = TRUE, maxV = 2)
+    # get balance
+    sel.pair = sort(fit_slbl$Taxa) # assuming each pair in all.pairs is sorted
+    sel.pair.idx = which(
+      apply(all.pairs, 1, function(row) isTRUE(all.equal(row, sel.pair))))
+    refit_data = data.frame(V1 = bal.ests[, sel.pair.idx], y = y)
+  } else{ # selection.crit %in% c("Rsq", "cor")
+    selected.bal = which.max(Rsqs)
+    out$index = sbp.ests[, selected.bal] # redundant
+    refit_data = data.frame(V1 = bal.ests[, selected.bal], y = y)
+  }
   
   if(!classification){
     refit <- lm(y~V1, data = refit_data)

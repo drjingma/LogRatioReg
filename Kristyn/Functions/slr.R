@@ -114,7 +114,8 @@ slr <- function(
     x, y, classification = FALSE, approx = FALSE, 
     amini.regularization = FALSE, 
     amini.regularization.parameter = 0.01, 
-    selection.crit = "Rsq" # "cor", "Rsq", "selbal"
+    selection.crit = "Rsq", # "cor", "Rsq", "selbal"
+    ad.hoc = FALSE
 ){
   
   num.clusters = 3
@@ -206,16 +207,33 @@ slr <- function(
     fit_slbl = selbal::selbal.aux(
       x = data_slbl$X, y = data_slbl$y, logt = TRUE, maxV = 2)
     # get balance
-    sel.pair = sort(fit_slbl$Taxa) # assuming each pair in all.pairs is sorted
-    sel.pair.idx = which(
-      apply(all.pairs, 1, function(row) isTRUE(all.equal(row, sel.pair))))
-    refit_data = data.frame(V1 = bal.ests[, sel.pair.idx], y = y)
+    slbl.pair = sort(fit_slbl$Taxa) # assuming each pair in all.pairs is sorted
+    selected.pair = which(
+      apply(all.pairs, 1, function(row) isTRUE(all.equal(row, slbl.pair))))
+    refit_data = data.frame(V1 = bal.ests[, selected.pair], y = y)
   } else{ # selection.crit %in% c("Rsq", "cor")
-    selected.bal = which.max(Rsqs)
-    out$index = sbp.ests[, selected.bal] # redundant
-    refit_data = data.frame(V1 = bal.ests[, selected.bal], y = y)
+    selected.pair = which.max(Rsqs)
+  }
+  if(ad.hoc){ # choose the sparsest balance
+    ad.hoc.invoked = FALSE
+    # pick the balance with smallest active set
+    cardinality.ests = apply(sbp.ests, 2, function(col) sum(col != 0))
+    min.card.pair = which.min(cardinality.ests)
+    if(cardinality.ests[selected.pair] != cardinality.ests[min.card.pair]){
+      # save original sbp
+      sbp.original = sbp.ests[, selected.pair, drop = FALSE]
+      rownames(sbp.original) = colnames(x)
+      out$sbp.original = sbp.original
+      # new selected pair, via ad hoc method
+      ad.hoc.invoked = TRUE
+      selected.pair = min.card.pair
+    }
+    out$ad.hoc.invoked = ad.hoc.invoked
   }
   
+  # fit the balance regression model
+  out$index = sbp.ests[, selected.pair] # redundant, may remove
+  refit_data = data.frame(V1 = bal.ests[, selected.pair], y = y)
   if(!classification){
     refit <- lm(y~V1, data = refit_data)
   } else{
@@ -224,8 +242,8 @@ slr <- function(
   }
   out$model <- refit
   
-  # return the full SBP vector (with entries for all p variables)
-  full.sbp.est = sbp.ests[, selected.bal, drop = FALSE]
+  # return the SBP vector (with entries for all p variables)
+  full.sbp.est = sbp.ests[, selected.pair, drop = FALSE]
   rownames(full.sbp.est) = colnames(x)
   out$sbp = full.sbp.est
   

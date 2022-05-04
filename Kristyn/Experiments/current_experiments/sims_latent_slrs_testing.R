@@ -192,6 +192,13 @@ as.numeric(slr0test$sbp)
 slr0slbl = slr(
   x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
   selection.crit = "selbal")
+slr0slbl$sbp
+
+slr0slbladhoc = slr(
+  x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
+  selection.crit = "selbal", ad.hoc = TRUE)
+slr0slbladhoc$sbp
+slr0slbladhoc$ad.hoc.invoked
 
 ##############################################################################
 # slr method using k-means spectral clustering with K = 3

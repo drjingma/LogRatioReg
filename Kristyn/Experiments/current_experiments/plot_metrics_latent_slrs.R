@@ -177,7 +177,7 @@ data.gg = rbind(
         "FP", "FN", "TPR", "precision", "Fscore",
         "FP+", "FN+", "TPR+", 
         "FP-", "FN-", "TPR-", 
-        "betasparsity", "logratios", "time"
+        "betasparsity", "logratios", "adhoc", "time"
         ))
   )
 
@@ -187,7 +187,7 @@ data.gg_main = data.gg %>%
       "PEtr", "PEte", 
       "EA1", "EA2", "EAInfty",
       "FP", "FN", "TPR", "precision", 
-      "Fscore", "time"
+      "Fscore", "adhoc", "time"
     )
   )
 plt_main = ggplot(
@@ -219,3 +219,7 @@ ggsave(
   plot = plt_main,
   width = 8, height = 6, units = c("in")
 )
+data.gg %>% filter(Metric == "adhoc") %>% 
+  group_by(Metric, Method) %>%
+  summarize(percentage = mean(value, na.rm = TRUE)) %>%
+  ungroup()

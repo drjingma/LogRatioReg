@@ -55,15 +55,15 @@ res = foreach(
   intercept = TRUE
   scaling = TRUE
   tol = 1e-4
-  sigma_eps1 = 0.1
-  sigma_eps2 = 0.1
+  sigma_eps1 = 0.1 # sigma (for y)
+  sigma_eps2 = 0.1 # sigma_j (for x)
   SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 1 # 1, 0.5, 0.25
+  b1 = 0.25 # 1, 0.5, 0.25
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   
@@ -151,7 +151,8 @@ res = foreach(
     cl.metrics,
     "betasparsity" = bspars,
     "logratios" = 0,
-    "time" = cl.timing
+    "time" = cl.timing, 
+    "adhoc" = NA
   ),
   paste0(output_dir, "/classo_metrics", file.end))
   
@@ -188,7 +189,8 @@ res = foreach(
     slr0.metrics,
     "betasparsity" = bspars,
     "logratios" = sum(slr0.coefs$bm.coefs != 0),
-    "time" = slr0.timing
+    "time" = slr0.timing, 
+    "adhoc" = 0
   ),
   paste0(output_dir, "/slr_metrics", file.end))
   
@@ -225,157 +227,10 @@ res = foreach(
     slr1.metrics,
     "betasparsity" = bspars,
     "logratios" = sum(slr1.coefs$bm.coefs != 0),
-    "time" = slr1.timing
+    "time" = slr1.timing, 
+    "adhoc" = slr1$ad.hoc.invoked
   ),
   paste0(output_dir, "/slr_adhoc_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   rank 1 approximation -- FALSE
-  #   amini regularization -- FALSE
-  #   selection.crit -- selbal
-  #   ad.hoc -- FALSE
-  ##############################################################################
-  start.time = Sys.time()
-  slr0slbl = slr(
-    x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
-    selection.crit = "selbal", ad.hoc = FALSE)
-  end.time = Sys.time()
-  slr0slbl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0slbl.coefs = getCoefsBM(
-    coefs = coefficients(slr0slbl$model), sbp = slr0slbl$sbp)
-  
-  # compute metrics on the selected model #
-  slr0slbl.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0slbl$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0slbl$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0slbl.coefs$a0, thetahat = slr0slbl.coefs$bm.coefs,
-    betahat = slr0slbl.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0slbl.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0slbl.coefs$bm.coefs != 0),
-    "time" = slr0slbl.timing
-  ),
-  paste0(output_dir, "/slr_selbal_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   rank 1 approximation -- FALSE
-  #   amini regularization -- TRUE
-  #   selection.crit -- Rsq
-  #   ad.hoc -- FALSE
-  ##############################################################################
-  start.time = Sys.time()
-  slr0am = slr(
-    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-    selection.crit = "Rsq", ad.hoc = FALSE)
-  end.time = Sys.time()
-  slr0am.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0am.coefs = getCoefsBM(
-    coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
-  
-  # compute metrics on the selected model #
-  slr0am.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0am$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0am$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0am.coefs$a0, thetahat = slr0am.coefs$bm.coefs,
-    betahat = slr0am.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0am.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0am.coefs$bm.coefs != 0),
-    "time" = slr0am.timing
-  ),
-  paste0(output_dir, "/slr_amini_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   rank 1 approximation -- FALSE
-  #   amini regularization -- TRUE
-  #   selection.crit -- Rsq
-  #   ad.hoc -- TRUE
-  ##############################################################################
-  start.time = Sys.time()
-  slr1am = slr(
-    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-    selection.crit = "Rsq", ad.hoc = TRUE)
-  end.time = Sys.time()
-  slr1am.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr1am.coefs = getCoefsBM(
-    coefs = coefficients(slr1am$model), sbp = slr1am$sbp)
-  
-  # compute metrics on the selected model #
-  slr1am.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr1am$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr1am$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr1am.coefs$a0, thetahat = slr1am.coefs$bm.coefs,
-    betahat = slr1am.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr1am.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr1am.coefs$bm.coefs != 0),
-    "time" = slr1am.timing
-  ),
-  paste0(output_dir, "/slr_adhoc_amini_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   rank 1 approximation -- FALSE
-  #   amini regularization -- TRUE
-  #   selection.crit -- selbal
-  #   ad.hoc -- FALSE
-  ##############################################################################
-  start.time = Sys.time()
-  slr0slblam = slr(
-    x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-    selection.crit = "selbal", ad.hoc = FALSE)
-  end.time = Sys.time()
-  slr0slblam.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0slblam.coefs = getCoefsBM(
-    coefs = coefficients(slr0slblam$model), sbp = slr0slblam$sbp)
-  
-  # compute metrics on the selected model #
-  slr0slblam.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0slblam$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0slblam$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0slblam.coefs$a0, thetahat = slr0slblam.coefs$bm.coefs,
-    betahat = slr0slblam.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0slblam.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0slblam.coefs$bm.coefs != 0),
-    "time" = slr0slblam.timing
-  ),
-  paste0(output_dir, "/slr_selbal_amini_metrics", file.end))
   
 }
 

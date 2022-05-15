@@ -15,7 +15,7 @@ geometric.mean = function(x, na.rm = TRUE){
 
 ##### preprocess data for selbal ###############################################
 
-getSelbalData = function(X = X, y = y, classification = TRUE, levels, labels){
+getSelbalData = function(X = X, y = y, classification = FALSE, levels, labels){
   if(is.null(rownames(X)) || is.null(colnames(X))){
     X.slbl = X
     if(is.null(rownames(X))){
@@ -60,18 +60,18 @@ getSBPSelbal = function(
     p, selbal.fit){
   
   # U (transformation) matrix
-  sbp = rep(0, p)
-  names(sbp) = colnames(X)
+  sbp = matrix(rep(0, p))
+  rownames(sbp) = colnames(X)
   pba.pos = unlist(subset(
     selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
   num.pos = length(pba.pos)
   pba.neg = unlist(subset(
     selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
   num.neg = length(pba.neg)
-  sbp[pba.pos] = 1
-  sbp[pba.neg] = -1
+  sbp[pba.pos, ] = 1
+  sbp[pba.neg, ] = -1
   if(!is.null(rownames(X))) rownames(sbp) = rownames(X)
-  return(matrix(sbp))
+  return(sbp)
 }
 
 getCoefsSelbal = function(
@@ -79,7 +79,7 @@ getCoefsSelbal = function(
   p = ncol(X)
   
   # U (transformation) matrix
-  sbp = getSBPSelbal(X = X, selbal.fit = selbal.fit)
+  sbp = getSBPSelbal(p, selbal.fit = selbal.fit)
   # ilrU = rep(0, p)
   # names(ilrU) = colnames(X)
   # pba.pos = unlist(subset(
@@ -118,7 +118,8 @@ getCoefsSelbal = function(
   return(list(
     a0 = a0, 
     bm.coefs = bm.coefs,
-    llc.coefs = llc.coefs
+    llc.coefs = llc.coefs, 
+    sbp = sbp
   ))
 }
 
@@ -220,127 +221,127 @@ getIlrX = function(X, sbp = NULL, U = NULL){
 #   using the balances' associated binary tree, SBP matrix, or 
 #   transformation matrix U
 # old name: fitILR
-fitBMLasso = function(
-  y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
-  intercept = TRUE, standardize = TRUE, classification = FALSE
-){
-  n = dim(X)[1]
-  p = dim(X)[2]
-  
-  # checks
-  if(length(y) != n){
-    stop("fitBMLasso(): dimensions of y and X don't match!!")
-  }
-  if(is.null(colnames(X))){
-    colnames(X) = paste("V", 1:p, sep = "")
-  }
-  if(!is.null(lambda)){ # lambda is given
-    nlam = length(lambda)
-  }
-  
-  # compute balances
-  ilrX = getIlrX(X = X, sbp = sbp)
-  
-  # run glmnet
-  if(!classification){
-    glmnet.fit = glmnet(
-      x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
-      intercept = intercept, standardize = standardize)
-  } else{
-    glmnet.fit = glmnet(
-      x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
-      intercept = intercept, standardize = standardize, 
-      family = binomial(link = "logit"))
-  }
-  
-  # check lambda length
-  if(nlam != length(glmnet.fit$lambda)){
-    lambda <- log(glmnet.fit$lambda)
-    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    if(!classification){
-      glmnet.fit = glmnet(
-        x = ilrX, y = y, lambda = lambda_new, 
-        intercept = intercept, standardize = standardize)
-    } else{
-      glmnet.fit = glmnet(
-        x = ilrX, y = y, lambda = lambda_new, 
-        intercept = intercept, standardize = standardize, 
-        family = binomial(link = "logit"))
-    }
-  }
-  return(list(
-    theta0 = glmnet.fit$a0, 
-    theta = glmnet.fit$beta, 
-    lambda = glmnet.fit$lambda,
-    glmnet = glmnet.fit, 
-    sbp = sbp
-  ))
-}
-
-# old name: cvILR
-cvBMLasso = function(
-  y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
-  nfolds = 10, foldid = NULL, intercept = TRUE, standardize = TRUE, 
-  keep = FALSE, classification = FALSE
-){
-  n = dim(X)[1]
-  p = dim(X)[2]
-  
-  # checks
-  if(length(y) != n){
-    stop("cvBMLasso(): dimensions of y and X don't match!!")
-  }
-  if(is.null(colnames(X))){
-    colnames(X) = paste("V", 1:p, sep = "")
-  }
-  if(!is.null(lambda)){ # lambda is given
-    nlam = length(lambda)
-  }
-  
-  # compute balances
-  ilrX = getIlrX(X = X, sbp = sbp)
-  
-  # run cv.glmnet
-  if(!classification){
-    cv_exact = cv.glmnet(
-      x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
-      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
-      keep = keep, standardize = standardize)
-  } else{
-    cv_exact = cv.glmnet(
-      x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
-      foldid = foldid, intercept = intercept, type.measure = c("mse"), 
-      keep = keep, standardize = standardize, family = binomial(link = "logit"))
-  }
-  
-  # check lambda length
-  if(nlam != length(cv_exact$lambda)){
-    lambda <- log(cv_exact$lambda)
-    lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
-    if(!classification){
-      cv_exact = cv.glmnet(
-        x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
-        foldid = foldid, intercept = intercept, type.measure = c("mse"), 
-        keep = keep, standardize = standardize)
-    } else{
-      cv_exact = cv.glmnet(
-        x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
-        foldid = foldid, intercept = intercept, type.measure = c("mse"), 
-        keep = keep, standardize = standardize, 
-        family = binomial(link = "logit"))
-    }
-  }
-  return(list(
-    theta0 = cv_exact$glmnet.fit$a0,
-    theta = cv_exact$glmnet.fit$beta,
-    lambda = cv_exact$lambda,
-    cv.glmnet = cv_exact,
-    glmnet = cv_exact$glmnet.fit,
-    cvm = cv_exact$cvm,
-    cvsd = cv_exact$cvsd,
-    sbp = sbp
-  ))
-}
+# fitBMLasso = function(
+#   y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
+#   intercept = TRUE, standardize = TRUE, classification = FALSE
+# ){
+#   n = dim(X)[1]
+#   p = dim(X)[2]
+#   
+#   # checks
+#   if(length(y) != n){
+#     stop("fitBMLasso(): dimensions of y and X don't match!!")
+#   }
+#   if(is.null(colnames(X))){
+#     colnames(X) = paste("V", 1:p, sep = "")
+#   }
+#   if(!is.null(lambda)){ # lambda is given
+#     nlam = length(lambda)
+#   }
+#   
+#   # compute balances
+#   ilrX = getIlrX(X = X, sbp = sbp)
+#   
+#   # run glmnet
+#   if(!classification){
+#     glmnet.fit = glmnet(
+#       x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
+#       intercept = intercept, standardize = standardize)
+#   } else{
+#     glmnet.fit = glmnet(
+#       x = ilrX, y = y, lambda = lambda, nlambda = nlam, 
+#       intercept = intercept, standardize = standardize, 
+#       family = binomial(link = "logit"))
+#   }
+#   
+#   # check lambda length
+#   if(nlam != length(glmnet.fit$lambda)){
+#     lambda <- log(glmnet.fit$lambda)
+#     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+#     if(!classification){
+#       glmnet.fit = glmnet(
+#         x = ilrX, y = y, lambda = lambda_new, 
+#         intercept = intercept, standardize = standardize)
+#     } else{
+#       glmnet.fit = glmnet(
+#         x = ilrX, y = y, lambda = lambda_new, 
+#         intercept = intercept, standardize = standardize, 
+#         family = binomial(link = "logit"))
+#     }
+#   }
+#   return(list(
+#     theta0 = glmnet.fit$a0, 
+#     theta = glmnet.fit$beta, 
+#     lambda = glmnet.fit$lambda,
+#     glmnet = glmnet.fit, 
+#     sbp = sbp
+#   ))
+# }
+# 
+# # old name: cvILR
+# cvBMLasso = function(
+#   y = NULL, X, sbp = NULL, lambda = NULL, nlam = 20, 
+#   nfolds = 10, foldid = NULL, intercept = TRUE, standardize = TRUE, 
+#   keep = FALSE, classification = FALSE
+# ){
+#   n = dim(X)[1]
+#   p = dim(X)[2]
+#   
+#   # checks
+#   if(length(y) != n){
+#     stop("cvBMLasso(): dimensions of y and X don't match!!")
+#   }
+#   if(is.null(colnames(X))){
+#     colnames(X) = paste("V", 1:p, sep = "")
+#   }
+#   if(!is.null(lambda)){ # lambda is given
+#     nlam = length(lambda)
+#   }
+#   
+#   # compute balances
+#   ilrX = getIlrX(X = X, sbp = sbp)
+#   
+#   # run cv.glmnet
+#   if(!classification){
+#     cv_exact = cv.glmnet(
+#       x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+#       foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+#       keep = keep, standardize = standardize)
+#   } else{
+#     cv_exact = cv.glmnet(
+#       x = ilrX, y = y, lambda = lambda, nlambda = nlam, nfolds = nfolds, 
+#       foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+#       keep = keep, standardize = standardize, family = binomial(link = "logit"))
+#   }
+#   
+#   # check lambda length
+#   if(nlam != length(cv_exact$lambda)){
+#     lambda <- log(cv_exact$lambda)
+#     lambda_new <- exp(seq(max(lambda), min(lambda),length.out = nlam))
+#     if(!classification){
+#       cv_exact = cv.glmnet(
+#         x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
+#         foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+#         keep = keep, standardize = standardize)
+#     } else{
+#       cv_exact = cv.glmnet(
+#         x = ilrX, y = y, lambda = lambda_new, nfolds = nfolds, 
+#         foldid = foldid, intercept = intercept, type.measure = c("mse"), 
+#         keep = keep, standardize = standardize, 
+#         family = binomial(link = "logit"))
+#     }
+#   }
+#   return(list(
+#     theta0 = cv_exact$glmnet.fit$a0,
+#     theta = cv_exact$glmnet.fit$beta,
+#     lambda = cv_exact$lambda,
+#     cv.glmnet = cv_exact,
+#     glmnet = cv_exact$glmnet.fit,
+#     cvm = cv_exact$cvm,
+#     cvsd = cv_exact$cvsd,
+#     sbp = sbp
+#   ))
+# }
 
 
 
@@ -402,7 +403,7 @@ getMetricsLLC = function(
     if(is.null(y.train) | is.null(y.test) | 
        is.null(logX.train) | is.null(logX.test) | 
        is.null(n.train) | is.null(n.test) | is.null(betahat0)) {
-      stop("getMetricsBalanceReg() prediction: one or more of these are missing -- y.train, y.test, logX.train, logX.test, n.train, n.test, betahat0")
+      stop("getMetricsLLC() prediction: one or more of these are missing -- y.train, y.test, logX.train, logX.test, n.train, n.test, betahat0")
     }
     # 1. prediction error #
     # 1a. on training set #
@@ -417,7 +418,7 @@ getMetricsLLC = function(
   
   if("betaestimation" %in% metrics){
     if(is.null(true.beta)) {
-      stop("getMetricsBalanceReg() betaestimation: true.beta arg is missing")
+      stop("getMetricsLLC() betaestimation: true.beta arg is missing")
     }
     # 2. estimation accuracy #
     # 2a. estimation of beta #
@@ -442,7 +443,7 @@ getMetricsLLC = function(
   
   if("selection" %in% metrics){
     if(is.null(true.beta) & is.null(true.sbp)) {
-      stop("getMetricsBalanceReg() selection: true.beta and true.sbp args are both missing, need at least one of them")
+      stop("getMetricsLLC() selection: true.beta and true.sbp args are both missing, need at least one of them")
     }
     if(is.null(true.beta) & !is.null(true.sbp)){
       true.beta = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
@@ -492,7 +493,7 @@ getMetricsBM = function(
     if(is.null(y.train) | is.null(y.test) | 
        is.null(ilrX.train) | is.null(ilrX.test) | 
        is.null(n.train) | is.null(n.test) | is.null(thetahat0)) {
-      stop("getMetricsBalanceReg() prediction: one or more of these are missing -- y.train, y.test, ilrX.train, ilrX.test, n.train, n.test, thetahat0")
+      stop("getMetricsBM() prediction: one or more of these are missing -- y.train, y.test, ilrX.train, ilrX.test, n.train, n.test, thetahat0")
     }
     # 1. prediction error #
     # 1a. on training set #
@@ -507,7 +508,7 @@ getMetricsBM = function(
   
   if("betaestimation" %in% metrics){
     if(is.null(true.beta)) {
-      stop("getMetricsBalanceReg() betaestimation: true.beta arg is missing")
+      stop("getMetricsBM() betaestimation: true.beta arg is missing")
     }
     # 2. estimation accuracy #
     # 2a. estimation of beta #
@@ -532,7 +533,7 @@ getMetricsBM = function(
   
   if("selection" %in% metrics){
     if(is.null(true.beta) & is.null(true.sbp)) {
-      stop("getMetricsBalanceReg() selection: true.beta and true.sbp args are both missing, need at least one of them")
+      stop("getMetricsBM() selection: true.beta and true.sbp args are both missing, need at least one of them")
     }
     if(is.null(true.beta) & !is.null(true.sbp)){
       true.beta = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))

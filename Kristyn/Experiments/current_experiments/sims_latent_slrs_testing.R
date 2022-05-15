@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 5/3/2022
+# Date: 5/14/2022
 rm(list=ls())
 
 ################################################################################
@@ -18,9 +18,9 @@ output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_slrs"
 # 
 # library(rngtools)
 # library(doRNG)
-rng.seed = 123 # 123, 345
+# rng.seed = 123 # 123, 345
 # registerDoRNG(rng.seed)
-set.seed(123)
+set.seed(2)
 
 # Other simulation settings
 numSims = 100
@@ -68,7 +68,8 @@ a0 = 0 # 0
 ################################################################################
 # Simulations #
 ################################################################################
-b = 3
+b = 4
+# b = 3 -- ad hoc works
 
 file.end = paste0(
   "_", sigma.settings,
@@ -85,15 +86,15 @@ file.end = paste0(
   "_sim", b,
   ".rds")
 
-# ##############################################################################
-# # generate data
+##############################################################################
+# generate data
 # # get latent variable
 # U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
 # # simulate y from latent variable
 # y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
-# # simulate X: 
+# # simulate X:
 # epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
-# a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+# a1 = theta.value * ilrtrans.true$ilr.trans[-p]
 # #   alpha1j = {
 # #     c1=theta*ilr.const/k+   if j \in I+
 # #     -c2=-theta*ilr.const/k-  if j \in I-
@@ -115,7 +116,7 @@ file.end = paste0(
 # bspars = sum(non0.beta)
 # # solve for beta
 # c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-# beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+# beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) *
 #   as.vector(ilrtrans.true$ilr.trans)
 
 data.tmp = readRDS(paste0(output_dir, "/data", file.end))
@@ -129,41 +130,17 @@ is0.beta = data.tmp$is0.beta
 non0.beta = data.tmp$non0.beta
 
 ##############################################################################
-# compositional lasso (a linear log contrast method)
-##############################################################################
-# classo = cv.func(
-#   method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
-#   nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
-# 
-# cl.lam.min.idx = which.min(classo$cvm)
-# cl.a0 = classo$int[cl.lam.min.idx]
-# cl.betahat = classo$bet[, cl.lam.min.idx]
-# 
-# # compute metrics on the selected model #
-# cl.metrics = getMetricsLLC(
-#   y.train = Y, y.test = Y.test,
-#   logX.train = log(X),
-#   logX.test = log(X.test),
-#   n.train = n, n.test = n,
-#   betahat0 = cl.a0, betahat = cl.betahat,
-#   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
-#   true.beta = beta.true)
-
-classo_metrics = readRDS(paste0(output_dir, "/classo_metrics", file.end))
-classo_metrics["Fscore"]
-
-##############################################################################
 # slr method using k-means spectral clustering with K = 3
 #   rank 1 approximation -- FALSE
 #   amini regularization -- FALSE
 #   high degree regularization -- FALSE
 ##############################################################################
 # slr0 = slr(
-#   x = X, y = Y, approx = FALSE, amini.regularization = FALSE,
-#   highdegree.regularization = FALSE)
+#   x = X, y = Y, approx = FALSE, amini.regularization = FALSE)
 # 
 # slr0.coefs = getCoefsBM(
 #   coefs = coefficients(slr0$model), sbp = slr0$sbp)
+# as.numeric(slr0.coefs$llc.coefs)
 # 
 # # compute metrics on the selected model #
 # slr0.metrics = getMetricsBM(
@@ -175,6 +152,10 @@ classo_metrics["Fscore"]
 #   betahat = slr0.coefs$llc.coefs,
 #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
 #   true.beta = beta.true)
+x = X
+y = Y
+classification = FALSE
+alpha = 0.05
 
 slr0_metrics = readRDS(paste0(output_dir, "/slr_metrics", file.end))
 slr0_metrics["Fscore"]
@@ -189,42 +170,11 @@ slr0test$Rsqs
 slr0test$spectralclustering$cl
 as.numeric(slr0test$sbp)
 
-slr0slbl = slr(
-  x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
-  selection.crit = "selbal")
-slr0slbl$sbp
+slr0adhoc = slr(
+  x = X, y = Y, approx = FALSE, amini.regularization = FALSE, ad.hoc = TRUE)
+as.numeric(slr0adhoc$sbp)
+slr0adhoc$ad.hoc.invoked
 
-slr0slbladhoc = slr(
-  x = X, y = Y, approx = FALSE, amini.regularization = FALSE, 
-  selection.crit = "selbal", ad.hoc = TRUE)
-slr0slbladhoc$sbp
-slr0slbladhoc$ad.hoc.invoked
 
-##############################################################################
-# slr method using k-means spectral clustering with K = 3
-#   rank 1 approximation -- FALSE
-#   amini regularization -- TRUE
-#   high degree regularization -- FALSE
-##############################################################################
-# slr0am = slr(
-#   x = X, y = Y, approx = FALSE, amini.regularization = TRUE, 
-#   highdegree.regularization = FALSE)
-# 
-# slr0am.coefs = getCoefsBM(
-#   coefs = coefficients(slr0am$model), sbp = slr0am$sbp)
-# 
-# # compute metrics on the selected model #
-# slr0am.metrics = getMetricsBM(
-#   y.train = Y, y.test = Y.test,
-#   ilrX.train = getIlrX(X, sbp = slr0am$sbp),
-#   ilrX.test = getIlrX(X.test, sbp = slr0am$sbp),
-#   n.train = n, n.test = n,
-#   thetahat0 = slr0am.coefs$a0, thetahat = slr0am.coefs$bm.coefs,
-#   betahat = slr0am.coefs$llc.coefs,
-#   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-#   true.beta = beta.true)
-
-slr0am_metrics = readRDS(paste0(output_dir, "/slr_amini_metrics", file.end))
-slr0am_metrics["Fscore"]
 
 

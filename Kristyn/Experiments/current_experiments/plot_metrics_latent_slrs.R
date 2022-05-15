@@ -32,7 +32,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 0.25 # 1, 0.5, 0.25
+b1 = 0.5 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 
@@ -54,12 +54,8 @@ file.end0 = paste0(
 
 # import metrics
 classo_sims_list = list()
-slr_sims_list = list()
-slr_slbl_sims_list = list()
-slr_adhoc_sims_list = list()
-slr_am_sims_list = list()
-slr_adhoc_am_sims_list = list()
-slr_slbl_am_sims_list = list()
+slr_0.05_sims_list = list()
+slr_0.01_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
@@ -73,53 +69,21 @@ for(i in 1:numSims){
   
   ###
   
-  # slr
-  slr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_metrics", file.end0,
+  # slr - alpha = 0.05
+  slr_alpha0.05_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_alpha0.05_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_sim_tmp) = NULL
-  slr_sims_list[[i]] = data.table::data.table(slr_sim_tmp)
+  rownames(slr_alpha0.05_sim_tmp) = NULL
+  slr_0.05_sims_list[[i]] = data.table::data.table(slr_alpha0.05_sim_tmp)
   
-  # slr - selbal
-  slr_slbl_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_selbal_metrics", file.end0,
+  # slr - alpha = 0.01
+  slr_alpha0.01_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_alpha0.01_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_slbl_sim_tmp) = NULL
-  slr_slbl_sims_list[[i]] = data.table::data.table(slr_slbl_sim_tmp)
-  
-  # slr - adhoc
-  slr_adhoc_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_adhoc_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slr_adhoc_sim_tmp) = NULL
-  slr_adhoc_sims_list[[i]] = data.table::data.table(slr_adhoc_sim_tmp)
-  
-  # slr - amini
-  slr_am_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_amini_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slr_am_sim_tmp) = NULL
-  slr_am_sims_list[[i]] = data.table::data.table(slr_am_sim_tmp)
-  
-  # slr - selbal - amini
-  slr_slbl_am_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_selbal_amini_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slr_slbl_am_sim_tmp) = NULL
-  slr_slbl_am_sims_list[[i]] = data.table::data.table(slr_slbl_am_sim_tmp)
-  
-  # slr - adhoc - amini
-  slr_adhoc_am_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_adhoc_amini_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slr_adhoc_am_sim_tmp) = NULL
-  slr_adhoc_am_sims_list[[i]] = data.table::data.table(slr_adhoc_am_sim_tmp)
+  rownames(slr_alpha0.01_sim_tmp) = NULL
+  slr_0.01_sims_list[[i]] = data.table::data.table(slr_alpha0.01_sim_tmp)
 }
 
 
@@ -130,42 +94,21 @@ classo_sims.gg =
                names_to = "Metric") %>%
   mutate("Method" = "classo")
 ###
-slr_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_sims_list)), 
+slr_0.05_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.05_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr")
-slr_slbl_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_slbl_sims_list)), 
+  mutate("Method" = "slr-0.05")
+slr_0.01_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.01_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr-slbl")
-slr_adhoc_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_adhoc_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-adhoc")
-###
-slr_am_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_am_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-am")
-slr_slbl_am_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_slbl_am_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-slbl-am")
-slr_adhoc_am_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_adhoc_am_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-adhoc-am")
+  mutate("Method" = "slr-0.01")
 ###
 data.gg = rbind(
   classo_sims.gg,
-  slr_sims.gg, slr_slbl_sims.gg, slr_adhoc_sims.gg,
-  slr_am_sims.gg, slr_slbl_am_sims.gg, slr_adhoc_am_sims.gg
+  slr_0.05_sims.gg, 
+  slr_0.01_sims.gg
 ) %>%
   mutate(
     Metric = factor(
@@ -213,7 +156,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220504",
+    "20220514",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

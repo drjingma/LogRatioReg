@@ -1,5 +1,4 @@
 
-
 slrmatrix = function(x, y){
   p = ncol(x)
   
@@ -17,15 +16,9 @@ slrmatrix = function(x, y){
 }
 
 # spectral.clustering() function, with automatic splitting of two things
-spectral.clustering.kmeans = function(
-  W, n_eig = 2, reindex = FALSE, 
-  amini.regularization = TRUE, 
-  amini.regularization.parameter = 0.01
-  ) {
+spectral.clustering.kmeans = function(W, n_eig = 2, reindex = FALSE) {
   # compute graph laplacian
-  L = graph.laplacian2(
-    W = W, amini.regularization = amini.regularization, 
-    amini.regularization.parameter = amini.regularization.parameter)          
+  L = graph.laplacian2(W = W)          
   ei = eigen(L, symmetric = TRUE)
   # compute the eigenvectors and values of L
   # we will use k-means to cluster the data
@@ -48,44 +41,21 @@ spectral.clustering.kmeans = function(
   return(cl)
 }
 
-graph.laplacian2 = function(
-  W, # normalized = TRUE, 
-  amini.regularization = TRUE, 
-  amini.regularization.parameter = 0.01
-){
+graph.laplacian2 = function(W){
   stopifnot(nrow(W) == ncol(W)) 
   n = nrow(W)    # number of vertices
   degrees <- colSums(W) # degrees of vertices
-  W.tmp = W
-  
-  # Amini et al., 2016 regularization method: perturb the network by adding 
-  #   some links with low edge weights
-  if(amini.regularization){
-    W.tmp <- W.tmp + 
-      amini.regularization.parameter * mean(degrees) / n * tcrossprod(rep(1,n))
-  }
-  
-  # if(normalized){
-  D_half = diag(1 / sqrt(degrees))
-  # } else {
-  #   return(W.tmp)
-  # }
-  return(D_half %*% W.tmp %*% D_half)
+  D_half = diag(1 / sqrt(degrees)) # normalization
+  return(D_half %*% W %*% D_half) # return normalized Laplacian
 }
 
 # spectral clustering using sign check method
-spectral.clustering.cut = function(
-  W, reindex = FALSE, 
-  amini.regularization = TRUE, 
-  amini.regularization.parameter = 0.01
-) {
+spectral.clustering.cut = function(W, reindex = FALSE) {
   stopifnot(nrow(W) == ncol(W)) 
   n = nrow(W)    # number of vertices
   
   # compute graph laplacian
-  L = graph.laplacian2(
-    W = W, amini.regularization = amini.regularization, 
-    amini.regularization.parameter = amini.regularization.parameter)
+  L = graph.laplacian2(W = W)
   IminusL = diag(n) - L
   
   ei = eigen(IminusL, symmetric = TRUE)
@@ -111,11 +81,8 @@ spectral.clustering.cut = function(
 
 # slr -- 1 application of spectral clustering
 slr <- function(
-    x, y, classification = FALSE, approx = FALSE, 
-    amini.regularization = FALSE, 
-    amini.regularization.parameter = 0.01, 
-    selection.crit = "Rsq", # "cor", "Rsq", "selbal"
-    ad.hoc = FALSE
+    x, y, classification = FALSE, 
+    alpha = 0.05
 ){
   
   num.clusters = 3
@@ -123,40 +90,21 @@ slr <- function(
   p = ncol(x)
   
   ## Compute pairwise correlation
-  rhoMat0 <- slrmatrix(x = x, y = y)
-  rhoMat = max(rhoMat0) - rhoMat0
+  rhoMat <- slrmatrix(x = x, y = y)
+  Ahat = max(rhoMat) - rhoMat
   
   out <- list()
-  out$kernel <- rhoMat
+  out$kernel <- Ahat
   
-  ## Split into active/inactive sets
-  if(approx){
-    rhoMat.svd <- svd(rhoMat)
-    rhoMat_approx <- tcrossprod(
-      rhoMat.svd$u[, 1], 
-      rhoMat.svd$v[, 1]) *
-      rhoMat.svd$d[1]
-    rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
-    affinityMat = rhoMat_approx
-  } else{
-    affinityMat = rhoMat
-  }
-  cluster.labels <- spectral.clustering.kmeans(
-    affinityMat, n_eig = num.clusters, 
-    amini.regularization = amini.regularization,
-    amini.regularization.parameter = amini.regularization.parameter)
+  ## cluster
+  cluster.labels <- spectral.clustering.kmeans(Ahat, n_eig = num.clusters)
   cluster.lengths = table(cluster.labels)
   clusters = names(cluster.lengths)
   out$num.clusters = num.clusters
   
-  ## Find which pair of the 3 clusters has the most predictive balance
+  ## Find which pair of the 3 clusters produces the most predictive balance
   all.pairs = t(combn(clusters, 2))
   cors = rep(NA, nrow(all.pairs))
-  Rsqs = rep(NA, nrow(all.pairs))
-  # pvals = rep(NA, nrow(all.pairs))
-  # adjRsqs = rep(NA, nrow(all.pairs))
-  # aics = rep(NA, nrow(all.pairs))
-  # bics = rep(NA, nrow(all.pairs))
   sbp.ests = matrix(0, nrow = p, ncol = nrow(all.pairs))
   bal.ests = matrix(NA, nrow = n, ncol = nrow(all.pairs))
   rownames(sbp.ests) <- colnames(x)
@@ -169,68 +117,74 @@ slr <- function(
     sbp.ests[match(names(subset2), rownames(sbp.ests)), i] = -1
     bal.ests[, i] = balance::balance.fromSBP(
       x = x, y = sbp.ests[, i, drop = FALSE])
-    # cors and Rsqs
     cors[i] = stats::cor(bal.ests[, i], y)
-    Rsqs[i] = cors[i]^2
-    # # significance -- didn't fix balance selection problem!
-    # refit_data.tmp = data.frame(V1 = bal.ests[, i], y = y)
-    # if(!classification){
-    #   refit.tmp <- lm(y~V1, data = refit_data.tmp)
-    #   pvals[i] = summary(refit.tmp)$coefficients["V1", "Pr(>|t|)"]
-    #   adjRsqs[i] = summary(refit.tmp)$adj.r.squared
-    #   aics[i] = AIC(refit.tmp)
-    #   bics[i] = BIC(refit.tmp)
-    # } else{
-    #   refit.tmp = stats::glm(
-    #     y~V1, data = refit_data.tmp, family = binomial(link = "logit"))
-    #   pvals[i] = summary(refit.tmp)$coefficients["V1", "Pr(>|z|)"]
-    #   adjRsqs[i] = summary(refit.tmp)$adj.r.squared # is this a thing for glm?
-    # }
   }
   out$cors = cors
-  out$Rsqs = Rsqs
+  # balances' active set size
+  cardinality.ests = apply(sbp.ests, 2, function(col) sum(col != 0))
+  
   # The correct active set should have largest correlation magnitude, i.e. Rsq.
   ## We refit the linear model on the balance from the set with the 
   ##    largest correlation magnitude.
-  if(selection.crit %in% c("selbal")){
-    # calculate geometric means of I+, I-, inactive set I0
-    geometric.means = matrix(NA, nrow = nrow(x), ncol = num.clusters)
-    colnames(geometric.means) = clusters
-    for(i in 1:num.clusters){
-      geometric.means[, i] =  apply(
-        x[, which(cluster.labels == clusters[i])], 1,
-        function(row) geometric.mean(row))
+  max.pair = which.max(abs(cors))
+  other.pairs = (1:3)[-max.pair]
+  z.scores = 0.5 * log((1 + abs(cors)) / (1 - abs(cors)))
+  sigma.z1.minus.z2 = sqrt(2 / (n - 3))
+  # tests (I), (II), (III)
+  test.stats = c(
+    z.scores[other.pairs] - z.scores[max.pair], 
+    diff(z.scores[other.pairs])
+  ) / sigma.z1.minus.z2
+  p.values = pnorm(q = test.stats, lower.tail = test.stats < 0)
+  signif.diffs = p.values <= alpha
+  selected.pair = max.pair
+  if(all(signif.diffs[c(1, 2)])){ # if (I) & (II) == 1, 
+    # choose Bmax
+  } else if(all(!(signif.diffs[c(1, 2)]))){ # if(I) & (II) == 0, 
+    # choose sparsest of the 3 balances
+    selected.pair = which.min(cardinality.ests)
+  } else if(sum(signif.diffs[c(1, 2)]) == 1){ # if (I) xor (II) == 1 (other 0),
+    # check which is bigger, Bmax or the other balance
+    # (either B1 or B2)
+    sim.other.pair = other.pairs[!signif.diffs[c(1, 2)]]
+    if(cardinality.ests[sim.other.pair] < cardinality.ests[max.pair]){
+      selected.pair = sim.other.pair
+      if(!signif.diffs[3]){ # if (III) == 0, 
+        notsim.other.pair = other.pairs[signif.diffs[c(1, 2)]]
+        # check which is bigger between B1 and B2
+        if(cardinality.ests[notsim.other.pair] < 
+           cardinality.ests[sim.other.pair]){
+          selected.pair = notsim.other.pair
+        }
+      }
     }
-    # fit selbal
-    data_slbl = getSelbalData(
-      X = geometric.means, y = y, classification = classification)
-    fit_slbl = selbal::selbal.aux(
-      x = data_slbl$X, y = data_slbl$y, logt = TRUE, maxV = 2)
-    # get balance
-    slbl.pair = sort(fit_slbl$Taxa) # assuming each pair in all.pairs is sorted
-    selected.pair = which(
-      apply(all.pairs, 1, function(row) isTRUE(all.equal(row, slbl.pair))))
-    refit_data = data.frame(V1 = bal.ests[, selected.pair], y = y)
-  } else{ # selection.crit %in% c("Rsq", "cor")
-    selected.pair = which.max(Rsqs)
   }
-  if(ad.hoc){ # choose the sparsest balance
-    ad.hoc.invoked = FALSE
-    # pick the balance with smallest active set
-    cardinality.ests = apply(sbp.ests, 2, function(col) sum(col != 0))
-    min.card.pair = which.min(cardinality.ests)
-    if(cardinality.ests[selected.pair] != cardinality.ests[min.card.pair]){
-      # save original sbp
-      sbp.original = sbp.ests[, selected.pair, drop = FALSE]
-      rownames(sbp.original) = colnames(x)
-      out$sbp.original = sbp.original
-      # new selected pair, via ad hoc method
-      ad.hoc.invoked = TRUE
-      selected.pair = min.card.pair
-    }
-    out$ad.hoc.invoked = ad.hoc.invoked
-  }
-  
+  # # two tests for difference in correlations
+  # # 1st test
+  # z.scores = 0.5 * log((1 + abs(cors)) / (1 - abs(cors)))
+  # sigma.z1.minus.z2 = sqrt(2 / (n - 3))
+  # test.stats = (z.scores[other.pairs] - z.scores[selected.pair]) / sigma.z1.minus.z2
+  # cordiff.pvalue = pnorm(q = test.stats, lower.tail = test.stats < 0)
+  # not.signif.diff = cordiff.pvalue > alpha
+  # if(not.signif.diff[1]){
+  #   if(cardinality.ests[other.pairs[1]] < cardinality.ests[selected.pair]){
+  #     selected.pair = other.pairs[1]
+  #     # 2nd test -- compare other.pairs[1] and other.pairs[2] cors
+  #     z.scores2 = 0.5 * log((1 + abs(cors[other.pairs])) / (1 - abs(cors[other.pairs])))
+  #     test.stats2 = (z.scores2[1] - z.scores2[2]) / sigma.z1.minus.z2
+  #     cordiff.pvalue2 = pnorm(q = test.stats2, lower.tail = test.stats2 < 0) 
+  #     if((cordiff.pvalue2 > alpha) & 
+  #        (cardinality.ests[other.pairs[2]] < cardinality.ests[other.pairs[1]])){
+  #       selected.pair = other.pairs[2]
+  #     }
+  #   } else if(not.signif.diff[2]){
+  #     if(cardinality.ests[other.pairs[2]] < cardinality.ests[selected.pair]){
+  #       selected.pair = other.pairs[2]
+  #     }
+  #   }
+  # }
+  out$adhoc.invoked = (selected.pair == max.pair)
+    
   # fit the balance regression model
   out$index = sbp.ests[, selected.pair] # redundant, may remove
   refit_data = data.frame(V1 = bal.ests[, selected.pair], y = y)

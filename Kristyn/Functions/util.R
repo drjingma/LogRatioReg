@@ -60,17 +60,18 @@ getSBPSelbal = function(X, selbal.fit){
   p = ncol(X)
   
   # U (transformation) matrix
-  sbp = matrix(rep(0, p))
-  rownames(sbp) = colnames(X)
+  sbp = rep(0, p)
+  names(sbp) = colnames(X)
   pba.pos = unlist(subset(
     selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
   num.pos = length(pba.pos)
   pba.neg = unlist(subset(
     selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
   num.neg = length(pba.neg)
-  sbp[pba.pos, ] = 1
-  sbp[pba.neg, ] = -1
-  if(!is.null(rownames(X))) rownames(sbp) = rownames(X)
+  sbp[pba.pos] = 1
+  sbp[pba.neg] = -1
+  sbp = matrix(sbp)
+  rownames(sbp) = colnames(X)
   return(sbp)
 }
 

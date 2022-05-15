@@ -354,11 +354,44 @@ res = foreach(
   # Log-Ratio Lasso
   # -- regresses on pairwise log-ratios
   ##############################################################################
-  # library(logratiolasso)
-  # W = log(X)
-  # Wc = scale(W, center = TRUE, scale = FALSE)
-  # Yc = Y - mean(Y)
-  # lrl_model <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
+  library(logratiolasso)
+  source("Kristyn/Functions/logratiolasso.R")
+  Wc = scale(log(X), center = TRUE, scale = FALSE)
+  Yc = Y - mean(Y)
+  
+  start.time = Sys.time()
+  lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
+  end.time = Sys.time()
+  lrl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  lrl.Yhat.train = Wc %*% lrl$beta_min
+  lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
+  # get prediction error on test set
+  Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
+  Yc.test = Y.test - mean(Y.test)
+  lrl.Yhat.test = Wc.test %*% lrl$beta_min
+  lrl.PE.test = crossprod(Y - lrl.Yhat.test) / n
+  
+  # beta estimation accuracy, selection accuracy #
+  lrl.metrics = getMetricsBM(
+    betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  lrl.metrics = c(
+    PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
+  
+  saveRDS(c(
+    lrl.metrics,
+    "betasparsity" = bspars,
+    "logratios" = length(lrl_coeffs), 
+    "time" = lrl.timing, 
+    "adhoc" = NA
+  ),
+  paste0(output_dir, "/lrlasso_metrics", file.end))
 
   
   

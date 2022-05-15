@@ -349,7 +349,18 @@ res = foreach(
     "adhoc" = NA
   ),
   paste0(output_dir, "/metrics", "/codacore_metrics", file.end))
- 
+  
+  ##############################################################################
+  # Log-Ratio Lasso
+  # -- regresses on pairwise log-ratios
+  ##############################################################################
+  # library(logratiolasso)
+  # # W = log(X)
+  # # Wc = scale(W, center = TRUE, scale = FALSE)
+  # # Yc = Y - mean(Y)
+  # lrl_model <- cv_two_stage(X, Y, n_folds = K)
+  
+  
   
   
   

@@ -274,7 +274,7 @@ res = foreach(
   saveRDS(c(
     slbl.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slbl.thetahat != 0), 
+    "logratios" = sum(slbl.coefs$bm.coefs != 0), 
     "time" = slbl.timing, 
     "adhoc" = NA
   ),
@@ -359,8 +359,6 @@ res = foreach(
   # # Wc = scale(W, center = TRUE, scale = FALSE)
   # # Yc = Y - mean(Y)
   # lrl_model <- cv_two_stage(X, Y, n_folds = K)
-  
-  
   
   
   

@@ -56,8 +56,8 @@ getCoefsBM = function(coefs, sbp){
   ))
 }
 
-getSBPSelbal = function(
-    p, selbal.fit){
+getSBPSelbal = function(X, selbal.fit){
+  p = ncol(X)
   
   # U (transformation) matrix
   sbp = matrix(rep(0, p))
@@ -79,7 +79,7 @@ getCoefsSelbal = function(
   p = ncol(X)
   
   # U (transformation) matrix
-  sbp = getSBPSelbal(p, selbal.fit = selbal.fit)
+  sbp = getSBPSelbal(X = X, selbal.fit = selbal.fit)
   # ilrU = rep(0, p)
   # names(ilrU) = colnames(X)
   # pba.pos = unlist(subset(

@@ -387,7 +387,7 @@ res = foreach(
   saveRDS(c(
     lrl.metrics,
     "betasparsity" = bspars,
-    "logratios" = length(lrl_coeffs), 
+    "logratios" = NA, 
     "time" = lrl.timing, 
     "adhoc" = NA
   ),

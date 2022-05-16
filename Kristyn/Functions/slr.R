@@ -82,7 +82,7 @@ spectral.clustering.cut = function(W, reindex = FALSE) {
 # slr -- 1 application of spectral clustering
 slr <- function(
     x, y, classification = FALSE, 
-    alpha = 0.05
+    alpha = 0.05, ordered.tests = TRUE
 ){
   
   num.clusters = 3
@@ -127,64 +127,85 @@ slr <- function(
   ## We refit the linear model on the balance from the set with the 
   ##    largest correlation magnitude.
   max.pair = which.max(abs(cors))
-  other.pairs = (1:3)[-max.pair]
+  selected.pair = max.pair
   z.scores = 0.5 * log((1 + abs(cors)) / (1 - abs(cors)))
   sigma.z1.minus.z2 = sqrt(2 / (n - 3))
-  # tests (I), (II), (III)
-  test.stats = c(
-    z.scores[other.pairs] - z.scores[max.pair], 
-    diff(z.scores[other.pairs])
-  ) / sigma.z1.minus.z2
-  p.values = pnorm(q = test.stats, lower.tail = test.stats < 0)
-  signif.diffs = p.values <= alpha
-  selected.pair = max.pair
-  if(all(signif.diffs[c(1, 2)])){ # if (I) & (II) == 1, 
-    # choose Bmax
-  } else if(all(!(signif.diffs[c(1, 2)]))){ # if(I) & (II) == 0, 
-    # choose sparsest of the 3 balances
-    selected.pair = which.min(cardinality.ests)
-  } else if(sum(signif.diffs[c(1, 2)]) == 1){ # if (I) xor (II) == 1 (other 0),
-    # check which is bigger, Bmax or the other balance
-    # (either B1 or B2)
-    sim.other.pair = other.pairs[!signif.diffs[c(1, 2)]]
-    if(cardinality.ests[sim.other.pair] < cardinality.ests[max.pair]){
-      selected.pair = sim.other.pair
-      if(!signif.diffs[3]){ # if (III) == 0, 
-        notsim.other.pair = other.pairs[signif.diffs[c(1, 2)]]
-        # check which is bigger between B1 and B2
-        if(cardinality.ests[notsim.other.pair] < 
-           cardinality.ests[sim.other.pair]){
-          selected.pair = notsim.other.pair
+  if(ordered.tests){
+    # rank the absolute correlations and comptue their z.scores
+    ranks = rank(abs(cors))
+    # ordered tests, where |r1| >= |r2| >= |r3|
+    test.stats = c(
+      z.scores[ranks[1]] - z.scores[ranks[2]], # test(|r1|, |r2|)
+      z.scores[ranks[2]] - z.scores[ranks[3]], # test(|r2|, |r3|)
+      z.scores[ranks[1]] - z.scores[ranks[3]] # test(|r1|, |r3|)
+    ) / sigma.z1.minus.z2
+    p.values = rep(NA, length(test.stats))
+    for(i in 1:length(test.stats)){ # since lower.tail doesn't take a vector
+      p.values[i] = pnorm(q = test.stats[i], lower.tail = test.stats[i] < 0)
+    }
+    signif.diffs = p.values <= alpha
+    # if |r1| & |r2| are different, choose B1 (with max |r|, i.e. |r1|).
+    if(!signif.diffs[1]){ 
+      # if |r1| & |r2| are similar, check if |r2| & |r3| are similar
+      if(signif.diffs[2]){
+        # if |r1| & |r2| are similar, but |r2| & |r3| are different,
+        #   choose the sparsest among B1 & B2
+        if(cardinality.ests[ranks[2]] < cardinality.ests[ranks[1]]){
+          selected.pair = ranks[2]
+        }
+      } else {
+        # if |r1| & |r2| are similar, and |r2| & |r3| are similar, 
+        #   check if |r1| & |r3| are similar --
+        #   -- if |r1| & |r3| are different, choose the sparsest among B1 & B2
+        if(cardinality.ests[ranks[2]] < cardinality.ests[ranks[1]]){
+          selected.pair = ranks[2]
+        }
+        if(!signif.diffs[3]){
+          # if |r1| & |r2| are similar, and |r2| & |r3| are similar, 
+          #   and also |r1| & |r3| are different, 
+          #   choose the sparsest among B1, B2, & B3
+          if(cardinality.ests[ranks[3]] < cardinality.ests[ranks[2]]){
+            selected.pair = ranks[3]
+          }
+        }
+      }
+    }
+  } else{
+    other.pairs = (1:3)[-max.pair]
+    # tests (I), (II), (III)
+    test.stats = c(
+      z.scores[other.pairs] - z.scores[max.pair], 
+      diff(z.scores[other.pairs])
+    ) / sigma.z1.minus.z2
+    p.values = rep(NA, length(test.stats))
+    for(i in 1:length(test.stats)){ # since lower.tail doesn't take a vector
+      p.values[i] = pnorm(q = test.stats[i], lower.tail = test.stats[i] < 0)
+    }
+    signif.diffs = p.values <= alpha
+    if(all(signif.diffs[c(1, 2)])){ # if (I) & (II) == 1, 
+      # choose Bmax
+    } else if(all(!(signif.diffs[c(1, 2)]))){ # if(I) & (II) == 0, 
+      # choose sparsest of the 3 balances
+      selected.pair = which.min(cardinality.ests)
+    } else if(sum(signif.diffs[c(1, 2)]) == 1){ # if (I) xor (II) == 1 (other 0),
+      # check which is bigger, Bmax or the other balance
+      # (either B1 or B2)
+      sim.other.pair = other.pairs[!signif.diffs[c(1, 2)]]
+      if(cardinality.ests[sim.other.pair] < cardinality.ests[max.pair]){
+        selected.pair = sim.other.pair
+        if(!signif.diffs[3]){ # if (III) == 0, 
+          notsim.other.pair = other.pairs[signif.diffs[c(1, 2)]]
+          # check which is bigger between B1 and B2
+          if(cardinality.ests[notsim.other.pair] < 
+             cardinality.ests[sim.other.pair]){
+            selected.pair = notsim.other.pair
+          }
         }
       }
     }
   }
-  # # two tests for difference in correlations
-  # # 1st test
-  # z.scores = 0.5 * log((1 + abs(cors)) / (1 - abs(cors)))
-  # sigma.z1.minus.z2 = sqrt(2 / (n - 3))
-  # test.stats = (z.scores[other.pairs] - z.scores[selected.pair]) / sigma.z1.minus.z2
-  # cordiff.pvalue = pnorm(q = test.stats, lower.tail = test.stats < 0)
-  # not.signif.diff = cordiff.pvalue > alpha
-  # if(not.signif.diff[1]){
-  #   if(cardinality.ests[other.pairs[1]] < cardinality.ests[selected.pair]){
-  #     selected.pair = other.pairs[1]
-  #     # 2nd test -- compare other.pairs[1] and other.pairs[2] cors
-  #     z.scores2 = 0.5 * log((1 + abs(cors[other.pairs])) / (1 - abs(cors[other.pairs])))
-  #     test.stats2 = (z.scores2[1] - z.scores2[2]) / sigma.z1.minus.z2
-  #     cordiff.pvalue2 = pnorm(q = test.stats2, lower.tail = test.stats2 < 0) 
-  #     if((cordiff.pvalue2 > alpha) & 
-  #        (cardinality.ests[other.pairs[2]] < cardinality.ests[other.pairs[1]])){
-  #       selected.pair = other.pairs[2]
-  #     }
-  #   } else if(not.signif.diff[2]){
-  #     if(cardinality.ests[other.pairs[2]] < cardinality.ests[selected.pair]){
-  #       selected.pair = other.pairs[2]
-  #     }
-  #   }
-  # }
   out$adhoc.invoked = (selected.pair == max.pair)
-    
+  
   # fit the balance regression model
   out$index = sbp.ests[, selected.pair] # redundant, may remove
   refit_data = data.frame(V1 = bal.ests[, selected.pair], y = y)
@@ -205,123 +226,5 @@ slr <- function(
   return(out)
 }
 
-
-
-
-
-# # used to be slr() -- two applications of spectral clustering
-# slr2sc <- function(
-#   x, y, num.clusters = 2, classification = FALSE, approx = FALSE, 
-#   amini.regularization = FALSE, 
-#   amini.regularization.parameter = 0.01, 
-#   highdegree.regularization.summary = "mean",
-#   highdegree.regularization = FALSE,
-#   spectral.clustering.method = "kmeans" # "kmeans" or "cut"
-# ){
-#   if(spectral.clustering.method == "cut" & num.clusters != 2){
-#     stop("spectral.clustering.method == cut requires num.clusters == 2")
-#   }
-#   
-#   n = nrow(x)
-#   p = ncol(x)
-#   
-#   ## Compute pairwise correlation
-#   rhoMat0 <- slrmatrix(x = x, y = y)
-#   rhoMat = max(rhoMat0) - rhoMat0
-#   
-#   out <- list()
-#   out$kernel <- rhoMat
-#   
-#   ## Split into active/inactive sets
-#   if(approx){
-#     rhoMat.svd <- svd(rhoMat)
-#     rhoMat_approx <- tcrossprod(
-#       rhoMat.svd$u[, 1], 
-#       rhoMat.svd$v[, 1]) *
-#       rhoMat.svd$d[1]
-#     rownames(rhoMat_approx) <- colnames(rhoMat_approx) <- rownames(rhoMat)
-#     affinityMat = rhoMat_approx
-#   } else{
-#     affinityMat = rhoMat
-#   }
-#   if(spectral.clustering.method == "kmeans"){
-#     clusters1 <- spectral.clustering.kmeans(
-#       affinityMat, n_eig = num.clusters, 
-#       amini.regularization = amini.regularization,
-#       amini.regularization.parameter = amini.regularization.parameter,
-#       highdegree.regularization.summary = highdegree.regularization.summary,
-#       highdegree.regularization = highdegree.regularization)
-#   } else if(spectral.clustering.method == "cut"){
-#     clusters1 <- spectral.clustering.cut(
-#       affinityMat, 
-#       amini.regularization = amini.regularization,
-#       amini.regularization.parameter = amini.regularization.parameter,
-#       highdegree.regularization.summary = highdegree.regularization.summary,
-#       highdegree.regularization = highdegree.regularization)
-#   }
-#   cluster.lengths = table(clusters1)
-#   clusters = names(cluster.lengths)
-#   out$num.clusters = num.clusters
-#   
-#   ## Find which set has the more predictive balance
-#   cors = rep(NA, num.clusters)
-#   Rsqs = rep(NA, num.clusters)
-#   sbp.ests = matrix(0, nrow = p, ncol = num.clusters)
-#   bal.ests = matrix(NA, nrow = n, ncol = num.clusters)
-#   rownames(sbp.ests) <- colnames(x)
-#   for(i in 1:num.clusters){ 
-#     cluster.label = as.numeric(clusters[i])
-#     index = which(clusters1 == cluster.label)
-#     if(length(index) >= 2){ # if a log-ratio can be made from the variables in this cluster
-#       ## Perform spectral clustering to get the numerator/denominator groups
-#       if(spectral.clustering.method == "kmeans"){
-#         subset = spectral.clustering.kmeans(
-#           rhoMat[index, index], n_eig = 2, reindex = TRUE, 
-#           amini.regularization = amini.regularization,
-#           amini.regularization.parameter = amini.regularization.parameter,
-#           highdegree.regularization.summary = highdegree.regularization.summary, 
-#           highdegree.regularization = highdegree.regularization)
-#       } else if(spectral.clustering.method == "cut"){
-#         subset = spectral.clustering.cut(
-#           rhoMat[index, index], reindex = TRUE, 
-#           amini.regularization = amini.regularization,
-#           amini.regularization.parameter = amini.regularization.parameter,
-#           highdegree.regularization.summary = highdegree.regularization.summary, 
-#           highdegree.regularization = highdegree.regularization)
-#       }
-#       ## calculate balance and its correlation with y
-#       sbp.ests[match(names(subset), rownames(sbp.ests)), i] = subset
-#       bal.ests[, i] = balance::balance.fromSBP(
-#         x = x, y = sbp.ests[, i, drop = FALSE])
-#     } else{ # otherwise, if there's just one variable in the cluster, set all other variables as -1
-#       sbp.ests[, i] = rep(NA, p)
-#     }
-#     cors[i] = stats::cor(bal.ests[, i], y)
-#     Rsqs[i] = cors[i]^2
-#   }
-#   out$cors = cors
-#   out$Rsqs = Rsqs
-#   # The correct active set should have largest correlation magnitude, i.e. Rsq.
-#   ## We refit the linear model on the balance from the set with the 
-#   ##    largest correlation magnitude.
-#   selected.cluster = which.max(Rsqs)
-#   out$index = sbp.ests[, selected.cluster]
-#   refit_data = data.frame(V1 = bal.ests[, selected.cluster], y = y)
-#   if(!classification){
-#     refit <- lm(y~V1, data = refit_data)
-#   } else{
-#     refit = stats::glm(
-#       y~V1, data = refit_data, family = binomial(link = "logit"))
-#   }
-#   out$model <- refit
-#   
-#   # return the full SBP vector (with entries for all p variables)
-#   full.sbp.est = sbp.ests[, selected.cluster, drop = FALSE]
-#   rownames(full.sbp.est) = colnames(x)
-#   out$sbp = full.sbp.est
-#   
-#   # return the slr object
-#   return(out)
-# }
 
 

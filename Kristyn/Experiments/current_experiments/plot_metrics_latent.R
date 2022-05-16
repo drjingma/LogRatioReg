@@ -6,7 +6,7 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_slrs"
+output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics"
 
 source("Kristyn/Functions/util.R")
 
@@ -32,7 +32,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 0.5 # 1, 0.5, 0.25
+b1 = 0.25 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 
@@ -134,10 +134,29 @@ slr_0.01_sims.gg =
                names_to = "Metric") %>%
   mutate("Method" = "slr-0.01")
 ###
+selbal_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "selbal")
+codacore_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(codacore_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "codacore")
+lrlasso_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "lrlasso")
+###
 data.gg = rbind(
   classo_sims.gg,
   slr_0.05_sims.gg, 
-  slr_0.01_sims.gg
+  slr_0.01_sims.gg, 
+  selbal_sims.gg, 
+  codacore_sims.gg, 
+  lrlasso_sims.gg
 ) %>%
   mutate(
     Metric = factor(

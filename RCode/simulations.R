@@ -1,15 +1,12 @@
 rm(list=ls())
 
-## Last update: 2022-05-13
-today <- '20220513'
+today <- '20220517'
 
 jid <- 2
 set.seed(jid)
 # devtools::install_github(repo = "malucalle/selbal")
 # library(selbal)
-# library(philr)
 # library(propr)
-# library(balance)
 library(tidyverse)
 library(cowplot)
 theme_set(theme_cowplot())
@@ -32,8 +29,8 @@ p <- 50    # number of variables
 n <- 100   # number of samples
 sigy <- 0.5   # noise level in regression
 sigx <- 0.5   # noise level in covariates
-r <- 3
-s <- 3
+r <- 1
+s <- 4
 
 
 # Generate x ----
@@ -122,26 +119,26 @@ print(df.psi)
 kmeans(Lhat.psi.eig$vectors[,1:3],centers=3,nstart=10)$cluster
 
 
-What <- max(rhoMat) - rhoMat
-pheatmap(What,show_colnames = T, show_rownames = T,
+What.rho <- max(rhoMat) - rhoMat
+pheatmap(What.rho,show_colnames = T, show_rownames = T,
          cluster_rows = F, cluster_cols = F,
          main = 'Heatmap of the original correlation')
 
-What.eig <- eigen(What)
-Lhat <- graph.laplacian(What,zeta=0.1)
-Lhat.eig <- eigen(Lhat)
-plot(Lhat.eig$values)
+What.rho.eig <- eigen(What.rho)
+Lhat.rho <- graph.laplacian(What.rho,zeta=0.1)
+Lhat.rho.eig <- eigen(Lhat.rho)
+plot(Lhat.rho.eig$values)
 
-dfhat <- data.frame('1'=Lhat.eig$vectors[,1],
-                    '2'=Lhat.eig$vectors[,2],
-                    '3'=Lhat.eig$vectors[,3]) %>%
+df.rho <- data.frame('1'=Lhat.rho.eig$vectors[,1],
+                        '2'=Lhat.rho.eig$vectors[,2],
+                        '3'=Lhat.rho.eig$vectors[,3]) %>%
   reshape2::melt() %>%
   ggplot(aes(x=rep(1:p,3),y=value)) + geom_point() +
   facet_wrap(~variable)
-print(dfhat)
+print(df.rho)
 
-cl <- kmeans(Lhat.eig$vectors[,1:3],centers=3,nstart=10)$cluster
-# kmeans(Lhat.eig$vectors[,1:2],centers=2,nstart=10)$cluster
+cl <- kmeans(Lhat.rho.eig$vectors[,1:3],centers=3,nstart=10)$cluster
+# kmeans(Lhat.rho.eig$vectors[,1:2],centers=2,nstart=10)$cluster
 
 
 ## Build balance from these three subsets
@@ -174,6 +171,7 @@ object.wald$threshold.min
 fit.wald <- slr(x,y,method='wald',response.type = 'continuous',threshold = object.wald$threshold.1se,s0.perc = 0)
 fit.wald$sbp
 
-# object.wald <- cv.slr(x,yb,method='wald',response.type = 'binary', threshold = NULL,s0.perc = 0)
-# fit.wald <- slr(x,yb,method='wald',response.type = 'binary', threshold = object.wald$threshold.1se,s0.perc = 0)
+object.wald <- cv.slr(x,yb,method='wald',response.type = 'binary', threshold = NULL,s0.perc = 0)
+fit.wald <- slr(x,yb,method='wald',response.type = 'binary', threshold = object.wald$threshold.1se,s0.perc = 0)
+fit.wald$sbp
 

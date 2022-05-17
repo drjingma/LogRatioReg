@@ -2,24 +2,13 @@
 
 This repo provides code, data, and references for the supervised log-ratio project. 
 
-## To-dos 04/18
+## To-dos 05/18
 
-- When variables are correlated, two iterations of spectral clustering may not correctly identify active variables. There may be too many false positives. Explore the correlation matrix in several real data examples and suggest ways of determining the number of binary splits needed. Can we use cross-validation to determine the number of binary splits?
+- Explore a new method that combines feature screening and spectral clustering
 
-- Inform a more realistic simulation design based on the correlation observed in real data.
+- Use the Crohn's data set to study classification problems
 
 - Consider an example with 2 latent variables.
-
-- Regularization helps in spectral clustering using K-means. Explore whether different regularization can help deal with the unbalanced balance case.  
-        
-        * Current results suggest that high-degree regularization does not seem to help with unbalanced balance regression, but could this be due to the choice of weights? How do the current weights impact the similarity matrix? 
-        * Uniform regularization to all entries of the similarity matrix and low-rank approximation together yields better performance than using either alone.
-
-- Spectral clustering is only optimal on population similarity matrix. What is the most appropriate low-rank regularization? Should we apply low-rank approximation to the Laplacian instead?
-
-## Other Issues
-
-- How to address the unbalanced balance issue? 
 
 **RCode**
 

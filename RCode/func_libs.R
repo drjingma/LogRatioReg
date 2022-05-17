@@ -1,127 +1,127 @@
-library(gdata)
-library(glmnet)
-library(Rcpp)
-library(dirmult)
-library(MGLM)
+# library(gdata)
+# library(glmnet)
+# library(Rcpp)
+# library(dirmult)
+# library(MGLM)
 library(MASS)
 library(compositions)
 library(matrixStats)
-# source("COAT-master/coat.R")
-# solves t(beta)%*%xx%*%beta/2 - t(xy)%*%beta + fac||beta||_1 
-#or ||X%*%bet-y||_2^2/2 + fac||beta||_1 with xx=crossprod(X), xy=crossprod(x,y)
-# subject to t(cmat)%*%beta=0
-cppFunction('NumericVector ConstrLassoC0(NumericVector betstart, NumericMatrix xx, NumericVector xy, NumericMatrix cmat, double fac, int maxiter, double tol){
-int p = xx.nrow();
-int m = cmat.ncol();
-NumericVector bet(p);
-NumericVector bet_old(p);
-NumericVector ksi(m);
-NumericVector ksi_old(m);
-NumericMatrix xxcc(p,p);
-double tmp;
-double tmp2;
-double fac2;
-double myabs;
-int mysgn;
-int iter;
-int iter2;
-int k;
-double eps;
-double eps2;
-LogicalVector nonzero(p);
-IntegerVector ind(p);
-
-
-for (int i=0; i<p; i++){
-    bet[i] = betstart[i];
-    nonzero[i] = xx(i,i)>0;
-    ind[i] = i;
-}
-
-for (int i=0; i<m; i++){
-    ksi[i] = 0;
-}
-
-for (int i=0; i<p; i++){
-    for (int j=0; j<p; j++){
-        xxcc(i,j) = xx(i,j);
-        for (int ij=0; ij<m; ij++){
-            xxcc(i,j) += cmat(i,ij)*cmat(j,ij);
-        }
-    }
-}
-
-iter2 = 1;
-eps2 = 1;
-while (eps2>tol & iter2<maxiter){
-    iter = 1;
-    eps = 1;
-    while (eps>tol & iter<maxiter){
-        for (int i=0; i<p; i++){
-            bet_old[i] = bet[i];
-        }
-        std::random_shuffle(ind.begin(), ind.end());
-        for (int i=0; i<p; i++){
-            k = ind[i];
-            if(nonzero[k]){
-                fac2 = fac/xxcc(k,k);
-                tmp = 0;
-                for (int j=0; j<p; j++){
-                    tmp += xxcc(k,j)*bet[j];
-                }
-                tmp = tmp - xxcc(k,k)*bet[k];
-                tmp2 = 0;
-                for (int j=0; j<m; j++){
-                    tmp2 += cmat(k,j)*ksi[j];
-                }
-                tmp = (xy[k] - tmp2 - tmp)/xxcc(k,k);
-                if (tmp>0){
-                    mysgn = 1;
-                    myabs = tmp;
-                }else if (tmp<0){
-                    mysgn = -1;
-                    myabs = -tmp;
-                }else{
-                    mysgn = 0;
-                    myabs = 0;
-                }
-                if (myabs > fac2){
-                    bet[k] = mysgn*(myabs - fac2);
-                }else{
-                    bet[k] = 0;
-                }
-            }else{
-                 bet[k] = 0;
-            }
-        }
-        eps = 0;
-        for (int i=0; i<p; i++){
-            eps += pow(bet[i] - bet_old[i], 2.0);
-        }
-        eps = sqrt(eps);
-        iter += 1;
-    }
-    for (int i=0; i<m; i++){
-        ksi_old[i] = ksi[i];
-        for (int j=0; j<p; j++){
-            ksi[i] += cmat(j,i)*bet[j];
-        }
-    }
-    eps2 = 0;
-    for (int j=0; j<m; j++){
-        eps2 += pow(ksi[j] - ksi_old[j], 2.0);
-    }
-    eps2 = sqrt(eps2);
-    iter2 += 1;  
-}
-if(iter2==maxiter){
-    for (int i=0; i<p; i++){
-        bet[i] = 0;
-    }
-}
-return bet;
-}')
-
+# # source("COAT-master/coat.R")
+# # solves t(beta)%*%xx%*%beta/2 - t(xy)%*%beta + fac||beta||_1 
+# #or ||X%*%bet-y||_2^2/2 + fac||beta||_1 with xx=crossprod(X), xy=crossprod(x,y)
+# # subject to t(cmat)%*%beta=0
+# cppFunction('NumericVector ConstrLassoC0(NumericVector betstart, NumericMatrix xx, NumericVector xy, NumericMatrix cmat, double fac, int maxiter, double tol){
+# int p = xx.nrow();
+# int m = cmat.ncol();
+# NumericVector bet(p);
+# NumericVector bet_old(p);
+# NumericVector ksi(m);
+# NumericVector ksi_old(m);
+# NumericMatrix xxcc(p,p);
+# double tmp;
+# double tmp2;
+# double fac2;
+# double myabs;
+# int mysgn;
+# int iter;
+# int iter2;
+# int k;
+# double eps;
+# double eps2;
+# LogicalVector nonzero(p);
+# IntegerVector ind(p);
+# 
+# 
+# for (int i=0; i<p; i++){
+#     bet[i] = betstart[i];
+#     nonzero[i] = xx(i,i)>0;
+#     ind[i] = i;
+# }
+# 
+# for (int i=0; i<m; i++){
+#     ksi[i] = 0;
+# }
+# 
+# for (int i=0; i<p; i++){
+#     for (int j=0; j<p; j++){
+#         xxcc(i,j) = xx(i,j);
+#         for (int ij=0; ij<m; ij++){
+#             xxcc(i,j) += cmat(i,ij)*cmat(j,ij);
+#         }
+#     }
+# }
+# 
+# iter2 = 1;
+# eps2 = 1;
+# while (eps2>tol & iter2<maxiter){
+#     iter = 1;
+#     eps = 1;
+#     while (eps>tol & iter<maxiter){
+#         for (int i=0; i<p; i++){
+#             bet_old[i] = bet[i];
+#         }
+#         std::random_shuffle(ind.begin(), ind.end());
+#         for (int i=0; i<p; i++){
+#             k = ind[i];
+#             if(nonzero[k]){
+#                 fac2 = fac/xxcc(k,k);
+#                 tmp = 0;
+#                 for (int j=0; j<p; j++){
+#                     tmp += xxcc(k,j)*bet[j];
+#                 }
+#                 tmp = tmp - xxcc(k,k)*bet[k];
+#                 tmp2 = 0;
+#                 for (int j=0; j<m; j++){
+#                     tmp2 += cmat(k,j)*ksi[j];
+#                 }
+#                 tmp = (xy[k] - tmp2 - tmp)/xxcc(k,k);
+#                 if (tmp>0){
+#                     mysgn = 1;
+#                     myabs = tmp;
+#                 }else if (tmp<0){
+#                     mysgn = -1;
+#                     myabs = -tmp;
+#                 }else{
+#                     mysgn = 0;
+#                     myabs = 0;
+#                 }
+#                 if (myabs > fac2){
+#                     bet[k] = mysgn*(myabs - fac2);
+#                 }else{
+#                     bet[k] = 0;
+#                 }
+#             }else{
+#                  bet[k] = 0;
+#             }
+#         }
+#         eps = 0;
+#         for (int i=0; i<p; i++){
+#             eps += pow(bet[i] - bet_old[i], 2.0);
+#         }
+#         eps = sqrt(eps);
+#         iter += 1;
+#     }
+#     for (int i=0; i<m; i++){
+#         ksi_old[i] = ksi[i];
+#         for (int j=0; j<p; j++){
+#             ksi[i] += cmat(j,i)*bet[j];
+#         }
+#     }
+#     eps2 = 0;
+#     for (int j=0; j<m; j++){
+#         eps2 += pow(ksi[j] - ksi_old[j], 2.0);
+#     }
+#     eps2 = sqrt(eps2);
+#     iter2 += 1;  
+# }
+# if(iter2==maxiter){
+#     for (int i=0; i<p; i++){
+#         bet[i] = 0;
+#     }
+# }
+# return bet;
+# }')
+# 
 
 ## ---- Constrained Lasso ----
 
@@ -418,7 +418,46 @@ clr <- function(x, base=exp(1)){
   x[!is.finite(x) | is.na(x)] <- 0.0
   return(x)
 }
+#' Function to double center a given matrix
+#' @param M a matrix of dimension n by n
+#' @return a double centered matrix
+GowerCentering <- function(M){
+  d = dim(M); n = d[1]
+  II = matrix(1,n,n)
+  Mgc = (diag(n)-(1/n)*II)%*%M%*%(diag(n)-(1/n)*II)
+}
 
+# Function to compute the population correlation matrix
+popGammajk = function(
+  alpha1j, alpha1k, beta1, var_epsilon, var_epsilonj, var_epsilonk, U){
+  varU = stats::var(U) #(1 / 12) * (0.5 - (-0.5))
+  corrjk = ((alpha1j - alpha1k) * beta1 * varU) / 
+    sqrt((beta1^2 * varU + var_epsilon) * 
+           ((alpha1j - alpha1k)^2 * varU + var_epsilonj + var_epsilonk))
+  return(abs(corrjk))
+}
+popGamma = function(
+  alpha1, beta1, var_epsilon, var_epsilon2, U
+){
+  p = length(alpha1)
+  if(length(var_epsilon2) == 1) var_epsilon2 = rep(var_epsilon2, p)
+  
+  rhoMat = matrix(0, p, p)
+  for (j in 1:p){
+    for (k in 1:p){
+      if (k==j){next}
+      else {
+        rhoMat[j, k] = popGammajk(
+          alpha1j = alpha1[j], alpha1k = alpha1[k], beta1 = beta1, 
+          var_epsilon = var_epsilon, var_epsilonj = var_epsilon2[j], 
+          var_epsilonk = var_epsilon2[k], U = U)
+      }
+    }
+  }
+  return(rhoMat)
+}
+
+# Function to compute the graph Laplacian
 graph.laplacian <- function(W, normalized = TRUE, zeta=0.01){
   stopifnot(nrow(W) == ncol(W)) 
   
@@ -436,18 +475,41 @@ graph.laplacian <- function(W, normalized = TRUE, zeta=0.01){
 }
 
 #' @param n_eig Number of clusters/eigenvectors to obtain
-spectral.clustering <- function(W, n_eig = 2) {
-  L = graph.laplacian(W)          # 2. compute graph laplacian
-  ei = eigen(L, symmetric = TRUE) # 3. Compute the eigenvectors and values of L
-  # we will use k-means to cluster the data
-  # using the leading eigenvalues in absolute values
+spectral.clustering <- function(W, n_eig = 2, zeta = 0) {
+  L = graph.laplacian(W,zeta = zeta) # compute graph Laplacian
+  ei = eigen(L, symmetric = TRUE)    # Compute the eigenvectors and values of L
+  # we will use k-means to cluster the eigenvectors corresponding to
+  # the leading smallest eigenvalues
   ei$vectors <- ei$vectors[,base::order(abs(ei$values),decreasing=TRUE)]
-  obj <- kmeans(ei$vectors[, 2:n_eig], centers = n_eig, nstart = 100)
+  obj <- kmeans(ei$vectors[, 1:n_eig], centers = n_eig, nstart = 100, algorithm = "Lloyd")
   if (n_eig==2){
     cl <- 2*(obj$cluster - 1) - 1 
   } else {
     cl <- obj$cluster
   }
+  names(cl) <- rownames(W)
+  # return the cluster membership
+  return(cl) 
+}
+
+spectral.clustering.sign <- function(W, n_eig = 2, zeta=0, normalized=TRUE) {
+  stopifnot(nrow(W) == ncol(W)) 
+  
+  n = nrow(W)    # number of vertices
+  # We perturb the network by adding some links with low edge weights
+  W <- W + zeta * mean(colSums(W))/n * tcrossprod(rep(1,n))
+  g <- colSums(W) # degrees of vertices
+  
+  if(normalized){
+    D_half = diag(1 / sqrt(g) )
+    L = diag(n) - D_half %*% W %*% D_half
+  } else {
+    L = diag(g) - W 
+  }
+  ei = eigen(L, symmetric = TRUE) # 3. Compute the eigenvectors and values of L
+  # we will use sign of the eigenvectors corresponding to the 2nd smallest eigenvalue
+  ei$vectors <- ei$vectors[,base::order(ei$values,decreasing=FALSE)]
+  cl <- 2*(ei$vectors[, 2]>0)-1
   names(cl) <- rownames(W)
   # return the cluster membership
   return(cl) 
@@ -772,7 +834,7 @@ getSupervisedTree = function(y, X, linkage = "average", rho.type = "square"){
 }
 #' Transform Samples with the ilr of a Balance
 #'
-#' @param x A matrix with rows as samples (N) and columns as components (D).
+#' @param x A relative abundance matrix with rows as samples (N) and columns as components (D).
 #' @param contrast A vector. One column of a serial binary partition matrix
 #'  with values [-1, 0, 1] describing D components.
 #'
@@ -782,15 +844,14 @@ slr.fromContrast <- function(x, contrast){
   if(length(contrast) != ncol(x)) stop("Contrast must have length ncol(x) = D.")
   if(any(!contrast %in% c(-1, 0, 1))) stop("Contrast must contain [-1, 0, 1] only.")
   
-  lpos <- sum(contrast == 1)
-  lneg <- sum(contrast == -1)
-  const <- sqrt((lpos*lneg)/(lpos+lneg))
+  # lpos <- sum(contrast == 1)
+  # lneg <- sum(contrast == -1)
+  # const <- sqrt((lpos*lneg)/(lpos+lneg))
+  logX <- log(x)
+  ipos <- rowMeans(logX[, contrast == 1, drop = FALSE])
+  ineg <- rowMeans(logX[, contrast == -1, drop = FALSE])
   
-  # logX <- log(x)
-  ipos <- rowSums(x[, contrast == 1, drop = FALSE])
-  ineg <- rowSums(x[, contrast == -1, drop = FALSE])
-  
-  log(ipos / ineg)
+  ipos - ineg
 }
 
 #' Compute Balances from an SBP Matrix

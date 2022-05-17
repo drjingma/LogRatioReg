@@ -10,6 +10,13 @@
 #   const * contrast
 # }
 
+## Potential to speed up the SLR function: do not need to evaluate the feature score each time
+
+alrinv <- function(y) {
+  x <- cbind(exp(y),1)
+  x / rowSums(x)
+}
+
 #' Updated: this version first screens variables and then constructs the balance on the Aitchison similarity. 
 #' @param x a sample by feature data matrix. Note x cannot have zero values.
 #' @param y an n by 1 response variable: continuous or binary
@@ -35,17 +42,15 @@ slr = function(
   ## Compute univariate coefficient 
   xclr <- apply(x,1,function(a) log(a) - mean(log(a)))
   if (method=='wald'){
-    # xclr.centered <- scale(t(xclr),center=TRUE,scale=F)
+    xclr.centered <- scale(t(xclr),center=TRUE,scale=TRUE)
     if (response.type=='continuous'){
-      # y.centered <- y - mean(y)
-      fit <- lm(y~x, data=data.frame(x=xclr[,2],y=y))
-      coef(summary(fit))[2,3]
-      sxx <- diag(crossprod(xclr))
+      y.centered <- y - mean(y)
+      sxx <- diag(crossprod(xclr.centered))
       sxy <- crossprod(xclr.centered,y.centered)
-      syy <- sum((y-mean(y))^2)
+      syy <- sum(y.centered^2)
       numer <- sxy/sxx
       sd <- sqrt((syy/sxx - numer^2)/(n - 2)) # variance estimate
-      
+
       if (is.null(s0.perc)) {
         fudge <- median(sd)
       }
@@ -58,13 +63,15 @@ slr = function(
         }
       }
       feature.scores <- numer/(sd + fudge) # this is the wald-statistic 
+      feature.scores <- stats::pt(abs(feature.scores),df=n-2) # t-distribution with n-2 df
     } else if (response.type=='binary'){
-      for (j in 1:ncol(xclr)){
+      feature.scores <- rep(0,ncol(xclr.centered))
+      for (j in 1:ncol(xclr.centered)){
         fit <- glm(y~x,data=data.frame(x=xclr.centered[,j],y=as.factor(y)),family=binomial(link='logit'))
-        feature.scores <- coef(summary(fit))[2,3]
+        feature.scores[j] <- coef(summary(fit))[2,3]
       }
+      feature.scores <- stats::pnorm(abs(feature.scores))
     }
-    feature.scores <- pchisq(feature.scores^2,df=1)
   }
   if (method=='correlation'){
     feature.scores <- cor(t(xclr),y)
@@ -72,7 +79,6 @@ slr = function(
   
   which.features <- (abs(feature.scores) >= threshold)
   if (sum(which.features)<2){
-    # warning('Not enough features are left for clustering!')
     # Fit an intercept only regression model 
     if (response.type=='binary'){
       model.train <- glm(y~.,data=data.frame(y=as.factor(y)),family=binomial(link='logit'))
@@ -82,7 +88,6 @@ slr = function(
     object <- list(sbp=NULL)
   } else {
     x.reduced <- x[,which.features] # reduced data matrix
-    # print(colnames(x.reduced))
     p <- ncol(x.reduced)
     Aitchison.variation <- matrix(0,p,p)
     rownames(Aitchison.variation) <- colnames(Aitchison.variation) <- colnames(x.reduced)
@@ -95,7 +100,6 @@ slr = function(
       }
     }
     Aitchison.similarity <- max(Aitchison.variation) - Aitchison.variation 
-    # print(Aitchison.similarity)
     ## Perform spectral clustering
     sbp.est <- spectral.clustering(Aitchison.similarity,zeta = zeta)
     balance <- slr.fromContrast(x.reduced,sbp.est)
@@ -108,6 +112,7 @@ slr = function(
     }
     object <- list(sbp = sbp.est)
   }
+  object$feature.scores <- feature.scores 
   object$theta <- as.numeric(coefficients(model.train))
   object$fit <- model.train
   
@@ -128,7 +133,7 @@ predict.slr <- function(object,newdata = NULL,response.type=c('survival','contin
       new.balance <- slr.fromContrast(newdata.reduced,object$sbp)
       if (response.type=='binary'){
         fitted.results <- predict(object$fit,newdata=data.frame(balance=new.balance),type='response')
-        predictor <- ifelse(fitted.results > 0.5,1,-1)
+        predictor <- ifelse(fitted.results > 0.5,1,0)
       } else if (response.type=='continuous'){
         predictor <- cbind(1,new.balance) %*% object$theta
       }
@@ -167,25 +172,52 @@ getOptcv <- function(threshold, cvm, cvsd){
 
 cv.slr <- function(x,y,method=c('correlation','wald'),
                    response.type=c('survival','continuous','binary'),
-                   threshold=NULL,s0.perc=NULL,
+                   threshold=NULL,s0.perc=NULL,zeta=0,
                    nfolds=10,foldid=NULL,weights=NULL,
                    type.measure = c("default", "mse", "deviance", "class", "auc", "mae", "C"),
                    parallel=FALSE,scale=FALSE,trace.it=TRUE){
   type.measure = match.arg(type.measure)
-  N = nrow(x)
+  N <- nrow(x)
+  p <- ncol(x)
   
   if (is.null(weights))
     weights <- rep(1,N)
   
   if (is.null(threshold)) {
+    xclr <- apply(x,1,function(a) log(a) - mean(log(a)))
+    xclr.centered <- base::scale(t(xclr),center=TRUE, scale=TRUE)
     # determine threshold based on univariate score statistics or correlations    
     if (method=='correlation'){
-      threshold = cor(x,y)    
+      threshold = sort(abs(cor(xclr.centered,as.numeric(y))))
     } else if (method=='wald'){
       if (response.type=='continuous'){
+        y.centered <- y - mean(y)
+        sxx <- diag(crossprod(xclr.centered))
+        sxy <- crossprod(xclr.centered,y.centered)
+        syy <- sum(y.centered^2)
+        numer <- sxy/sxx
+        sd <- sqrt((syy/sxx - numer^2)/(n - 2)) # variance estimate
         
+        if (is.null(s0.perc)) {
+          fudge <- median(sd)
+        }
+        if (!is.null(s0.perc)) {
+          if (s0.perc >= 0) {
+            fudge <- quantile(sd, s0.perc)
+          }
+          if (s0.perc < 0) {
+            fudge <- 0
+          }
+        }
+        feature.scores <- numer/(sd + fudge) # this is the wald-statistic
+        threshold <- sort(stats::pt(abs(feature.scores),df=n-2))
       } else if (response.type=='binary'){
-        
+        feature.scores <- rep(0,p)
+        for (j in 1:p){
+          fit <- glm(y~x,data=data.frame(x=xclr.centered[,j],y=as.factor(y)),family=binomial(link='logit'))
+          feature.scores[j] <- coef(summary(fit))[2,3]
+        }
+        threshold <- sort(stats::pnorm(abs(feature.scores)))
       }
     }
   }
@@ -223,7 +255,7 @@ cv.slr <- function(x,y,method=c('correlation','wald'),
       x_in <- x[which, ,drop=FALSE]
       x_sub <- x[!which, ,drop=FALSE]
       y_sub <- y[!which]
-      outlist[[i]] <- lapply(threshold, function(l) slr(x_sub,y_sub,method=method,response.type = response.type,s0.perc=s0.perc,l))
+      outlist[[i]] <- lapply(threshold, function(l) slr(x_sub,y_sub,method=method,response.type = response.type,threshold=l,s0.perc=s0.perc,zeta = zeta))
     }# end loop i
   }
   

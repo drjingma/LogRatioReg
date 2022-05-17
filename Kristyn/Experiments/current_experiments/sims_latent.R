@@ -1,10 +1,10 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 5/11/2022
+# Date: 3/7/2022
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics"
+output_dir = "Kristyn/Experiments/current_experiments/outputs"
 
 # set up parallelization
 library(foreach)
@@ -38,10 +38,22 @@ res = foreach(
   library(glmnet)
   
   library(balance)
+  library(propr)
   
   source("RCode/func_libs.R")
-  source("Kristyn/Functions/slr.R")
-  source("Kristyn/Functions/util.R")
+  source("Kristyn/Functions/supervisedlogratios.R")
+  source("Kristyn/Functions/supervisedlogratioseta.R")
+  source("Kristyn/Functions/HSClust.R")
+  source("Kristyn/Functions/slrnew.R")
+  
+  # helper functions
+  source("Kristyn/Functions/metrics.R")
+  source("Kristyn/Functions/helper_functions.R")
+  
+  # for plots
+  library(ggraph) # make dendrogram
+  library(igraph) # transform dataframe to graph object: graph_from_data_frame()
+  library(tidygraph)
   
   # Tuning parameters###########################################################
   
@@ -55,15 +67,14 @@ res = foreach(
   intercept = TRUE
   scaling = TRUE
   tol = 1e-4
-  sigma_eps1 = 0.1 # sigma (for y)
-  sigma_eps2 = 0.1 # sigma_j (for x)
-  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  sigma_eps1 = 0.1
+  sigma_eps2 = 0.1
+  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 0.5 # 1, 0.5, 0.25
+  b1 = 1 # 1, 0.5, 0.25
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   
@@ -115,31 +126,20 @@ res = foreach(
   beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
     as.vector(ilrtrans.true$ilr.trans)
   
-  saveRDS(list(
-    X = X, Y = Y, X.test = X.test, Y.test = Y.test, 
-    SBP.true = SBP.true, beta.true = beta.true, 
-    is0.beta = is0.beta, non0.beta = non0.beta
-  ),
-  paste0(output_dir, "/data", file.end))
-  
   ##############################################################################
-  # compositional lasso
-  # -- fits a linear log contrast model
+  # compositional lasso (a linear log contrast method)
   ##############################################################################
   start.time = Sys.time()
   classo = cv.func(
-    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
-    nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
-    scaling = scaling)
+    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), nlam = nlam,
+    nfolds = K, tol = tol, intercept = intercept, scaling = scaling)
   end.time = Sys.time()
   cl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  # cl.lam.idx = which.min(classo$cvm)
-  oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
-  cl.lam.idx = which(classo$cvm <= oneSErule)[1]
-  cl.a0 = classo$int[cl.lam.idx]
-  cl.betahat = classo$bet[, cl.lam.idx]
+  cl.lam.min.idx = which.min(classo$cvm)
+  cl.a0 = classo$int[cl.lam.min.idx]
+  cl.betahat = classo$bet[, cl.lam.min.idx]
   
   # compute metrics on the selected model #
   cl.metrics = getMetricsLLC(
@@ -155,118 +155,144 @@ res = foreach(
     cl.metrics,
     "betasparsity" = bspars,
     "logratios" = 0,
-    "time" = cl.timing, 
-    "adhoc" = NA
+    "time" = cl.timing
   ),
-  paste0(output_dir, "/classo_metrics", file.end))
+  paste0(output_dir, "/metrics", "/classo_metrics", file.end))
   
   ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   alpha = 0.05
-  # -- fits a balance regression model with one balance
+  # new slr method (a balance regression method)
+  #   -- hierarchical spectral clustering (with rank 1 approximation)
   ##############################################################################
   start.time = Sys.time()
-  slr0.05 = slr(
-    x = X, y = Y, alpha = 0.05)
+  slrnew = slr(x = X, y = Y, rank1approx = TRUE)
   end.time = Sys.time()
-  slr0.05.timing = difftime(
+  slrnew.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slr0.05.coefs = getCoefsBM(
-    coefs = coefficients(slr0.05$model), sbp = slr0.05$sbp)
+  slrnew_activevars = names(slrnew$index)
+  slrnew_SBP = matrix(slrnew$index)
+  rownames(slrnew_SBP) = slrnew_activevars
+  
+  slrnew.coefs = coefficients(slrnew$model)
+  slrnew.a0 = slrnew.coefs[1]
+  slrnew.thetahat = slrnew.coefs[-1]
+  
+  slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
+  slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+  rownames(slrnew.betahat) = colnames(X)
+  slrnew.betahat[slrnew_activevars, ] =
+    as.numeric(slrnew.betahat.nonzero)
   
   # compute metrics on the selected model #
-  slr0.05.metrics = getMetricsBM(
+  slrnew.metrics = getMetricsBalanceReg(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0.05$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0.05$sbp),
+    ilrX.train = getIlrX(X[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
+    ilrX.test = getIlrX(X.test[, slrnew_activevars, drop = FALSE], sbp = slrnew_SBP),
     n.train = n, n.test = n,
-    thetahat0 = slr0.05.coefs$a0, thetahat = slr0.05.coefs$bm.coefs,
-    betahat = slr0.05.coefs$llc.coefs,
+    thetahat0 = slrnew.a0, thetahat = slrnew.thetahat, betahat = slrnew.betahat,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slr0.05.metrics,
+    slrnew.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slr0.05.coefs$bm.coefs != 0),
-    "time" = slr0.05.timing, 
-    "adhoc" = slr0.05$adhoc.invoked
+    "logratios" = sum(slrnew.thetahat != 0), 
+    "time" = slrnew.timing
   ),
-  paste0(output_dir, "/slr_alpha0.05_metrics", file.end))
+  paste0(output_dir, "/metrics", "/slr_approx_metrics", file.end))
   
   ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   alpha = 0.01
-  # -- fits a balance regression model with one balance
+  # new slr method (a balance regression method)
+  #   -- hierarchical spectral clustering (without rank 1 approximation)
   ##############################################################################
   start.time = Sys.time()
-  slr0.01 = slr(x = X, y = Y, alpha = 0.01)
+  slrnew2 = slr(x = X, y = Y, rank1approx = FALSE)
   end.time = Sys.time()
-  slr0.01.timing = difftime(
+  slrnew2.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slr0.01.coefs = getCoefsBM(
-    coefs = coefficients(slr0.01$model), sbp = slr0.01$sbp)
+  slrnew2_activevars = names(slrnew2$index)
+  slrnew2_SBP = matrix(slrnew2$index)
+  rownames(slrnew2_SBP) = slrnew2_activevars
+  
+  slrnew2.coefs = coefficients(slrnew2$model)
+  slrnew2.a0 = slrnew2.coefs[1]
+  slrnew2.thetahat = slrnew2.coefs[-1]
+  
+  slrnew2.betahat.nonzero = getBetaFromTheta(slrnew2.thetahat, sbp = slrnew2_SBP)
+  slrnew2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
+  rownames(slrnew2.betahat) = colnames(X)
+  slrnew2.betahat[slrnew2_activevars, ] =
+    as.numeric(slrnew2.betahat.nonzero)
   
   # compute metrics on the selected model #
-  slr0.01.metrics = getMetricsBM(
+  slrnew2.metrics = getMetricsBalanceReg(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0.01$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0.01$sbp),
+    ilrX.train = getIlrX(X[, slrnew2_activevars, drop = FALSE], sbp = slrnew2_SBP),
+    ilrX.test = getIlrX(X.test[, slrnew2_activevars, drop = FALSE], sbp = slrnew2_SBP),
     n.train = n, n.test = n,
-    thetahat0 = slr0.01.coefs$a0, thetahat = slr0.01.coefs$bm.coefs,
-    betahat = slr0.01.coefs$llc.coefs,
+    thetahat0 = slrnew2.a0, thetahat = slrnew2.thetahat, betahat = slrnew2.betahat,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slr0.01.metrics,
+    slrnew2.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slr0.01.coefs$bm.coefs != 0),
-    "time" = slr0.01.timing, 
-    "adhoc" = slr0.01$adhoc.invoked
+    "logratios" = sum(slrnew2.thetahat != 0), 
+    "time" = slrnew2.timing
   ),
-  paste0(output_dir, "/slr_alpha0.01_metrics", file.end))
+  paste0(output_dir, "/metrics", "/slr_metrics", file.end))
   
   ##############################################################################
   # selbal method (a balance regression method)
   ##############################################################################
   library(selbal) # masks stats::cor()
-  slbl.data = getSelbalData(X = X, y = Y, classification = FALSE)
+  
+  X.slbl = X
+  rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
+  colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
   
   start.time = Sys.time()
-  slbl = selbal.cv(x = slbl.data$X, y = slbl.data$y, n.fold = K)
+  slbl = selbal.cv(x = X.slbl, y = as.vector(Y), n.fold = K)
   end.time = Sys.time()
   slbl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slbl.coefs = getCoefsSelbal(
-    X = slbl.data$X, y = slbl.data$y, selbal.fit = slbl, classification = FALSE, 
-    check = TRUE)
-  # slbl.thetahat = coefficients(slbl$glm)[-1]
-  # slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
+  # U (transformation) matrix
+  U.slbl = rep(0, p)
+  names(U.slbl) = colnames(X.slbl)
+  pba.pos = unlist(subset(
+    slbl$global.balance, subset = Group == "NUM", select = Taxa))
+  num.pos = length(pba.pos)
+  pba.neg = unlist(subset(
+    slbl$global.balance, subset = Group == "DEN", select = Taxa))
+  num.neg = length(pba.neg)
+  U.slbl[pba.pos] = 1 / num.pos
+  U.slbl[pba.neg] = -1 / num.neg
+  norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
+  U.slbl = norm.const * U.slbl
+  # check: these are equal
+  # lm(as.vector(Y) ~ log(X) %*% as.matrix(U.slbl))
+  # slbl$glm
+  slbl.thetahat = coefficients(slbl$glm)[-1]
+  slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
   
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
   slbl.Yhat.train = predict.glm(
-    slbl$glm, 
-    newdata = data.frame(V1 = balance::balance.fromSBP(
-      x = slbl.data$X, y = slbl.coefs$sbp)), 
-    type = "response")
+    slbl$glm, newdata = data.frame(X.slbl), type = "response")
   slbl.PE.train = crossprod(Y - slbl.Yhat.train) / n
   # get prediction error on test set
-  slbl.test.data = getSelbalData(X = X.test, y = Y.test, classification = FALSE)
+  X.slbl.test = X.test
+  rownames(X.slbl.test) = paste("Sample", 1:nrow(X.slbl.test), sep = "_")
+  colnames(X.slbl.test) = paste("V", 1:ncol(X.slbl.test), sep = "")
   slbl.Yhat.test = predict.glm(
-    slbl$glm, 
-    newdata = data.frame(V1 = balance::balance.fromSBP(
-      x = slbl.test.data$X, y = slbl.coefs$sbp)), 
-    type = "response")
+    slbl$glm, newdata = data.frame(X.slbl.test), type = "response")
   slbl.PE.test = crossprod(Y.test - slbl.Yhat.test) / n
   # beta estimation accuracy, selection accuracy #
-  slbl.metrics = getMetricsBM(
-    thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
+  slbl.metrics = getMetricsBalanceReg(
+    thetahat = slbl.thetahat, betahat = slbl.betahat,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
   slbl.metrics = c(PEtr = slbl.PE.train, PEte = slbl.PE.test, slbl.metrics)
@@ -274,17 +300,21 @@ res = foreach(
   saveRDS(c(
     slbl.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slbl.coefs$bm.coefs != 0), 
-    "time" = slbl.timing, 
-    "adhoc" = NA
+    "logratios" = sum(slbl.thetahat != 0), 
+    "time" = slbl.timing
   ),
-  paste0(output_dir, "/selbal_metrics", file.end))
+  paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
   
   ##############################################################################
-  # CoDaCoRe
-  # -- fits a balance regression model with possibly multiple balances
+  # CoDaCoRe (a balance regression method)
   ##############################################################################
   library(codacore)
+  
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+  # tensorflow::install_tensorflow()
+  # keras::install_keras()
   
   start.time = Sys.time()
   codacore0 = codacore(
@@ -294,7 +324,8 @@ res = foreach(
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
+  if(length(codacore0$ensemble) > 0){
+    
     codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
     codacore0_coeffs = rep(NA, length(codacore0$ensemble))
     for(col.idx in 1:ncol(codacore0_SBP)){
@@ -334,7 +365,7 @@ res = foreach(
     
   }
   # beta estimation accuracy, selection accuracy #
-  codacore0.metrics = getMetricsBM(
+  codacore0.metrics = getMetricsBalanceReg(
     betahat = codacore0.betahat,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
@@ -345,56 +376,12 @@ res = foreach(
     codacore0.metrics,
     "betasparsity" = bspars,
     "logratios" = length(codacore0_coeffs), 
-    "time" = codacore0.timing, 
-    "adhoc" = NA
+    "time" = codacore0.timing
   ),
-  paste0(output_dir, "/codacore_metrics", file.end))
+  paste0(output_dir, "/metrics", "/codacore_metrics", file.end))
   
   ##############################################################################
-  # Log-Ratio Lasso
-  # -- regresses on pairwise log-ratios
   ##############################################################################
-  library(logratiolasso)
-  source("Kristyn/Functions/logratiolasso.R")
-  Wc = scale(log(X), center = TRUE, scale = FALSE)
-  Yc = Y - mean(Y)
-  
-  start.time = Sys.time()
-  lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
-  end.time = Sys.time()
-  lrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  lrl.Yhat.train = Wc %*% lrl$beta_min
-  lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
-  # get prediction error on test set
-  Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
-  Yc.test = Y.test - mean(Y.test)
-  lrl.Yhat.test = Wc.test %*% lrl$beta_min
-  lrl.PE.test = crossprod(Y - lrl.Yhat.test) / n
-  
-  # beta estimation accuracy, selection accuracy #
-  lrl.metrics = getMetricsBM(
-    betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  lrl.metrics = c(
-    PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
-  
-  saveRDS(c(
-    lrl.metrics,
-    "betasparsity" = bspars,
-    "logratios" = NA, 
-    "time" = lrl.timing, 
-    "adhoc" = NA
-  ),
-  paste0(output_dir, "/lrlasso_metrics", file.end))
-
-  
-  
-  
+  ##############################################################################
+  ### fin ###
 }
-

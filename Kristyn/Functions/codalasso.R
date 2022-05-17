@@ -491,7 +491,7 @@ codalasso = function(x, y, numFolds=5) {
     }
   }
   # Now implement gamma-SE rule
-  means = apply(scores, 1, mean) # take the mean over the folds
+  means = apply(scores, 1, mean)
   stds = apply(scores, 1, sd)
   oneSeRule = max(means) - stds[which.max(means)] * 1
   lambda = lambdas[means >= oneSeRule][1]

@@ -382,7 +382,7 @@ res = foreach(
   saveRDS(c(
     slbl.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slbl.thetahat != 0), 
+    "logratios" = sum(slbl.coefs$bm.coefs != 0), 
     "time" = slbl.timing
   ),
   paste0(output_dir, "/metrics", "/selbal_metrics", file.end))

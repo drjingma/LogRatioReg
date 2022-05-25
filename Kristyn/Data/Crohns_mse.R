@@ -72,6 +72,12 @@ res = foreach(
   b = 1:numSplits
 ) %dorng% {
   
+  file.end = paste0(
+    "_sim", b,
+    "_Crohns", 
+    "_gbm",
+    ".rds")
+  
   ################################################################################
   # Crohn: a data set in selbal package
   #   n = 975 samples, 
@@ -94,28 +100,34 @@ res = foreach(
   inputDim = ncol(X_gbm)
   # stratified sampling
   trainIdx = 1:numObs
-  caseIdx = sample(cut(1:sum(y), breaks=5, labels=F))
-  controlIdx = sample(cut(1:sum(1 - y), breaks=5, labels=F))
-  trainIdx[y == 1] = caseIdx
-  trainIdx[y == 0] = controlIdx
-  xTr = x[trainIdx != 1,]
-  yTr = y[trainIdx != 1,]
-  xTe = x[trainIdx == 1,]
-  yTe = y[trainIdx == 1,]
+  caseIdx = sample(cut(1:sum(Y2), breaks=5, labels=F))
+  controlIdx = sample(cut(1:sum(1 - Y2), breaks=5, labels=F))
+  trainIdx[Y2 == 1] = caseIdx
+  trainIdx[Y2 == 0] = controlIdx
+  XTr = X_gbm[trainIdx != 1,]
+  YTr = Y[trainIdx != 1,]
+  Y2Tr = Y2[trainIdx != 1,]
+  XTe = X_gbm[trainIdx == 1,]
+  YTe = Y[trainIdx == 1,]
+  Y2Te = Y2[trainIdx == 1,]
+  
+  saveRDS(list(
+    XTr = XTr, YTr = YTr, Y2Tr = Y2Tr,
+    XTe = XTe, YTe = YTe, Y2Te = Y2Te
+  ),
+  paste0(output_dir, "/data", file.end))
   
   ################################################################################
   # fit methods
   ################################################################################
   
   # classo #######################################################################
-  cl_gbm = codalasso(X_gbm, Y2, numFolds = K)
+  cl_gbm = codalasso(XTr, Y2Tr, numFolds = K)
+  
+  
   saveRDS(
     cl_gbm,
-    paste0(
-      output_dir, "/Crohns",
-      "_classo",
-      "_gbm",
-      ".rds"))
+    paste0(output_dir, "/classo", file.end))
   
   # slr -- alpha = 0.01 ##########################################################
   slr0.01 = slr(x = X_gbm, y = Y2, alpha = 0.01, classification = TRUE)

@@ -233,7 +233,7 @@ cv.slr.screen <- function(x,y,method=c('correlation','wald'),
         sxy <- crossprod(xclr.centered,y.centered)
         syy <- sum(y.centered^2)
         numer <- sxy/sxx
-        sd <- sqrt((syy/sxx - numer^2)/(n - 2)) # variance estimate
+        sd <- sqrt((syy/sxx - numer^2)/(N - 2)) # variance estimate
         
         if (is.null(s0.perc)) {
           fudge <- median(sd)

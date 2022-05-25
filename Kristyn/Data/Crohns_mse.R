@@ -13,8 +13,7 @@ library(future)
 library(doFuture)
 library(parallel)
 registerDoFuture()
-nworkers = 6
-# nworkers = detectCores() / 2
+nworkers = detectCores() / 2
 plan(multisession, workers = nworkers)
 
 library(rngtools)
@@ -23,7 +22,7 @@ rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
 
 # Other simulation settings
-numSplits = nworkers
+numSplits = 20
 
 ################################################################################
 # 80/20 train/test splits #

@@ -26,7 +26,7 @@ getSelbalData = function(X = X, y = y, classification = FALSE, levels, labels){
     }
   }
   if(classification && !is.factor(y)){
-    if(is.null(levels) | is.null(labels)){
+    if(is.null(levels) & is.null(labels)){
       stop("getSelbalData(): classification = TRUE, but levels and labels were not provided. Will let factor() choose them.")
     }
     y.slbl = factor(y, levels = levels, labels = labels)

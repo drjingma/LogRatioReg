@@ -284,6 +284,7 @@ res = foreach(
   
   ##############################################################################
   # selbal method (a balance regression method)
+  # -- fits a balance regression model with one balance
   ##############################################################################
   library(selbal) # masks stats::cor()
   slbl.data = getSelbalData(X = X, y = Y, classification = FALSE)
@@ -297,8 +298,6 @@ res = foreach(
   slbl.coefs = getCoefsSelbal(
     X = slbl.data$X, y = slbl.data$y, selbal.fit = slbl, classification = FALSE, 
     check = TRUE)
-  # slbl.thetahat = coefficients(slbl$glm)[-1]
-  # slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
   
   # compute metrics on the selected model #
   # prediction errors
@@ -341,8 +340,8 @@ res = foreach(
   
   start.time = Sys.time()
   codacore0 = codacore(
-    x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
-    objective = "regression") 
+    x = X, y = Y, logRatioType = "ILR",
+    objective = "regression", cvParams = list(numFolds = K)) 
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -403,50 +402,52 @@ res = foreach(
   ),
   paste0(output_dir, "/codacore_metrics", file.end))
   
+  # ##############################################################################
+  # # Log-Ratio Lasso
+  # # -- regresses on pairwise log-ratios
+  # ##############################################################################
+  # library(logratiolasso)
+  # source("Kristyn/Functions/logratiolasso.R")
+  # Wc = scale(log(X), center = TRUE, scale = FALSE)
+  # Yc = Y - mean(Y)
+  # 
+  # start.time = Sys.time()
+  # lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
+  # end.time = Sys.time()
+  # lrl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # compute metrics on the selected model #
+  # # prediction errors
+  # # get prediction error on training set
+  # lrl.Yhat.train = Wc %*% lrl$beta_min
+  # lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
+  # # get prediction error on test set
+  # Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
+  # Yc.test = Y.test - mean(Y.test)
+  # lrl.Yhat.test = Wc.test %*% lrl$beta_min
+  # lrl.PE.test = crossprod(Y - lrl.Yhat.test) / n
+  # 
+  # # beta estimation accuracy, selection accuracy #
+  # lrl.metrics = getMetricsBM(
+  #   betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
+  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  # lrl.metrics = c(
+  #   PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
+  # 
+  # saveRDS(c(
+  #   lrl.metrics,
+  #   "betasparsity" = bspars,
+  #   "logratios" = NA, 
+  #   "time" = lrl.timing, 
+  #   "adhoc" = NA
+  # ),
+  # paste0(output_dir, "/lrlasso_metrics", file.end))
+  
+  
   ##############################################################################
-  # Log-Ratio Lasso
-  # -- regresses on pairwise log-ratios
   ##############################################################################
-  library(logratiolasso)
-  source("Kristyn/Functions/logratiolasso.R")
-  Wc = scale(log(X), center = TRUE, scale = FALSE)
-  Yc = Y - mean(Y)
-  
-  start.time = Sys.time()
-  lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
-  end.time = Sys.time()
-  lrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  lrl.Yhat.train = Wc %*% lrl$beta_min
-  lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
-  # get prediction error on test set
-  Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
-  Yc.test = Y.test - mean(Y.test)
-  lrl.Yhat.test = Wc.test %*% lrl$beta_min
-  lrl.PE.test = crossprod(Y - lrl.Yhat.test) / n
-  
-  # beta estimation accuracy, selection accuracy #
-  lrl.metrics = getMetricsBM(
-    betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  lrl.metrics = c(
-    PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
-  
-  saveRDS(c(
-    lrl.metrics,
-    "betasparsity" = bspars,
-    "logratios" = NA, 
-    "time" = lrl.timing, 
-    "adhoc" = NA
-  ),
-  paste0(output_dir, "/lrlasso_metrics", file.end))
-  
-  
-  
-  
+  ##############################################################################
+  ### fin ###
 }

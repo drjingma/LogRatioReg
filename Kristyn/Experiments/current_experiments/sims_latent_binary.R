@@ -4,7 +4,7 @@
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs"
+output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_binary"
 
 # set up parallelization
 library(foreach)
@@ -39,11 +39,14 @@ res = foreach(
   
   library(balance)
   
+  library(pROC)
+  
   source("RCode/func_libs_1.R") # for classo to work
   
   source("Kristyn/Functions/slr.R")
   source("Kristyn/Functions/util.R")
   source("Kristyn/Functions/slrscreen.R")
+  source("Kristyn/Functions/codalasso.R")
   
   # Tuning parameters###########################################################
   
@@ -160,234 +163,218 @@ res = foreach(
      "logratios" = 0,
     "time" = cl.timing
   ),
-  paste0(output_dir, "/metrics", "/classo_metrics", file.end))
+  paste0(output_dir, "/classo_metrics", file.end))
 
   ##############################################################################
-  # new slr method (a balance regression method)
-  #   -- hierarchical spectral clustering (with rank 1 approximation)
+  # slr method using k-means spectral clustering with K = 3
+  #   alpha = 0.05
+  # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  slrnew = slr(x = X, y = Y, rank1approx = TRUE, classification = TRUE)
+  slr0.05 = slr(
+    x = X, y = Y, alpha = 0.05, classification = TRUE)
   end.time = Sys.time()
-  slrnew.timing = difftime(
+  slr0.05.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
-
-  slrnew_activevars = names(slrnew$index)
-  slrnew_SBP = matrix(slrnew$index)
-  rownames(slrnew_SBP) = slrnew_activevars
   
-  slrnew.coefs = coefficients(slrnew$model)
-  slrnew.a0 = slrnew.coefs[1]
-  slrnew.thetahat = slrnew.coefs[-1]
-
-  slrnew.betahat.nonzero = getBetaFromTheta(slrnew.thetahat, sbp = slrnew_SBP)
-  slrnew.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-  rownames(slrnew.betahat) = colnames(X)
-  slrnew.betahat[slrnew_activevars, ] =
-    as.numeric(slrnew.betahat.nonzero)
-
+  slr0.05.coefs = getCoefsBM(
+    coefs = coefficients(slr0.05$model), sbp = slr0.05$sbp)
+  
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
-  slrnew.Yhat.train = predict.glm(
-    slrnew$model, newdata = data.frame(balance::balance.fromSBP(x = X, y = slrnew$sbp)), type = "response")
-  slrnew.AUC.train = roc(
-    Y, slrnew.Yhat.train, levels = c(0, 1), direction = "<")$auc
-  # get prediction error on test set
-  slrnew.Yhat.test = predict.glm(
-    slrnew$model, newdata = data.frame(balance::balance.fromSBP(x = X.test, y = slrnew$sbp)), type = "response")
-  slrnew.AUC.test = roc(
-    Y, slrnew.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # beta estimation accuracy, selection accuracy #
-  slrnew.metrics = getMetricsBalanceReg(
-    thetahat = slrnew.thetahat, betahat = slrnew.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  slrnew.metrics = c(
-    AUCtr = slrnew.AUC.train, AUCte = slrnew.AUC.test, slrnew.metrics)
-
-  saveRDS(c(
-    slrnew.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slrnew.thetahat != 0), 
-    "time" = slrnew.timing
-  ),
-  paste0(output_dir, "/metrics", "/slr_approx_metrics", file.end))
-
-  ##############################################################################
-  # new slr method (a balance regression method)
-  #   -- hierarchical spectral clustering (without rank 1 approximation)
-  ##############################################################################
-  start.time = Sys.time()
-  slrnew2 = slr(x = X, y = Y, rank1approx = FALSE, classification = TRUE)
-  end.time = Sys.time()
-  slrnew2.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-
-  slrnew2_activevars = names(slrnew2$index)
-  slrnew2_SBP = matrix(slrnew2$index)
-  rownames(slrnew2_SBP) = slrnew2_activevars
-  
-  slrnew2.coefs = coefficients(slrnew2$model)
-  slrnew2.a0 = slrnew2.coefs[1]
-  slrnew2.thetahat = slrnew2.coefs[-1]
-
-  slrnew2.betahat.nonzero = getBetaFromTheta(slrnew2.thetahat, sbp = slrnew2_SBP)
-  slrnew2.betahat = matrix(0, nrow = ncol(X), ncol = 1)
-  rownames(slrnew2.betahat) = colnames(X)
-  slrnew2.betahat[slrnew2_activevars, ] =
-    as.numeric(slrnew2.betahat.nonzero)
-
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  slrnew2.Yhat.train = predict.glm(
-    slrnew2$model, 
-    newdata = data.frame(balance::balance.fromSBP(x = X, y = slrnew2$sbp)), 
+  slr0.05.Yhat.train = predict(
+    slr0.05$model, 
+    data.frame(V1 = balance::balance.fromSBP(x = X, y = slr0.05$sbp)), 
     type = "response")
-  slrnew2.AUC.train = roc(
-    Y, slrnew2.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  slr0.05.AUC.train = roc(
+    Y, slr0.05.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
-  slrnew2.Yhat.test = predict.glm(
-    slrnew2$model, 
-    newdata = data.frame(balance::balance.fromSBP(x = X.test, y = slrnew2$sbp)), 
+  slr0.05.Yhat.test = predict(
+    slr0.05$model, 
+    data.frame(V1 = balance::balance.fromSBP(x = X.test, y = slr0.05$sbp)), 
     type = "response")
-  slrnew2.AUC.test = roc(
-    Y.test, slrnew2.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  slr0.05.AUC.test = roc(
+    Y, slr0.05.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
-  slrnew2.metrics = getMetricsBalanceReg(
-    thetahat = slrnew2.thetahat, betahat = slrnew2.betahat,
+  slr0.05.metrics = getMetricsBM(
+    thetahat0 = slr0.05.coefs$a0, thetahat = slr0.05.coefs$bm.coefs,
+    betahat = slr0.05.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  slrnew2.metrics = c(
-    AUCtr = slrnew2.AUC.train, AUCte = slrnew2.AUC.test, slrnew2.metrics)
-
+    true.beta = beta.true,
+    metrics = c("betaestimation", "selection"), classification = TRUE)
+  slr0.05.metrics = c(
+    AUCtr = slr0.05.AUC.train, AUCte = slr0.05.AUC.test, slr0.05.metrics)
+  
   saveRDS(c(
-    slrnew2.metrics,
+    slr0.05.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slrnew2.thetahat != 0), 
-    "time" = slrnew2.timing
+    "logratios" = sum(slr0.05.coefs$bm.coefs != 0),
+    "time" = slr0.05.timing, 
+    "adhoc" = slr0.05$adhoc.invoked
   ),
-  paste0(output_dir, "/metrics", "/slr_metrics", file.end))
-
-  ##############################################################################
-  # DBA method (a balance regression method)
-  ##############################################################################
-  Y.dba = factor(Y, levels = c(0, 1))
+  paste0(output_dir, "/slr_alpha0.05_metrics", file.end))
   
+  ##############################################################################
+  # slr method using k-means spectral clustering with K = 3
+  #   alpha = 0.01
+  # -- fits a balance regression model with one balance
+  ##############################################################################
   start.time = Sys.time()
-  dba_SBPfull = sbp.fromADBA(x = X, group = Y.dba)
-  dba_SBP = sbp.subset(dba_SBPfull)
-  dba = cvBMLasso(
-    y = Y, X = X, sbp = dba_SBP, nlam = nlam, nfolds = K, 
-    intercept = intercept, standardize = scaling, classification = TRUE)
+  slr0.01 = slr(x = X, y = Y, alpha = 0.01, classification = TRUE)
   end.time = Sys.time()
-  dba.timing = difftime(
+  slr0.01.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
-
-  # dba.lam.min.idx = which.min(dba$cvm)
-  oneSErule = min(dba$cvm) + dba$cvsd[which.min(dba$cvm)] * 1
-  dba.lam.idx = which(dba$cvm <= oneSErule)[1]
-  dba.a0 = dba$theta0[dba.lam.idx]
-  dba.thetahat = dba$theta[, dba.lam.idx]
-  dba.betahat = getBetaFromTheta(dba.thetahat, sbp = dba$sbp)
   
-  # # check that it matches glmnet answer
-  # dba$lambda[dba.lam.idx]
-  # dba$cv.glmnet$lambda.1se
-  # c(dba.a0, dba.thetahat)
-  # coef(dba$cv.glmnet, s = "lambda.1se")
-
+  slr0.01.coefs = getCoefsBM(
+    coefs = coefficients(slr0.01$model), sbp = slr0.01$sbp)
+  
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
-  dba.Yhat.train = as.vector(predict(
-    dba$cv.glmnet, newx = balance::balance.fromSBP(X, dba_SBP), s = "lambda.min"))
-  dba.AUC.train = roc(
-    Y, dba.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  slr0.01.Yhat.train = predict(
+    slr0.01$model, 
+    data.frame(V1 = balance::balance.fromSBP(x = X, y = slr0.01$sbp)), 
+    type = "response")
+  slr0.01.AUC.train = roc(
+    Y, slr0.01.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
-  dba.Yhat.test = as.vector(predict(
-    dba$cv.glmnet, newx = balance::balance.fromSBP(X.test, dba_SBP), s = "lambda.min"))
-  dba.AUC.test = roc(
-    Y.test, dba.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  slr0.01.Yhat.test = predict(
+    slr0.01$model, 
+    data.frame(V1 = balance::balance.fromSBP(x = X.test, y = slr0.01$sbp)), 
+    type = "response")
+  slr0.01.AUC.test = roc(
+    Y, slr0.01.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
-  dba.metrics = getMetricsBalanceReg(
-    thetahat = dba.thetahat, betahat = dba.betahat,
+  slr0.01.metrics = getMetricsBM(
+    thetahat0 = slr0.01.coefs$a0, thetahat = slr0.01.coefs$bm.coefs,
+    betahat = slr0.01.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  dba.metrics = c(
-    AUCtr = dba.AUC.train, AUCte = dba.AUC.test, dba.metrics)
+    true.beta = beta.true,
+    metrics = c("betaestimation", "selection"), classification = TRUE)
+  slr0.01.metrics = c(
+    AUCtr = slr0.01.AUC.train, AUCte = slr0.01.AUC.test, slr0.01.metrics)
   
-  # # plot the tree given by slr-hsc, indicating significant covariates
-  # dba_leaf_types = rep("covariate", nrow(dba$sbp))
-  # dba_balance_types = rep("balance", ncol(dba$sbp))
-  # dba_nodes_types = data.frame(
-  #   name = c(colnames(dba$sbp), rownames(dba$sbp)),
-  #   type = c(dba_balance_types, dba_leaf_types)
-  # )
-  # plotSBP(dba$sbp, title = "DBA", nodes_types = dba_nodes_types)
-
   saveRDS(c(
-    dba.metrics,
+    slr0.01.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(dba.thetahat != 0), 
-    "time" = dba.timing
+    "logratios" = sum(slr0.01.coefs$bm.coefs != 0),
+    "time" = slr0.01.timing, 
+    "adhoc" = slr0.01$adhoc.invoked
   ),
-  paste0(output_dir, "/metrics", "/dba_metrics", file.end))
+  paste0(output_dir, "/slr_alpha0.01_metrics", file.end))
+  
+  ##############################################################################
+  # slr method with screening step
+  #   method = "wald"
+  #   response.type = "continuous"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "mse"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrscreen0cv = cv.slr.screen(
+    x = X, y = Y, method = "wald", 
+    response.type = "binary", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  slrscreen0 = slr.screen(
+    x = X, y = Y, method = "wald", 
+    response.type = "binary", s0.perc = 0, zeta = 0, 
+    threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
+  end.time = Sys.time()
+  slrscreen0.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrscreen0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrscreen0.fullSBP) = colnames(X)
+  slrscreen0.fullSBP[match(
+    names(slrscreen0$sbp), rownames(slrscreen0.fullSBP))] = slrscreen0$sbp
+  
+  slrscreen0.coefs = getCoefsBM(
+    coefs = coefficients(slrscreen0$fit), sbp = slrscreen0.fullSBP)
+  
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  slrscreen0.Yhat.train = predict(
+    slrscreen0$fit, 
+    data.frame(balance = balance::balance.fromSBP(
+      x = X, y = slrscreen0.fullSBP)), 
+    type = "response")
+  slrscreen0.AUC.train = roc(
+    Y, slrscreen0.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  # get prediction error on test set
+  slrscreen0.Yhat.test = predict(
+    slrscreen0$fit, 
+    data.frame(balance = balance::balance.fromSBP(
+      x = X.test, y = slrscreen0.fullSBP)), 
+    type = "response")
+  slrscreen0.AUC.test = roc(
+    Y, slrscreen0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slrscreen0.metrics = getMetricsBM(
+    thetahat0 = slrscreen0.coefs$a0, thetahat = slrscreen0.coefs$bm.coefs,
+    betahat = slrscreen0.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true,
+    metrics = c("betaestimation", "selection"), classification = TRUE)
+  slrscreen0.metrics = c(
+    AUCtr = slrscreen0.AUC.train, AUCte = slrscreen0.AUC.test, 
+    slrscreen0.metrics)
+  
+  saveRDS(c(
+    slrscreen0.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrscreen0.coefs$bm.coefs != 0),
+    "time" = slrscreen0.timing, 
+    "adhoc" = slrscreen0$adhoc.invoked
+  ),
+  paste0(output_dir, "/slrscreen_metrics", file.end))
 
   ##############################################################################
   # selbal method (a balance regression method)
+  # -- fits a balance regression model with one balance
   ##############################################################################
   library(selbal) # masks stats::cor()
-  
-  X.slbl = X
-  Y.slbl = factor(Y, levels = c(0, 1))
-  rownames(X.slbl) = paste("Sample", 1:nrow(X.slbl), sep = "_")
-  colnames(X.slbl) = paste("V", 1:ncol(X.slbl), sep = "")
+  slbl.data = getSelbalData(
+    X = X, y = Y, classification = TRUE, levels = c(0, 1), labels = c(0, 1))
   
   start.time = Sys.time()
-  slbl = selbal.cv(x = X.slbl, y = Y.slbl, n.fold = K)
+  slbl = selbal.cv(x = slbl.data$X, y = slbl.data$y, n.fold = K)
   end.time = Sys.time()
   slbl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
-
-  # U (transformation) matrix
-  U.slbl = rep(0, p)
-  names(U.slbl) = colnames(X.slbl)
-  pba.pos = unlist(subset(
-    slbl$global.balance, subset = Group == "NUM", select = Taxa))
-  num.pos = length(pba.pos)
-  pba.neg = unlist(subset(
-    slbl$global.balance, subset = Group == "DEN", select = Taxa))
-  num.neg = length(pba.neg)
-  U.slbl[pba.pos] = 1 / num.pos
-  U.slbl[pba.neg] = -1 / num.neg
-  norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
-  U.slbl = norm.const * U.slbl
-  # check: these are equal
-  # glm(Y.slbl ~ log(X.slbl) %*% as.matrix(U.slbl), family = binomial(link = "logit"))
-  # slbl$glm
-  slbl.thetahat = coefficients(slbl$glm)[-1]
-  slbl.betahat = U.slbl %*% as.matrix(slbl.thetahat)
+  
+  slbl.coefs = getCoefsSelbal(
+    X = slbl.data$X, y = slbl.data$y, selbal.fit = slbl, classification = TRUE, 
+    check = TRUE)
 
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
   slbl.Yhat.train = predict.glm(
-    slbl$glm, newdata = data.frame(X.slbl), type = "response")
+    slbl$glm, 
+    newdata = data.frame(V1 = balance::balance.fromSBP(
+      x = slbl.data$X, y = slbl.coefs$sbp)), 
+    type = "response")
   slbl.AUC.train = roc(
-    Y, slbl.Yhat.train, levels = c(0, 1), direction = "<")$auc
+    slbl.data$y, slbl.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
-  X.slbl.test = X.test
-  rownames(X.slbl.test) = paste("Sample", 1:nrow(X.slbl.test), sep = "_")
-  colnames(X.slbl.test) = paste("V", 1:ncol(X.slbl.test), sep = "")
+  slbl.test.data = getSelbalData(
+    X = X.test, y = Y, classification = TRUE, 
+    levels = c(0, 1), labels = c(0, 1))
   slbl.Yhat.test = predict.glm(
-    slbl$glm, newdata = data.frame(X.slbl.test), type = "response")
+    slbl$glm, 
+    newdata = data.frame(V1 = balance::balance.fromSBP(
+      x = slbl.test.data$X, y = slbl.coefs$sbp)), 
+    type = "response")
   slbl.AUC.test = roc(
-    Y.test, slbl.Yhat.test, levels = c(0, 1), direction = "<")$auc
+    slbl.test.data$y, slbl.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
-  slbl.metrics = getMetricsBalanceReg(
-    thetahat = slbl.thetahat, betahat = slbl.betahat,
+  slbl.metrics = getMetricsBM(
+    thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
   slbl.metrics = c(AUCtr = slbl.AUC.train, AUCte = slbl.AUC.test, slbl.metrics)
@@ -402,24 +389,19 @@ res = foreach(
   
   ##############################################################################
   # CoDaCoRe (a balance regression method)
+  # -- fits a balance regression model with possibly multiple balances
   ##############################################################################
   library(codacore)
   
-  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-    reticulate::use_condaenv("anaconda3")
-  }
-  # tensorflow::install_tensorflow()
-  # keras::install_keras()
-  
   start.time = Sys.time()
   codacore0 = codacore(
-    x = X, y = Y, logRatioType = "ILR", # instead of "balance" ?
+    x = X, y = Y, logRatioType = "ILR", 
     objective = "binary classification", cvParams = list(numFolds = K))
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  if(length(codacore0$ensemble) > 0){
+  if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
     codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
     codacore0_coeffs = rep(NA, length(codacore0$ensemble))
     for(col.idx in 1:ncol(codacore0_SBP)){

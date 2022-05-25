@@ -56,9 +56,10 @@ file.end0 = paste0(
 classo_sims_list = list()
 slr_0.05_sims_list = list()
 slr_0.01_sims_list = list()
+slrscreen_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
-lrlasso_sims_list = list()
+# lrlasso_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
@@ -88,6 +89,13 @@ for(i in 1:numSims){
   rownames(slr_alpha0.01_sim_tmp) = NULL
   slr_0.01_sims_list[[i]] = data.table::data.table(slr_alpha0.01_sim_tmp)
   
+  # slr - screen
+  slrscreen_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slrscreen_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slrscreen_sim_tmp) = NULL
+  slrscreen_sims_list[[i]] = data.table::data.table(slrscreen_sim_tmp)
   ###
   
   # selbal
@@ -106,15 +114,14 @@ for(i in 1:numSims){
   rownames(cdcr_sim_tmp) = NULL
   codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
   
-  # log-ratio lasso
-  lrl_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/lrlasso_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(lrl_sim_tmp) = NULL
-  lrlasso_sims_list[[i]] = data.table::data.table(lrl_sim_tmp)
+  # # log-ratio lasso
+  # lrl_sim_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/lrlasso_metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(lrl_sim_tmp) = NULL
+  # lrlasso_sims_list[[i]] = data.table::data.table(lrl_sim_tmp)
 }
-
 
 # metrics boxplots
 classo_sims.gg = 
@@ -133,6 +140,11 @@ slr_0.01_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "slr-0.01")
+slrscreen_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slrscreen_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slrscreen")
 ###
 selbal_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
@@ -144,19 +156,20 @@ codacore_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "codacore")
-lrlasso_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "lrlasso")
+# lrlasso_sims.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "lrlasso")
 ###
 data.gg = rbind(
   classo_sims.gg,
   slr_0.05_sims.gg, 
   slr_0.01_sims.gg, 
+  slrscreen_sims.gg,
   selbal_sims.gg, 
-  codacore_sims.gg, 
-  lrlasso_sims.gg
+  codacore_sims.gg
+  # lrlasso_sims.gg
 ) %>%
   mutate(
     Metric = factor(
@@ -204,7 +217,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220514",
+    "20220525",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

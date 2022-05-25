@@ -28,26 +28,6 @@ source("Kristyn/Functions/slrscreen.R")
 source("Kristyn/Functions/codalasso.R")
 source("Kristyn/Functions/util.R")
 
-getTPlots = function(cvslr_fit){
-  cv_data = data.frame(
-    `T` = cvslr_fit$nclusters, 
-    cvm = cvslr_fit$cvm, 
-    cvse = cvslr_fit$cvse,
-    Active.Size = sapply(
-      cvslr_fit$models, function(elt) sum(elt$sbp != 0))
-  )
-  cvm.plt = ggplot(cv_data, aes(x = `T`, y = cvm)) + 
-    geom_path() + 
-    geom_point() + 
-    geom_errorbar(aes(ymin = cvm - cvse, ymax = cvm + cvse), width = 0.5) + 
-    scale_x_continuous(breaks = c(cv_data$`T`))
-  size.plt = ggplot(cv_data, aes(x = `T`, y = Active.Size)) + 
-    geom_path() + 
-    geom_point() + 
-    scale_x_continuous(breaks = c(cv_data$`T`))
-  return(ggarrange(cvm.plt, size.plt, nrow = 1))
-}
-
 # tuning parameter settings
 K = 10
 scaling = TRUE
@@ -63,7 +43,7 @@ Y = selbal::Crohn[, 49]
 Y2 = ifelse(Y == "CD", 1, 0)
 
 ################################################################################
-# Strategy 2: 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
+# 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
 X_gbm = cmultRepl2(W, zero.rep = "bayes")
 
 ################################################################################

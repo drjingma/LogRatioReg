@@ -247,7 +247,7 @@ cv.slr.screen <- function(x,y,method=c('correlation','wald'),
           }
         }
         feature.scores <- numer/(sd + fudge) # this is the wald-statistic
-        threshold <- sort(stats::pt(abs(feature.scores),df=n-2))
+        threshold <- sort(stats::pt(abs(feature.scores),df=N-2))
       } else if (response.type=='binary'){
         feature.scores <- rep(0,p)
         for (j in 1:p){

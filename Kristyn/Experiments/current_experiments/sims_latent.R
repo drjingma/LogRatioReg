@@ -39,9 +39,11 @@ res = foreach(
   
   library(balance)
   
-  source("RCode/func_libs.R")
+  source("RCode/func_libs_1.R") # for classo to work
+  
   source("Kristyn/Functions/slr.R")
   source("Kristyn/Functions/util.R")
+  source("Kristyn/Functions/slrscreen.R")
   
   # Tuning parameters###########################################################
   
@@ -228,6 +230,57 @@ res = foreach(
     "adhoc" = slr0.01$adhoc.invoked
   ),
   paste0(output_dir, "/slr_alpha0.01_metrics", file.end))
+  
+  ##############################################################################
+  # slr method with screening step
+  #   method = "wald"
+  #   response.type = "continuous"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "mse"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrscreen0cv = cv.slr.screen(
+    x = X, y = Y, method = "wald", 
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  slrscreen0 = slr.screen(
+    x = X, y = Y, method = "wald", 
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
+  end.time = Sys.time()
+  slrscreen0.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrscreen0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrscreen0.fullSBP) = colnames(X)
+  slrscreen0.fullSBP[match(
+    names(slrscreen0$sbp), rownames(slrscreen0.fullSBP))] = slrscreen0$sbp
+  
+  slrscreen0.coefs = getCoefsBM(
+    coefs = coefficients(slrscreen0$fit), sbp = slrscreen0.fullSBP)
+  
+  # compute metrics on the selected model #
+  slrscreen0.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrscreen0.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = slrscreen0.fullSBP),
+    n.train = n, n.test = n,
+    thetahat0 = slrscreen0.coefs$a0, thetahat = slrscreen0.coefs$bm.coefs,
+    betahat = slrscreen0.coefs$llc.coefs,
+    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrscreen0.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrscreen0.coefs$bm.coefs != 0),
+    "time" = slrscreen0.timing, 
+    "adhoc" = slrscreen0$adhoc.invoked
+  ),
+  paste0(output_dir, "/slrscreen_metrics", file.end))
   
   ##############################################################################
   # selbal method (a balance regression method)

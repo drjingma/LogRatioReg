@@ -38,26 +38,12 @@ res = foreach(
   library(glmnet)
   
   library(balance)
-  library(propr)
   
-  library(pROC)
+  source("RCode/func_libs_1.R") # for classo to work
   
-  source("RCode/func_libs.R")
-  source("Kristyn/Functions/supervisedlogratios.R")
-  source("Kristyn/Functions/supervisedlogratioseta.R")
-  source("Kristyn/Functions/HSClust.R")
-  source("Kristyn/Functions/slrnew.R")
-  source("Kristyn/Functions/codalasso.R")
-  
-  
-  # helper functions
-  source("Kristyn/Functions/metrics.R")
-  source("Kristyn/Functions/helper_functions.R")
-  
-  # for plots
-  library(ggraph) # make dendrogram
-  library(igraph) # transform dataframe to graph object: graph_from_data_frame()
-  library(tidygraph)
+  source("Kristyn/Functions/slr.R")
+  source("Kristyn/Functions/util.R")
+  source("Kristyn/Functions/slrscreen.R")
   
   # Tuning parameters###########################################################
   
@@ -73,7 +59,8 @@ res = foreach(
   tol = 1e-4
   # sigma_eps1 = 0.1
   sigma_eps2 = 0.1 # 0.1, 0.01
-  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -129,6 +116,13 @@ res = foreach(
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
   beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
     as.vector(ilrtrans.true$ilr.trans)
+  
+  saveRDS(list(
+    X = X, Y = Y, X.test = X.test, Y.test = Y.test, 
+    SBP.true = SBP.true, beta.true = beta.true, 
+    is0.beta = is0.beta, non0.beta = non0.beta
+  ),
+  paste0(output_dir, "/data", file.end))
 
   ##############################################################################
   # compositional lasso (a linear log contrast method)

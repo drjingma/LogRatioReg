@@ -1,5 +1,6 @@
 # Purpose: compare slr to selbal on data sets
 # Date: 5/25/2022
+rm(list=ls())
 
 ################################################################################
 # libraries and settings
@@ -21,54 +22,55 @@ rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
 
 # Other simulation settings
-numSims = 100
+numSplits = 20
 
 ################################################################################
-# Simulations #
+# 80/20 train/test splits #
 ################################################################################
+
+library(mvtnorm)
+
+library(Matrix)
+library(glmnet)
+
+library(balance)
+library(selbal)
+
+library(pROC)
+
+source("RCode/func_libs.R")
+source("Kristyn/Functions/slr.R")
+source("Kristyn/Functions/codalasso.R")
+source("Kristyn/Functions/util.R")
+
+getTPlots = function(cvslr_fit){
+  cv_data = data.frame(
+    `T` = cvslr_fit$nclusters, 
+    cvm = cvslr_fit$cvm, 
+    cvse = cvslr_fit$cvse,
+    Active.Size = sapply(
+      cvslr_fit$models, function(elt) sum(elt$sbp != 0))
+  )
+  cvm.plt = ggplot(cv_data, aes(x = `T`, y = cvm)) + 
+    geom_path() + 
+    geom_point() + 
+    geom_errorbar(aes(ymin = cvm - cvse, ymax = cvm + cvse), width = 0.5) + 
+    scale_x_continuous(breaks = c(cv_data$`T`))
+  size.plt = ggplot(cv_data, aes(x = `T`, y = Active.Size)) + 
+    geom_path() + 
+    geom_point() + 
+    scale_x_continuous(breaks = c(cv_data$`T`))
+  return(ggarrange(cvm.plt, size.plt, nrow = 1))
+}
+
+# tuning parameter settings
+K = 10
+scaling = TRUE
 
 registerDoRNG(rng.seed)
 res = foreach(
-  b = 1:numSims
+  b = 1:numSplits
 ) %dorng% {
-  # rm(list=ls())
-  library(mvtnorm)
-  
-  library(Matrix)
-  library(glmnet)
-  
-  library(balance)
-  library(selbal)
-  
-  library(pROC)
-  
-  source("RCode/func_libs.R")
-  source("Kristyn/Functions/slr.R")
-  source("Kristyn/Functions/codalasso.R")
-  source("Kristyn/Functions/util.R")
-  
-  getTPlots = function(cvslr_fit){
-    cv_data = data.frame(
-      `T` = cvslr_fit$nclusters, 
-      cvm = cvslr_fit$cvm, 
-      cvse = cvslr_fit$cvse,
-      Active.Size = sapply(
-        cvslr_fit$models, function(elt) sum(elt$sbp != 0))
-    )
-    cvm.plt = ggplot(cv_data, aes(x = `T`, y = cvm)) + 
-      geom_path() + 
-      geom_point() + 
-      geom_errorbar(aes(ymin = cvm - cvse, ymax = cvm + cvse), width = 0.5) + 
-      scale_x_continuous(breaks = c(cv_data$`T`))
-    size.plt = ggplot(cv_data, aes(x = `T`, y = Active.Size)) + 
-      geom_path() + 
-      geom_point() + 
-      scale_x_continuous(breaks = c(cv_data$`T`))
-    return(ggarrange(cvm.plt, size.plt, nrow = 1))
-  }
-  
-  # tuning parameter settings
-  K = 10
   
   ################################################################################
   # Crohn: a data set in selbal package
@@ -83,6 +85,23 @@ res = foreach(
   ################################################################################
   # Strategy 2: 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
   X_gbm = cmultRepl2(W, zero.rep = "bayes")
+  
+  ################################################################################
+  # Train/Test Split
+  #   Following Gordon-Rodriguez et al. 2022, fit each method on 20 random 80/20
+  #     train/test splits, sampled with stratification by case-control.
+  numObs = nrow(X_gbm)
+  inputDim = ncol(X_gbm)
+  # stratified sampling
+  trainIdx = 1:numObs
+  caseIdx = sample(cut(1:sum(y), breaks=5, labels=F))
+  controlIdx = sample(cut(1:sum(1 - y), breaks=5, labels=F))
+  trainIdx[y == 1] = caseIdx
+  trainIdx[y == 0] = controlIdx
+  xTr = x[trainIdx != 1,]
+  yTr = y[trainIdx != 1,]
+  xTe = x[trainIdx == 1,]
+  yTe = y[trainIdx == 1,]
   
   ################################################################################
   # fit methods

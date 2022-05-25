@@ -385,7 +385,7 @@ res = foreach(
     "logratios" = sum(slbl.coefs$bm.coefs != 0), 
     "time" = slbl.timing
   ),
-  paste0(output_dir, "/metrics", "/selbal_metrics", file.end))
+  paste0(output_dir, "/selbal_metrics", file.end))
   
   ##############################################################################
   # CoDaCoRe (a balance regression method)
@@ -458,7 +458,7 @@ res = foreach(
     "logratios" = length(codacore0_coeffs), 
     "time" = codacore0.timing
   ),
-  paste0(output_dir, "/metrics", "/codacore_metrics", file.end))
+  paste0(output_dir, "/codacore_metrics", file.end))
   
   ##############################################################################
   ##############################################################################

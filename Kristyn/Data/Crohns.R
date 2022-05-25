@@ -50,6 +50,7 @@ getTPlots = function(cvslr_fit){
 
 # tuning parameter settings
 K = 10
+scaling = TRUE
 
 ################################################################################
 # Crohn: a data set in selbal package
@@ -132,7 +133,13 @@ library(codacore)
 codacore0 = codacore(
   x = X_gbm, y = Y2, logRatioType = "ILR", 
   objective = "binary classification", cvParams = list(numFolds = K))
-
+saveRDS(
+  codacore0,
+  paste0(
+    output_dir, "/Crohns",
+    "_codacore",
+    "_gbm",
+    ".rds"))
 
 
 

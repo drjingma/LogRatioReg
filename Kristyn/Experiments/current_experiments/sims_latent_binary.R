@@ -445,7 +445,7 @@ res = foreach(
     
   }
   # beta estimation accuracy, selection accuracy #
-  codacore0.metrics = getMetricsBalanceReg(
+  codacore0.metrics = getMetricsBM(
     betahat = codacore0.betahat,
     true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))

@@ -26,8 +26,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -59,7 +59,7 @@ slr_0.01_sims_list = list()
 slrscreen_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
-# lrlasso_sims_list = list()
+lrlasso_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
@@ -114,13 +114,13 @@ for(i in 1:numSims){
   rownames(cdcr_sim_tmp) = NULL
   codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
   
-  # # log-ratio lasso
-  # lrl_sim_tmp = t(data.frame(readRDS(paste0(
-  #   output_dir, "/lrlasso_metrics", file.end0,
-  #   "_sim", i, ".rds"
-  # ))))
-  # rownames(lrl_sim_tmp) = NULL
-  # lrlasso_sims_list[[i]] = data.table::data.table(lrl_sim_tmp)
+  # log-ratio lasso
+  lrl_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/lrlasso_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(lrl_sim_tmp) = NULL
+  lrlasso_sims_list[[i]] = data.table::data.table(lrl_sim_tmp)
 }
 
 # metrics boxplots
@@ -130,21 +130,21 @@ classo_sims.gg =
                names_to = "Metric") %>%
   mutate("Method" = "classo")
 ###
-slr_0.05_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.05_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-0.05")
-slr_0.01_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.01_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-0.01")
+# slr_0.05_sims.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(slr_0.05_sims_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "slr-0.05")
+# slr_0.01_sims.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(slr_0.01_sims_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "slr-0.01")
 slrscreen_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(slrscreen_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slrscreen")
+  mutate("Method" = "slr")
 ###
 selbal_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
@@ -156,42 +156,38 @@ codacore_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "codacore")
-# lrlasso_sims.gg = 
-#   pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)), 
-#                cols = everything(),
-#                names_to = "Metric") %>%
-#   mutate("Method" = "lrlasso")
+lrlasso_sims.gg =
+  pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)),
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "lrlasso")
 ###
 data.gg = rbind(
   classo_sims.gg,
-  slr_0.05_sims.gg, 
-  slr_0.01_sims.gg, 
+  # slr_0.05_sims.gg, 
+  # slr_0.01_sims.gg, 
   slrscreen_sims.gg,
   selbal_sims.gg, 
-  codacore_sims.gg
-  # lrlasso_sims.gg
+  codacore_sims.gg,
+  lrlasso_sims.gg
 ) %>%
   mutate(
     Metric = factor(
       Metric, levels = c(
         "PEtr", "PEte", 
         "EA1", "EA2", "EAInfty", 
-        "EA1Active", "EA2Active", "EAInftyActive",
-        "EA1Inactive", "EA2Inactive", "EAInftyInactive",
-        "FP", "FN", "TPR", "precision", "Fscore",
-        "FP+", "FN+", "TPR+", 
-        "FP-", "FN-", "TPR-", 
+        "TPR", "FPR", "Fscore",
         "betasparsity", "logratios", "adhoc", "time"
       ))
   )
 
-data.gg_main = data.gg %>% 
+data.gg_main = data.gg %>%
   dplyr::filter(
     Metric %in% c(
-      "PEtr", "PEte", 
+      "PEtr", "PEte",
       "EA1", "EA2", "EAInfty",
-      "FP", "FN", "TPR", "precision", 
-      "Fscore", "adhoc", "time"
+      "TPR", "FPR", "Fscore",
+      "time"
     )
   )
 plt_main = ggplot(
@@ -217,13 +213,13 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220525",
+    "20220526",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
   width = 8, height = 6, units = c("in")
 )
-data.gg %>% filter(Metric == "adhoc") %>% 
-  group_by(Metric, Method) %>%
-  summarize(percentage = mean(value, na.rm = TRUE)) %>%
-  ungroup()
+# data.gg %>% filter(Metric == "adhoc") %>% 
+#   group_by(Metric, Method) %>%
+#   summarize(percentage = mean(value, na.rm = TRUE)) %>%
+#   ungroup()

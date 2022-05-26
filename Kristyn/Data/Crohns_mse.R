@@ -5,7 +5,7 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_binary"
+output_dir = "Kristyn/Data/outputs_mse"
 
 # set up parallelization
 library(foreach)

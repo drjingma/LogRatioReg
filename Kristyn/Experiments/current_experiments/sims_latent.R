@@ -110,7 +110,6 @@ res = foreach(
   
   # about beta
   non0.beta = as.vector(SBP.true != 0)
-  is0.beta = !non0.beta
   bspars = sum(non0.beta)
   # solve for beta
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
@@ -120,7 +119,7 @@ res = foreach(
   saveRDS(list(
     X = X, Y = Y, X.test = X.test, Y.test = Y.test, 
     SBP.true = SBP.true, beta.true = beta.true, 
-    is0.beta = is0.beta, non0.beta = non0.beta
+    non0.beta = non0.beta
   ),
   paste0(output_dir, "/data", file.end))
   
@@ -150,7 +149,7 @@ res = foreach(
     logX.test = log(X.test),
     n.train = n, n.test = n,
     betahat0 = cl.a0, betahat = cl.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+    true.sbp = SBP.true, non0.true.beta = non0.beta, 
     true.beta = beta.true)
   
   saveRDS(c(
@@ -185,7 +184,7 @@ res = foreach(
     n.train = n, n.test = n,
     thetahat0 = slr0.05.coefs$a0, thetahat = slr0.05.coefs$bm.coefs,
     betahat = slr0.05.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
@@ -219,7 +218,7 @@ res = foreach(
     n.train = n, n.test = n,
     thetahat0 = slr0.01.coefs$a0, thetahat = slr0.01.coefs$bm.coefs,
     betahat = slr0.01.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
@@ -270,7 +269,7 @@ res = foreach(
     n.train = n, n.test = n,
     thetahat0 = slrscreen0.coefs$a0, thetahat = slrscreen0.coefs$bm.coefs,
     betahat = slrscreen0.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
@@ -319,7 +318,7 @@ res = foreach(
   # beta estimation accuracy, selection accuracy #
   slbl.metrics = getMetricsBM(
     thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
   slbl.metrics = c(PEtr = slbl.PE.train, PEte = slbl.PE.test, slbl.metrics)
   
@@ -388,7 +387,7 @@ res = foreach(
   # beta estimation accuracy, selection accuracy #
   codacore0.metrics = getMetricsBM(
     betahat = codacore0.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
   codacore0.metrics = c(
     PEtr = codacore0.PE.train, PEte = codacore0.PE.test, codacore0.metrics)
@@ -402,48 +401,48 @@ res = foreach(
   ),
   paste0(output_dir, "/codacore_metrics", file.end))
   
-  # ##############################################################################
-  # # Log-Ratio Lasso
-  # # -- regresses on pairwise log-ratios
-  # ##############################################################################
-  # library(logratiolasso)
-  # source("Kristyn/Functions/logratiolasso.R")
-  # Wc = scale(log(X), center = TRUE, scale = FALSE)
-  # Yc = Y - mean(Y)
-  # 
-  # start.time = Sys.time()
-  # lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
-  # end.time = Sys.time()
-  # lrl.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # compute metrics on the selected model #
-  # # prediction errors
-  # # get prediction error on training set
-  # lrl.Yhat.train = Wc %*% lrl$beta_min
-  # lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
-  # # get prediction error on test set
-  # Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
-  # Yc.test = Y.test - mean(Y.test)
-  # lrl.Yhat.test = Wc.test %*% lrl$beta_min
-  # lrl.PE.test = crossprod(Y - lrl.Yhat.test) / n
-  # 
-  # # beta estimation accuracy, selection accuracy #
-  # lrl.metrics = getMetricsBM(
-  #   betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
-  #   true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
-  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  # lrl.metrics = c(
-  #   PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
-  # 
-  # saveRDS(c(
-  #   lrl.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = NA, 
-  #   "time" = lrl.timing, 
-  #   "adhoc" = NA
-  # ),
-  # paste0(output_dir, "/lrlasso_metrics", file.end))
+  ##############################################################################
+  # Log-Ratio Lasso
+  # -- regresses on pairwise log-ratios
+  ##############################################################################
+  library(logratiolasso)
+  source("Kristyn/Functions/logratiolasso.R")
+  Wc = scale(log(X), center = TRUE, scale = FALSE)
+  Yc = Y - mean(Y)
+
+  start.time = Sys.time()
+  lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
+  end.time = Sys.time()
+  lrl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  lrl.Yhat.train = Wc %*% lrl$beta_min
+  lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
+  # get prediction error on test set
+  Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
+  Yc.test = Y.test - mean(Y.test)
+  lrl.Yhat.test = Wc.test %*% lrl$beta_min
+  lrl.PE.test = crossprod(Y - lrl.Yhat.test) / n
+
+  # beta estimation accuracy, selection accuracy #
+  lrl.metrics = getMetricsBM(
+    betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  lrl.metrics = c(
+    PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
+
+  saveRDS(c(
+    lrl.metrics,
+    "betasparsity" = bspars,
+    "logratios" = NA,
+    "time" = lrl.timing,
+    "adhoc" = NA
+  ),
+  paste0(output_dir, "/lrlasso_metrics", file.end))
   
   
   ##############################################################################

@@ -113,7 +113,6 @@ res = foreach(
   
   # about beta
   non0.beta = as.vector(SBP.true != 0)
-  is0.beta = !non0.beta
   bspars = sum(non0.beta)
   # solve for beta
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
@@ -123,7 +122,7 @@ res = foreach(
   saveRDS(list(
     X = X, Y = Y, X.test = X.test, Y.test = Y.test, 
     SBP.true = SBP.true, beta.true = beta.true, 
-    is0.beta = is0.beta, non0.beta = non0.beta
+    non0.beta = non0.beta
   ),
   paste0(output_dir, "/data", file.end))
 
@@ -147,11 +146,11 @@ res = foreach(
   # get prediction error on test set
   classo.Yhat.test = predict(classo, X.test)
   classo.AUC.test = roc(
-    Y, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc
+    Y.test, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   cl.metrics = getMetricsLLC(
     betahat = cl.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta, 
+    true.sbp = SBP.true, non0.true.beta = non0.beta, 
     true.beta = beta.true, 
     metrics = c("betaestimation", "selection"), classification = TRUE)
   cl.metrics = c(
@@ -195,12 +194,12 @@ res = foreach(
     data.frame(V1 = balance::balance.fromSBP(x = X.test, y = slr0.05$sbp)), 
     type = "response")
   slr0.05.AUC.test = roc(
-    Y, slr0.05.Yhat.test, levels = c(0, 1), direction = "<")$auc
+    Y.test, slr0.05.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   slr0.05.metrics = getMetricsBM(
     thetahat0 = slr0.05.coefs$a0, thetahat = slr0.05.coefs$bm.coefs,
     betahat = slr0.05.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true,
     metrics = c("betaestimation", "selection"), classification = TRUE)
   slr0.05.metrics = c(
@@ -244,12 +243,12 @@ res = foreach(
     data.frame(V1 = balance::balance.fromSBP(x = X.test, y = slr0.01$sbp)), 
     type = "response")
   slr0.01.AUC.test = roc(
-    Y, slr0.01.Yhat.test, levels = c(0, 1), direction = "<")$auc
+    Y.test, slr0.01.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   slr0.01.metrics = getMetricsBM(
     thetahat0 = slr0.01.coefs$a0, thetahat = slr0.01.coefs$bm.coefs,
     betahat = slr0.01.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true,
     metrics = c("betaestimation", "selection"), classification = TRUE)
   slr0.01.metrics = c(
@@ -312,12 +311,12 @@ res = foreach(
       x = X.test, y = slrscreen0.fullSBP)), 
     type = "response")
   slrscreen0.AUC.test = roc(
-    Y, slrscreen0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+    Y.test, slrscreen0.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   slrscreen0.metrics = getMetricsBM(
     thetahat0 = slrscreen0.coefs$a0, thetahat = slrscreen0.coefs$bm.coefs,
     betahat = slrscreen0.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true,
     metrics = c("betaestimation", "selection"), classification = TRUE)
   slrscreen0.metrics = c(
@@ -363,7 +362,7 @@ res = foreach(
     slbl.data$y, slbl.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
   slbl.test.data = getSelbalData(
-    X = X.test, y = Y, classification = TRUE, 
+    X = X.test, y = Y.test, classification = TRUE, 
     levels = c(0, 1), labels = c(0, 1))
   slbl.Yhat.test = predict.glm(
     slbl$glm, 
@@ -375,7 +374,7 @@ res = foreach(
   # beta estimation accuracy, selection accuracy #
   slbl.metrics = getMetricsBM(
     thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
   slbl.metrics = c(AUCtr = slbl.AUC.train, AUCte = slbl.AUC.test, slbl.metrics)
   
@@ -423,8 +422,6 @@ res = foreach(
       Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
     # get prediction error on test set
     codacore0.Yhat.test = predict(codacore0, X.test)
-    codacore0.AUC.test = roc(
-      Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
     
   } else{
     print(paste0("sim ", i, " -- codacore has no log-ratios"))
@@ -440,14 +437,14 @@ res = foreach(
       Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
     # get prediction error on test set
     codacore0.Yhat.test = predict(codacore0model, data.frame(X.test))
-    codacore0.AUC.test = roc(
-      Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
-    
   }
+  codacore0.AUC.test = roc(
+    Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  
   # beta estimation accuracy, selection accuracy #
   codacore0.metrics = getMetricsBM(
     betahat = codacore0.betahat,
-    true.sbp = SBP.true, is0.true.beta = is0.beta, non0.true.beta = non0.beta,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
   codacore0.metrics = c(
     AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)

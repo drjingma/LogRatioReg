@@ -1,22 +1,21 @@
 rm(list=ls())
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
 #   explore various sigma_eps & rho values to get specified Rsquared values
-# Date: 2/12/2022
+# Date: 5/24/2022
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_binary"
+output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics"
 
 source("Kristyn/Functions/util.R")
 
 library(tidyverse)
 library(reshape2)
 
-numSims = 100 
+numSims = 100
 
-# Settings to toggle with
-sigma.settings = "latentVarModel_binary"
+sigma.settings = "latentVarModel"
 n = 100
 p = 30
 K = 10
@@ -25,15 +24,15 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-# sigma_eps1 = 0.1
+sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 4 # 2, 4
+b1 = 0.5 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 
@@ -43,7 +42,8 @@ file.end0 = paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
   "_dim", n, "x", p, 
-  "_noisex", sigma_eps2,
+  "_noisey", sigma_eps1, 
+  "_noisex", sigma_eps2, 
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
@@ -59,6 +59,7 @@ slr_0.01_sims_list = list()
 slrscreen_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
+lrlasso_sims_list = list()
 for(i in 1:numSims){
   print(i)
   
@@ -112,6 +113,14 @@ for(i in 1:numSims){
   ))))
   rownames(cdcr_sim_tmp) = NULL
   codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
+  
+  # log-ratio lasso
+  lrl_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/lrlasso_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(lrl_sim_tmp) = NULL
+  lrlasso_sims_list[[i]] = data.table::data.table(lrl_sim_tmp)
 }
 
 # metrics boxplots
@@ -147,32 +156,43 @@ codacore_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "codacore")
+lrlasso_sims.gg =
+  pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)),
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "lrlasso")
 ###
 data.gg = rbind(
   classo_sims.gg,
-  # slr_0.05_sims.gg,
-  # slr_0.01_sims.gg,
+  # slr_0.05_sims.gg, 
+  # slr_0.01_sims.gg, 
   slrscreen_sims.gg,
   selbal_sims.gg, 
-  codacore_sims.gg
+  codacore_sims.gg,
+  lrlasso_sims.gg
 ) %>%
   mutate(
     Metric = factor(
       Metric, levels = c(
-        "AUCtr", "AUCte", 
         "EA1", "EA2", "EAInfty", 
         "TPR", "FPR", "Fscore",
-        "betasparsity", "logratios", "adhoc", "time"
+        "betasparsity", "logratios", "adhoc", "time",
+        "PEtr", "PEte"
+      ), 
+      labels = c(
+        "EA1", "EA2", "EAInfty", 
+        "True Pos. Rate", "False Pos. Rate", "F1-Score",
+        "betasparsity", "logratios", "adhoc", "Timing", 
+        "PEtr", "Prediction MSE"
       ))
   )
 
 data.gg_main = data.gg %>%
   dplyr::filter(
     Metric %in% c(
-      "AUCtr", "AUCte",
-      "EA1", "EA2", "EAInfty",
-      "TPR", "FPR", "Fscore",
-      "time"
+      "Prediction MSE", 
+      "True Pos. Rate", "False Pos. Rate", "F1-Score",
+      "Timing"
     )
   )
 plt_main = ggplot(
@@ -194,7 +214,13 @@ plt_main = ggplot(
     axis.title.x = element_blank(), 
     # axis.text.x = element_blank(),
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
+    axis.title.y = element_blank(), 
+    text = element_text(size = 12), 
+    panel.background = element_rect(fill = "transparent"), 
+    plot.background = element_rect(fill = "transparent", color = NA), 
+    legend.background = element_rect(fill = "transparent"), 
+    legend.box.background = element_rect(
+      fill = "transparent", color = "transparent"))
 plt_main
 ggsave(
   filename = paste0(
@@ -202,7 +228,7 @@ ggsave(
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
-  width = 8, height = 6, units = c("in")
+  width = 6, height = 3, units = c("in")
 )
 # data.gg %>% filter(Metric == "adhoc") %>% 
 #   group_by(Metric, Method) %>%

@@ -130,16 +130,16 @@ classo_sims.gg =
                names_to = "Metric") %>%
   mutate("Method" = "classo")
 ###
-# slr_0.05_sims.gg = 
-#   pivot_longer(as.data.frame(data.table::rbindlist(slr_0.05_sims_list)), 
-#                cols = everything(),
-#                names_to = "Metric") %>%
-#   mutate("Method" = "slr-0.05")
-# slr_0.01_sims.gg = 
-#   pivot_longer(as.data.frame(data.table::rbindlist(slr_0.01_sims_list)), 
-#                cols = everything(),
-#                names_to = "Metric") %>%
-#   mutate("Method" = "slr-0.01")
+slr_0.05_sims.gg =
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.05_sims_list)),
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slr-0.05")
+slr_0.01_sims.gg =
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.01_sims_list)),
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slr-0.01")
 slrscreen_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(slrscreen_sims_list)), 
                cols = everything(),
@@ -213,7 +213,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220526",
+    "20220528",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

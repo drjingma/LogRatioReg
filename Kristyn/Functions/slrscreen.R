@@ -93,7 +93,7 @@ slr.screen = function(
       }
       if (!is.null(s0.perc)) {
         if (s0.perc >= 0) {
-          fudge <- quantile(sd, s0.perc)
+          fudge <- quantile(sd, s0.perc) # same as min(sd)
         }
         if (s0.perc < 0) {
           fudge <- 0
@@ -105,9 +105,9 @@ slr.screen = function(
       feature.scores <- rep(0,ncol(xclr.centered))
       for (j in 1:ncol(xclr.centered)){
         fit <- glm(y~x,data=data.frame(x=xclr.centered[,j],y=as.factor(y)),family=binomial(link='logit'))
-        feature.scores[j] <- coef(summary(fit))[2,3]
+        feature.scores[j] <- coef(summary(fit))[2,3] # ["x", "t value"]
       }
-      feature.scores <- stats::pnorm(abs(feature.scores))
+      feature.scores <- stats::pnorm(abs(feature.scores)) 
     }
   }
   if (method=='correlation'){

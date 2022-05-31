@@ -1,8 +1,8 @@
+# Purpose: look at aitchison matrix
+# Date: 5/24/2022
 rm(list=ls())
-# Purpose: observe different R^2 values for specified rho and sigma_eps values
-#   for the one-balance model
-#   this time, more generalizeable to different balances
-# Date: 3/7/2022
+
+set.seed(1234)
 
 ################################################################################
 # libraries and settings
@@ -13,23 +13,14 @@ library(Matrix)
 library(glmnet)
 
 library(balance)
-library(propr)
 
-source("RCode/func_libs.R")
-source("Kristyn/Functions/supervisedlogratios.R")
-source("Kristyn/Functions/HSClust.R")
-source("Kristyn/Functions/slrnew.R")
+source("RCode/func_libs_1.R") # for classo to work
 
-# helper functions
-source("Kristyn/Functions/metrics.R")
-source("Kristyn/Functions/helper_functions.R")
+source("Kristyn/Functions/slr.R")
+source("Kristyn/Functions/util.R")
+source("Kristyn/Functions/slrscreen.R")
 
-# for plots
-library(ggraph) # make dendrogram
-library(igraph) # transform dataframe to graph object: graph_from_data_frame()
-library(tidygraph)
-
-# expdecay Sigma #############################################################
+# Tuning parameters###########################################################
 
 # Settings to toggle with
 sigma.settings = "latentVarModel"
@@ -41,22 +32,20 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.1
-sigma_eps2 = 0.1
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+sigma_eps1 = 0.1 # sigma (for y)
+sigma_eps2 = 0.1 # sigma_j (for x)
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-b0 = 0
-b1 = 1 # 1, 0.5, 0.25
-theta.value = 1 # weight on a1: 1
+b0 = 0 # 0
+b1 = 0.5 # 1, 0.5, 0.25
+theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 
 ##############################################################################
 # generate data
-seed = 5
-set.seed(seed)
 # get latent variable
 U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
 # simulate y from latent variable
@@ -81,53 +70,79 @@ Y.test <- y.all[-(1:n)]
 
 # about beta
 non0.beta = as.vector(SBP.true != 0)
-is0.beta = !non0.beta
+bspars = sum(non0.beta)
 # solve for beta
 c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
 beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
   as.vector(ilrtrans.true$ilr.trans)
 
+# aitchison similarity matrix
+X.reduced <- X[, which(SBP.true != 0)] # reduced data matrix
+p.reduced = sum(SBP.true != 0)
+Aitchison.variation <- matrix(0, p.reduced, p.reduced)
+rownames(Aitchison.variation) <- colnames(Aitchison.variation) <- colnames(
+  X.reduced)
+for (j in 1:p.reduced){
+  for (k in 1:p.reduced){
+    if (k==j){next}
+    else {
+      Aitchison.variation[j,k] <- stats::var(
+        log(X.reduced[,j]) - log(X.reduced[,k])) # Aitchison variation
+    }
+  }
+}
+Aitchison.similarity <- max(Aitchison.variation) - Aitchison.variation 
+pheatmap::pheatmap(
+  Aitchison.similarity, cluster_rows = FALSE, cluster_cols = FALSE, 
+  fontsize = 12)
+?pheatmap
 ##############################################################################
-# plain slr
+# slr method with screening step
+#   method = "wald"
+#   response.type = "continuous"
+#   s0.perc = 0
+#   zeta = 0
+#   type.measure = "mse"
+# -- fits a balance regression model with one balance
 ##############################################################################
+start.time = Sys.time()
+slrscreen0cv = cv.slr.screen(
+  x = X, y = Y, method = "wald", 
+  response.type = "continuous", s0.perc = 0, zeta = 0, 
+  nfolds = K, type.measure = "mse", 
+  parallel = FALSE, scale = scaling, trace.it = FALSE)
+slrscreen0 = slr.screen(
+  x = X, y = Y, method = "wald", 
+  response.type = "continuous", s0.perc = 0, zeta = 0, 
+  threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
+end.time = Sys.time()
+slrscreen0.timing = difftime(
+  time1 = end.time, time2 = start.time, units = "secs")
 
-# using slr
-slrnew1 = slr(x = X, y = Y, num.clusters = 2, approx = FALSE)
-# slrnew1$sbp
+slrscreen0.fullSBP = matrix(0, nrow = p, ncol = 1)
+rownames(slrscreen0.fullSBP) = colnames(X)
+slrscreen0.fullSBP[match(
+  names(slrscreen0$sbp), rownames(slrscreen0.fullSBP))] = slrscreen0$sbp
 
-# using hslr
-slrnew2 = hslr(x = X, y = Y, max.levels = 1, approx = FALSE)
-slrnew2fit = slrnew2$fits[[1]]
-# slrnew2fit$sbp
+slrscreen0.coefs = getCoefsBM(
+  coefs = coefficients(slrscreen0$fit), sbp = slrscreen0.fullSBP)
 
-##############################################################################
-# slr with max.clusters = 5, model selection with Rsq
-##############################################################################
-# note: chose 5 = floor(sqrt(p))
-slrmult0 = slrmult(x = X, y = Y, max.clusters = 5, approx = FALSE)
-which_fit_slrmult0 = which.max(slrmult0$max.Rsqs)
-slrmult0fit = slrmult0$fits[[which_fit_slrmult0]]
-# slrmult0fit$sbp
-
-##############################################################################
-# slr with max.clusters = 5, model selection with cv
-##############################################################################
-cvslr0 = cv.slr(x = X, y = Y, max.clusters = 5, approx = FALSE, nfolds = K)
-cvslr0fit = cvslr0$models[[cvslr0$nclusters_1se_idx]]
-# cvslr0fit$sbp
+# compute metrics on the selected model #
+slrscreen0.metrics = getMetricsBM(
+  y.train = Y, y.test = Y.test,
+  ilrX.train = getIlrX(X, sbp = slrscreen0.fullSBP),
+  ilrX.test = getIlrX(X.test, sbp = slrscreen0.fullSBP),
+  n.train = n, n.test = n,
+  thetahat0 = slrscreen0.coefs$a0, thetahat = slrscreen0.coefs$bm.coefs,
+  betahat = slrscreen0.coefs$llc.coefs,
+  true.sbp = SBP.true, non0.true.beta = non0.beta,
+  true.beta = beta.true)
 
 
-##############################################################################
-# hslr with max.levels = 5, model selection with Rsq
-##############################################################################
-hslr0 = hslr(x = X, y = Y, max.levels = 5, approx = FALSE)
-# which_fit = which(slrnew5$Rsqs == max(slrnew5$Rsqs, na.rm = TRUE), arr.ind = TRUE)
-which_fit_hslr0 = which.max(hslr0$max.Rsqs)
-hslr0fit = hslr0$fits[[which_fit_hslr0]]
 
-##############################################################################
-# hslr with max.levels = 5, model selection with cv
-##############################################################################
+
+
+
 
 
 

@@ -12,7 +12,6 @@ library(balance)
 
 source("RCode/func_libs.R")
 source("Kristyn/Functions/slr.R")
-source("Kristyn/Functions/slrtesting.R")
 source("Kristyn/Functions/util.R")
 
 library(ggplot2)

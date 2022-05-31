@@ -183,26 +183,19 @@ plt_main = ggplot(
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
     color = "red") +
-  # scale_x_discrete(limits = c(
-  #   "slr", "slr-s1",
-  #   "slr-am", "slr-am-s1",
-  #   "slr-ap", "slr-ap-s1",
-  #   "slr-am-ap", "slr-am-ap-s1"
-  # )) +
   theme_bw() +
   theme(
     axis.title.x = element_blank(), 
-    # axis.text.x = element_blank(),
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
 plt_main
 ggsave(
   filename = paste0(
-    "20220528",
+    "20220530",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
-  width = 8, height = 6, units = c("in")
+  width = 6, height = 5, units = c("in")
 )
 # data.gg %>% filter(Metric == "adhoc") %>% 
 #   group_by(Metric, Method) %>%

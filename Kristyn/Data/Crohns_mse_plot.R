@@ -109,7 +109,7 @@ slrscreen.gg =
   pivot_longer(as.data.frame(data.table::rbindlist(slrscreen_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slrscreen")
+  mutate("Method" = "slr")
 ###
 selbal.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_list)), 
@@ -124,8 +124,8 @@ codacore.gg =
 ###
 data.gg = rbind(
   classo.gg,
-  slr_0.05.gg,
-  slr_0.01.gg,
+  # slr_0.05.gg,
+  # slr_0.01.gg,
   slrscreen.gg,
   selbal.gg, 
   codacore.gg
@@ -164,9 +164,9 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220527",
+    "20220530",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
-  width = 8, height = 6, units = c("in")
+  width = 6, height = 2.5, units = c("in")
 )

@@ -2,6 +2,10 @@
 
 This repo provides code, data, and references for the supervised log-ratio project. 
 
+## To-dos 05/25
+
+- Consider a semi-supervised experimental design. Check if unlabelled data are useful in spectral clustering with Aitchison similarity.
+
 ## To-dos 05/18
 
 - Explore a new method that combines feature screening and spectral clustering

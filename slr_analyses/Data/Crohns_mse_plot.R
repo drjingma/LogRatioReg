@@ -1,13 +1,13 @@
 rm(list=ls())
 # Purpose: compare methods on prediction accuracy & timing using Crohns data
-# Date: 5/26/2022
+# Date: 6/13/2022
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Data/outputs_mse"
+output_dir = "slr_analyses/Data/outputs_mse"
 
-source("Kristyn/Functions/util.R")
+source("slr_analyses/Functions/util.R")
 
 library(tidyverse)
 library(reshape2)
@@ -28,9 +28,7 @@ file.end0 = paste0(
 
 # import metrics
 classo_list = list()
-slr_0.05_list = list()
-slr_0.01_list = list()
-slrscreen_list = list()
+slr_list = list()
 selbal_list = list()
 codacore_list = list()
 for(i in 1:numSplits){
@@ -46,29 +44,13 @@ for(i in 1:numSplits){
   
   ###
   
-  # slr - alpha = 0.05
-  slr_alpha0.05_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_alpha0.05_metrics",
-    "_sim", i, file.end0, ".rds"
-  ))))
-  rownames(slr_alpha0.05_tmp) = NULL
-  slr_0.05_list[[i]] = data.table::data.table(slr_alpha0.05_tmp)
-  
-  # slr - alpha = 0.01
-  slr_alpha0.01_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_alpha0.01_metrics",
-    "_sim", i, file.end0, ".rds"
-  ))))
-  rownames(slr_alpha0.01_tmp) = NULL
-  slr_0.01_list[[i]] = data.table::data.table(slr_alpha0.01_tmp)
-  
-  # slr - screen
+  # slr
   slrscreen_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slrscreen_metrics",
+    output_dir, "/slr_metrics",
     "_sim", i, file.end0, ".rds"
   ))))
   rownames(slrscreen_tmp) = NULL
-  slrscreen_list[[i]] = data.table::data.table(slrscreen_tmp)
+  slr_list[[i]] = data.table::data.table(slrscreen_tmp)
   ###
   
   # selbal
@@ -95,18 +77,8 @@ classo.gg =
                names_to = "Metric") %>%
   mutate("Method" = "classo")
 ###
-slr_0.05.gg =
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.05_list)),
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-0.05")
-slr_0.01.gg =
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.01_list)),
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-0.01")
 slrscreen.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slrscreen_list)), 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_list)), 
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "slr")
@@ -124,8 +96,6 @@ codacore.gg =
 ###
 data.gg = rbind(
   classo.gg,
-  # slr_0.05.gg,
-  # slr_0.01.gg,
   slrscreen.gg,
   selbal.gg, 
   codacore.gg
@@ -158,13 +128,12 @@ plt_main = ggplot(
   theme_bw() +
   theme(
     axis.title.x = element_blank(), 
-    # axis.text.x = element_blank(),
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
 plt_main
 ggsave(
   filename = paste0(
-    "20220530",
+    "20220613",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

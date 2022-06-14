@@ -1,11 +1,11 @@
 # Purpose: compare slr to selbal on data sets
-# Date: 5/25/2022
+# Date: 6/13/2022
 rm(list=ls())
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Data/outputs_mse"
+output_dir = "slr_analyses/Data/outputs_mse"
 
 # set up parallelization
 library(foreach)
@@ -44,10 +44,9 @@ res = foreach(
   library(pROC)
   
   source("RCode/func_libs.R")
-  source("Kristyn/Functions/slr.R")
-  source("Kristyn/Functions/slrscreen.R")
-  source("Kristyn/Functions/codalasso.R")
-  source("Kristyn/Functions/util.R")
+  source("RCode/SLR.R")
+  source("slr_analyses/Functions/codalasso.R")
+  source("slr_analyses/Functions/util.R")
   
   # tuning parameter settings
   K = 10
@@ -123,62 +122,14 @@ res = foreach(
     cl.metrics,
     paste0(output_dir, "/classo_metrics", file.end))
   
-  # slr -- alpha = 0.01 ########################################################
+  # slr ########################################################################
   start.time = Sys.time()
-  slr0.01 = slr(x = XTr, y = Y2Tr, alpha = 0.01, classification = TRUE)
-  end.time = Sys.time()
-  slr0.01.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # get prediction error on test set
-  slr0.01.Yhat.test = predict(
-    slr0.01$model, 
-    data.frame(V1 = balance::balance.fromSBP(x = XTe, y = slr0.01$sbp)), 
-    type = "response")
-  
-  slr0.01.metrics = c(
-    acc = mean((slr0.01.Yhat.test > 0.5) == Y2Te),
-    auc = roc(
-      Y2Te, slr0.01.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    time = slr0.01.timing
-  )
-  
-  saveRDS(
-    slr0.01.metrics,
-    paste0(output_dir, "/slr_alpha0.01_metrics", file.end))
-  
-  # slr -- alpha = 0.05 ########################################################
-  start.time = Sys.time()
-  slr0.05 = slr(x = XTr, y = Y2Tr, alpha = 0.05, classification = TRUE)
-  end.time = Sys.time()
-  slr0.05.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # get prediction error on test set
-  slr0.05.Yhat.test = predict(
-    slr0.05$model, 
-    data.frame(V1 = balance::balance.fromSBP(x = XTe, y = slr0.05$sbp)), 
-    type = "response")
-  
-  slr0.05.metrics = c(
-    acc = mean((slr0.05.Yhat.test > 0.5) == Y2Te),
-    auc = roc(
-      Y2Te, slr0.05.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    time = slr0.05.timing
-  )
-  
-  saveRDS(
-    slr0.05.metrics,
-    paste0(output_dir, "/slr_alpha0.05_metrics", file.end))
-  
-  # slr -- screen ##############################################################
-  start.time = Sys.time()
-  slrscreen0cv = cv.slr.screen(
+  slrscreen0cv = cv.slr(
     x = XTr, y = Y2Tr, method = "wald", 
     response.type = "binary", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slrscreen0 = slr.screen(
+  slrscreen0 = slr(
     x = XTr, y = Y2Tr, method = "wald", 
     response.type = "binary", s0.perc = 0, zeta = 0, 
     threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
@@ -207,7 +158,7 @@ res = foreach(
   
   saveRDS(
     slrscreen0.metrics,
-    paste0(output_dir, "/slrscreen_metrics", file.end))
+    paste0(output_dir, "/slr_metrics", file.end))
   
   # selbal #####################################################################
   start.time = Sys.time()

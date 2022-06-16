@@ -51,47 +51,39 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 ################################################################################
 
 # classo #######################################################################
-cl_gbm = codalasso(X_gbm, Y2, numFolds = K)
-saveRDS(
-  cl_gbm,
+# cl_gbm = codalasso(X_gbm, Y2, numFolds = K)
+# saveRDS(
+#   cl_gbm,
+#   paste0(
+#     output_dir, "/Crohns",
+#     "_classo",
+#     "_gbm",
+#     ".rds"))
+cl_gbm = readRDS(
   paste0(
     output_dir, "/Crohns",
     "_classo",
     "_gbm",
     ".rds"))
 
-# slr -- alpha = 0.01 ##########################################################
-slr0.01 = slr(x = X_gbm, y = Y2, alpha = 0.01, classification = TRUE)
-saveRDS(
-  slr0.01,
-  paste0(
-    output_dir, "/Crohns",
-    "_slr_alpha0.01",
-    "_gbm",
-    ".rds"))
-
-# slr -- alpha = 0.05 ##########################################################
-slr0.05 = slr(x = X_gbm, y = Y2, alpha = 0.05, classification = TRUE)
-saveRDS(
-  slr0.05,
-  paste0(
-    output_dir, "/Crohns",
-    "_slr_alpha0.05",
-    "_gbm",
-    ".rds"))
-
-# slr -- screen ################################################################
-slrscreen0cv = cv.slr.screen(
-  x = X_gbm, y = Y2, method = "wald", 
-  response.type = "binary", s0.perc = 0, zeta = 0, 
-  nfolds = K, type.measure = "mse", 
-  parallel = FALSE, scale = scaling, trace.it = FALSE)
-slrscreen0 = slr.screen(
-  x = X_gbm, y = Y2, method = "wald", 
-  response.type = "binary", s0.perc = 0, zeta = 0, 
-  threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
-saveRDS(
-  slrscreen0,
+# slr ##########################################################################
+# slrscreen0cv = cv.slr.screen(
+#   x = X_gbm, y = Y2, method = "wald", 
+#   response.type = "binary", s0.perc = 0, zeta = 0, 
+#   nfolds = K, type.measure = "mse", 
+#   parallel = FALSE, scale = scaling, trace.it = FALSE)
+# slrscreen0 = slr.screen(
+#   x = X_gbm, y = Y2, method = "wald", 
+#   response.type = "binary", s0.perc = 0, zeta = 0, 
+#   threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
+# saveRDS(
+#   slrscreen0,
+#   paste0(
+#     output_dir, "/Crohns",
+#     "_slrscreen",
+#     "_gbm",
+#     ".rds"))
+slr0 = readRDS(
   paste0(
     output_dir, "/Crohns",
     "_slrscreen",
@@ -99,9 +91,15 @@ saveRDS(
     ".rds"))
 
 # selbal #######################################################################
-slbl_gbm = selbal.cv(x = X_gbm, y = Y, n.fold = K)
-saveRDS(
-  slbl_gbm,
+# slbl_gbm = selbal.cv(x = X_gbm, y = Y, n.fold = K)
+# saveRDS(
+#   slbl_gbm,
+#   paste0(
+#     output_dir, "/Crohns",
+#     "_selbal",
+#     "_gbm",
+#     ".rds"))
+slbl_gbm = readRDS(
   paste0(
     output_dir, "/Crohns",
     "_selbal",
@@ -109,18 +107,23 @@ saveRDS(
     ".rds"))
 
 # codacore #####################################################################
-library(codacore)
-codacore0 = codacore(
-  x = X_gbm, y = Y2, logRatioType = "ILR", 
-  objective = "binary classification", cvParams = list(numFolds = K))
-saveRDS(
-  codacore0,
+# library(codacore)
+# codacore0 = codacore(
+#   x = X_gbm, y = Y2, logRatioType = "ILR", 
+#   objective = "binary classification", cvParams = list(numFolds = K))
+# saveRDS(
+#   codacore0,
+#   paste0(
+#     output_dir, "/Crohns",
+#     "_codacore",
+#     "_gbm",
+#     ".rds"))
+codacore0 = readRDS(
   paste0(
     output_dir, "/Crohns",
     "_codacore",
     "_gbm",
     ".rds"))
-
 
 
 

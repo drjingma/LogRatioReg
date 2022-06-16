@@ -38,15 +38,19 @@ res = foreach(
   library(Matrix)
   library(glmnet)
   
-  library(balance)
-  library(selbal)
-  
   library(pROC)
   
   source("RCode/func_libs.R")
   source("RCode/SLR.R")
   source("slr_analyses/Functions/codalasso.R")
   source("slr_analyses/Functions/util.R")
+  
+  getF1 = function(y, yhat){
+      TPR = sum((yhat > 0) & (y == 1)) / sum(y == 1) # TPR (recall)
+      prec = sum((yhat > 0) & (y == 1)) / sum(yhat > 0) # precision
+    F1 = 2 / (1/TPR + 1/prec) # f1 is harmonic mean of precision & recall
+    return(F1)
+  }
   
   # tuning parameter settings
   K = 10
@@ -67,6 +71,7 @@ res = foreach(
   X = sweep(W, 1, rowSums(W), FUN='/')
   Y = selbal::Crohn[, 49]
   Y2 = ifelse(Y == "CD", 1, 0)
+  p = ncol(W)
   
   ##############################################################################
   # 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
@@ -109,12 +114,14 @@ res = foreach(
     time1 = end.time, time2 = start.time, units = "secs")
   
   # get prediction error on test set
-  classo.Yhat.test = predict(classo, XTe)
+  classo.Yhat.test = predict(classo, XTe) # before sigmoid
   
   cl.metrics = c(
     acc = mean((classo.Yhat.test > 0) == Y2Te),
-    auc = roc(
+    auc = pROC::roc(
       Y2Te, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(classo$cll$betas[-1]) > 10e-8) / p,
+    f1 = getF1(Y2Te, classo.Yhat.test),
     time = cl.timing
   )
   
@@ -124,49 +131,53 @@ res = foreach(
   
   # slr ########################################################################
   start.time = Sys.time()
-  slrscreen0cv = cv.slr(
+  slr0cv = cv.slr(
     x = XTr, y = Y2Tr, method = "wald", 
     response.type = "binary", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slrscreen0 = slr(
+  slr0 = slr(
     x = XTr, y = Y2Tr, method = "wald", 
     response.type = "binary", s0.perc = 0, zeta = 0, 
-    threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
+    threshold = slr0cv$threshold[slr0cv$index["1se",]])
   end.time = Sys.time()
-  slrscreen0.timing = difftime(
+  slr0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrscreen0.fullSBP = matrix(0, nrow = ncol(XTr), ncol = 1)
-  rownames(slrscreen0.fullSBP) = colnames(XTr)
-  slrscreen0.fullSBP[match(
-    names(slrscreen0$sbp), rownames(slrscreen0.fullSBP))] = slrscreen0$sbp
+  # get SBP
+  slr0.fullSBP = matrix(0, nrow = ncol(XTr), ncol = 1)
+  rownames(slr0.fullSBP) = colnames(XTr)
+  slr0.fullSBP[match(
+    names(slr0$sbp), rownames(slr0.fullSBP))] = slr0$sbp
   
   # get prediction error on test set
-  slrscreen0.Yhat.test = predict(
-    slrscreen0$fit, 
+  slr0.Yhat.test = predict(
+    slr0$fit, 
     data.frame(balance = balance::balance.fromSBP(
-      x = XTe, y = slrscreen0.fullSBP)), 
+      x = XTe, y = slr0.fullSBP)), 
     type = "response")
   
-  slrscreen0.metrics = c(
-    acc = mean((slrscreen0.Yhat.test > 0.5) == Y2Te),
-    auc = roc(
-      Y2Te, slrscreen0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    time = slrscreen0.timing
+  slr0.metrics = c(
+    acc = mean((slr0.Yhat.test > 0.5) == Y2Te),
+    auc = pROC::roc(
+      Y2Te, slr0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(slr0.fullSBP > 0) / p,
+    f1 = getF1(Y2Te, slr0.Yhat.test),
+    time = slr0.timing
   )
   
   saveRDS(
-    slrscreen0.metrics,
+    slr0.metrics,
     paste0(output_dir, "/slr_metrics", file.end))
   
   # selbal #####################################################################
   start.time = Sys.time()
-  slbl = selbal.cv(x = XTr, y = YTr, n.fold = K)
+  slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K)
   end.time = Sys.time()
   slbl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
+  # get theta-hat and gamma-hat
   slbl.coefs = getCoefsSelbal(
     X = XTr, y = YTr, selbal.fit = slbl, classification = TRUE, 
     check = TRUE)
@@ -180,8 +191,10 @@ res = foreach(
   
   slbl.metrics = c(
     acc = mean((slbl.Yhat.test < 0.5) == Y2Te),
-    auc = roc(
+    auc = pROC::roc(
       YTe, slbl.Yhat.test, levels = levels(YTe), direction = "<")$auc,
+    percselected = sum(slbl.coefs$sbp > 0) / p,
+    f1 = getF1(Y2Te, slbl.Yhat.test),
     time = slbl.timing
   )
   
@@ -190,36 +203,88 @@ res = foreach(
     paste0(output_dir, "/selbal_metrics", file.end))
   
   # codacore ###################################################################
-  library(codacore)
   start.time = Sys.time()
-  codacore0 = codacore(
+  codacore0 = codacore::codacore(
     x = XTr, y = Y2Tr, logRatioType = "ILR", 
     objective = "binary classification", cvParams = list(numFolds = K))
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
+  # # get prediction error on test set
+  # if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
+  #   # get prediction error on test set
+  #   codacore0.Yhat.test = predict(codacore0, XTe)
+  # } else{
+  #   print(paste0("sim ", i, " -- codacore has no log-ratios"))
+  #   codacore0model = stats::glm(Y ~ 1, family = "binomial")
+  #   codacore0.Yhat.test = predict(codacore0model, data.frame(XTe))
+  # }
+  
+  # get prediction error on test set and gamma-hat
   if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
-    # get prediction error on test set
-    codacore0.Yhat.test = predict(codacore0, XTe)
-    
+    codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
+    codacore0_coeffs = rep(NA, length(codacore0$ensemble))
+    for(col.idx in 1:ncol(codacore0_SBP)){
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
+      codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
+    }
+    codacore0.betahat = getBetaFromCodacore(
+      SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
+    codacore0.Yhat.test = predict(codacore0, X.test)
   } else{
     print(paste0("sim ", i, " -- codacore has no log-ratios"))
+    codacore0_coeffs = c()
     codacore0model = stats::glm(Y ~ 1, family = "binomial")
-    
-    # get prediction error on test set
-    codacore0.Yhat.test = predict(codacore0model, data.frame(XTe))
+    codacore0.betahat = rep(0, p)
+    codacore0.Yhat.test = predict(codacore0model, data.frame(X.test))
   }
   
   codacore0.metrics = c(
     acc = mean((codacore0.Yhat.test > 0.5) == Y2Te),
-    auc = roc(
+    auc = pROC::roc(
         Y2Te, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(codacore0.betahat) > 10e-8) / p,
+    f1 = getF1(Y2Te, codacore0.Yhat.test),
     time = codacore0.timing
   )
   
   saveRDS(
     codacore0.metrics,
     paste0(output_dir, "/codacore_metrics", file.end))
+  
+
+  # log-ratio lasso ############################################################
+  library(logratiolasso)
+  source("slr_analyses/Functions/logratiolasso.R")
+  WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
+  
+  start.time = Sys.time()
+  lrl <- cv_two_stage(
+    z = WTr.c, y = Y2Tr, n_folds = K, family="binomial")
+  end.time = Sys.time()
+  lrl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # get prediction error on test set
+  WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
+  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min)
+  
+  lrl.metrics = c(
+    acc = mean((lrl.Yhat.test > 0.5) == Y2Te),
+    auc = pROC::roc(
+      Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
+    f1 = getF1(Y2Te, lrl.Yhat.test),
+    time = lrl.timing
+  )
+  
+  saveRDS(
+    lrl.metrics,
+    paste0(output_dir, "/lrlasso_metrics", file.end))
+  
   
 }

@@ -39,11 +39,10 @@ res = foreach(
   
   library(balance)
   
-  source("RCode/func_libs_1.R") # for classo to work
-  
-  source("Kristyn/Functions/slr.R")
-  source("Kristyn/Functions/util.R")
-  source("Kristyn/Functions/slrscreen.R")
+  source("RCode/func_libs.R")
+  source("RCode/SLR.R")
+  source("slr_analyses/Functions/codalasso.R")
+  source("slr_analyses/Functions/util.R")
   
   # Tuning parameters###########################################################
   
@@ -162,75 +161,6 @@ res = foreach(
   paste0(output_dir, "/classo_metrics", file.end))
   
   ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   alpha = 0.05
-  # -- fits a balance regression model with one balance
-  ##############################################################################
-  start.time = Sys.time()
-  slr0.05 = slr(
-    x = X, y = Y, alpha = 0.05)
-  end.time = Sys.time()
-  slr0.05.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0.05.coefs = getCoefsBM(
-    coefs = coefficients(slr0.05$model), sbp = slr0.05$sbp)
-  
-  # compute metrics on the selected model #
-  slr0.05.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0.05$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0.05$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0.05.coefs$a0, thetahat = slr0.05.coefs$bm.coefs,
-    betahat = slr0.05.coefs$llc.coefs,
-    true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0.05.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0.05.coefs$bm.coefs != 0),
-    "time" = slr0.05.timing, 
-    "adhoc" = slr0.05$adhoc.invoked
-  ),
-  paste0(output_dir, "/slr_alpha0.05_metrics", file.end))
-  
-  ##############################################################################
-  # slr method using k-means spectral clustering with K = 3
-  #   alpha = 0.01
-  # -- fits a balance regression model with one balance
-  ##############################################################################
-  start.time = Sys.time()
-  slr0.01 = slr(x = X, y = Y, alpha = 0.01)
-  end.time = Sys.time()
-  slr0.01.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  slr0.01.coefs = getCoefsBM(
-    coefs = coefficients(slr0.01$model), sbp = slr0.01$sbp)
-  
-  # compute metrics on the selected model #
-  slr0.01.metrics = getMetricsBM(
-    y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0.01$sbp),
-    ilrX.test = getIlrX(X.test, sbp = slr0.01$sbp),
-    n.train = n, n.test = n,
-    thetahat0 = slr0.01.coefs$a0, thetahat = slr0.01.coefs$bm.coefs,
-    betahat = slr0.01.coefs$llc.coefs,
-    true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    slr0.01.metrics,
-    "betasparsity" = bspars,
-    "logratios" = sum(slr0.01.coefs$bm.coefs != 0),
-    "time" = slr0.01.timing, 
-    "adhoc" = slr0.01$adhoc.invoked
-  ),
-  paste0(output_dir, "/slr_alpha0.01_metrics", file.end))
-  
-  ##############################################################################
   # slr method with screening step
   #   method = "wald"
   #   response.type = "continuous"
@@ -240,46 +170,46 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  slrscreen0cv = cv.slr.screen(
+  slr0cv = cv.slr(
     x = X, y = Y, method = "wald", 
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slrscreen0 = slr.screen(
+  slr0 = slr(
     x = X, y = Y, method = "wald", 
     response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = slrscreen0cv$threshold[slrscreen0cv$index["1se",]])
+    threshold = slr0cv$threshold[slr0cv$index["1se",]])
   end.time = Sys.time()
-  slrscreen0.timing = difftime(
+  slr0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrscreen0.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slrscreen0.fullSBP) = colnames(X)
-  slrscreen0.fullSBP[match(
-    names(slrscreen0$sbp), rownames(slrscreen0.fullSBP))] = slrscreen0$sbp
+  slr0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slr0.fullSBP) = colnames(X)
+  slr0.fullSBP[match(
+    names(slr0$sbp), rownames(slr0.fullSBP))] = slr0$sbp
   
-  slrscreen0.coefs = getCoefsBM(
-    coefs = coefficients(slrscreen0$fit), sbp = slrscreen0.fullSBP)
+  slr0.coefs = getCoefsBM(
+    coefs = coefficients(slr0$fit), sbp = slr0.fullSBP)
   
   # compute metrics on the selected model #
-  slrscreen0.metrics = getMetricsBM(
+  slr0.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slrscreen0.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = slrscreen0.fullSBP),
+    ilrX.train = getIlrX(X, sbp = slr0.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = slr0.fullSBP),
     n.train = n, n.test = n,
-    thetahat0 = slrscreen0.coefs$a0, thetahat = slrscreen0.coefs$bm.coefs,
-    betahat = slrscreen0.coefs$llc.coefs,
+    thetahat0 = slr0.coefs$a0, thetahat = slr0.coefs$bm.coefs,
+    betahat = slr0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slrscreen0.metrics,
+    slr0.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slrscreen0.coefs$bm.coefs != 0),
-    "time" = slrscreen0.timing, 
-    "adhoc" = slrscreen0$adhoc.invoked
+    "logratios" = sum(slr0.coefs$bm.coefs != 0),
+    "time" = slr0.timing, 
+    "adhoc" = slr0$adhoc.invoked
   ),
-  paste0(output_dir, "/slrscreen_metrics", file.end))
+  paste0(output_dir, "/slr_metrics", file.end))
   
   ##############################################################################
   # selbal method (a balance regression method)
@@ -425,7 +355,7 @@ res = foreach(
   Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
   Yc.test = Y.test - mean(Y.test)
   lrl.Yhat.test = Wc.test %*% lrl$beta_min
-  lrl.PE.test = crossprod(Y - lrl.Yhat.test) / n
+  lrl.PE.test = crossprod(Y.test - lrl.Yhat.test) / n
 
   # beta estimation accuracy, selection accuracy #
   lrl.metrics = getMetricsBM(

@@ -12,17 +12,17 @@ options(repos=r)
 
 packages <- c(
   "mvtnorm",
-  "balance", 
-  "selbal", 
-  "propr", 
+  "balance", # github repo
+  "selbal", # github repo
+  # "propr", 
   "Matrix", 
   "glmnet", 
   "compositions", 
   "stats", 
-  "limSolve", 
-  "microbenchmark",
-  "ggplot2",
-  "logratiolasso",
+  # "limSolve", 
+  # "microbenchmark",
+  # "ggplot2",
+  "logratiolasso", # github repo
   "foreach",
   "future", 
   "parallel", 

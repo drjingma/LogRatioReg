@@ -31,6 +31,7 @@ classo_list = list()
 slr_list = list()
 selbal_list = list()
 codacore_list = list()
+lrlasso_list = list()
 for(i in 1:numSplits){
   print(i)
   
@@ -68,6 +69,14 @@ for(i in 1:numSplits){
   ))))
   rownames(cdcr_tmp) = NULL
   codacore_list[[i]] = data.table::data.table(cdcr_tmp)
+  
+  # log-ratio lasso
+  lrl_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/lrlasso_metrics",
+    "_sim", i, file.end0, ".rds"
+  ))))
+  rownames(lrl_tmp) = NULL
+  lrlasso_list[[i]] = data.table::data.table(lrl_tmp)
 }
 
 # metrics boxplots
@@ -93,30 +102,36 @@ codacore.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "codacore")
+lrlasso.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "lrlasso")
 ###
 data.gg = rbind(
   classo.gg,
   slrscreen.gg,
   selbal.gg, 
-  codacore.gg
+  codacore.gg, 
+  lrlasso.gg
 ) %>%
   mutate(
     Metric = factor(
       Metric, 
       levels = c(
-        "acc", "auc", "time"
+        "acc", "auc", "f1", "percselected",  "time"
       ), 
       labels = c(
-        "Accuracy", "AUC", "Timing"
+        "Accuracy", "AUC", "F1", "% Selected", "Timing"
       ))
   )
 
-data.gg_main = data.gg %>%
-  dplyr::filter(
-    Metric %in% c(
-      "Accuracy", "AUC", "Timing"
-    )
-  )
+data.gg_main = data.gg #%>%
+  # dplyr::filter(
+  #   Metric %in% c(
+  #     "Accuracy", "AUC", "Timing"
+  #   )
+  # )
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -133,7 +148,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220613",
+    "20220616",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

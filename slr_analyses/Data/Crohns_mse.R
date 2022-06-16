@@ -211,16 +211,6 @@ res = foreach(
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  # # get prediction error on test set
-  # if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
-  #   # get prediction error on test set
-  #   codacore0.Yhat.test = predict(codacore0, XTe)
-  # } else{
-  #   print(paste0("sim ", i, " -- codacore has no log-ratios"))
-  #   codacore0model = stats::glm(Y ~ 1, family = "binomial")
-  #   codacore0.Yhat.test = predict(codacore0model, data.frame(XTe))
-  # }
-  
   # get prediction error on test set and gamma-hat
   if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
     codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
@@ -234,13 +224,13 @@ res = foreach(
     }
     codacore0.betahat = getBetaFromCodacore(
       SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
-    codacore0.Yhat.test = predict(codacore0, X.test)
+    codacore0.Yhat.test = predict(codacore0, XTe)
   } else{
     print(paste0("sim ", i, " -- codacore has no log-ratios"))
     codacore0_coeffs = c()
-    codacore0model = stats::glm(Y ~ 1, family = "binomial")
+    codacore0model = stats::glm(Y2Tr ~ 1, family = "binomial")
     codacore0.betahat = rep(0, p)
-    codacore0.Yhat.test = predict(codacore0model, data.frame(X.test))
+    codacore0.Yhat.test = predict(codacore0model, XTe)
   }
   
   codacore0.metrics = c(
@@ -256,7 +246,6 @@ res = foreach(
     codacore0.metrics,
     paste0(output_dir, "/codacore_metrics", file.end))
   
-
   # log-ratio lasso ############################################################
   library(logratiolasso)
   source("slr_analyses/Functions/logratiolasso.R")
@@ -271,10 +260,10 @@ res = foreach(
   
   # get prediction error on test set
   WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
-  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min)
+  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min) # before sigmoid
   
   lrl.metrics = c(
-    acc = mean((lrl.Yhat.test > 0.5) == Y2Te),
+    acc = mean((lrl.Yhat.test > 0) == Y2Te),
     auc = pROC::roc(
       Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
     percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
@@ -285,6 +274,5 @@ res = foreach(
   saveRDS(
     lrl.metrics,
     paste0(output_dir, "/lrlasso_metrics", file.end))
-  
   
 }

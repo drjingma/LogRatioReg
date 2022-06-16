@@ -1,10 +1,11 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 3/7/2022
+# Date: 6/16/2022
+rm(list=ls())
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_binary"
+output_dir = "slr_analyses/Experiments/outputs/metrics_binary"
 
 # set up parallelization
 library(foreach)
@@ -64,7 +65,7 @@ res = foreach(
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 6 # 2, 4
+  b1 = 6 # 6
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   
@@ -312,8 +313,6 @@ res = foreach(
     # prediction errors
     # get prediction error on training set
     codacore0.Yhat.train = predict(codacore0, X)
-    codacore0.AUC.train = pROC::roc(
-      Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
     # get prediction error on test set
     codacore0.Yhat.test = predict(codacore0, X.test)
     
@@ -326,12 +325,12 @@ res = foreach(
     # compute metrics on the selected model #
     # prediction errors
     # get prediction error on training set
-    codacore0.Yhat.train = predict(codacore0model, data.frame(X))
-    codacore0.AUC.train = pROC::roc(
-      Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
+    codacore0.Yhat.train = predict(codacore0model, X)
     # get prediction error on test set
-    codacore0.Yhat.test = predict(codacore0model, data.frame(X.test))
+    codacore0.Yhat.test = predict(codacore0model, X.test)
   }
+  codacore0.AUC.train = pROC::roc(
+    Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
   codacore0.AUC.test = pROC::roc(
     Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
   

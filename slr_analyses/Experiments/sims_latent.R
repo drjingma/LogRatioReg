@@ -1,10 +1,11 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 5/24/2022
+# Date: 6/16/2022
+rm(list=ls())
 
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics"
+output_dir = "slr_analyses/Experiments/outputs/metrics"
 
 # set up parallelization
 library(foreach)
@@ -58,13 +59,13 @@ res = foreach(
   tol = 1e-4
   sigma_eps1 = 0.1 # sigma (for y)
   sigma_eps2 = 0.1 # sigma_j (for x)
-  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 0.5 # 1, 0.5, 0.25
+  b1 = 0.5 # 0.5
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
   
@@ -293,10 +294,8 @@ res = foreach(
     # prediction errors
     # get prediction error on training set
     codacore0.Yhat.train = predict(codacore0, X)
-    codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
     # get prediction error on test set
     codacore0.Yhat.test = predict(codacore0, X.test)
-    codacore0.PE.test = crossprod(Y - codacore0.Yhat.test) / n
     
   } else{
     print(paste0("sim ", i, " -- codacore has no log-ratios"))
@@ -307,13 +306,13 @@ res = foreach(
     # compute metrics on the selected model #
     # prediction errors
     # get prediction error on training set
-    codacore0.Yhat.train = predict(codacore0model, data.frame(X))
-    codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
+    codacore0.Yhat.train = predict(codacore0model, X)
     # get prediction error on test set
-    codacore0.Yhat.test = predict(codacore0model, data.frame(X.test))
-    codacore0.PE.test = crossprod(Y - codacore0.Yhat.test) / n
-    
+    codacore0.Yhat.test = predict(codacore0model, X.test)
   }
+  codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
+  codacore0.PE.test = crossprod(Y.test - codacore0.Yhat.test) / n
+  
   # beta estimation accuracy, selection accuracy #
   codacore0.metrics = getMetricsBM(
     betahat = codacore0.betahat,
@@ -336,7 +335,7 @@ res = foreach(
   # -- regresses on pairwise log-ratios
   ##############################################################################
   library(logratiolasso)
-  source("Kristyn/Functions/logratiolasso.R")
+  source("slr_analyses/Functions/logratiolasso.R")
   Wc = scale(log(X), center = TRUE, scale = FALSE)
   Yc = Y - mean(Y)
 
@@ -355,7 +354,7 @@ res = foreach(
   Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
   Yc.test = Y.test - mean(Y.test)
   lrl.Yhat.test = Wc.test %*% lrl$beta_min
-  lrl.PE.test = crossprod(Y.test - lrl.Yhat.test) / n
+  lrl.PE.test = crossprod(Yc.test - lrl.Yhat.test) / n
 
   # beta estimation accuracy, selection accuracy #
   lrl.metrics = getMetricsBM(

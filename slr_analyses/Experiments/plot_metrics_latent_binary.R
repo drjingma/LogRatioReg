@@ -6,9 +6,9 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "Kristyn/Experiments/current_experiments/outputs/metrics_binary"
+output_dir = "slr_analyses/Experiments/outputs/metrics_binary"
 
-source("Kristyn/Functions/util.R")
+source("slr_analyses/Functions/util.R")
 
 library(tidyverse)
 library(reshape2)
@@ -27,13 +27,13 @@ scaling = TRUE
 tol = 1e-4
 # sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 4 # 2, 4
+b1 = 6 # 6
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
 
@@ -54,9 +54,7 @@ file.end0 = paste0(
 
 # import metrics
 classo_sims_list = list()
-slr_0.05_sims_list = list()
-slr_0.01_sims_list = list()
-slrscreen_sims_list = list()
+slr_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
 for(i in 1:numSims){
@@ -72,29 +70,13 @@ for(i in 1:numSims){
   
   ###
   
-  # slr - alpha = 0.05
-  slr_alpha0.05_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_alpha0.05_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slr_alpha0.05_sim_tmp) = NULL
-  slr_0.05_sims_list[[i]] = data.table::data.table(slr_alpha0.05_sim_tmp)
-  
-  # slr - alpha = 0.01
-  slr_alpha0.01_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_alpha0.01_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(slr_alpha0.01_sim_tmp) = NULL
-  slr_0.01_sims_list[[i]] = data.table::data.table(slr_alpha0.01_sim_tmp)
-  
   # slr - screen
   slrscreen_sim_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/slrscreen_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(slrscreen_sim_tmp) = NULL
-  slrscreen_sims_list[[i]] = data.table::data.table(slrscreen_sim_tmp)
+  slr_sims_list[[i]] = data.table::data.table(slrscreen_sim_tmp)
   ###
   
   # selbal
@@ -121,18 +103,8 @@ classo_sims.gg =
                names_to = "Metric") %>%
   mutate("Method" = "classo")
 ###
-slr_0.05_sims.gg =
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.05_sims_list)),
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-0.05")
-slr_0.01_sims.gg =
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_0.01_sims_list)),
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "slr-0.01")
-slrscreen_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slrscreen_sims_list)), 
+slr_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "slr")
@@ -150,9 +122,7 @@ codacore_sims.gg =
 ###
 data.gg = rbind(
   classo_sims.gg,
-  # slr_0.05_sims.gg,
-  # slr_0.01_sims.gg,
-  slrscreen_sims.gg,
+  slr_sims.gg,
   selbal_sims.gg, 
   codacore_sims.gg
 ) %>%
@@ -191,13 +161,9 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220530",
+    "20220616",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
   width = 6, height = 5, units = c("in")
 )
-# data.gg %>% filter(Metric == "adhoc") %>% 
-#   group_by(Metric, Method) %>%
-#   summarize(percentage = mean(value, na.rm = TRUE)) %>%
-#   ungroup()

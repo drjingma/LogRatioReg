@@ -53,7 +53,6 @@ res = foreach(
   p = 30
   K = 10
   nlam = 100
-  neta = p
   intercept = TRUE
   scaling = TRUE
   tol = 1e-4

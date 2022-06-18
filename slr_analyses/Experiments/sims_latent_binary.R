@@ -53,7 +53,6 @@ res = foreach(
   p = 30
   K = 10
   nlam = 100
-  neta = p
   intercept = TRUE
   scaling = TRUE
   tol = 1e-4
@@ -383,7 +382,7 @@ res = foreach(
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true, metrics = c("betaestimation", "selection"))
   lrl.metrics = c(
-    PEtr = lrl.AUC.train, PEte = lrl.AUC.test, lrl.metrics)
+    AUCtr = lrl.AUC.train, AUCte = lrl.AUC.test, lrl.metrics)
   
   saveRDS(c(
     lrl.metrics,

@@ -1,6 +1,6 @@
+# Purpose: investigate particular data splits from Crohns_mse.R
+# Date: 6/16/2022
 rm(list=ls())
-# Purpose: compare methods on prediction accuracy & timing using Crohns data
-# Date: 6/13/2022
 
 ################################################################################
 # libraries and settings

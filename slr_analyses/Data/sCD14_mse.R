@@ -54,24 +54,25 @@ res = foreach(
   
   # tuning parameter settings
   K = 10
+  nlam = 100
+  intercept = TRUE
   scaling = TRUE
+  tol = 1e-4
   
   file.end = paste0(
     "_sim", b,
-    "_Crohns", 
+    "_sCD14", 
     "_gbm",
     ".rds")
   
-  ##############################################################################
-  # Crohn: a data set in selbal package
-  #   n = 975 samples, 
-  #   p = 48 taxa (counts for microbial taxa at genus level), 
-  #   1 response (y - binary)
-  W = selbal::Crohn[, 1:48]
+  ################################################################################
+  # sCD14: another HIV data set in selbal package
+  #   n = 151 samples (a subset from sCD14 data set), 
+  #   p = 60 taxa (counts for microbial taxa at genus level), 
+  #   1 response (sCD14 - continuous)
+  W = selbal::sCD14[, 1:60]
   X = sweep(W, 1, rowSums(W), FUN='/')
-  Y = selbal::Crohn[, 49]
-  # levels(Y) # (case, control)
-  Y2 = ifelse(Y == "CD", 1, 0)
+  Y = selbal::sCD14[, 61]
   p = ncol(W)
   
   ##############################################################################
@@ -81,21 +82,15 @@ res = foreach(
   ##############################################################################
   # Train/Test Split
   #   Following Gordon-Rodriguez et al. 2022, fit each method on 20 random 80/20
-  #     train/test splits, sampled with stratification by case-control.
+  #     train/test splits, 
+  #     -- since response is continuous, no need to stratify by case-control.
   numObs = nrow(X_gbm)
   inputDim = ncol(X_gbm)
-  # stratified sampling
-  trainIdx = 1:numObs
-  caseIdx = sample(cut(1:sum(Y2), breaks=5, labels=F))
-  controlIdx = sample(cut(1:sum(1 - Y2), breaks=5, labels=F))
-  trainIdx[Y2 == 1] = caseIdx
-  trainIdx[Y2 == 0] = controlIdx
+  trainIdx = sample(cut(1:numObs, breaks=5, labels=F))
   XTr = X_gbm[trainIdx != 1,]
   YTr = Y[trainIdx != 1]
-  Y2Tr = Y2[trainIdx != 1]
   XTe = X_gbm[trainIdx == 1,]
   YTe = Y[trainIdx == 1]
-  Y2Te = Y2[trainIdx == 1]
   
   saveRDS(list(
     XTr = XTr, YTr = YTr, Y2Tr = Y2Tr,
@@ -109,20 +104,26 @@ res = foreach(
   
   # classo #####################################################################
   start.time = Sys.time()
-  classo = codalasso(XTr, Y2Tr, numFolds = K)
+  classo = cv.func(
+    method="ConstrLasso", y = YTr, x = log(XTr), Cmat = matrix(1, p, 1), 
+    nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
+    scaling = scaling)
   end.time = Sys.time()
   cl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
+  # get gamma-hat
+  oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
+  cl.lam.idx = which(classo$cvm <= oneSErule)[1]
+  cl.a0 = classo$int[cl.lam.idx]
+  cl.betahat = classo$bet[, cl.lam.idx]
+  
   # get prediction error on test set
-  classo.Yhat.test = predict(classo, XTe) # before sigmoid
+  classo.Yhat.test = cl.a0 + log(as.matrix(XTe)) %*% cl.betahat
   
   cl.metrics = c(
-    acc = mean((classo.Yhat.test > 0) == Y2Te),
-    auc = pROC::roc(
-      Y2Te, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    percselected = sum(abs(classo$cll$betas[-1]) > 10e-8) / p,
-    f1 = getF1(Y2Te, classo.Yhat.test),
+    mse = as.vector(crossprod(YTe - classo.Yhat.test) / nrow(XTe)),
+    percselected = sum(abs(cl.betahat) > 10e-8) / p,
     time = cl.timing
   )
   
@@ -133,13 +134,13 @@ res = foreach(
   # slr ########################################################################
   start.time = Sys.time()
   slr0cv = cv.slr(
-    x = XTr, y = Y2Tr, method = "wald", 
-    response.type = "binary", s0.perc = 0, zeta = 0, 
+    x = XTr, y = YTr, method = "wald", 
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
   slr0 = slr(
-    x = XTr, y = Y2Tr, method = "wald", 
-    response.type = "binary", s0.perc = 0, zeta = 0, 
+    x = XTr, y = YTr, method = "wald", 
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
     threshold = slr0cv$threshold[slr0cv$index["1se",]])
   end.time = Sys.time()
   slr0.timing = difftime(
@@ -147,7 +148,7 @@ res = foreach(
   
   # get SBP
   slr0.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slr0.fullSBP) = colnames(XTr)
+  rownames(slr0.fullSBP) = colnames(X)
   slr0.fullSBP[match(
     names(slr0$sbp), rownames(slr0.fullSBP))] = slr0$sbp
   
@@ -159,11 +160,8 @@ res = foreach(
     type = "response")
   
   slr0.metrics = c(
-    acc = mean((slr0.Yhat.test > 0.5) == Y2Te),
-    auc = pROC::roc(
-      Y2Te, slr0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    mse = as.vector(crossprod(YTe - slr0.Yhat.test) / nrow(XTe)),
     percselected = sum(slr0.fullSBP > 0) / p,
-    f1 = getF1(Y2Te, slr0.Yhat.test),
     time = slr0.timing
   )
   

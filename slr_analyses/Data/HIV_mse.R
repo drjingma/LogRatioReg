@@ -1,5 +1,5 @@
 # Purpose: compare slr to other methods on data sets
-# Date: 6/16/2022
+# Date: 6/17/2022
 rm(list=ls())
 
 ################################################################################
@@ -58,20 +58,21 @@ res = foreach(
   
   file.end = paste0(
     "_sim", b,
-    "_Crohns", 
+    "_HIV", 
     "_gbm",
     ".rds")
   
   ##############################################################################
-  # Crohn: a data set in selbal package
-  #   n = 975 samples, 
-  #   p = 48 taxa (counts for microbial taxa at genus level), 
-  #   1 response (y - binary)
-  W = selbal::Crohn[, 1:48]
+  # HIV: one of the HIV data sets in selbal package -- has binary response
+  #   n = 155 samples, 
+  #   p = 60 taxa (counts for microbial taxa at genus level), 
+  #   1 covariate (MSM), 
+  #   1 response (HIV_Status - binary)
+  W = selbal::HIV[, 1:60]
   X = sweep(W, 1, rowSums(W), FUN='/')
-  Y = selbal::Crohn[, 49]
-  # levels(Y) # (case, control)
-  Y2 = ifelse(Y == "CD", 1, 0)
+  Y = selbal::HIV[, 62]
+  # levels(Y) # (control, case)
+  Y2 = ifelse(Y == "Pos", 1, 0)
   p = ncol(W)
   
   ##############################################################################
@@ -191,8 +192,7 @@ res = foreach(
     type = "response")
   
   slbl.metrics = c(
-    acc = mean((slbl.Yhat.test < 0.5) == Y2Te), 
-      # < 0.5 bc order of levels = c(case, control) instead of c(control, case)
+    acc = mean((slbl.Yhat.test > 0.5) == Y2Te),
     auc = pROC::roc(
       YTe, slbl.Yhat.test, levels = levels(YTe), direction = "<")$auc,
     percselected = sum(slbl.coefs$sbp > 0) / p,

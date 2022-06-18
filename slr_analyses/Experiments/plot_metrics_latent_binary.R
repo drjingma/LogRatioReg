@@ -133,9 +133,9 @@ lrlasso_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "lrlasso")
-lrlasso_sims.gg = lrlasso_sims.gg %>%  ##########################################
-  mutate(Metric = replace(Metric, Metric == "PEtr", "AUCtr")) %>% ###############
-  mutate(Metric = replace(Metric, Metric == "PEte", "AUCte")) ###################
+# lrlasso_sims.gg = lrlasso_sims.gg %>%  ##########################################
+#   mutate(Metric = replace(Metric, Metric == "PEtr", "AUCtr")) %>% ###############
+#   mutate(Metric = replace(Metric, Metric == "PEte", "AUCte")) ###################
 
 ###
 data.gg = rbind(

@@ -1,5 +1,5 @@
-# Purpose: plot results from Crohns_mse.R
-# Date: 6/16/2022
+# Purpose: plot results from HIV_mse.R
+# Date: 6/17/2022
 rm(list=ls())
 
 ################################################################################
@@ -20,7 +20,7 @@ scaling = TRUE
 
 file.end0 = paste0(
   # "_sim", b,
-  "_Crohns", 
+  "_HIV", 
   "_gbm")
 
 ################################################################################
@@ -126,12 +126,7 @@ data.gg = rbind(
       ))
   )
 
-data.gg_main = data.gg #%>%
-  # dplyr::filter(
-  #   Metric %in% c(
-  #     "Accuracy", "AUC", "Timing"
-  #   )
-  # )
+data.gg_main = data.gg
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -148,7 +143,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220616",
+    "20220617",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

@@ -76,21 +76,11 @@ getSBPSelbal = function(X, selbal.fit){
 }
 
 getCoefsSelbal = function(
-    X, y, selbal.fit, classification = FALSE, check = TRUE){
+    X, y, selbal.fit, classification = FALSE, check = TRUE, covar = NULL){
   p = ncol(X)
   
   # U (transformation) matrix
   sbp = getSBPSelbal(X = X, selbal.fit = selbal.fit)
-  # ilrU = rep(0, p)
-  # names(ilrU) = colnames(X)
-  # pba.pos = unlist(subset(
-  #   selbal.fit$global.balance, subset = Group == "NUM", select = Taxa))
-  # num.pos = length(pba.pos)
-  # pba.neg = unlist(subset(
-  #   selbal.fit$global.balance, subset = Group == "DEN", select = Taxa))
-  # num.neg = length(pba.neg)
-  # ilrU[pba.pos] = 1 / num.pos
-  # ilrU[pba.neg] = -1 / num.neg
   is.pos = (sbp == 1)
   is.neg = (sbp == -1)
   num.pos = sum(is.pos)
@@ -101,19 +91,21 @@ getCoefsSelbal = function(
   norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
   ilrU = norm.const * ilrU
   if(check){
+    if(is.factor(y)) y = as.numeric(y) - 1
+    data = data.frame(cbind(y, covar, log(as.matrix(X)) %*% matrix(ilrU)))
+    colnames(data)[ncol(data)] <- "V1"
     if(!classification){
-      supposed.fit = lm(y ~ log(as.matrix(X)) %*% as.matrix(ilrU))
+      supposed.fit = lm(y ~ ., data = data)
     } else{
-      supposed.fit = glm(
-        y ~ log(as.matrix(X)) %*% matrix(ilrU), family = binomial(link = "logit"))
+      supposed.fit = glm(y ~ ., data = data, family = binomial(link = "logit"))
     }
     if(!isTRUE(all.equal(as.numeric(coefficients(selbal.fit$glm)), 
                          as.numeric(coefficients(supposed.fit))))){
       warning("getCoefsSelbal(): coefficients of given model and supposed model don't match!")
     }
   }
-  a0 = coefficients(selbal.fit$glm)[1]
-  bm.coefs = coefficients(selbal.fit$glm)[-1]
+  a0 = coefficients(selbal.fit$glm)["(Intecept)"]
+  bm.coefs = coefficients(selbal.fit$glm)["V1"]
   llc.coefs = ilrU %*% as.matrix(bm.coefs)
   rownames(llc.coefs) = colnames(X)
   return(list(

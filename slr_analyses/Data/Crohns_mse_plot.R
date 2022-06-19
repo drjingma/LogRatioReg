@@ -28,7 +28,8 @@ file.end0 = paste0(
 
 # import metrics
 classo_list = list()
-slr_list = list()
+slr_spec_list = list()
+slr_hier_list = list()
 selbal_list = list()
 codacore_list = list()
 lrlasso_list = list()
@@ -45,13 +46,22 @@ for(i in 1:numSplits){
   
   ###
   
-  # slr
-  slrscreen_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_metrics",
+  # slr - spectral clustering
+  slr_spec_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_spectral_metrics",
     "_sim", i, file.end0, ".rds"
   ))))
-  rownames(slrscreen_tmp) = NULL
-  slr_list[[i]] = data.table::data.table(slrscreen_tmp)
+  rownames(slr_spec_tmp) = NULL
+  slr_spec_list[[i]] = data.table::data.table(slr_spec_tmp)
+  
+  # slr - hierarchical clustering
+  slr_hier_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_hierarchical_metrics",
+    "_sim", i, file.end0, ".rds"
+  ))))
+  rownames(slr_hier_tmp) = NULL
+  slr_hier_list[[i]] = data.table::data.table(slr_hier_tmp)
+  
   ###
   
   # selbal
@@ -86,11 +96,16 @@ classo.gg =
                names_to = "Metric") %>%
   mutate("Method" = "classo")
 ###
-slrscreen.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_list)), 
+slr_spec.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr")
+  mutate("Method" = "slr-s")
+slr_hier.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_hier_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slr-h")
 ###
 selbal.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_list)), 
@@ -110,7 +125,8 @@ lrlasso.gg =
 ###
 data.gg = rbind(
   classo.gg,
-  slrscreen.gg,
+  slr_spec.gg,
+  slr_hier.gg,
   selbal.gg, 
   codacore.gg, 
   lrlasso.gg
@@ -126,12 +142,7 @@ data.gg = rbind(
       ))
   )
 
-data.gg_main = data.gg #%>%
-  # dplyr::filter(
-  #   Metric %in% c(
-  #     "Accuracy", "AUC", "Timing"
-  #   )
-  # )
+data.gg_main = data.gg 
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -148,7 +159,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220616",
+    "20220620",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

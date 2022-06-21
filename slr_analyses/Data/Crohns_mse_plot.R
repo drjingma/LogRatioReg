@@ -163,5 +163,5 @@ ggsave(
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,
-  width = 6, height = 3.5, units = c("in")
+  width = 6, height = 4, units = c("in")
 )

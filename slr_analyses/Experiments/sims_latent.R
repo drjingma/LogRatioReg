@@ -122,47 +122,48 @@ res = foreach(
   ),
   paste0(output_dir, "/data", file.end))
   
+  # ##############################################################################
+  # # compositional lasso
+  # # -- fits a linear log contrast model
+  # ##############################################################################
+  # start.time = Sys.time()
+  # classo = cv.func(
+  #   method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
+  #   nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
+  #   scaling = scaling)
+  # end.time = Sys.time()
+  # cl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # cl.lam.idx = which.min(classo$cvm)
+  # oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
+  # cl.lam.idx = which(classo$cvm <= oneSErule)[1]
+  # cl.a0 = classo$int[cl.lam.idx]
+  # cl.betahat = classo$bet[, cl.lam.idx]
+  # 
+  # # compute metrics on the selected model #
+  # cl.metrics = getMetricsLLC(
+  #   y.train = Y, y.test = Y.test,
+  #   logX.train = log(X),
+  #   logX.test = log(X.test),
+  #   n.train = n, n.test = n,
+  #   betahat0 = cl.a0, betahat = cl.betahat,
+  #   true.sbp = SBP.true, non0.true.beta = non0.beta, 
+  #   true.beta = beta.true)
+  # 
+  # saveRDS(c(
+  #   cl.metrics,
+  #   "betasparsity" = bspars,
+  #   "logratios" = 0,
+  #   "time" = cl.timing, 
+  #   "adhoc" = NA
+  # ),
+  # paste0(output_dir, "/classo_metrics", file.end))
+  
   ##############################################################################
-  # compositional lasso
-  # -- fits a linear log contrast model
-  ##############################################################################
-  start.time = Sys.time()
-  classo = cv.func(
-    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
-    nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
-    scaling = scaling)
-  end.time = Sys.time()
-  cl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # cl.lam.idx = which.min(classo$cvm)
-  oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
-  cl.lam.idx = which(classo$cvm <= oneSErule)[1]
-  cl.a0 = classo$int[cl.lam.idx]
-  cl.betahat = classo$bet[, cl.lam.idx]
-  
-  # compute metrics on the selected model #
-  cl.metrics = getMetricsLLC(
-    y.train = Y, y.test = Y.test,
-    logX.train = log(X),
-    logX.test = log(X.test),
-    n.train = n, n.test = n,
-    betahat0 = cl.a0, betahat = cl.betahat,
-    true.sbp = SBP.true, non0.true.beta = non0.beta, 
-    true.beta = beta.true)
-  
-  saveRDS(c(
-    cl.metrics,
-    "betasparsity" = bspars,
-    "logratios" = 0,
-    "time" = cl.timing, 
-    "adhoc" = NA
-  ),
-  paste0(output_dir, "/classo_metrics", file.end))
-  
-  ##############################################################################
-  # slr method with screening step
-  #   method = "wald"
+  # slr
+  #   screen.method = "wald"
+  #   cluster.method = "spectral"
   #   response.type = "continuous"
   #   s0.perc = 0
   #   zeta = 0
@@ -170,46 +171,98 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  slr0cv = cv.slr(
-    x = X, y = Y, method = "wald", 
+  slrspeccv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slr0 = slr(
-    x = X, y = Y, method = "wald", 
+  slrspec = slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = slr0cv$threshold[slr0cv$index["1se",]])
+    threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
   end.time = Sys.time()
-  slr0.timing = difftime(
+  slrspec.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slr0.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slr0.fullSBP) = colnames(X)
-  slr0.fullSBP[match(
-    names(slr0$sbp), rownames(slr0.fullSBP))] = slr0$sbp
+  slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec.fullSBP) = colnames(X)
+  slrspec.fullSBP[match(
+    names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
   
-  slr0.coefs = getCoefsBM(
-    coefs = coefficients(slr0$fit), sbp = slr0.fullSBP)
+  slrspec.coefs = getCoefsBM(
+    coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
   
   # compute metrics on the selected model #
-  slr0.metrics = getMetricsBM(
+  slrspec.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slr0.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = slr0.fullSBP),
+    ilrX.train = getIlrX(X, sbp = slrspec.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = slrspec.fullSBP),
     n.train = n, n.test = n,
-    thetahat0 = slr0.coefs$a0, thetahat = slr0.coefs$bm.coefs,
-    betahat = slr0.coefs$llc.coefs,
+    thetahat0 = slrspec.coefs$a0, thetahat = slrspec.coefs$bm.coefs,
+    betahat = slrspec.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slr0.metrics,
+    slrspec.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slr0.coefs$bm.coefs != 0),
-    "time" = slr0.timing, 
-    "adhoc" = slr0$adhoc.invoked
+    "logratios" = sum(slrspec.coefs$bm.coefs != 0),
+    "time" = slrspec.timing, 
+    "adhoc" = slrspec$adhoc.invoked
   ),
-  paste0(output_dir, "/slr_metrics", file.end))
+  paste0(output_dir, "/slr_spectral_metrics", file.end))
+  
+  ##############################################################################
+  # slr
+  #   screen.method = "wald"
+  #   cluster.method = "hieararchical"
+  #   response.type = "continuous"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "mse"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrhiercv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  slrhier = slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+  end.time = Sys.time()
+  slrhier.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier.fullSBP) = colnames(X)
+  slrhier.fullSBP[match(
+    names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
+  
+  slrhier.coefs = getCoefsBM(
+    coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
+  
+  # compute metrics on the selected model #
+  slrhier.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = slrhier.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = slrhier.fullSBP),
+    n.train = n, n.test = n,
+    thetahat0 = slrhier.coefs$a0, thetahat = slrhier.coefs$bm.coefs,
+    betahat = slrhier.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    slrhier.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrhier.coefs$bm.coefs != 0),
+    "time" = slrhier.timing, 
+    "adhoc" = slrhier$adhoc.invoked
+  ),
+  paste0(output_dir, "/slr_hierarchical_metrics", file.end))
   
   ##############################################################################
   # selbal method (a balance regression method)

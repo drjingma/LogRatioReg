@@ -1,5 +1,5 @@
 # Purpose: plot results from Crohns_mse.R
-# Date: 6/16/2022
+# Date: 6/22/2022
 rm(list=ls())
 
 ################################################################################
@@ -100,12 +100,12 @@ slr_spec.gg =
   pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr-s")
+  mutate("Method" = "slr-spec")
 slr_hier.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(slr_hier_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr-h")
+  mutate("Method" = "slr-hier")
 ###
 selbal.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_list)), 
@@ -130,7 +130,10 @@ data.gg = rbind(
   selbal.gg, 
   codacore.gg, 
   lrlasso.gg
-) %>%
+) %>% 
+  mutate(
+    value = ifelse(Metric == "time", log(value), value)
+  ) %>%
   mutate(
     Metric = factor(
       Metric, 
@@ -138,8 +141,16 @@ data.gg = rbind(
         "acc", "auc", "f1", "percselected",  "time"
       ), 
       labels = c(
-        "Accuracy", "AUC", "F1", "% Selected", "Timing"
+        "Accuracy", "AUC", "F1", "% Selected", "log(Timing)"
       ))
+  ) %>% 
+  mutate(
+    Method = factor(
+      Method, 
+      levels = c(
+        "selbal", "classo", "codacore", "lrlasso", "slr-spec", "slr-hier"
+      )
+    )
   )
 
 data.gg_main = data.gg 
@@ -159,7 +170,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220620",
+    "20220622",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

@@ -41,7 +41,7 @@ res = foreach(
   library(pROC)
   
   source("RCode/func_libs.R")
-  source("RCode/SLR.R")
+  source("slr_analyses/Functions/slrs.R")
   source("slr_analyses/Functions/codalasso.R")
   source("slr_analyses/Functions/util.R")
   

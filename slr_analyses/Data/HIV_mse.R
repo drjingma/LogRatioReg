@@ -38,8 +38,6 @@ res = foreach(
   library(Matrix)
   library(glmnet)
   
-  library(pROC)
-  
   source("RCode/func_libs.R")
   source("slr_analyses/Functions/slrs.R")
   source("slr_analyses/Functions/codalasso.R")

@@ -1,5 +1,5 @@
 # Purpose: plot results from HIV_mse.R
-# Date: 6/17/2022
+# Date: 6/22/2022
 rm(list=ls())
 
 ################################################################################
@@ -145,10 +145,13 @@ data.gg = rbind(
   slr_spec.gg,
   slr_hier.gg,
   selbal.gg, 
-  selbal_covar.gg,
+  # selbal_covar.gg,
   codacore.gg, 
   lrlasso.gg
-) %>%
+) %>% 
+  mutate(
+    value = ifelse(Metric == "time", log(value), value)
+  ) %>%
   mutate(
     Metric = factor(
       Metric, 
@@ -156,8 +159,17 @@ data.gg = rbind(
         "acc", "auc", "f1", "percselected",  "time"
       ), 
       labels = c(
-        "Accuracy", "AUC", "F1", "% Selected", "Timing"
+        "Accuracy", "AUC", "F1", "% Selected", "log(Timing)"
       ))
+  ) %>% 
+  mutate(
+    Method = factor(
+      Method, 
+      levels = c(
+        "selbal", "classo", "codacore", "lrlasso", 
+        "slr-spec", "slr-hier"
+      )
+    )
   )
 
 data.gg_main = data.gg 
@@ -177,7 +189,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220620",
+    "20220622",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

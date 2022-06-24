@@ -41,7 +41,7 @@ res = foreach(
   library(balance)
   
   source("RCode/func_libs.R")
-  source("RCode/SLR.R")
+  source("slr_analyses/Functions/slrs.R")
   source("slr_analyses/Functions/codalasso.R")
   source("slr_analyses/Functions/util.R")
   
@@ -58,8 +58,8 @@ res = foreach(
   tol = 1e-4
   sigma_eps1 = 0.1 # sigma (for y)
   sigma_eps2 = 0.1 # sigma_j (for x)
-  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)

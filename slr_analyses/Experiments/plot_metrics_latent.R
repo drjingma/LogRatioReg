@@ -54,7 +54,8 @@ file.end0 = paste0(
 
 # import metrics
 classo_sims_list = list()
-slr_sims_list = list()
+slr_spec_sims_list = list()
+slr_hier_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
 lrlasso_sims_list = list()
@@ -71,13 +72,22 @@ for(i in 1:numSims){
   
   ###
   
-  # slr - screen
-  slr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_metrics", file.end0,
+  # slr - spectral
+  slr_spec_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_spectral_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_sim_tmp) = NULL
-  slr_sims_list[[i]] = data.table::data.table(slr_sim_tmp)
+  rownames(slr_spec_sim_tmp) = NULL
+  slr_spec_sims_list[[i]] = data.table::data.table(slr_spec_sim_tmp)
+  
+  # slr - hierarchical
+  slr_hier_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_hierarchical_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_hier_sim_tmp) = NULL
+  slr_hier_sims_list[[i]] = data.table::data.table(slr_hier_sim_tmp)
+  
   ###
   
   # selbal
@@ -112,11 +122,16 @@ classo_sims.gg =
                names_to = "Metric") %>%
   mutate("Method" = "classo")
 ###
-slr_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_sims_list)), 
+slr_spec_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr")
+  mutate("Method" = "slr-spec")
+slr_hier_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_hier_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "slr-hier")
 ###
 selbal_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
@@ -133,26 +148,16 @@ lrlasso_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "lrlasso")
-###
+
 ###
 data.gg = rbind(
   classo_sims.gg,
-  slr_sims.gg,
+  slr_spec_sims.gg,
+  slr_hier_sims.gg,
   selbal_sims.gg, 
   codacore_sims.gg, 
   lrlasso_sims.gg
 ) %>%
-  mutate(
-    Metric = factor(
-      Metric, levels = c(
-        "PEtr", "PEte", 
-        "EA1", "EA2", "EAInfty", 
-        "TPR", "FPR", "Fscore",
-        "betasparsity", "logratios", "adhoc", "time"
-      ))
-  )
-
-data.gg_main = data.gg %>%
   dplyr::filter(
     Metric %in% c(
       "PEtr", "PEte",
@@ -160,7 +165,36 @@ data.gg_main = data.gg %>%
       "TPR", "FPR", "Fscore",
       "time"
     )
+  ) %>% 
+  mutate(
+    value = ifelse(
+      Metric %in% c("time", "EA1", "EA2", "EAInfty"), log(value), value)
+  ) %>%
+  mutate(
+    Metric = factor(
+      Metric, 
+      levels = c(
+        "PEtr", "PEte",
+        "EA1", "EA2", "EAInfty",
+        "TPR", "FPR", "Fscore",
+        "time"
+      ), 
+      labels = c(
+        "PEtr", "PEte",
+        "log(EA1)", "log(EA2)", "log(EAInfty)",
+        "TPR", "FPR", "F1",
+        "log(Timing)"
+      ))
+  ) %>% 
+  mutate(
+    Method = factor(
+      Method, 
+      levels = c(
+        "selbal", "classo", "codacore", "lrlasso", "slr-spec", "slr-hier"
+      )
+    )
   )
+data.gg_main = data.gg
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -177,7 +211,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220616",
+    "20220622",
     file.end0,
     "_", "metrics", ".pdf"),
   plot = plt_main,

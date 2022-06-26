@@ -24,16 +24,18 @@ source("slr_analyses/Functions/util.R")
 K = 10
 scaling = TRUE
 
-################################################################################
-# Crohn: a data set in selbal package
-#   n = 975 samples, 
-#   p = 48 taxa (counts for microbial taxa at genus level), 
-#   1 response (y - binary)
-W = selbal::Crohn[, 1:48]
+##############################################################################
+# HIV: one of the HIV data sets in selbal package -- has binary response
+#   n = 155 samples, 
+#   p = 60 taxa (counts for microbial taxa at genus level), 
+#   1 covariate (MSM), 
+#   1 response (HIV_Status - binary)
+W = selbal::HIV[, 1:60]
+covar = data.frame(MSM = selbal::HIV[, 61])
 X = sweep(W, 1, rowSums(W), FUN='/')
-Y = selbal::Crohn[, 49]
-levels(Y) = c("no", "CD") # (control, case)
-Y2 = ifelse(Y == "CD", 1, 0)
+Y = selbal::HIV[, 62]
+# levels(Y) # (control, case)
+Y2 = ifelse(Y == "Pos", 1, 0)
 
 ################################################################################
 # 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
@@ -48,13 +50,13 @@ Y2 = ifelse(Y == "CD", 1, 0)
 # saveRDS(
 #   cl_gbm,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/HIV",
 #     "_classo",
 #     "_gbm",
 #     ".rds"))
 cl = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/HIV",
     "_classo",
     "_gbm",
     ".rds"))
@@ -72,13 +74,13 @@ cl = readRDS(
 # saveRDS(
 #   slrspec,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/HIV",
 #     "_slr_spectral",
 #     "_gbm",
 #     ".rds"))
 slrspec = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/HIV",
     "_slr_spectral",
     "_gbm",
     ".rds"))
@@ -96,13 +98,13 @@ slrspec = readRDS(
 # saveRDS(
 #   slrhier,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/HIV",
 #     "_slr_hierarchical",
 #     "_gbm",
 #     ".rds"))
 slrhier = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/HIV",
     "_slr_hierarchical",
     "_gbm",
     ".rds"))
@@ -112,14 +114,30 @@ slrhier = readRDS(
 # saveRDS(
 #   slbl_gbm,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/HIV",
 #     "_selbal",
 #     "_gbm",
 #     ".rds"))
 slbl = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/HIV",
     "_selbal",
+    "_gbm",
+    ".rds"))
+
+# selbal - covariate ###########################################################
+# slbl_covar_gbm = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, covar = covar)
+# saveRDS(
+#   slbl_covar_gbm,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_selbal_covar",
+#     "_gbm",
+#     ".rds"))
+slblc = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_selbal_covar",
     "_gbm",
     ".rds"))
 
@@ -130,13 +148,13 @@ slbl = readRDS(
 # saveRDS(
 #   codacore0,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/HIV",
 #     "_codacore",
 #     "_gbm",
 #     ".rds"))
 cdcr = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/HIV",
     "_codacore",
     "_gbm",
     ".rds"))
@@ -150,13 +168,13 @@ cdcr = readRDS(
 # saveRDS(
 #   lrl,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/HIV",
 #     "_lrlasso",
 #     "_gbm",
 #     ".rds"))
 lrl = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/HIV",
     "_lrlasso",
     "_gbm",
     ".rds"))
@@ -204,18 +222,41 @@ sum(slrhier.fullSBP[, 1] != 0)
 
 # selbal #######################################################################
 # numerator (I+) / denominator (I-) of selected balance
-slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 4
-slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 8
+slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 1
+slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 1
+
+# selbal - covariate ###########################################################
+# numerator (I+) / denominator (I-) of selected balance
+slblc$global.balance[slblc$global.balance$Group == "NUM", "Taxa"] # 1
+slblc$global.balance[slblc$global.balance$Group == "DEN", "Taxa"] # 1
 
 # codacore #####################################################################
 length(cdcr$ensemble) # one balance selected
-# numerator (I+) / denominator (I-) of selected balance
+# numerator (I+) / denominator (I-) of 1st selected balance
 cdcr$ensemble[[1]]$slope # positive (if negative, num -> den & vice versa)
 colnames(X)[cdcr$ensemble[[1]]$hard$numerator]
 colnames(X)[cdcr$ensemble[[1]]$hard$denominator]
+# numerator (I+) / denominator (I-) of 2nd selected balance
+cdcr$ensemble[[2]]$slope # positive (if negative, num -> den & vice versa)
+colnames(X)[cdcr$ensemble[[2]]$hard$denominator]
+colnames(X)[cdcr$ensemble[[2]]$hard$numerator]
 
 # log-ratio lasso ############################################################
 # positive/negative effect on response
 colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
 colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
 sum(abs(lrl$beta_min) > 1e-8)
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -131,43 +131,81 @@ res = foreach(
     cl.metrics,
     paste0(output_dir, "/classo_metrics", file.end))
   
-  # slr ########################################################################
+  # slr - spectral #############################################################
   start.time = Sys.time()
-  slr0cv = cv.slr(
-    x = XTr, y = YTr, method = "wald", 
+  slrspeccv = cv.slr(
+    x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slr0 = slr(
-    x = XTr, y = YTr, method = "wald", 
+  slrspec = slr(
+    x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = slr0cv$threshold[slr0cv$index["1se",]])
+    threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
   end.time = Sys.time()
-  slr0.timing = difftime(
+  slrspec.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
   # get SBP
-  slr0.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slr0.fullSBP) = colnames(X)
-  slr0.fullSBP[match(
-    names(slr0$sbp), rownames(slr0.fullSBP))] = slr0$sbp
+  slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec.fullSBP) = colnames(X)
+  slrspec.fullSBP[match(
+    names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
   
   # get prediction error on test set
-  slr0.Yhat.test = predict(
-    slr0$fit, 
+  slrspec.Yhat.test = predict(
+    slrspec$fit, 
     data.frame(balance = balance::balance.fromSBP(
-      x = XTe, y = slr0.fullSBP)), 
+      x = XTe, y = slrspec.fullSBP)), 
     type = "response")
   
-  slr0.metrics = c(
-    mse = as.vector(crossprod(YTe - slr0.Yhat.test) / nrow(XTe)),
-    percselected = sum(slr0.fullSBP > 0) / p,
-    time = slr0.timing
+  slrspec.metrics = c(
+    mse = as.vector(crossprod(YTe - slrspec.Yhat.test) / nrow(XTe)),
+    percselected = sum(slrspec.fullSBP > 0) / p,
+    time = slrspec.timing
   )
   
   saveRDS(
-    slr0.metrics,
-    paste0(output_dir, "/slr_metrics", file.end))
+    slrspec.metrics,
+    paste0(output_dir, "/slr_spectral_metrics", file.end))
+  
+  # slr ########################################################################
+  start.time = Sys.time()
+  slrhiercv = cv.slr(
+    x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  slrhier = slr(
+    x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+  end.time = Sys.time()
+  slrhier.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # get SBP
+  slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier.fullSBP) = colnames(X)
+  slrhier.fullSBP[match(
+    names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
+  
+  # get prediction error on test set
+  slrhier.Yhat.test = predict(
+    slrhier$fit, 
+    data.frame(balance = balance::balance.fromSBP(
+      x = XTe, y = slrhier.fullSBP)), 
+    type = "response")
+  
+  slrhier.metrics = c(
+    mse = as.vector(crossprod(YTe - slrhier.Yhat.test) / nrow(XTe)),
+    percselected = sum(slrhier.fullSBP > 0) / p,
+    time = slrhier.timing
+  )
+  
+  saveRDS(
+    slrhier.metrics,
+    paste0(output_dir, "/slr_hierarchical_metrics", file.end))
   
   # selbal #####################################################################
   start.time = Sys.time()
@@ -178,7 +216,7 @@ res = foreach(
   
   # get theta-hat and gamma-hat
   slbl.coefs = getCoefsSelbal(
-    X = XTr, y = YTr, selbal.fit = slbl, classification = TRUE, 
+    X = XTr, y = YTr, selbal.fit = slbl, classification = FALSE, 
     check = TRUE)
   
   # get prediction error on test set
@@ -189,12 +227,8 @@ res = foreach(
     type = "response")
   
   slbl.metrics = c(
-    acc = mean((slbl.Yhat.test < 0.5) == Y2Te), 
-      # < 0.5 bc order of levels = c(case, control) instead of c(control, case)
-    auc = pROC::roc(
-      YTe, slbl.Yhat.test, levels = levels(YTe), direction = "<")$auc,
+    mse = as.vector(crossprod(YTe - slbl.Yhat.test) / nrow(XTe)),
     percselected = sum(slbl.coefs$sbp > 0) / p,
-    f1 = getF1(Y2Te, slbl.Yhat.test),
     time = slbl.timing
   )
   
@@ -205,8 +239,8 @@ res = foreach(
   # codacore ###################################################################
   start.time = Sys.time()
   codacore0 = codacore::codacore(
-    x = XTr, y = Y2Tr, logRatioType = "ILR", 
-    objective = "binary classification", cvParams = list(numFolds = K))
+    x = XTr, y = YTr, logRatioType = "ILR", 
+    objective = "regression", cvParams = list(numFolds = K))
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -228,17 +262,14 @@ res = foreach(
   } else{
     print(paste0("sim ", i, " -- codacore has no log-ratios"))
     codacore0_coeffs = c()
-    codacore0model = stats::glm(Y2Tr ~ 1, family = "binomial")
+    codacore0model = stats::glm(YTr ~ 1, family = "gaussian")
     codacore0.betahat = rep(0, p)
     codacore0.Yhat.test = predict(codacore0model, XTe)
   }
   
   codacore0.metrics = c(
-    acc = mean((codacore0.Yhat.test > 0.5) == Y2Te),
-    auc = pROC::roc(
-        Y2Te, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    mse = as.vector(crossprod(YTe - codacore0.Yhat.test) / nrow(XTe)),
     percselected = sum(abs(codacore0.betahat) > 10e-8) / p,
-    f1 = getF1(Y2Te, codacore0.Yhat.test),
     time = codacore0.timing
   )
   
@@ -253,21 +284,18 @@ res = foreach(
   
   start.time = Sys.time()
   lrl <- cv_two_stage(
-    z = WTr.c, y = Y2Tr, n_folds = K, family="binomial")
+    z = WTr.c, y = YTr, n_folds = K, family="gaussian")
   end.time = Sys.time()
   lrl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
   # get prediction error on test set
   WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
-  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min) # before sigmoid
+  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min)
   
   lrl.metrics = c(
-    acc = mean((lrl.Yhat.test > 0) == Y2Te),
-    auc = pROC::roc(
-      Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    mse = as.vector(crossprod(YTe - lrl.Yhat.test) / nrow(XTe)),
     percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
-    f1 = getF1(Y2Te, lrl.Yhat.test),
     time = lrl.timing
   )
   

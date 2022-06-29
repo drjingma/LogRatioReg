@@ -105,28 +105,28 @@ res = foreach(
   # fit methods
   ##############################################################################
   
-  # classo #####################################################################
-  start.time = Sys.time()
-  classo = codalasso(XTr, Y2Tr, numFolds = K)
-  end.time = Sys.time()
-  cl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-
-  # get prediction error on test set
-  classo.Yhat.test = predict(classo, XTe) # before sigmoid
-
-  cl.metrics = c(
-    acc = mean((classo.Yhat.test > 0) == Y2Te),
-    auc = pROC::roc(
-      Y2Te, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    percselected = sum(abs(classo$cll$betas[-1]) > 10e-8) / p,
-    f1 = getF1(Y2Te, classo.Yhat.test > 0),
-    time = cl.timing
-  )
-
-  saveRDS(
-    cl.metrics,
-    paste0(output_dir, "/classo_metrics", file.end))
+  # # classo #####################################################################
+  # start.time = Sys.time()
+  # classo = codalasso(XTr, Y2Tr, numFolds = K)
+  # end.time = Sys.time()
+  # cl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # get prediction error on test set
+  # classo.Yhat.test = predict(classo, XTe) # before sigmoid
+  # 
+  # cl.metrics = c(
+  #   acc = mean((classo.Yhat.test > 0) == Y2Te),
+  #   auc = pROC::roc(
+  #     Y2Te, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+  #   percselected = sum(abs(classo$cll$betas[-1]) > 10e-8) / p,
+  #   f1 = getF1(Y2Te, classo.Yhat.test > 0),
+  #   time = cl.timing
+  # )
+  # 
+  # saveRDS(
+  #   cl.metrics,
+  #   paste0(output_dir, "/classo_metrics", file.end))
   
   # slr - spectral clustering ##################################################
   start.time = Sys.time()
@@ -169,6 +169,14 @@ res = foreach(
     slrspec.metrics,
     paste0(output_dir, "/slr_spectral_metrics", file.end))
   
+  if(slrspec$theta[2] < 0){
+    slrspec.fullSBP = -slrspec.fullSBP
+  }
+  saveRDS(
+    slrspec.fullSBP, 
+    paste0(output_dir, "/slr_spectral_sbp", file.end)
+  )
+  
   # slr - hierarchical clustering ##############################################
   start.time = Sys.time()
   slrhiercv = cv.slr(
@@ -210,6 +218,14 @@ res = foreach(
     slrhier.metrics,
     paste0(output_dir, "/slr_hierarchical_metrics", file.end))
   
+  if(slrhier$theta[2] < 0){
+    slrhier.fullSBP = -slrhier.fullSBP
+  }
+  saveRDS(
+    slrhier.fullSBP, 
+    paste0(output_dir, "/slr_hierarchical_sbp", file.end)
+  )
+  
   # selbal #####################################################################
   start.time = Sys.time()
   slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K)
@@ -243,6 +259,15 @@ res = foreach(
     slbl.metrics,
     paste0(output_dir, "/selbal_metrics", file.end))
 
+  slbl_sbp = slbl.coefs$sbp
+  if(slbl$glm$coefficients[2] < 0){
+    slbl_sbp = -slbl_sbp
+  }
+  saveRDS(
+    slbl_sbp,
+    paste0(output_dir, "/selbal_sbp", file.end)
+  )
+
   # codacore ###################################################################
   start.time = Sys.time()
   codacore0 = codacore::codacore(
@@ -266,13 +291,21 @@ res = foreach(
     codacore0.betahat = getBetaFromCodacore(
       SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
     codacore0.Yhat.test = predict(codacore0, XTe) # before sigmoid
+    # adjust codacore_SBP to correspond to positive theta-hats #################
+    for(col in 1:ncol(codacore0_SBP)){
+      if(codacore0_coeffs[col] < 0){
+        codacore0_SBP[, col] = -codacore0_SBP[, col]
+      }
+    }
   } else{
     print(paste0("sim ", i, " -- codacore has no log-ratios"))
     codacore0_coeffs = c()
+    SBP_codacore = matrix(0, nrow = p, ncol = 1) ###############################
     codacore0model = stats::glm(Y2Tr ~ 1, family = "binomial")
     codacore0.betahat = rep(0, p)
     codacore0.Yhat.test = predict(codacore0model, XTe) # before sigmoid
   }
+  rownames(codacore0_SBP) = colnames(XTr) ######################################
 
   codacore0.metrics = c(
     acc = mean((codacore0.Yhat.test > 0) == Y2Te),
@@ -286,34 +319,39 @@ res = foreach(
   saveRDS(
     codacore0.metrics,
     paste0(output_dir, "/codacore_metrics", file.end))
-
-  # log-ratio lasso ############################################################
-  library(logratiolasso)
-  source("slr_analyses/Functions/logratiolasso.R")
-  WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
-
-  start.time = Sys.time()
-  lrl <- cv_two_stage(
-    z = WTr.c, y = Y2Tr, n_folds = K, family="binomial")
-  end.time = Sys.time()
-  lrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-
-  # get prediction error on test set
-  WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
-  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min) # before sigmoid
-
-  lrl.metrics = c(
-    acc = mean((lrl.Yhat.test > 0) == Y2Te),
-    auc = pROC::roc(
-      Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
-    f1 = getF1(Y2Te, lrl.Yhat.test > 0),
-    time = lrl.timing
+  
+  saveRDS(
+    codacore0_SBP, 
+    paste0(output_dir, "/codacore_sbp", file.end)
   )
 
-  saveRDS(
-    lrl.metrics,
-    paste0(output_dir, "/lrlasso_metrics", file.end))
+  # # log-ratio lasso ############################################################
+  # library(logratiolasso)
+  # source("slr_analyses/Functions/logratiolasso.R")
+  # WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
+  # 
+  # start.time = Sys.time()
+  # lrl <- cv_two_stage(
+  #   z = WTr.c, y = Y2Tr, n_folds = K, family="binomial")
+  # end.time = Sys.time()
+  # lrl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # get prediction error on test set
+  # WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
+  # lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min) # before sigmoid
+  # 
+  # lrl.metrics = c(
+  #   acc = mean((lrl.Yhat.test > 0) == Y2Te),
+  #   auc = pROC::roc(
+  #     Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+  #   percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
+  #   f1 = getF1(Y2Te, lrl.Yhat.test > 0),
+  #   time = lrl.timing
+  # )
+  # 
+  # saveRDS(
+  #   lrl.metrics,
+  #   paste0(output_dir, "/lrlasso_metrics", file.end))
   
 }

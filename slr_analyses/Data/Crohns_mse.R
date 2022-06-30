@@ -105,28 +105,28 @@ res = foreach(
   # fit methods
   ##############################################################################
   
-  # # classo #####################################################################
-  # start.time = Sys.time()
-  # classo = codalasso(XTr, Y2Tr, numFolds = K)
-  # end.time = Sys.time()
-  # cl.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get prediction error on test set
-  # classo.Yhat.test = predict(classo, XTe) # before sigmoid
-  # 
-  # cl.metrics = c(
-  #   acc = mean((classo.Yhat.test > 0) == Y2Te),
-  #   auc = pROC::roc(
-  #     Y2Te, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-  #   percselected = sum(abs(classo$cll$betas[-1]) > 10e-8) / p,
-  #   f1 = getF1(Y2Te, classo.Yhat.test > 0),
-  #   time = cl.timing
-  # )
-  # 
-  # saveRDS(
-  #   cl.metrics,
-  #   paste0(output_dir, "/classo_metrics", file.end))
+  # classo #####################################################################
+  start.time = Sys.time()
+  classo = codalasso(XTr, Y2Tr, numFolds = K)
+  end.time = Sys.time()
+  cl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  # get prediction error on test set
+  classo.Yhat.test = predict(classo, XTe) # before sigmoid
+
+  cl.metrics = c(
+    acc = mean((classo.Yhat.test > 0) == Y2Te),
+    auc = pROC::roc(
+      Y2Te, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(classo$cll$betas[-1]) > 10e-8) / p,
+    f1 = getF1(Y2Te, classo.Yhat.test > 0),
+    time = cl.timing
+  )
+
+  saveRDS(
+    cl.metrics,
+    paste0(output_dir, "/classo_metrics", file.end))
   
   # slr - spectral clustering ##################################################
   start.time = Sys.time()
@@ -325,33 +325,33 @@ res = foreach(
     paste0(output_dir, "/codacore_sbp", file.end)
   )
 
-  # # log-ratio lasso ############################################################
-  # library(logratiolasso)
-  # source("slr_analyses/Functions/logratiolasso.R")
-  # WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
-  # 
-  # start.time = Sys.time()
-  # lrl <- cv_two_stage(
-  #   z = WTr.c, y = Y2Tr, n_folds = K, family="binomial")
-  # end.time = Sys.time()
-  # lrl.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get prediction error on test set
-  # WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
-  # lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min) # before sigmoid
-  # 
-  # lrl.metrics = c(
-  #   acc = mean((lrl.Yhat.test > 0) == Y2Te),
-  #   auc = pROC::roc(
-  #     Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-  #   percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
-  #   f1 = getF1(Y2Te, lrl.Yhat.test > 0),
-  #   time = lrl.timing
-  # )
-  # 
-  # saveRDS(
-  #   lrl.metrics,
-  #   paste0(output_dir, "/lrlasso_metrics", file.end))
+  # log-ratio lasso ############################################################
+  library(logratiolasso)
+  source("slr_analyses/Functions/logratiolasso.R")
+  WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
+
+  start.time = Sys.time()
+  lrl <- cv_two_stage(
+    z = WTr.c, y = Y2Tr, n_folds = K, family="binomial")
+  end.time = Sys.time()
+  lrl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  # get prediction error on test set
+  WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
+  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min) # before sigmoid
+
+  lrl.metrics = c(
+    acc = mean((lrl.Yhat.test > 0) == Y2Te),
+    auc = pROC::roc(
+      Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
+    f1 = getF1(Y2Te, lrl.Yhat.test > 0),
+    time = lrl.timing
+  )
+
+  saveRDS(
+    lrl.metrics,
+    paste0(output_dir, "/lrlasso_metrics", file.end))
   
 }

@@ -1,5 +1,5 @@
 # Purpose: compare slr to other methods on data sets
-# Date: 6/16/2022
+# Date: 6/29/2022
 rm(list=ls())
 
 ################################################################################
@@ -93,8 +93,8 @@ res = foreach(
   YTe = Y[trainIdx == 1]
   
   saveRDS(list(
-    XTr = XTr, YTr = YTr, Y2Tr = Y2Tr,
-    XTe = XTe, YTe = YTe, Y2Te = Y2Te
+    XTr = XTr, YTr = YTr,
+    XTe = XTe, YTe = YTe
   ),
   paste0(output_dir, "/data", file.end))
   
@@ -169,6 +169,14 @@ res = foreach(
     slrspec.metrics,
     paste0(output_dir, "/slr_spectral_metrics", file.end))
   
+  if(!all(slrspec.fullSBP == 0) & slrspec$theta[2] < 0){
+    slrspec.fullSBP = -slrspec.fullSBP
+  }
+  saveRDS(
+    slrspec.fullSBP, 
+    paste0(output_dir, "/slr_spectral_sbp", file.end)
+  )
+  
   # slr ########################################################################
   start.time = Sys.time()
   slrhiercv = cv.slr(
@@ -207,6 +215,14 @@ res = foreach(
     slrhier.metrics,
     paste0(output_dir, "/slr_hierarchical_metrics", file.end))
   
+  if(!all(slrhier.fullSBP == 0) & slrhier$theta[2] < 0){
+    slrhier.fullSBP = -slrhier.fullSBP
+  }
+  saveRDS(
+    slrhier.fullSBP, 
+    paste0(output_dir, "/slr_hierarchical_sbp", file.end)
+  )
+  
   # selbal #####################################################################
   start.time = Sys.time()
   slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K)
@@ -236,6 +252,15 @@ res = foreach(
     slbl.metrics,
     paste0(output_dir, "/selbal_metrics", file.end))
   
+  slbl_sbp = slbl.coefs$sbp
+  if((length(slbl$glm$coefficients) > 1) & slbl$glm$coefficients[2] < 0){
+    slbl_sbp = -slbl_sbp
+  }
+  saveRDS(
+    slbl_sbp,
+    paste0(output_dir, "/selbal_sbp", file.end)
+  )
+  
   # codacore ###################################################################
   start.time = Sys.time()
   codacore0 = codacore::codacore(
@@ -259,13 +284,21 @@ res = foreach(
     codacore0.betahat = getBetaFromCodacore(
       SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
     codacore0.Yhat.test = predict(codacore0, XTe)
+    # adjust codacore_SBP to correspond to positive theta-hats #################
+    for(col in 1:ncol(codacore0_SBP)){
+      if(codacore0_coeffs[col] < 0){
+        codacore0_SBP[, col] = -codacore0_SBP[, col]
+      }
+    }
   } else{
     print(paste0("sim ", i, " -- codacore has no log-ratios"))
     codacore0_coeffs = c()
+    SBP_codacore = matrix(0, nrow = p, ncol = 1) ###############################
     codacore0model = stats::glm(YTr ~ 1, family = "gaussian")
     codacore0.betahat = rep(0, p)
     codacore0.Yhat.test = predict(codacore0model, XTe)
   }
+  rownames(codacore0_SBP) = colnames(XTr) ######################################
   
   codacore0.metrics = c(
     mse = as.vector(crossprod(YTe - codacore0.Yhat.test) / nrow(XTe)),
@@ -276,6 +309,11 @@ res = foreach(
   saveRDS(
     codacore0.metrics,
     paste0(output_dir, "/codacore_metrics", file.end))
+  
+  saveRDS(
+    codacore0_SBP, 
+    paste0(output_dir, "/codacore_sbp", file.end)
+  )
   
   # log-ratio lasso ############################################################
   library(logratiolasso)

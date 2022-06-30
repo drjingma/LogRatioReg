@@ -1,5 +1,5 @@
 # Purpose: compare slr to other methods on data sets
-# Date: 6/27/2022
+# Date: 6/29/2022
 rm(list=ls())
 
 ################################################################################
@@ -47,19 +47,19 @@ p = ncol(X)
 
 # classo #######################################################################
 # classo = cv.func(
-#   method="ConstrLasso", y = Y, x = log(X_gbm), Cmat = matrix(1, p, 1), 
-#   nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
+#   method="ConstrLasso", y = Y, x = log(X_gbm), Cmat = matrix(1, p, 1),
+#   nlam = nlam, nfolds = K, tol = tol, intercept = intercept,
 #   scaling = scaling)
 # saveRDS(
 #   classo,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/sCD14_0se",
 #     "_classo",
 #     "_gbm",
 #     ".rds"))
 cl = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/sCD14_0se",
     "_classo",
     "_gbm",
     ".rds"))
@@ -72,18 +72,18 @@ cl = readRDS(
 #   parallel = FALSE, scale = scaling, trace.it = FALSE)
 # slrspec = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "spectral",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
-#   threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
+#   threshold = slrspeccv$threshold[slrspeccv$index["min",]])
 # saveRDS(
 #   slrspec,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/sCD14_0se",
 #     "_slr_spectral",
 #     "_gbm",
 #     ".rds"))
 slrspec = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/sCD14_0se",
     "_slr_spectral",
     "_gbm",
     ".rds"))
@@ -91,57 +91,57 @@ slrspec = readRDS(
 # slr - hierarchical ###########################################################
 # slrhiercv = cv.slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
-#   nfolds = K, type.measure = "mse", 
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
+#   nfolds = K, type.measure = "mse",
 #   parallel = FALSE, scale = scaling, trace.it = FALSE)
 # slrhier = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
-#   threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
+#   threshold = slrhiercv$threshold[slrhiercv$index["min",]])
 # saveRDS(
 #   slrhier,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/sCD14_0se",
 #     "_slr_hierarchical",
 #     "_gbm",
 #     ".rds"))
 slrhier = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/sCD14_0se",
     "_slr_hierarchical",
     "_gbm",
     ".rds"))
 
 # selbal #######################################################################
-# slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K)
+# slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, opt.cri = "max")
 # saveRDS(
 #   slbl,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/sCD14_0se",
 #     "_selbal",
 #     "_gbm",
 #     ".rds"))
 slbl = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/sCD14_0se",
     "_selbal",
     "_gbm",
     ".rds"))
 
 # codacore #####################################################################
 # codacore0 = codacore::codacore(
-#   x = X_gbm, y = Y, logRatioType = "ILR", 
-#   objective = "regression", cvParams = list(numFolds = K))
+#   x = X_gbm, y = Y, logRatioType = "ILR",
+#   objective = "regression", cvParams = list(numFolds = K), lambda = 0)
 # saveRDS(
 #   codacore0,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/sCD14_0se",
 #     "_codacore",
 #     "_gbm",
 #     ".rds"))
 cdcr = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/sCD14_0se",
     "_codacore",
     "_gbm",
     ".rds"))
@@ -155,13 +155,13 @@ cdcr = readRDS(
 # saveRDS(
 #   lrl,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/sCD14_0se",
 #     "_lrlasso",
 #     "_gbm",
 #     ".rds"))
 lrl = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/sCD14_0se",
     "_lrlasso",
     "_gbm",
     ".rds"))
@@ -172,8 +172,9 @@ lrl = readRDS(
 
 # classo #######################################################################
 # selected variables
-oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
-cl.lam.idx = which(cl$cvm <= oneSErule)[1]
+# oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
+# cl.lam.idx = which(cl$cvm <= oneSErule)[1]
+cl.lam.idx = which.min(cl$cvm)
 cl.a0 = cl$int[cl.lam.idx]
 cl.betahat = cl$bet[, cl.lam.idx]
 # positive/negative effect on response
@@ -211,8 +212,8 @@ sum(slrhier.fullSBP[, 1] != 0)
 
 # selbal #######################################################################
 # numerator (I+) / denominator (I-) of selected balance
-slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 3
-slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 2
+slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 4
+slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 4
 
 # codacore #####################################################################
 length(cdcr$ensemble) # one balance selected
@@ -220,15 +221,28 @@ length(cdcr$ensemble) # one balance selected
 cdcr$ensemble[[1]]$slope # positive (if negative, num -> den & vice versa)
 colnames(X)[cdcr$ensemble[[1]]$hard$numerator]
 colnames(X)[cdcr$ensemble[[1]]$hard$denominator]
+# 2nd balance
+cdcr$ensemble[[2]]$slope # negative (if negative, num -> den & vice versa)
+colnames(X)[cdcr$ensemble[[2]]$hard$denominator]
+colnames(X)[cdcr$ensemble[[2]]$hard$numerator]
+# 3rd balance
+cdcr$ensemble[[3]]$slope # positive (if negative, num -> den & vice versa)
+colnames(X)[cdcr$ensemble[[3]]$hard$numerator]
+colnames(X)[cdcr$ensemble[[3]]$hard$denominator]
+# 4th balance
+cdcr$ensemble[[4]]$slope # negative (if negative, num -> den & vice versa)
+colnames(X)[cdcr$ensemble[[4]]$hard$denominator]
+colnames(X)[cdcr$ensemble[[4]]$hard$numerator]
+# 4th balance
+cdcr$ensemble[[5]]$slope # negative (if negative, num -> den & vice versa)
+colnames(X)[cdcr$ensemble[[5]]$hard$denominator]
+colnames(X)[cdcr$ensemble[[5]]$hard$numerator]
 
-# log-ratio lasso ############################################################
-# positive/negative effect on response
-colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
-colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
-sum(abs(lrl$beta_min) > 1e-8)
-
-
-
+# # log-ratio lasso ############################################################
+# # positive/negative effect on response
+# colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
+# colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
+# sum(abs(lrl$beta_min) > 1e-8)
 
 
 

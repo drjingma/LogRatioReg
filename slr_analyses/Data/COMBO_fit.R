@@ -1,5 +1,5 @@
 # Purpose: compare slr to other methods on data sets
-# Date: 6/27/2022
+# Date: 6/29/2022
 rm(list=ls())
 
 ################################################################################
@@ -28,17 +28,18 @@ scaling = TRUE
 tol = 1e-4
 
 ################################################################################
-# sCD14: another HIV data set in selbal package
-#   n = 151 samples (a subset from sCD14 data set), 
-#   p = 60 taxa (counts for microbial taxa at genus level), 
-#   1 response (sCD14 - continuous)
-W = selbal::sCD14[, 1:60]
-X = sweep(W, 1, rowSums(W), FUN='/')
-Y = selbal::sCD14[, 61]
+# COMBO data set
+#   n = 98 samples,
+#   p = 87 taxa, 
+#   1 response - continuous
+load("Data/BMI.rda")
+W = X
+X = X.prop
+Y = y
 
 ################################################################################
 # 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
-X_gbm = cmultRepl2(W, zero.rep = "bayes")
+X_gbm = cmultRepl2(W, zero.rep = "bayes") # count -> prop (handles 0s)
 
 ################################################################################
 # fit methods
@@ -47,19 +48,19 @@ p = ncol(X)
 
 # classo #######################################################################
 # classo = cv.func(
-#   method="ConstrLasso", y = Y, x = log(X_gbm), Cmat = matrix(1, p, 1), 
-#   nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
+#   method="ConstrLasso", y = Y, x = log(X_gbm), Cmat = matrix(1, p, 1),
+#   nlam = nlam, nfolds = K, tol = tol, intercept = intercept,
 #   scaling = scaling)
 # saveRDS(
 #   classo,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/COMBO",
 #     "_classo",
 #     "_gbm",
 #     ".rds"))
 cl = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/COMBO",
     "_classo",
     "_gbm",
     ".rds"))
@@ -72,18 +73,18 @@ cl = readRDS(
 #   parallel = FALSE, scale = scaling, trace.it = FALSE)
 # slrspec = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "spectral",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
 #   threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
 # saveRDS(
 #   slrspec,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/COMBO",
 #     "_slr_spectral",
 #     "_gbm",
 #     ".rds"))
 slrspec = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/COMBO",
     "_slr_spectral",
     "_gbm",
     ".rds"))
@@ -91,23 +92,23 @@ slrspec = readRDS(
 # slr - hierarchical ###########################################################
 # slrhiercv = cv.slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
-#   nfolds = K, type.measure = "mse", 
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
+#   nfolds = K, type.measure = "mse",
 #   parallel = FALSE, scale = scaling, trace.it = FALSE)
 # slrhier = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
 #   threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
 # saveRDS(
 #   slrhier,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/COMBO",
 #     "_slr_hierarchical",
 #     "_gbm",
 #     ".rds"))
 slrhier = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/COMBO",
     "_slr_hierarchical",
     "_gbm",
     ".rds"))
@@ -117,31 +118,31 @@ slrhier = readRDS(
 # saveRDS(
 #   slbl,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/COMBO",
 #     "_selbal",
 #     "_gbm",
 #     ".rds"))
 slbl = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/COMBO",
     "_selbal",
     "_gbm",
     ".rds"))
 
 # codacore #####################################################################
 # codacore0 = codacore::codacore(
-#   x = X_gbm, y = Y, logRatioType = "ILR", 
+#   x = X_gbm, y = Y, logRatioType = "ILR",
 #   objective = "regression", cvParams = list(numFolds = K))
 # saveRDS(
 #   codacore0,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/COMBO",
 #     "_codacore",
 #     "_gbm",
 #     ".rds"))
 cdcr = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/COMBO",
     "_codacore",
     "_gbm",
     ".rds"))
@@ -155,13 +156,13 @@ cdcr = readRDS(
 # saveRDS(
 #   lrl,
 #   paste0(
-#     output_dir, "/sCD14",
+#     output_dir, "/COMBO",
 #     "_lrlasso",
 #     "_gbm",
 #     ".rds"))
 lrl = readRDS(
   paste0(
-    output_dir, "/sCD14",
+    output_dir, "/COMBO",
     "_lrlasso",
     "_gbm",
     ".rds"))
@@ -187,7 +188,7 @@ slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
 rownames(slrspec.fullSBP) = colnames(X)
 slrspec.fullSBP[match(
   names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
-# thetahat 
+# thetahat
 slrspec.coefs = getCoefsBM(
   coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
 # numerator (I+) / denominator (I-) of selected balance
@@ -201,7 +202,7 @@ slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
 rownames(slrhier.fullSBP) = colnames(X)
 slrhier.fullSBP[match(
   names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
-# thetahat 
+# thetahat
 slrhier.coefs = getCoefsBM(
   coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
 # numerator (I+) / denominator (I-) of selected balance

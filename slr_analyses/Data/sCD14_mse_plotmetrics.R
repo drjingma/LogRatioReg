@@ -1,5 +1,5 @@
-# Purpose: plot results from HIV_mse.R
-# Date: 6/22/2022
+# Purpose: plot results from Crohns_mse.R
+# Date: 6/29/2022
 rm(list=ls())
 
 ################################################################################
@@ -20,7 +20,7 @@ scaling = TRUE
 
 file.end0 = paste0(
   # "_sim", b,
-  "_HIV", 
+  "_sCD14", 
   "_gbm")
 
 ################################################################################
@@ -31,7 +31,6 @@ classo_list = list()
 slr_spec_list = list()
 slr_hier_list = list()
 selbal_list = list()
-selbal_covar_list = list()
 codacore_list = list()
 lrlasso_list = list()
 for(i in 1:numSplits){
@@ -73,16 +72,6 @@ for(i in 1:numSplits){
   rownames(slbl_tmp) = NULL
   selbal_list[[i]] = data.table::data.table(slbl_tmp)
   
-  # selbal - covar
-  slbl_covar_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/selbal_covar_metrics",
-    "_sim", i, file.end0, ".rds"
-  ))))
-  rownames(slbl_covar_tmp) = NULL
-  selbal_covar_list[[i]] = data.table::data.table(slbl_covar_tmp)
-  
-  #
-  
   # codacore
   cdcr_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/codacore_metrics",
@@ -123,12 +112,6 @@ selbal.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "selbal")
-selbal_covar.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(selbal_covar_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "selbal-MSM")
-###
 codacore.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(codacore_list)), 
                cols = everything(),
@@ -145,7 +128,6 @@ data.gg = rbind(
   slr_spec.gg,
   slr_hier.gg,
   selbal.gg, 
-  # selbal_covar.gg,
   codacore.gg, 
   lrlasso.gg
 ) %>% 
@@ -166,8 +148,7 @@ data.gg = rbind(
     Method = factor(
       Method, 
       levels = c(
-        "selbal", "classo", "codacore", "lrlasso", 
-        "slr-spec", "slr-hier"
+        "selbal", "classo", "codacore", "lrlasso", "slr-spec", "slr-hier"
       )
     )
   )
@@ -189,7 +170,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220629",
+    "20220630",
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,

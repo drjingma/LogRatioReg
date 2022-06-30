@@ -106,14 +106,15 @@ slr_spec_bar = ggplot(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
   ggtitle("slr-spec")
-ggsave(
-  filename = paste0(
-    "20220622",
-    file.end0,
-    "_", "slr_spectral", ".pdf"),
-  plot = slr_spec_bar,
-  width = 6, height = 3.5, units = c("in")
-)
+slr_spec_bar
+# ggsave(
+#   filename = paste0(
+#     "20220622",
+#     file.end0,
+#     "_", "slr_spectral", ".png"),
+#   plot = slr_spec_bar,
+#   width = 6, height = 3.5, units = c("in")
+# )
 
 # slr - hierarchical ###########################################################
 slr_hier_props0 = data.frame(
@@ -142,14 +143,15 @@ slr_hier_bar = ggplot(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
   ggtitle("slr-hier")
-ggsave(
-  filename = paste0(
-    "20220622",
-    file.end0,
-    "_", "slr_hierarchical", ".pdf"),
-  plot = slr_hier_bar,
-  width = 6, height = 3.5, units = c("in")
-)
+slr_hier_bar
+# ggsave(
+#   filename = paste0(
+#     "20220622",
+#     file.end0,
+#     "_", "slr_hierarchical", ".png"),
+#   plot = slr_hier_bar,
+#   width = 6, height = 3.5, units = c("in")
+# )
 
 # selbal #######################################################################
 selbal_props0 = data.frame(
@@ -178,21 +180,52 @@ selbal_bar = ggplot(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
   ggtitle("selbal")
-ggsave(
-  filename = paste0(
-    "20220622",
-    file.end0,
-    "_", "selbal", ".pdf"),
-  plot = selbal_bar,
-  width = 6, height = 3.5, units = c("in")
+selbal_bar
+# ggsave(
+#   filename = paste0(
+#     "20220622",
+#     file.end0,
+#     "_", "selbal", ".png"),
+#   plot = selbal_bar,
+#   width = 6, height = 3.5, units = c("in")
+# )
+
+# codacore1 ####################################################################
+codacore1_props0 = data.frame(
+  taxa = rownames(codacore1_sbps),
+  active = apply(codacore1_sbps != 0, 1, function(row) mean(row)), 
+  numerator = apply(codacore1_sbps == 1, 1, function(row) mean(row)), 
+  denominator = apply(codacore1_sbps == -1, 1, function(row) mean(row))
 )
+codacore1_props = codacore1_props0 %>% filter(active != 0) %>%
+  arrange(active) %>% 
+  select(-"active") %>% 
+  pivot_longer(
+    cols = numerator:denominator, 
+    names_to = "side", values_to = "proportion") %>%
+  filter(proportion != 0)
+codacore1_props = codacore1_props %>% 
+  mutate(taxa = factor(taxa, levels = codacore1_props$taxa))
 
-
-
-
-
-# codacore #####################################################################
-
+codacore1_bar = ggplot(
+  codacore1_props, aes(x = taxa, y = proportion, fill = side)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) +
+  ggtitle("codacore1")
+codacore1_bar
+# ggsave(
+#   filename = paste0(
+#     "20220622",
+#     file.end0,
+#     "_", "codacore1", ".png"),
+#   plot = codacore1_bar,
+#   width = 6, height = 3.5, units = c("in")
+# )
 
 
 

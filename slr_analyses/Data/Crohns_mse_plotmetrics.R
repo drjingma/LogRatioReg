@@ -131,8 +131,11 @@ data.gg = rbind(
   codacore.gg, 
   lrlasso.gg
 ) %>% 
-  mutate(
-    value = ifelse(Metric == "time", log(value), value)
+  # mutate(
+  #   value = ifelse(Metric == "time", log(value), value)
+  # ) %>%
+  dplyr::filter(
+    Metric %in% c("auc", "percselected", "time")
   ) %>%
   mutate(
     Metric = factor(
@@ -141,7 +144,7 @@ data.gg = rbind(
         "acc", "auc", "f1", "percselected",  "time"
       ), 
       labels = c(
-        "Accuracy", "AUC", "F1", "% Selected", "log(Timing)"
+        "Accuracy", "AUC", "F1", "% Selected", "Timing"
       ))
   ) %>% 
   mutate(
@@ -170,9 +173,9 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220622",
+    "20220630",
     file.end0,
-    "_", "metrics", ".pdf"),
+    "_", "metrics", ".png"),
   plot = plt_main,
-  width = 6, height = 4, units = c("in")
+  width = 6, height = 2.5, units = c("in")
 )

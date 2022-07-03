@@ -160,30 +160,33 @@ data.gg = rbind(
 ) %>%
   dplyr::filter(
     Metric %in% c(
-      "PEtr", "PEte",
-      "EA1", "EA2", "EAInfty",
+      # "PEtr", 
+      "PEte",
+      # "EA1", 
+      "EA2", 
+      # "EAInfty",
       "TPR", "FPR", "Fscore",
       "time"
     )
   ) %>% 
-  mutate(
-    value = ifelse(
-      Metric %in% c("time", "EA1", "EA2", "EAInfty"), log(value), value)
-  ) %>%
+  # mutate(
+  #   value = ifelse(
+  #     Metric %in% c("time", "EA1", "EA2", "EAInfty"), log(value), value)
+  # ) %>%
   mutate(
     Metric = factor(
       Metric, 
       levels = c(
         "PEtr", "PEte",
         "EA1", "EA2", "EAInfty",
-        "TPR", "FPR", "Fscore",
-        "time"
+        "time",
+        "TPR", "FPR", "Fscore"
       ), 
       labels = c(
-        "PEtr", "PEte",
-        "log(EA1)", "log(EA2)", "log(EAInfty)",
-        "TPR", "FPR", "F1",
-        "log(Timing)"
+        "PEtr", "MSE",
+        "EA1", "EA2", "EAInfty",
+        "Timing",
+        "TPR", "FPR", "F1"
       ))
   ) %>% 
   mutate(
@@ -211,9 +214,9 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220622",
+    "20220630",
     file.end0,
-    "_", "metrics", ".pdf"),
+    "_", "metrics", ".png"),
   plot = plt_main,
-  width = 6, height = 5, units = c("in")
+  width = 6, height = 4, units = c("in")
 )

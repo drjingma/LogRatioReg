@@ -16,7 +16,10 @@ numSplits = 20
 
 # tuning parameter settings
 K = 10
+nlam = 100
+intercept = TRUE
 scaling = TRUE
+tol = 1e-4
 
 file.end0 = paste0(
   # "_sim", b,
@@ -131,17 +134,17 @@ data.gg = rbind(
   codacore.gg, 
   lrlasso.gg
 ) %>% 
-  mutate(
-    value = ifelse(Metric == "time", log(value), value)
-  ) %>%
+  # mutate(
+  #   value = ifelse(Metric == "time", log(value), value)
+  # ) %>%
   mutate(
     Metric = factor(
       Metric, 
       levels = c(
-        "acc", "auc", "f1", "percselected",  "time"
+        "mse", "percselected", "time"
       ), 
       labels = c(
-        "Accuracy", "AUC", "F1", "% Selected", "log(Timing)"
+        "MSE", "% Selected", "Timing"
       ))
   ) %>% 
   mutate(
@@ -174,5 +177,5 @@ ggsave(
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,
-  width = 6, height = 4, units = c("in")
+  width = 6, height = 2.5, units = c("in")
 )

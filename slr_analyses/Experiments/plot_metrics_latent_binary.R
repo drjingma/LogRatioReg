@@ -27,8 +27,8 @@ scaling = TRUE
 tol = 1e-4
 # sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -163,30 +163,33 @@ data.gg = rbind(
 ) %>%
   dplyr::filter(
     Metric %in% c(
-      "AUCtr", "AUCte",
-      "EA1", "EA2", "EAInfty",
+      # "AUCtr", 
+      "AUCte",
+      # "EA1", 
+      "EA2", 
+      # "EAInfty",
       "TPR", "FPR", "Fscore",
       "time"
     )
-  ) %>% 
-  mutate(
-    value = ifelse(
-      Metric %in% c("time", "EA1", "EA2", "EAInfty"), log(value), value)
   ) %>%
+  # mutate(
+  #   value = ifelse(
+  #     Metric %in% c("time", "EA1", "EA2", "EAInfty"), log(value), value)
+  # ) %>%
   mutate(
     Metric = factor(
       Metric, 
       levels = c(
         "AUCtr", "AUCte",
         "EA1", "EA2", "EAInfty",
-        "TPR", "FPR", "Fscore",
-        "time"
+        "time",
+        "TPR", "FPR", "Fscore"
       ), 
       labels = c(
-        "AUCtr", "AUCte",
-        "log(EA1)", "log(EA2)", "log(EAInfty)",
-        "TPR", "FPR", "F1",
-        "log(Timing)"
+        "AUCtr", "AUC",
+        "EA1", "EA2", "EAInfty",
+        "Timing",
+        "TPR", "FPR", "F1"
       ))
   ) %>% 
   mutate(
@@ -214,9 +217,9 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220622",
+    "20220630",
     file.end0,
-    "_", "metrics", ".pdf"),
+    "_", "metrics", ".png"),
   plot = plt_main,
-  width = 6, height = 5, units = c("in")
+  width = 6, height = 4, units = c("in")
 )

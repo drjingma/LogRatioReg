@@ -291,9 +291,9 @@ res = foreach(
       }
     }
   } else{
-    print(paste0("sim ", i, " -- codacore has no log-ratios"))
+    print(paste0("sim ", b, " -- codacore has no log-ratios"))
     codacore0_coeffs = c()
-    SBP_codacore = matrix(0, nrow = p, ncol = 1) ###############################
+    codacore0_SBP = matrix(0, nrow = p, ncol = 1) ###############################
     codacore0model = stats::glm(YTr ~ 1, family = "gaussian")
     codacore0.betahat = rep(0, p)
     codacore0.Yhat.test = predict(codacore0model, XTe)

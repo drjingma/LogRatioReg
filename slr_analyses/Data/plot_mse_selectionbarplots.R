@@ -1,6 +1,9 @@
 # Purpose: plot results from HIV_mse.R
-# Date: 6/28/2022
+# Date: 7/5/2022
 rm(list=ls())
+
+data_set = "sCD14" # "HIV", "sCD14", "Crohns"
+date = "20220705"
 
 ################################################################################
 # libraries and settings
@@ -20,12 +23,18 @@ scaling = TRUE
 
 file.end0 = paste0(
   # "_sim", b,
-  "_HIV", 
+  "_", data_set,
   "_gbm")
 
 ################################################################################
 # plot metrics
-W = selbal::HIV[, 1:60]
+if(data_set == "Crohns"){
+  W = selbal::Crohn[, 1:48]
+} else if(data_set == "HIV"){
+  W = selbal::HIV[, 1:60]
+} else if(data_set == "sCD14"){
+  W = selbal::sCD14[, 1:60]
+}
 p = ncol(W)
 
 # import metrics
@@ -94,7 +103,7 @@ slr_spec_props = slr_spec_props0 %>% filter(active != 0) %>%
     names_to = "side", values_to = "proportion") %>%
   filter(proportion != 0)
 slr_spec_props = slr_spec_props %>% 
-  mutate(taxa = factor(taxa, levels = slr_spec_props$taxa))
+  mutate(taxa = factor(taxa, levels = unique(slr_spec_props$taxa)))
 
 slr_spec_bar = ggplot(
   slr_spec_props, aes(x = taxa, y = proportion, fill = side)) + 
@@ -107,14 +116,14 @@ slr_spec_bar = ggplot(
     axis.title.y = element_blank()) +
   ggtitle("slr-spec")
 slr_spec_bar
-# ggsave(
-#   filename = paste0(
-#     "20220622",
-#     file.end0,
-#     "_", "slr_spectral", ".png"),
-#   plot = slr_spec_bar,
-#   width = 6, height = 3.5, units = c("in")
-# )
+ggsave(
+  filename = paste0(
+    date,
+    file.end0,
+    "_", "slr_spectral", ".png"),
+  plot = slr_spec_bar,
+  width = 6, height = 3.25, units = c("in")
+)
 
 # slr - hierarchical ###########################################################
 slr_hier_props0 = data.frame(
@@ -131,7 +140,7 @@ slr_hier_props = slr_hier_props0 %>% filter(active != 0) %>%
     names_to = "side", values_to = "proportion") %>%
   filter(proportion != 0)
 slr_hier_props = slr_hier_props %>% 
-  mutate(taxa = factor(taxa, levels = slr_hier_props$taxa))
+  mutate(taxa = factor(taxa, levels = unique(slr_hier_props$taxa)))
 
 slr_hier_bar = ggplot(
   slr_hier_props, aes(x = taxa, y = proportion, fill = side)) + 
@@ -144,14 +153,14 @@ slr_hier_bar = ggplot(
     axis.title.y = element_blank()) +
   ggtitle("slr-hier")
 slr_hier_bar
-# ggsave(
-#   filename = paste0(
-#     "20220622",
-#     file.end0,
-#     "_", "slr_hierarchical", ".png"),
-#   plot = slr_hier_bar,
-#   width = 6, height = 3.5, units = c("in")
-# )
+ggsave(
+  filename = paste0(
+    date,
+    file.end0,
+    "_", "slr_hierarchical", ".png"),
+  plot = slr_hier_bar,
+  width = 6, height = 3.25, units = c("in")
+)
 
 # selbal #######################################################################
 selbal_props0 = data.frame(
@@ -168,7 +177,7 @@ selbal_props = selbal_props0 %>% filter(active != 0) %>%
     names_to = "side", values_to = "proportion") %>%
   filter(proportion != 0)
 selbal_props = selbal_props %>% 
-  mutate(taxa = factor(taxa, levels = selbal_props$taxa))
+  mutate(taxa = factor(taxa, levels = unique(selbal_props$taxa)))
 
 selbal_bar = ggplot(
   selbal_props, aes(x = taxa, y = proportion, fill = side)) + 
@@ -181,14 +190,14 @@ selbal_bar = ggplot(
     axis.title.y = element_blank()) +
   ggtitle("selbal")
 selbal_bar
-# ggsave(
-#   filename = paste0(
-#     "20220622",
-#     file.end0,
-#     "_", "selbal", ".png"),
-#   plot = selbal_bar,
-#   width = 6, height = 3.5, units = c("in")
-# )
+ggsave(
+  filename = paste0(
+    date,
+    file.end0,
+    "_", "selbal", ".png"),
+  plot = selbal_bar,
+  width = 6, height = 3.25, units = c("in")
+)
 
 # codacore1 ####################################################################
 codacore1_props0 = data.frame(
@@ -205,7 +214,7 @@ codacore1_props = codacore1_props0 %>% filter(active != 0) %>%
     names_to = "side", values_to = "proportion") %>%
   filter(proportion != 0)
 codacore1_props = codacore1_props %>% 
-  mutate(taxa = factor(taxa, levels = codacore1_props$taxa))
+  mutate(taxa = factor(taxa, levels = unique(codacore1_props$taxa)))
 
 codacore1_bar = ggplot(
   codacore1_props, aes(x = taxa, y = proportion, fill = side)) + 
@@ -218,14 +227,14 @@ codacore1_bar = ggplot(
     axis.title.y = element_blank()) +
   ggtitle("codacore1")
 codacore1_bar
-# ggsave(
-#   filename = paste0(
-#     "20220622",
-#     file.end0,
-#     "_", "codacore1", ".png"),
-#   plot = codacore1_bar,
-#   width = 6, height = 3.5, units = c("in")
-# )
+ggsave(
+  filename = paste0(
+    date,
+    file.end0,
+    "_", "codacore1", ".png"),
+  plot = codacore1_bar,
+  width = 6, height = 3.25, units = c("in")
+)
 
 
 

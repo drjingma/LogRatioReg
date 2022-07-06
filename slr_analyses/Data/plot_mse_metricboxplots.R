@@ -1,6 +1,11 @@
-# Purpose: plot results from Crohns_mse.R
-# Date: 6/29/2022
+# Purpose: plot results from HIV_mse.R
+# Date: 7/5/2022
 rm(list=ls())
+
+data_set = "sCD14" # "HIV", "sCD14", "Crohns"
+date = "20220705"
+response_type = "continuous" 
+#   "binary" (for "HIV" and "Crohns"), "continuous" (for "sCD14)
 
 ################################################################################
 # libraries and settings
@@ -16,14 +21,11 @@ numSplits = 20
 
 # tuning parameter settings
 K = 10
-nlam = 100
-intercept = TRUE
 scaling = TRUE
-tol = 1e-4
 
 file.end0 = paste0(
   # "_sim", b,
-  "_sCD14", 
+  "_", data_set, 
   "_gbm")
 
 ################################################################################
@@ -34,6 +36,7 @@ classo_list = list()
 slr_spec_list = list()
 slr_hier_list = list()
 selbal_list = list()
+# selbal_covar_list = list() # only applicable to HIV data set
 codacore_list = list()
 lrlasso_list = list()
 for(i in 1:numSplits){
@@ -75,6 +78,16 @@ for(i in 1:numSplits){
   rownames(slbl_tmp) = NULL
   selbal_list[[i]] = data.table::data.table(slbl_tmp)
   
+  # # selbal - covar
+  # slbl_covar_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/selbal_covar_metrics",
+  #   "_sim", i, file.end0, ".rds"
+  # ))))
+  # rownames(slbl_covar_tmp) = NULL
+  # selbal_covar_list[[i]] = data.table::data.table(slbl_covar_tmp)
+  
+  #
+  
   # codacore
   cdcr_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/codacore_metrics",
@@ -115,6 +128,12 @@ selbal.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "selbal")
+# selbal_covar.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(selbal_covar_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "selbal-MSM")
+###
 codacore.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(codacore_list)), 
                cols = everything(),
@@ -131,30 +150,59 @@ data.gg = rbind(
   slr_spec.gg,
   slr_hier.gg,
   selbal.gg, 
+  # selbal_covar.gg,
   codacore.gg, 
   lrlasso.gg
-) %>% 
-  # mutate(
-  #   value = ifelse(Metric == "time", log(value), value)
-  # ) %>%
-  mutate(
-    Metric = factor(
-      Metric, 
-      levels = c(
-        "mse", "percselected", "time"
-      ), 
-      labels = c(
-        "MSE", "% Selected", "Timing"
-      ))
-  ) %>% 
+) 
+
+if(response_type == "binary"){
+  data.gg = data.gg %>% 
+    # mutate(
+    #   value = ifelse(Metric == "time", log(value), value)
+    # ) %>%
+    dplyr::filter(
+      Metric %in% c("auc", "percselected", "time")
+    ) %>%
+    mutate(
+      Metric = factor(
+        Metric, 
+        levels = c(
+          "acc", "auc", "f1", "percselected",  "time"
+        ), 
+        labels = c(
+          "Accuracy", "AUC", "F1", "% Selected", "Timing"
+        ))
+    ) 
+} else if(response_type == "continuous"){
+  data.gg = data.gg %>% 
+    # mutate(
+    #   value = ifelse(Metric == "time", log(value), value)
+    # ) %>%
+    dplyr::filter(
+      Metric %in% c("mse", "percselected", "time")
+    ) %>%
+    mutate(
+      Metric = factor(
+        Metric, 
+        levels = c(
+          "mse", "percselected",  "time"
+        ), 
+        labels = c(
+          "MSE", "% Selected", "Timing"
+        ))
+    ) 
+}
+
+data.gg = data.gg %>% 
   mutate(
     Method = factor(
       Method, 
       levels = c(
-        "selbal", "classo", "codacore", "lrlasso", "slr-spec", "slr-hier"
+        "selbal", "classo", "codacore", "lrlasso", 
+        "slr-spec", "slr-hier"
       )
     )
-  )
+  ) 
 
 data.gg_main = data.gg 
 plt_main = ggplot(
@@ -173,7 +221,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220630",
+    date,
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,

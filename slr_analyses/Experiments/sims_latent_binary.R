@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 6/20/2022
+# Date: 7/19/2022
 rm(list=ls())
 
 ################################################################################
@@ -32,6 +32,7 @@ registerDoRNG(rng.seed)
 res = foreach(
   b = 1:numSims
 ) %dorng% {
+  print(b)
   # rm(list=ls())
   library(mvtnorm)
   
@@ -55,8 +56,8 @@ res = foreach(
   nlam = 100
   scaling = TRUE
   sigma_eps2 = 0.1
-  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -91,6 +92,7 @@ res = foreach(
     SBP.true = data.tmp$SBP.true
     beta.true = data.tmp$beta.true
     non0.beta = data.tmp$non0.beta
+    bspars = sum(non0.beta)
   } else{
     # get latent variable
     U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
@@ -168,145 +170,145 @@ res = foreach(
   # ),
   # paste0(output_dir, "/classo_metrics", file.end))
 
-  # ##############################################################################
-  # # slr
-  # #   screening.method = "wald"
-  # #   cluster.method = "spectral"
-  # #   response.type = "binary"
-  # #   s0.perc = 0
-  # #   zeta = 0
-  # #   type.measure = "accuracy"
-  # # -- fits a balance regression model with one balance
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slrspeccv = cv.slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #   response.type = "binary", s0.perc = 0, zeta = 0, 
-  #   nfolds = K, type.measure = "accuracy", 
-  #   parallel = FALSE, scale = scaling, trace.it = FALSE)
-  # slrspec = slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #   response.type = "binary", s0.perc = 0, zeta = 0, 
-  #   threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
-  # end.time = Sys.time()
-  # slrspec.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrspec.fullSBP) = colnames(X)
-  # slrspec.fullSBP[match(
-  #   names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
-  # 
-  # slrspec.coefs = getCoefsBM(
-  #   coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
-  # 
-  # # compute metrics on the selected model #
-  # # prediction errors
-  # # get prediction error on training set
-  # slrspec.Yhat.train = predict(
-  #   slrspec$fit, 
-  #   data.frame(balance = balance::balance.fromSBP(
-  #     x = X, y = slrspec.fullSBP)), 
-  #   type = "response")
-  # slrspec.AUC.train = pROC::roc(
-  #   Y, slrspec.Yhat.train, levels = c(0, 1), direction = "<")$auc
-  # # get prediction error on test set
-  # slrspec.Yhat.test = predict(
-  #   slrspec$fit, 
-  #   data.frame(balance = balance::balance.fromSBP(
-  #     x = X.test, y = slrspec.fullSBP)), 
-  #   type = "response")
-  # slrspec.AUC.test = pROC::roc(
-  #   Y.test, slrspec.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # beta estimation accuracy, selection accuracy #
-  # slrspec.metrics = getMetricsBM(
-  #   thetahat0 = slrspec.coefs$a0, thetahat = slrspec.coefs$bm.coefs,
-  #   betahat = slrspec.coefs$llc.coefs,
-  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
-  #   true.beta = beta.true,
-  #   metrics = c("betaestimation", "selection"), classification = TRUE)
-  # slrspec.metrics = c(
-  #   AUCtr = slrspec.AUC.train, AUCte = slrspec.AUC.test, 
-  #   slrspec.metrics)
-  # 
-  # saveRDS(c(
-  #   slrspec.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(slrspec.coefs$bm.coefs != 0),
-  #   "time" = slrspec.timing, 
-  #   "adhoc" = slrspec$adhoc.invoked
-  # ),
-  # paste0(output_dir, "/slr_spectral_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # slr
-  # #   screening.method = "wald"
-  # #   cluster.method = "hierarchical"
-  # #   response.type = "binary"
-  # #   s0.perc = 0
-  # #   zeta = 0
-  # #   type.measure = "accuracy"
-  # # -- fits a balance regression model with one balance
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slrhiercv = cv.slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #   response.type = "binary", s0.perc = 0, zeta = 0, 
-  #   nfolds = K, type.measure = "accuracy", 
-  #   parallel = FALSE, scale = scaling, trace.it = FALSE)
-  # slrhier = slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #   response.type = "binary", s0.perc = 0, zeta = 0, 
-  #   threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
-  # end.time = Sys.time()
-  # slrhier.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrhier.fullSBP) = colnames(X)
-  # slrhier.fullSBP[match(
-  #   names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
-  # 
-  # slrhier.coefs = getCoefsBM(
-  #   coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
-  # 
-  # # compute metrics on the selected model #
-  # # prediction errors
-  # # get prediction error on training set
-  # slrhier.Yhat.train = predict(
-  #   slrhier$fit, 
-  #   data.frame(balance = balance::balance.fromSBP(
-  #     x = X, y = slrhier.fullSBP)), 
-  #   type = "response")
-  # slrhier.AUC.train = pROC::roc(
-  #   Y, slrhier.Yhat.train, levels = c(0, 1), direction = "<")$auc
-  # # get prediction error on test set
-  # slrhier.Yhat.test = predict(
-  #   slrhier$fit, 
-  #   data.frame(balance = balance::balance.fromSBP(
-  #     x = X.test, y = slrhier.fullSBP)), 
-  #   type = "response")
-  # slrhier.AUC.test = pROC::roc(
-  #   Y.test, slrhier.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # beta estimation accuracy, selection accuracy #
-  # slrhier.metrics = getMetricsBM(
-  #   thetahat0 = slrhier.coefs$a0, thetahat = slrhier.coefs$bm.coefs,
-  #   betahat = slrhier.coefs$llc.coefs,
-  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
-  #   true.beta = beta.true,
-  #   metrics = c("betaestimation", "selection"), classification = TRUE)
-  # slrhier.metrics = c(
-  #   AUCtr = slrhier.AUC.train, AUCte = slrhier.AUC.test, 
-  #   slrhier.metrics)
-  # 
-  # saveRDS(c(
-  #   slrhier.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(slrhier.coefs$bm.coefs != 0),
-  #   "time" = slrhier.timing, 
-  #   "adhoc" = slrhier$adhoc.invoked
-  # ),
-  # paste0(output_dir, "/slr_hierarchical_metrics", file.end))
+  ##############################################################################
+  # slr
+  #   screening.method = "wald"
+  #   cluster.method = "spectral"
+  #   response.type = "binary"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "accuracy"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrspec0cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "accuracy",
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  slrspec0 = slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    threshold = slrspec0cv$threshold[slrspec0cv$index["1se",]])
+  end.time = Sys.time()
+  slrspec0.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  slrspec0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec0.fullSBP) = colnames(X)
+  slrspec0.fullSBP[match(
+    names(slrspec0$sbp), rownames(slrspec0.fullSBP))] = slrspec0$sbp
+
+  slrspec0.coefs = getCoefsBM(
+    coefs = coefficients(slrspec0$fit), sbp = slrspec0.fullSBP)
+
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  slrspec0.Yhat.train = predict(
+    slrspec0$fit,
+    data.frame(balance = balance::balance.fromSBP(
+      x = X, y = slrspec0.fullSBP)),
+    type = "response")
+  slrspec0.AUC.train = pROC::roc(
+    Y, slrspec0.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  # get prediction error on test set
+  slrspec0.Yhat.test = predict(
+    slrspec0$fit,
+    data.frame(balance = balance::balance.fromSBP(
+      x = X.test, y = slrspec0.fullSBP)),
+    type = "response")
+  slrspec0.AUC.test = pROC::roc(
+    Y.test, slrspec0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slrspec0.metrics = getMetricsBM(
+    thetahat0 = slrspec0.coefs$a0, thetahat = slrspec0.coefs$bm.coefs,
+    betahat = slrspec0.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true,
+    metrics = c("betaestimation", "selection"), classification = TRUE)
+  slrspec0.metrics = c(
+    AUCtr = slrspec0.AUC.train, AUCte = slrspec0.AUC.test,
+    slrspec0.metrics)
+
+  saveRDS(c(
+    slrspec0.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrspec0.coefs$bm.coefs != 0),
+    "time" = slrspec0.timing,
+    "adhoc" = slrspec0$adhoc.invoked
+  ),
+  paste0(output_dir, "/slr_spectral_accuracy_metrics", file.end))
+
+  ##############################################################################
+  # slr
+  #   screening.method = "wald"
+  #   cluster.method = "hierarchical"
+  #   response.type = "binary"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "accuracy"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrhier0cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "accuracy",
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  slrhier0 = slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    threshold = slrhier0cv$threshold[slrhier0cv$index["1se",]])
+  end.time = Sys.time()
+  slrhier0.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  slrhier0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier0.fullSBP) = colnames(X)
+  slrhier0.fullSBP[match(
+    names(slrhier0$sbp), rownames(slrhier0.fullSBP))] = slrhier0$sbp
+
+  slrhier0.coefs = getCoefsBM(
+    coefs = coefficients(slrhier0$fit), sbp = slrhier0.fullSBP)
+
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  slrhier0.Yhat.train = predict(
+    slrhier0$fit,
+    data.frame(balance = balance::balance.fromSBP(
+      x = X, y = slrhier0.fullSBP)),
+    type = "response")
+  slrhier0.AUC.train = pROC::roc(
+    Y, slrhier0.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  # get prediction error on test set
+  slrhier0.Yhat.test = predict(
+    slrhier0$fit,
+    data.frame(balance = balance::balance.fromSBP(
+      x = X.test, y = slrhier0.fullSBP)),
+    type = "response")
+  slrhier0.AUC.test = pROC::roc(
+    Y.test, slrhier0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slrhier0.metrics = getMetricsBM(
+    thetahat0 = slrhier0.coefs$a0, thetahat = slrhier0.coefs$bm.coefs,
+    betahat = slrhier0.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true,
+    metrics = c("betaestimation", "selection"), classification = TRUE)
+  slrhier0.metrics = c(
+    AUCtr = slrhier0.AUC.train, AUCte = slrhier0.AUC.test,
+    slrhier0.metrics)
+
+  saveRDS(c(
+    slrhier0.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slrhier0.coefs$bm.coefs != 0),
+    "time" = slrhier0.timing,
+    "adhoc" = slrhier0$adhoc.invoked
+  ),
+  paste0(output_dir, "/slr_hierarchical_accuracy_metrics", file.end))
   
   ##############################################################################
   # slr
@@ -319,62 +321,62 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  slrspeccv = cv.slr(
+  slrspec1cv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "binary", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "auc", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slrspec = slr(
+  slrspec1 = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "binary", s0.perc = 0, zeta = 0, 
-    threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
+    threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]])
   end.time = Sys.time()
-  slrspec.timing = difftime(
+  slrspec1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slrspec.fullSBP) = colnames(X)
-  slrspec.fullSBP[match(
-    names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+  slrspec1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec1.fullSBP) = colnames(X)
+  slrspec1.fullSBP[match(
+    names(slrspec1$sbp), rownames(slrspec1.fullSBP))] = slrspec1$sbp
   
-  slrspec.coefs = getCoefsBM(
-    coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
+  slrspec1.coefs = getCoefsBM(
+    coefs = coefficients(slrspec1$fit), sbp = slrspec1.fullSBP)
   
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
-  slrspec.Yhat.train = predict(
-    slrspec$fit, 
+  slrspec1.Yhat.train = predict(
+    slrspec1$fit, 
     data.frame(balance = balance::balance.fromSBP(
-      x = X, y = slrspec.fullSBP)), 
+      x = X, y = slrspec1.fullSBP)), 
     type = "response")
-  slrspec.AUC.train = pROC::roc(
-    Y, slrspec.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  slrspec1.AUC.train = pROC::roc(
+    Y, slrspec1.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
-  slrspec.Yhat.test = predict(
-    slrspec$fit, 
+  slrspec1.Yhat.test = predict(
+    slrspec1$fit, 
     data.frame(balance = balance::balance.fromSBP(
-      x = X.test, y = slrspec.fullSBP)), 
+      x = X.test, y = slrspec1.fullSBP)), 
     type = "response")
-  slrspec.AUC.test = pROC::roc(
-    Y.test, slrspec.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  slrspec1.AUC.test = pROC::roc(
+    Y.test, slrspec1.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
-  slrspec.metrics = getMetricsBM(
-    thetahat0 = slrspec.coefs$a0, thetahat = slrspec.coefs$bm.coefs,
-    betahat = slrspec.coefs$llc.coefs,
+  slrspec1.metrics = getMetricsBM(
+    thetahat0 = slrspec1.coefs$a0, thetahat = slrspec1.coefs$bm.coefs,
+    betahat = slrspec1.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true,
     metrics = c("betaestimation", "selection"), classification = TRUE)
-  slrspec.metrics = c(
-    AUCtr = slrspec.AUC.train, AUCte = slrspec.AUC.test, 
-    slrspec.metrics)
+  slrspec1.metrics = c(
+    AUCtr = slrspec1.AUC.train, AUCte = slrspec1.AUC.test, 
+    slrspec1.metrics)
   
   saveRDS(c(
-    slrspec.metrics,
+    slrspec1.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slrspec.coefs$bm.coefs != 0),
-    "time" = slrspec.timing, 
-    "adhoc" = slrspec$adhoc.invoked
+    "logratios" = sum(slrspec1.coefs$bm.coefs != 0),
+    "time" = slrspec1.timing, 
+    "adhoc" = slrspec1$adhoc.invoked
   ),
   paste0(output_dir, "/slr_spectral_auc_metrics", file.end))
   
@@ -389,62 +391,62 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  slrhiercv = cv.slr(
+  slrhier1cv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "binary", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "auc", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slrhier = slr(
+  slrhier1 = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "binary", s0.perc = 0, zeta = 0, 
-    threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+    threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]])
   end.time = Sys.time()
-  slrhier.timing = difftime(
+  slrhier1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slrhier.fullSBP) = colnames(X)
-  slrhier.fullSBP[match(
-    names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
+  slrhier1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier1.fullSBP) = colnames(X)
+  slrhier1.fullSBP[match(
+    names(slrhier1$sbp), rownames(slrhier1.fullSBP))] = slrhier1$sbp
   
-  slrhier.coefs = getCoefsBM(
-    coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
+  slrhier1.coefs = getCoefsBM(
+    coefs = coefficients(slrhier1$fit), sbp = slrhier1.fullSBP)
   
   # compute metrics on the selected model #
   # prediction errors
   # get prediction error on training set
-  slrhier.Yhat.train = predict(
-    slrhier$fit, 
+  slrhier1.Yhat.train = predict(
+    slrhier1$fit, 
     data.frame(balance = balance::balance.fromSBP(
-      x = X, y = slrhier.fullSBP)), 
+      x = X, y = slrhier1.fullSBP)), 
     type = "response")
-  slrhier.AUC.train = pROC::roc(
-    Y, slrhier.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  slrhier1.AUC.train = pROC::roc(
+    Y, slrhier1.Yhat.train, levels = c(0, 1), direction = "<")$auc
   # get prediction error on test set
-  slrhier.Yhat.test = predict(
-    slrhier$fit, 
+  slrhier1.Yhat.test = predict(
+    slrhier1$fit, 
     data.frame(balance = balance::balance.fromSBP(
-      x = X.test, y = slrhier.fullSBP)), 
+      x = X.test, y = slrhier1.fullSBP)), 
     type = "response")
-  slrhier.AUC.test = pROC::roc(
-    Y.test, slrhier.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  slrhier1.AUC.test = pROC::roc(
+    Y.test, slrhier1.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
-  slrhier.metrics = getMetricsBM(
-    thetahat0 = slrhier.coefs$a0, thetahat = slrhier.coefs$bm.coefs,
-    betahat = slrhier.coefs$llc.coefs,
+  slrhier1.metrics = getMetricsBM(
+    thetahat0 = slrhier1.coefs$a0, thetahat = slrhier1.coefs$bm.coefs,
+    betahat = slrhier1.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true,
     metrics = c("betaestimation", "selection"), classification = TRUE)
-  slrhier.metrics = c(
-    AUCtr = slrhier.AUC.train, AUCte = slrhier.AUC.test, 
-    slrhier.metrics)
+  slrhier1.metrics = c(
+    AUCtr = slrhier1.AUC.train, AUCte = slrhier1.AUC.test, 
+    slrhier1.metrics)
   
   saveRDS(c(
-    slrhier.metrics,
+    slrhier1.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slrhier.coefs$bm.coefs != 0),
-    "time" = slrhier.timing, 
-    "adhoc" = slrhier$adhoc.invoked
+    "logratios" = sum(slrhier1.coefs$bm.coefs != 0),
+    "time" = slrhier1.timing, 
+    "adhoc" = slrhier1$adhoc.invoked
   ),
   paste0(output_dir, "/slr_hierarchical_auc_metrics", file.end))
 
@@ -616,6 +618,7 @@ res = foreach(
   ##############################################################################
   ##############################################################################
   ### fin ###
+  print(paste0("sim ", b, " completed successfully."))
 }
 
 

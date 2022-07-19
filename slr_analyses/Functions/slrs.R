@@ -128,7 +128,8 @@ slr = function(
 
 #' @param newdata x n by p of relative abundances
 predict.slr <- function(
-    object,newdata = NULL,response.type=c('survival','continuous','binary')){
+  object,newdata = NULL,response.type=c('survival','continuous','binary')
+){
   # prediction will be based on the canonical space
   if (missing(newdata) || is.null(newdata)) {
     stop('No new data provided!')
@@ -140,7 +141,8 @@ predict.slr <- function(
       new.balance <- slr.fromContrast(newdata.reduced,object$sbp)
       if (response.type=='binary'){
         fitted.results <- predict(object$fit,newdata=data.frame(balance=new.balance),type='response')
-        predictor <- ifelse(fitted.results > 0.5,1,0)
+        # predictor <- ifelse(fitted.results > 0.5,1,0)
+        predictor = fitted.results
       } else if (response.type=='continuous'){
         predictor <- cbind(1,new.balance) %*% object$theta
       }
@@ -149,18 +151,53 @@ predict.slr <- function(
   }
 }
 
-buildPredmat <- function(outlist,threshold,x,foldid,response.type){
+# # this version doesn't summarize by fold, instead it's n x n.thresh
+# buildPredmat <- function(outlist,threshold,x,foldid,response.type){
+#   nfolds = max(foldid)
+#   predlist = as.list(seq(nfolds))
+#   predmat = matrix(NA, length(foldid), length(threshold))
+#   for (i in seq(nfolds)) {
+#     which = foldid == i
+#     fitobj = outlist[[i]]
+#     x_in = x[which, , drop=FALSE]
+#     predlist[[i]] = sapply(
+#       fitobj, function(a) predict.slr(
+#         a,newdata=x_in,response.type=response.type))
+#     predmat[which,] <- predlist[[i]]
+#   }
+#   predmat
+# }
+# this version is nfolds x n.thresh, like the other methods
+buildPredmat <- function(
+    outlist,threshold,x,y,foldid,response.type,type.measure
+){
   nfolds = max(foldid)
-  predlist = as.list(seq(nfolds))
-  predmat = matrix(NA, length(foldid), length(threshold))
-  for (i in seq(nfolds)) {
+  # predlist = as.list(seq(nfolds))
+  predmat = matrix(NA, nfolds, length(threshold))
+  for(i in 1:nfolds){ # predict for each fold
     which = foldid == i
+    y.i = y[which]
     fitobj = outlist[[i]]
     x_in = x[which, , drop=FALSE]
-    predlist[[i]] = sapply(
+    # predlist[[i]] = sapply(
+    #   fitobj, function(a) predict.slr(
+    #     a,newdata=x_in,response.type=response.type))
+    predy.i = sapply(
       fitobj, function(a) predict.slr(
         a,newdata=x_in,response.type=response.type))
-    predmat[which,] <- predlist[[i]]
+    for(j in 1:length(threshold)){
+      predy.ij = predy.i[, j]
+      if (response.type=='continuous'){ # mse, to be minimized
+        predmat[i, j] <- mean((as.numeric(y.i)-predy.ij)^2)
+      } else if (response.type=='binary'){
+        if(type.measure == "accuracy"){# accuracy, minimize the # that don't match
+          predmat[i, j] <- mean((predy.ij > 0.5) != y.i) 
+        } else if(type.measure == "auc"){# auc, minimize 1 - auc 
+          predmat[i, j] = 1 - pROC::auc(
+            y.i,predy.ij, levels = c(0, 1), direction = "<", quiet = TRUE)
+        }
+      }
+    }
   }
   predmat
 }
@@ -189,14 +226,18 @@ cv.slr <- function(
     response.type=c('survival','continuous','binary'),
     threshold=NULL,s0.perc=NULL,zeta=0,
     nfolds=10,foldid=NULL,weights=NULL,
-    type.measure = c("default", "mse", "deviance", "class", "auc", "mae", "C"),
-    parallel=FALSE,scale=FALSE,trace.it=FALSE){
+    type.measure = c(
+      "default", "mse", "deviance", "class", "auc", "mae", "C", "accuracy"
+    ),
+    parallel=FALSE,scale=FALSE,trace.it=FALSE
+){
   type.measure = match.arg(type.measure)
   N <- nrow(x)
   p <- ncol(x)
   
   if (is.null(weights)){
-    weights <- rep(1,N)
+    # weights <- rep(1,N)
+    weights = rep(1, nfolds)
   }
   
   if (is.null(threshold)) {
@@ -286,17 +327,14 @@ cv.slr <- function(
   
   # collect all out-of-sample predicted values
   predmat <- buildPredmat(
-    outlist, threshold, x, foldid, response.type = response.type)
-  
-  if (response.type=='continuous'){
-    mse <- (as.numeric(y)-predmat)^2
-  } else if (response.type=='binary'){
-    mse <- (predmat != y)
-  }
-  cvm <- apply(mse, 2, weighted.mean, w=weights, na.rm = TRUE)
-  cvsd <- sqrt(apply(
-    scale(mse, cvm, FALSE)^2, 2, weighted.mean, w = weights, na.rm = TRUE) / 
-      (N - 1))
+    outlist, threshold, x, y, foldid, response.type = response.type, 
+    type.measure = type.measure)
+
+  cvm <- apply(predmat, 2, weighted.mean, w=weights, na.rm = TRUE)
+  # cvsd <- sqrt(apply(
+  #   scale(predmat, cvm, FALSE)^2, 2, weighted.mean, w = weights, na.rm = TRUE) / 
+  #     (N - 1))
+  cvsd = apply(predmat, 2, stats::sd, na.rm = TRUE) / sqrt(nfolds)
   
   out <- list(
     threshold=threshold,

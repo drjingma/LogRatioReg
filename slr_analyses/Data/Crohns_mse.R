@@ -179,7 +179,7 @@ res = foreach(
     slrspec0.metrics,
     paste0(output_dir, "/slr_spectral_accuracy_metrics", file.end))
   
-  if(slrspec0$theta[2] < 0){
+  if(!all(slrspec0.fullSBP == 0) & slrspec0$theta[2] < 0){
     slrspec0.fullSBP = -slrspec0.fullSBP
   }
   saveRDS(
@@ -228,7 +228,7 @@ res = foreach(
     slrhier0.metrics,
     paste0(output_dir, "/slr_hierarchical_accuracy_metrics", file.end))
   
-  if(slrhier0$theta[2] < 0){
+  if(!all(slrhier0.fullSBP == 0) & slrhier0$theta[2] < 0){
     slrhier0.fullSBP = -slrhier0.fullSBP
   }
   saveRDS(
@@ -277,7 +277,7 @@ res = foreach(
     slrspec1.metrics,
     paste0(output_dir, "/slr_spectral_auc_metrics", file.end))
   
-  if(slrspec1$theta[2] < 0){
+  if(!all(slrspec1.fullSBP == 0) & slrspec1$theta[2] < 0){
     slrspec1.fullSBP = -slrspec1.fullSBP
   }
   saveRDS(
@@ -326,7 +326,7 @@ res = foreach(
     slrhier1.metrics,
     paste0(output_dir, "/slr_hierarchical_auc_metrics", file.end))
   
-  if(slrhier1$theta[2] < 0){
+  if(!all(slrhier1.fullSBP == 0) & slrhier1$theta[2] < 0){
     slrhier1.fullSBP = -slrhier1.fullSBP
   }
   saveRDS(

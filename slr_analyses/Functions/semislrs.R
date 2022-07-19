@@ -14,8 +14,9 @@
 #' @param response.type type of response variable: could be survival, continuous, or binary. Currently only continuous and binary responses are allowed.
 #' @param s0.perc Factor for denominator of score statistic, between 0 and 1: the percentile of standard deviation values added to the denominator. Default is 0.
 #' @param threshold a nonnegative constant between 0 and 1. If NULL, then no variable screening is performed.
-slr = function(
+semislr = function(
     x, 
+    x2, # compositional data with no response
     y, 
     screen.method=c('correlation','wald'),
     cluster.method = c('spectral', 'hierarchical'),
@@ -24,6 +25,10 @@ slr = function(
     s0.perc=0,
     zeta=0
 ){
+  if(colnames(x) != colnames(x2)){
+    stop("x and x2 don't have the same components/covariates/columns!")
+  }
+  
   this.call <- match.call()
   screen.method <- match.arg(screen.method)
   response.type <- match.arg(response.type)
@@ -82,15 +87,18 @@ slr = function(
     }
     object <- list(sbp=NULL)
   } else {
-    x.reduced <- x[,which.features] # reduced data matrix
-    p <- ncol(x.reduced)
+    allx = rbind(x, x2) #################################################################
+    allx.reduced <- allx[,which.features] # reduced data matrix, ########################
+    #   this time including the data x2 with missing response
+    p <- ncol(allx.reduced)
     Aitchison.var <- matrix(0,p,p)
-    rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(x.reduced)
+    rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(allx.reduced)
     for (j in 1:p){
       for (k in 1:p){
         if (k==j){next}
         else {
-          Aitchison.var[j,k] <- stats::var(log(x.reduced[,j])-log(x.reduced[,k])) # Aitchison variation
+          Aitchison.var[j,k] <- stats::var(
+            log(allx.reduced[,j])-log(allx.reduced[,k])) # Aitchison variation
         }
       }
     }
@@ -105,7 +113,7 @@ slr = function(
     } else{
       stop("invalid cluster.method arg was provided!!")
     }
-    balance <- slr.fromContrast(x.reduced,sbp.est)
+    balance <- slr.fromContrast(x[,which.features],sbp.est) #########################
     # model fitting
     if (response.type=='binary'){
       model.train <- glm(
@@ -151,23 +159,6 @@ predict.slr <- function(
   }
 }
 
-# # this version doesn't summarize by fold, instead it's n x n.thresh
-# buildPredmat <- function(outlist,threshold,x,foldid,response.type){
-#   nfolds = max(foldid)
-#   predlist = as.list(seq(nfolds))
-#   predmat = matrix(NA, length(foldid), length(threshold))
-#   for (i in seq(nfolds)) {
-#     which = foldid == i
-#     fitobj = outlist[[i]]
-#     x_in = x[which, , drop=FALSE]
-#     predlist[[i]] = sapply(
-#       fitobj, function(a) predict.slr(
-#         a,newdata=x_in,response.type=response.type))
-#     predmat[which,] <- predlist[[i]]
-#   }
-#   predmat
-# }
-# this version is nfolds x n.thresh, like the other methods
 buildPredmat <- function(
     outlist,threshold,x,y,foldid,response.type,type.measure
 ){
@@ -223,8 +214,8 @@ getOptcv <- function(threshold, cvm, cvsd){
   )
 }
 
-cv.slr <- function(
-    x,y,screen.method=c('correlation','wald'),
+cv.semislr <- function(
+    x,x2,y,screen.method=c('correlation','wald'),
     cluster.method = c('spectral', 'hierarchical'),
     response.type=c('survival','continuous','binary'),
     threshold=NULL,s0.perc=NULL,zeta=0,
@@ -321,10 +312,12 @@ cv.slr <- function(
       which = foldid == i
       x_in <- x[which, ,drop=FALSE]
       x_sub <- x[!which, ,drop=FALSE]
+      x2_sub = x2[!which, ,drop=FALSE]
       y_sub <- y[!which]
-      outlist[[i]] <- lapply(threshold, function(l) slr(
-        x_sub,y_sub,screen.method=screen.method,cluster.method=cluster.method,
-        response.type = response.type,threshold=l,s0.perc=s0.perc,zeta = zeta))
+      outlist[[i]] <- lapply(threshold, function(l) semislr(
+        x_sub, x2_sub, y_sub,screen.method=screen.method,
+        cluster.method=cluster.method, response.type = response.type,
+        threshold=l,s0.perc=s0.perc,zeta = zeta))
     }# end loop i
   }
   

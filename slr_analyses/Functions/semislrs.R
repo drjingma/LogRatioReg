@@ -25,7 +25,7 @@ semislr = function(
     s0.perc=0,
     zeta=0
 ){
-  if(colnames(x) != colnames(x2)){
+  if(!all.equal(colnames(x), colnames(x2))){
     stop("x and x2 don't have the same components/covariates/columns!")
   }
   
@@ -219,7 +219,7 @@ cv.semislr <- function(
     cluster.method = c('spectral', 'hierarchical'),
     response.type=c('survival','continuous','binary'),
     threshold=NULL,s0.perc=NULL,zeta=0,
-    nfolds=10,foldid=NULL,weights=NULL,
+    nfolds=10,foldid=NULL,foldid.miss = NULL,weights=NULL,
     type.measure = c(
       "default", "mse", "deviance", "class", "auc", "mae", "C", "accuracy"
     ),
@@ -227,6 +227,7 @@ cv.semislr <- function(
 ){
   type.measure = match.arg(type.measure)
   N <- nrow(x)
+  N2 = nrow(x2)
   p <- ncol(x)
   
   if (is.null(weights)){
@@ -279,6 +280,12 @@ cv.semislr <- function(
   } else {
     nfolds = max(foldid)
   }
+  if (is.null(foldid.miss)) {
+    if(nfolds > N2){
+      stop("nfolds is greater than the number of samples in X2! cannot divide into folds.")
+    }
+    foldid.miss = sample(rep(seq(nfolds), length = N2))
+  }
   
   if (nfolds < 3){
     stop("nfolds must be bigger than 3; nfolds=10 recommended")
@@ -310,9 +317,10 @@ cv.semislr <- function(
         cat(sprintf("Fold: %d/%d\n", i, nfolds))
       }
       which = foldid == i
+      which.miss = foldid.miss == i
       x_in <- x[which, ,drop=FALSE]
       x_sub <- x[!which, ,drop=FALSE]
-      x2_sub = x2[!which, ,drop=FALSE]
+      x2_sub = x2[!which.miss, ,drop=FALSE]
       y_sub <- y[!which]
       outlist[[i]] <- lapply(threshold, function(l) semislr(
         x_sub, x2_sub, y_sub,screen.method=screen.method,

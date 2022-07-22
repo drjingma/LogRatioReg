@@ -1,10 +1,10 @@
 # Purpose: plot results from HIV_mse.R
-# Date: 7/5/2022
+# Date: 7/19/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohns"
-date = "20220705"
-response_type = "continuous" 
+data_set = "HIV" # "HIV", "sCD14", "Crohns"
+date = "20220719"
+response_type = "binary"  # binary or continuous;
 #   "binary" (for "HIV" and "Crohns"), "continuous" (for "sCD14)
 
 ################################################################################
@@ -35,6 +35,10 @@ file.end0 = paste0(
 classo_list = list()
 slr_spec_list = list()
 slr_hier_list = list()
+if(response_type == "binary"){
+  slr2_spec_list = list()
+  slr2_hier_list = list()
+}
 selbal_list = list()
 # selbal_covar_list = list() # only applicable to HIV data set
 codacore_list = list()
@@ -52,21 +56,55 @@ for(i in 1:numSplits){
   
   ###
   
-  # slr - spectral clustering
-  slr_spec_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_spectral_metrics",
-    "_sim", i, file.end0, ".rds"
-  ))))
-  rownames(slr_spec_tmp) = NULL
-  slr_spec_list[[i]] = data.table::data.table(slr_spec_tmp)
-  
-  # slr - hierarchical clustering
-  slr_hier_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/slr_hierarchical_metrics",
-    "_sim", i, file.end0, ".rds"
-  ))))
-  rownames(slr_hier_tmp) = NULL
-  slr_hier_list[[i]] = data.table::data.table(slr_hier_tmp)
+  if(response_type == "continuous"){
+    # slr - spectral clustering
+    slr_spec_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/slr_spectral_metrics",
+      "_sim", i, file.end0, ".rds"
+    ))))
+    rownames(slr_spec_tmp) = NULL
+    slr_spec_list[[i]] = data.table::data.table(slr_spec_tmp)
+    
+    # slr - hierarchical clustering
+    slr_hier_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/slr_hierarchical_metrics",
+      "_sim", i, file.end0, ".rds"
+    ))))
+    rownames(slr_hier_tmp) = NULL
+    slr_hier_list[[i]] = data.table::data.table(slr_hier_tmp)
+  } else{
+    # slr - spectral clustering
+    slr_spec_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/slr_spectral_accuracy_metrics",
+      "_sim", i, file.end0, ".rds"
+    ))))
+    rownames(slr_spec_tmp) = NULL
+    slr_spec_list[[i]] = data.table::data.table(slr_spec_tmp)
+    
+    # slr - hierarchical clustering
+    slr_hier_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/slr_hierarchical_accuracy_metrics",
+      "_sim", i, file.end0, ".rds"
+    ))))
+    rownames(slr_hier_tmp) = NULL
+    slr_hier_list[[i]] = data.table::data.table(slr_hier_tmp)
+    
+    # slr - spectral clustering
+    slr2_spec_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/slr_spectral_auc_metrics",
+      "_sim", i, file.end0, ".rds"
+    ))))
+    rownames(slr2_spec_tmp) = NULL
+    slr2_spec_list[[i]] = data.table::data.table(slr2_spec_tmp)
+    
+    # slr - hierarchical clustering
+    slr2_hier_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/slr_hierarchical_auc_metrics",
+      "_sim", i, file.end0, ".rds"
+    ))))
+    rownames(slr2_hier_tmp) = NULL
+    slr2_hier_list[[i]] = data.table::data.table(slr2_hier_tmp)
+  }
   
   ###
   
@@ -116,12 +154,24 @@ slr_spec.gg =
   pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr-spec")
+  mutate("Method" = "slr-spec-ac")
 slr_hier.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(slr_hier_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr-hier")
+  mutate("Method" = "slr-hier-ac")
+if(response_type == "binary"){
+  slr2_spec.gg = 
+    pivot_longer(as.data.frame(data.table::rbindlist(slr2_spec_list)), 
+                 cols = everything(),
+                 names_to = "Metric") %>%
+    mutate("Method" = "slr-spec-auc")
+  slr2_hier.gg = 
+    pivot_longer(as.data.frame(data.table::rbindlist(slr2_hier_list)), 
+                 cols = everything(),
+                 names_to = "Metric") %>%
+    mutate("Method" = "slr-hier-auc")
+}
 ###
 selbal.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_list)), 
@@ -153,7 +203,13 @@ data.gg = rbind(
   # selbal_covar.gg,
   codacore.gg, 
   lrlasso.gg
-) 
+)
+if(response_type == "binary"){
+  data.gg = rbind(
+    data.gg, 
+    slr2_spec.gg,
+    slr2_hier.gg)
+}
 
 if(response_type == "binary"){
   data.gg = data.gg %>% 
@@ -193,16 +249,29 @@ if(response_type == "binary"){
     ) 
 }
 
-data.gg = data.gg %>% 
-  mutate(
-    Method = factor(
-      Method, 
-      levels = c(
-        "selbal", "classo", "codacore", "lrlasso", 
-        "slr-spec", "slr-hier"
+if(response_type == "continuous"){
+  data.gg = data.gg %>% 
+    mutate(
+      Method = factor(
+        Method, 
+        levels = c(
+          "selbal", "classo", "codacore", "lrlasso", 
+          "slr-spec", "slr-hier"
+        )
       )
-    )
-  ) 
+    ) 
+} else{
+  data.gg = data.gg %>% 
+    mutate(
+      Method = factor(
+        Method, 
+        levels = c(
+          "selbal", "classo", "codacore", "lrlasso", 
+          "slr-spec-ac", "slr-hier-ac", "slr-spec-auc", "slr-hier-auc"
+        )
+      )
+    ) 
+}
 
 data.gg_main = data.gg 
 plt_main = ggplot(
@@ -225,5 +294,5 @@ ggsave(
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,
-  width = 6, height = 2.5, units = c("in")
+  width = 6, height = 2.75, units = c("in") # height is 2.5 usuallly
 )

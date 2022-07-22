@@ -135,13 +135,13 @@ predict.slr <- function(
     stop('No new data provided!')
   } else {
     if (is.null(object$sbp)){
-      predictor <- rep(1,nrow(newdata)) * object$theta
+      predictor <- sigmoid(rep(1,nrow(newdata)) * object$theta)
     } else {
       newdata.reduced <- newdata[,colnames(newdata) %in% names(object$sbp)]
       new.balance <- slr.fromContrast(newdata.reduced,object$sbp)
       if (response.type=='binary'){
-        fitted.results <- predict(object$fit,newdata=data.frame(balance=new.balance),type='response')
-        # predictor <- ifelse(fitted.results > 0.5,1,0)
+        fitted.results <- predict(
+          object$fit,newdata=data.frame(balance=new.balance),type='response')
         predictor = fitted.results
       } else if (response.type=='continuous'){
         predictor <- cbind(1,new.balance) %*% object$theta
@@ -172,19 +172,15 @@ buildPredmat <- function(
     outlist,threshold,x,y,foldid,response.type,type.measure
 ){
   nfolds = max(foldid)
-  # predlist = as.list(seq(nfolds))
   predmat = matrix(NA, nfolds, length(threshold))
   for(i in 1:nfolds){ # predict for each fold
     which = foldid == i
     y.i = y[which]
     fitobj = outlist[[i]]
-    x_in = x[which, , drop=FALSE]
-    # predlist[[i]] = sapply(
-    #   fitobj, function(a) predict.slr(
-    #     a,newdata=x_in,response.type=response.type))
+    x.i = x[which, , drop=FALSE]
     predy.i = sapply(
       fitobj, function(a) predict.slr(
-        a,newdata=x_in,response.type=response.type))
+        a,newdata=x.i,response.type=response.type))
     for(j in 1:length(threshold)){
       predy.ij = predy.i[, j]
       if (response.type=='continuous'){ # mse, to be minimized
@@ -227,7 +223,7 @@ cv.slr <- function(
     x,y,screen.method=c('correlation','wald'),
     cluster.method = c('spectral', 'hierarchical'),
     response.type=c('survival','continuous','binary'),
-    threshold=NULL,s0.perc=NULL,zeta=0,
+    threshold=NULL,s0.perc=0,zeta=0,
     nfolds=10,foldid=NULL,weights=NULL,
     type.measure = c(
       "default", "mse", "deviance", "class", "auc", "mae", "C", "accuracy"
@@ -329,6 +325,7 @@ cv.slr <- function(
   }
   
   # collect all out-of-sample predicted values
+  #   with the updated code, this is more like a CV matrix
   predmat <- buildPredmat(
     outlist, threshold, x, y, foldid, response.type = response.type, 
     type.measure = type.measure)

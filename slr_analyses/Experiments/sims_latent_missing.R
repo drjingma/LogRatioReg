@@ -5,7 +5,7 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Experiments/outputs/metrics"
+output_dir = "slr_analyses/Experiments/outputs/metrics_missing"
 
 # set up parallelization
 library(foreach)
@@ -59,16 +59,17 @@ res = foreach(
   tol = 1e-4
   sigma_eps1 = 0.1 # sigma (for y)
   sigma_eps2 = 0.1 # sigma_j (for x)
-  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 0.5 # 0.5
-  theta.value = 1 # weight on a1 -- 1
+  b1 = 0.75 # 0.5
+  theta.value = 0.5 # weight on a1 -- 1, 0.75, 0.5
   a0 = 0 # 0
-  prop.missing = 0.5
+  prop.missing = 0.5 # 0.25, 0.5
+  ulimit = 0.5
   
   file.end = paste0(
     "_", prop.missing,
@@ -89,7 +90,7 @@ res = foreach(
   ##############################################################################
   # generate data
   # get latent variable
-  U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
+  U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n), ncol = 1)
   # simulate y from latent variable
   y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
   # simulate X: 
@@ -132,6 +133,46 @@ res = foreach(
   paste0(output_dir, "/data", file.end))
   
   ##############################################################################
+  ##############################################################################
+  ##############################################################################
+  # about the chosen settings
+  
+  # # b1 / c * (c1 + c2) 
+  # b1
+  # ilrtrans.true$const * c1plusc2
+  # b1 / (ilrtrans.true$const * c1plusc2)
+  
+  # Aitchison variation when j != k ############################################
+  # when j != k, aitchison var is Sjk = (c1 + c2)^2 Var[U] + 2 * sigma_eps2
+  varU = (2 * ulimit)^2 / 12
+  c1plusc2^2 * varU # term 1
+  2 * sigma_eps2^2 # term 2 (want this term to dominate)
+  
+  # Correlation bt clr(Xj) & y #################################################
+  covclrXy = a1 * b1 * varU # covariance, in numerator
+  varclrX = a1^2 * varU + (1 - (1 / (p))) * sigma_eps2^2 # variance of clrX
+  vary = b1^2 * varU + sigma_eps1^2 # variance of y
+  # population correlations?
+  covclrXy / (sqrt(varclrX) * sqrt(vary))
+  
+  var(y.all)
+  vary
+  
+  # data correlations:
+  round(apply(
+    t(apply(
+      X.all,1,
+      function(a) log(a) - mean(log(a)))), 2, 
+    function(xj) cor(xj, y.all)
+  ), 3)
+  
+  ##############################################################################
+  ##############################################################################
+  ##############################################################################
+  # fit models
+  
+  
+  ##############################################################################
   # compositional lasso
   # -- fits a linear log contrast model
   ##############################################################################
@@ -165,7 +206,8 @@ res = foreach(
     "betasparsity" = bspars,
     "logratios" = 0,
     "time" = cl.timing,
-    "adhoc" = NA
+    "randindex" = NA,
+    "adjrandindex" = NA
   ),
   paste0(output_dir, "/classo_metrics", file.end))
   
@@ -180,44 +222,45 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  slrspeccv = cv.slr(
+  slrspec0cv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slrspec = slr(
+  slrspec0 = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
+    threshold = slrspec0cv$threshold[slrspec0cv$index["1se",]])
   end.time = Sys.time()
-  slrspec.timing = difftime(
+  slrspec0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slrspec.fullSBP) = colnames(X)
-  slrspec.fullSBP[match(
-    names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+  slrspec0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec0.fullSBP) = colnames(X)
+  slrspec0.fullSBP[match(
+    names(slrspec0$sbp), rownames(slrspec0.fullSBP))] = slrspec0$sbp
   
-  slrspec.coefs = getCoefsBM(
-    coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
+  slrspec0.coefs = getCoefsBM(
+    coefs = coefficients(slrspec0$fit), sbp = slrspec0.fullSBP)
   
   # compute metrics on the selected model #
-  slrspec.metrics = getMetricsBM(
+  slrspec0.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slrspec.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = slrspec.fullSBP),
+    ilrX.train = getIlrX(X, sbp = slrspec0.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = slrspec0.fullSBP),
     n.train = n, n.test = n,
-    thetahat0 = slrspec.coefs$a0, thetahat = slrspec.coefs$bm.coefs,
-    betahat = slrspec.coefs$llc.coefs,
+    thetahat0 = slrspec0.coefs$a0, thetahat = slrspec0.coefs$bm.coefs,
+    betahat = slrspec0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slrspec.metrics,
+    slrspec0.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slrspec.coefs$bm.coefs != 0),
-    "time" = slrspec.timing, 
-    "adhoc" = slrspec$adhoc.invoked
+    "logratios" = sum(slrspec0.coefs$bm.coefs != 0),
+    "time" = slrspec0.timing,
+    "randindex" = randidx(SBP.true, slrspec0.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, slrspec0.fullSBP, adjusted = TRUE)
   ),
   paste0(output_dir, "/slr_spectral_metrics", file.end))
   
@@ -232,49 +275,51 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  slrhiercv = cv.slr(
+  slrhier0cv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  slrhier = slr(
+  slrhier0 = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+    threshold = slrhier0cv$threshold[slrhier0cv$index["1se",]])
   end.time = Sys.time()
-  slrhier.timing = difftime(
+  slrhier0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(slrhier.fullSBP) = colnames(X)
-  slrhier.fullSBP[match(
-    names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
+  slrhier0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier0.fullSBP) = colnames(X)
+  slrhier0.fullSBP[match(
+    names(slrhier0$sbp), rownames(slrhier0.fullSBP))] = slrhier0$sbp
   
-  slrhier.coefs = getCoefsBM(
-    coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
+  slrhier0.coefs = getCoefsBM(
+    coefs = coefficients(slrhier0$fit), sbp = slrhier0.fullSBP)
   
   # compute metrics on the selected model #
-  slrhier.metrics = getMetricsBM(
+  slrhier0.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slrhier.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = slrhier.fullSBP),
+    ilrX.train = getIlrX(X, sbp = slrhier0.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = slrhier0.fullSBP),
     n.train = n, n.test = n,
-    thetahat0 = slrhier.coefs$a0, thetahat = slrhier.coefs$bm.coefs,
-    betahat = slrhier.coefs$llc.coefs,
+    thetahat0 = slrhier0.coefs$a0, thetahat = slrhier0.coefs$bm.coefs,
+    betahat = slrhier0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    slrhier.metrics,
+    slrhier0.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slrhier.coefs$bm.coefs != 0),
-    "time" = slrhier.timing, 
-    "adhoc" = slrhier$adhoc.invoked
+    "logratios" = sum(slrhier0.coefs$bm.coefs != 0),
+    "time" = slrhier0.timing,
+    "randindex" = randidx(SBP.true, slrhier0.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, slrhier0.fullSBP, adjusted = TRUE)
   ),
   paste0(output_dir, "/slr_hierarchical_metrics", file.end))
   
   ##############################################################################
   # semislr
+  #   fold.x2 = FALSE
   #   screen.method = "wald"
   #   cluster.method = "spectral"
   #   response.type = "continuous"
@@ -284,49 +329,160 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  sslrspeccv = cv.semislr(
-    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "spectral",
+  sslrspec0cv = cv.semislr(
+    x = X, x2 = X2, fold.x2 = FALSE,
+    y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  sslrspec = semislr(
+  sslrspec0 = semislr(
     x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = sslrspeccv$threshold[sslrspeccv$index["1se",]])
+    threshold = sslrspec0cv$threshold[sslrspec0cv$index["1se",]])
   end.time = Sys.time()
-  sslrspec.timing = difftime(
+  sslrspec0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  sslrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(sslrspec.fullSBP) = colnames(X)
-  sslrspec.fullSBP[match(
-    names(sslrspec$sbp), rownames(sslrspec.fullSBP))] = sslrspec$sbp
+  sslrspec0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(sslrspec0.fullSBP) = colnames(X)
+  sslrspec0.fullSBP[match(
+    names(sslrspec0$sbp), rownames(sslrspec0.fullSBP))] = sslrspec0$sbp
   
-  sslrspec.coefs = getCoefsBM(
-    coefs = coefficients(sslrspec$fit), sbp = sslrspec.fullSBP)
+  sslrspec0.coefs = getCoefsBM(
+    coefs = coefficients(sslrspec0$fit), sbp = sslrspec0.fullSBP)
   
   # compute metrics on the selected model #
-  sslrspec.metrics = getMetricsBM(
+  sslrspec0.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = sslrspec.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = sslrspec.fullSBP),
+    ilrX.train = getIlrX(X, sbp = sslrspec0.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = sslrspec0.fullSBP),
     n.train = n, n.test = n,
-    thetahat0 = sslrspec.coefs$a0, thetahat = sslrspec.coefs$bm.coefs,
-    betahat = sslrspec.coefs$llc.coefs,
+    thetahat0 = sslrspec0.coefs$a0, thetahat = sslrspec0.coefs$bm.coefs,
+    betahat = sslrspec0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    sslrspec.metrics,
+    sslrspec0.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(sslrspec.coefs$bm.coefs != 0),
-    "time" = sslrspec.timing, 
-    "adhoc" = sslrspec$adhoc.invoked
+    "logratios" = sum(sslrspec0.coefs$bm.coefs != 0),
+    "time" = sslrspec0.timing,
+    "randindex" = randidx(SBP.true, sslrspec0.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, sslrspec0.fullSBP, adjusted = TRUE)
   ),
   paste0(output_dir, "/semislr_spectral_metrics", file.end))
   
   ##############################################################################
   # semislr
+  #   fold.x2 = TRUE
+  #   screen.method = "wald"
+  #   cluster.method = "spectral"
+  #   response.type = "continuous"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "mse"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  sslrspec1cv = cv.semislr(
+    x = X, x2 = X2, fold.x2 = TRUE,
+    y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  sslrspec1 = semislr(
+    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    threshold = sslrspec1cv$threshold[sslrspec1cv$index["1se",]])
+  end.time = Sys.time()
+  sslrspec1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  sslrspec1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(sslrspec1.fullSBP) = colnames(X)
+  sslrspec1.fullSBP[match(
+    names(sslrspec1$sbp), rownames(sslrspec1.fullSBP))] = sslrspec1$sbp
+  
+  sslrspec1.coefs = getCoefsBM(
+    coefs = coefficients(sslrspec1$fit), sbp = sslrspec1.fullSBP)
+  
+  # compute metrics on the selected model #
+  sslrspec1.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = sslrspec1.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = sslrspec1.fullSBP),
+    n.train = n, n.test = n,
+    thetahat0 = sslrspec1.coefs$a0, thetahat = sslrspec1.coefs$bm.coefs,
+    betahat = sslrspec1.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    sslrspec1.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(sslrspec1.coefs$bm.coefs != 0),
+    "time" = sslrspec1.timing,
+    "randindex" = randidx(SBP.true, sslrspec1.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, sslrspec1.fullSBP, adjusted = TRUE)
+  ),
+  paste0(output_dir, "/semislr_spectral_foldx2_metrics", file.end))
+  
+  ##############################################################################
+  # semislr with no CV on x2
+  #   screen.method = "wald"
+  #   cluster.method = "spectral"
+  #   response.type = "continuous"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "mse"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  sslrspec2cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  sslrspec2 = semislr(
+    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    threshold = sslrspec2cv$threshold[sslrspec2cv$index["1se",]])
+  end.time = Sys.time()
+  sslrspec2.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  sslrspec2.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(sslrspec2.fullSBP) = colnames(X)
+  sslrspec2.fullSBP[match(
+    names(sslrspec2$sbp), rownames(sslrspec2.fullSBP))] = sslrspec2$sbp
+  
+  sslrspec2.coefs = getCoefsBM(
+    coefs = coefficients(sslrspec2$fit), sbp = sslrspec2.fullSBP)
+  
+  # compute metrics on the selected model #
+  sslrspec2.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = sslrspec2.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = sslrspec2.fullSBP),
+    n.train = n, n.test = n,
+    thetahat0 = sslrspec2.coefs$a0, thetahat = sslrspec2.coefs$bm.coefs,
+    betahat = sslrspec2.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    sslrspec2.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(sslrspec2.coefs$bm.coefs != 0),
+    "time" = sslrspec2.timing,
+    "randindex" = randidx(SBP.true, sslrspec2.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, sslrspec2.fullSBP, adjusted = TRUE)
+  ),
+  paste0(output_dir, "/semislr_spectral_nocvx2_metrics", file.end))
+  
+  ##############################################################################
+  # semislr
+  #   fold.x2 = FALSE
   #   screen.method = "wald"
   #   cluster.method = "hieararchical"
   #   response.type = "continuous"
@@ -336,96 +492,207 @@ res = foreach(
   # -- fits a balance regression model with one balance
   ##############################################################################
   start.time = Sys.time()
-  sslrhiercv = cv.semislr(
-    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+  sslrhier0cv = cv.semislr(
+    x = X, x2 = X2, fold.x2 = FALSE,
+    y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
     parallel = FALSE, scale = scaling, trace.it = FALSE)
-  sslrhier = semislr(
+  sslrhier0 = semislr(
     x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = sslrhiercv$threshold[sslrhiercv$index["1se",]])
+    threshold = sslrhier0cv$threshold[sslrhier0cv$index["1se",]])
   end.time = Sys.time()
-  sslrhier.timing = difftime(
+  sslrhier0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  sslrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(sslrhier.fullSBP) = colnames(X)
-  sslrhier.fullSBP[match(
-    names(sslrhier$sbp), rownames(sslrhier.fullSBP))] = sslrhier$sbp
+  sslrhier0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(sslrhier0.fullSBP) = colnames(X)
+  sslrhier0.fullSBP[match(
+    names(sslrhier0$sbp), rownames(sslrhier0.fullSBP))] = sslrhier0$sbp
   
-  sslrhier.coefs = getCoefsBM(
-    coefs = coefficients(sslrhier$fit), sbp = sslrhier.fullSBP)
+  sslrhier0.coefs = getCoefsBM(
+    coefs = coefficients(sslrhier0$fit), sbp = sslrhier0.fullSBP)
   
   # compute metrics on the selected model #
-  sslrhier.metrics = getMetricsBM(
+  sslrhier0.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = sslrhier.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = sslrhier.fullSBP),
+    ilrX.train = getIlrX(X, sbp = sslrhier0.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = sslrhier0.fullSBP),
     n.train = n, n.test = n,
-    thetahat0 = sslrhier.coefs$a0, thetahat = sslrhier.coefs$bm.coefs,
-    betahat = sslrhier.coefs$llc.coefs,
+    thetahat0 = sslrhier0.coefs$a0, thetahat = sslrhier0.coefs$bm.coefs,
+    betahat = sslrhier0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
     true.beta = beta.true)
   
   saveRDS(c(
-    sslrhier.metrics,
+    sslrhier0.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(sslrhier.coefs$bm.coefs != 0),
-    "time" = sslrhier.timing, 
-    "adhoc" = sslrhier$adhoc.invoked
+    "logratios" = sum(sslrhier0.coefs$bm.coefs != 0),
+    "time" = sslrhier0.timing,
+    "randindex" = randidx(SBP.true, sslrhier0.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, sslrhier0.fullSBP, adjusted = TRUE)
   ),
   paste0(output_dir, "/semislr_hierarchical_metrics", file.end))
   
   ##############################################################################
-  # selbal method (a balance regression method)
+  # semislr
+  #   fold.x2 = TRUE
+  #   screen.method = "wald"
+  #   cluster.method = "hieararchical"
+  #   response.type = "continuous"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "mse"
   # -- fits a balance regression model with one balance
   ##############################################################################
-  library(selbal) # masks stats::cor()
-  slbl.data = getSelbalData(X = X, y = Y, classification = FALSE)
-  
   start.time = Sys.time()
-  slbl = selbal.cv(x = slbl.data$X, y = slbl.data$y, n.fold = K)
+  sslrhier1cv = cv.semislr(
+    x = X, x2 = X2, fold.x2 = TRUE,
+    y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  sslrhier1 = semislr(
+    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    threshold = sslrhier1cv$threshold[sslrhier1cv$index["1se",]])
   end.time = Sys.time()
-  slbl.timing = difftime(
+  sslrhier1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
   
-  slbl.coefs = getCoefsSelbal(
-    X = slbl.data$X, y = slbl.data$y, selbal.fit = slbl, classification = FALSE, 
-    check = TRUE)
+  sslrhier1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(sslrhier1.fullSBP) = colnames(X)
+  sslrhier1.fullSBP[match(
+    names(sslrhier1$sbp), rownames(sslrhier1.fullSBP))] = sslrhier1$sbp
+  
+  sslrhier1.coefs = getCoefsBM(
+    coefs = coefficients(sslrhier1$fit), sbp = sslrhier1.fullSBP)
   
   # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  slbl.Yhat.train = predict.glm(
-    slbl$glm, 
-    newdata = data.frame(V1 = balance::balance.fromSBP(
-      x = slbl.data$X, y = slbl.coefs$sbp)), 
-    type = "response")
-  slbl.PE.train = crossprod(Y - slbl.Yhat.train) / n
-  # get prediction error on test set
-  slbl.test.data = getSelbalData(X = X.test, y = Y.test, classification = FALSE)
-  slbl.Yhat.test = predict.glm(
-    slbl$glm, 
-    newdata = data.frame(V1 = balance::balance.fromSBP(
-      x = slbl.test.data$X, y = slbl.coefs$sbp)), 
-    type = "response")
-  slbl.PE.test = crossprod(Y.test - slbl.Yhat.test) / n
-  # beta estimation accuracy, selection accuracy #
-  slbl.metrics = getMetricsBM(
-    thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
+  sslrhier1.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = sslrhier1.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = sslrhier1.fullSBP),
+    n.train = n, n.test = n,
+    thetahat0 = sslrhier1.coefs$a0, thetahat = sslrhier1.coefs$bm.coefs,
+    betahat = sslrhier1.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  slbl.metrics = c(PEtr = slbl.PE.train, PEte = slbl.PE.test, slbl.metrics)
+    true.beta = beta.true)
   
   saveRDS(c(
-    slbl.metrics,
+    sslrhier1.metrics,
     "betasparsity" = bspars,
-    "logratios" = sum(slbl.coefs$bm.coefs != 0), 
-    "time" = slbl.timing, 
-    "adhoc" = NA
+    "logratios" = sum(sslrhier1.coefs$bm.coefs != 0),
+    "time" = sslrhier1.timing,
+    "randindex" = randidx(SBP.true, sslrhier1.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, sslrhier1.fullSBP, adjusted = TRUE)
   ),
-  paste0(output_dir, "/selbal_metrics", file.end))
+  paste0(output_dir, "/semislr_hierarchical_foldx2_metrics", file.end))
+  
+  ##############################################################################
+  # semislr with no CV on x2
+  #   screen.method = "wald"
+  #   cluster.method = "hieararchical"
+  #   response.type = "continuous"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "mse"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  sslrhier2cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "hieararchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    nfolds = K, type.measure = "mse", 
+    parallel = FALSE, scale = scaling, trace.it = FALSE)
+  sslrhier2 = semislr(
+    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hieararchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0, 
+    threshold = sslrhier2cv$threshold[sslrhier2cv$index["1se",]])
+  end.time = Sys.time()
+  sslrhier2.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  sslrhier2.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(sslrhier2.fullSBP) = colnames(X)
+  sslrhier2.fullSBP[match(
+    names(sslrhier2$sbp), rownames(sslrhier2.fullSBP))] = sslrhier2$sbp
+  
+  sslrhier2.coefs = getCoefsBM(
+    coefs = coefficients(sslrhier2$fit), sbp = sslrhier2.fullSBP)
+  
+  # compute metrics on the selected model #
+  sslrhier2.metrics = getMetricsBM(
+    y.train = Y, y.test = Y.test,
+    ilrX.train = getIlrX(X, sbp = sslrhier2.fullSBP),
+    ilrX.test = getIlrX(X.test, sbp = sslrhier2.fullSBP),
+    n.train = n, n.test = n,
+    thetahat0 = sslrhier2.coefs$a0, thetahat = sslrhier2.coefs$bm.coefs,
+    betahat = sslrhier2.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+  
+  saveRDS(c(
+    sslrhier2.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(sslrhier2.coefs$bm.coefs != 0),
+    "time" = sslrhier2.timing,
+    "randindex" = randidx(SBP.true, sslrhier2.fullSBP, adjusted = FALSE),
+    "adjrandindex" = randidx(SBP.true, sslrhier2.fullSBP, adjusted = TRUE)
+  ),
+  paste0(output_dir, "/semislr_hierarchical_nocvx2_metrics", file.end))
+  
+  # ##############################################################################
+  # # selbal method (a balance regression method)
+  # # -- fits a balance regression model with one balance
+  # ##############################################################################
+  # library(selbal) # masks stats::cor()
+  # slbl.data = getSelbalData(X = X, y = Y, classification = FALSE)
+  # 
+  # start.time = Sys.time()
+  # slbl = selbal.cv(x = slbl.data$X, y = slbl.data$y, n.fold = K)
+  # end.time = Sys.time()
+  # slbl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # slbl.coefs = getCoefsSelbal(
+  #   X = slbl.data$X, y = slbl.data$y, selbal.fit = slbl, classification = FALSE, 
+  #   check = TRUE)
+  # 
+  # # compute metrics on the selected model #
+  # # prediction errors
+  # # get prediction error on training set
+  # slbl.Yhat.train = predict.glm(
+  #   slbl$glm, 
+  #   newdata = data.frame(V1 = balance::balance.fromSBP(
+  #     x = slbl.data$X, y = slbl.coefs$sbp)), 
+  #   type = "response")
+  # slbl.PE.train = crossprod(Y - slbl.Yhat.train) / n
+  # # get prediction error on test set
+  # slbl.test.data = getSelbalData(X = X.test, y = Y.test, classification = FALSE)
+  # slbl.Yhat.test = predict.glm(
+  #   slbl$glm, 
+  #   newdata = data.frame(V1 = balance::balance.fromSBP(
+  #     x = slbl.test.data$X, y = slbl.coefs$sbp)), 
+  #   type = "response")
+  # slbl.PE.test = crossprod(Y.test - slbl.Yhat.test) / n
+  # # beta estimation accuracy, selection accuracy #
+  # slbl.metrics = getMetricsBM(
+  #   thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
+  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
+  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  # slbl.metrics = c(PEtr = slbl.PE.train, PEte = slbl.PE.test, slbl.metrics)
+  # 
+  # saveRDS(c(
+  #   slbl.metrics,
+  #   "betasparsity" = bspars,
+  #   "logratios" = sum(slbl.coefs$bm.coefs != 0),
+  #   "time" = slbl.timing
+  #   "randindex" = randidx(SBP.true, slbl.coefs$sbp, adjusted = FALSE),
+  #   "adjrandindex" = randidx(SBP.true, slbl.coefs$sbp, adjusted = TRUE)
+  # ),
+  # paste0(output_dir, "/selbal_metrics", file.end))
   
   ##############################################################################
   # CoDaCoRe
@@ -491,52 +758,56 @@ res = foreach(
     "betasparsity" = bspars,
     "logratios" = length(codacore0_coeffs), 
     "time" = codacore0.timing, 
-    "adhoc" = NA
+    "randindex" = randidx(
+      SBP.true, codacore0_SBP[, 1, drop = FALSE], adjusted = FALSE),
+    "adjrandindex" = randidx(
+      SBP.true, codacore0_SBP[, 1, drop = FALSE], adjusted = TRUE)
   ),
   paste0(output_dir, "/codacore_metrics", file.end))
   
-  ##############################################################################
-  # Log-Ratio Lasso
-  # -- regresses on pairwise log-ratios
-  ##############################################################################
-  library(logratiolasso)
-  source("slr_analyses/Functions/logratiolasso.R")
-  Wc = scale(log(X), center = TRUE, scale = FALSE)
-  Yc = Y - mean(Y)
-
-  start.time = Sys.time()
-  lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
-  end.time = Sys.time()
-  lrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-
-  # compute metrics on the selected model #
-  # prediction errors
-  # get prediction error on training set
-  lrl.Yhat.train = Wc %*% lrl$beta_min
-  lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
-  # get prediction error on test set
-  Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
-  Yc.test = Y.test - mean(Y.test)
-  lrl.Yhat.test = Wc.test %*% lrl$beta_min
-  lrl.PE.test = crossprod(Yc.test - lrl.Yhat.test) / n
-
-  # beta estimation accuracy, selection accuracy #
-  lrl.metrics = getMetricsBM(
-    betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
-    true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  lrl.metrics = c(
-    PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
-
-  saveRDS(c(
-    lrl.metrics,
-    "betasparsity" = bspars,
-    "logratios" = NA,
-    "time" = lrl.timing,
-    "adhoc" = NA
-  ),
-  paste0(output_dir, "/lrlasso_metrics", file.end))
+  # ##############################################################################
+  # # Log-Ratio Lasso
+  # # -- regresses on pairwise log-ratios
+  # ##############################################################################
+  # library(logratiolasso)
+  # source("slr_analyses/Functions/logratiolasso.R")
+  # Wc = scale(log(X), center = TRUE, scale = FALSE)
+  # Yc = Y - mean(Y)
+  # 
+  # start.time = Sys.time()
+  # lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
+  # end.time = Sys.time()
+  # lrl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # compute metrics on the selected model #
+  # # prediction errors
+  # # get prediction error on training set
+  # lrl.Yhat.train = Wc %*% lrl$beta_min
+  # lrl.PE.train = crossprod(Y - lrl.Yhat.train) / n
+  # # get prediction error on test set
+  # Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
+  # Yc.test = Y.test - mean(Y.test)
+  # lrl.Yhat.test = Wc.test %*% lrl$beta_min
+  # lrl.PE.test = crossprod(Yc.test - lrl.Yhat.test) / n
+  # 
+  # # beta estimation accuracy, selection accuracy #
+  # lrl.metrics = getMetricsBM(
+  #   betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
+  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
+  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  # lrl.metrics = c(
+  #   PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
+  # 
+  # saveRDS(c(
+  #   lrl.metrics,
+  #   "betasparsity" = bspars,
+  #   "logratios" = NA,
+  #   "time" = lrl.timing
+  #   "randindex" = NA,
+  #   "adjrandindex" = NA
+  # ),
+  # paste0(output_dir, "/lrlasso_metrics", file.end))
   
   
   ##############################################################################

@@ -85,7 +85,7 @@ semislr = function(
     } else if (response.type=='continuous'){
       model.train <- lm(y~.,data=data.frame(y=y))
     }
-    object <- list(sbp=NULL)
+    object <- list(sbp=NULL, Aitchison.var = NULL, cluster.mat = NULL)
   } else {
     allx = rbind(x, x2) #################################################################
     allx.reduced <- allx[,which.features] # reduced data matrix, ########################
@@ -106,10 +106,12 @@ semislr = function(
       Aitchison.sim <- max(Aitchison.var) - Aitchison.var 
       ## Perform spectral clustering
       sbp.est <- spectral.clustering(Aitchison.sim,zeta = zeta)
+      cluster.mat = Aitchison.sim
     } else if(cluster.method == "hierarchical"){
         ## Perform hierarchical clustering
         htree.est <- hclust(dist(Aitchison.var))
         sbp.est <- balance::sbp.fromHclust(htree.est)[, 1] # grab 1st partition
+        cluster.mat = Aitchison.var
     } else{
       stop("invalid cluster.method arg was provided!!")
     }
@@ -124,7 +126,8 @@ semislr = function(
       model.train <- lm(
         y~balance,data=data.frame(balance=balance,y=y))
     }
-    object <- list(sbp = sbp.est)
+    object <- list(
+      sbp = sbp.est, Aitchison.var = Aitchison.var, cluster.mat = cluster.mat)
   }
   object$feature.scores <- feature.scores 
   object$theta <- as.numeric(coefficients(model.train))
@@ -215,7 +218,9 @@ getOptcv <- function(threshold, cvm, cvsd){
 }
 
 cv.semislr <- function(
-    x,x2,y,screen.method=c('correlation','wald'),
+    x,x2,y,
+    fold.x2 = TRUE,
+    screen.method=c('correlation','wald'),
     cluster.method = c('spectral', 'hierarchical'),
     response.type=c('survival','continuous','binary'),
     threshold=NULL,s0.perc=NULL,zeta=0,
@@ -280,11 +285,13 @@ cv.semislr <- function(
   } else {
     nfolds = max(foldid)
   }
-  if (is.null(foldid.miss)) {
-    if(nfolds > N2){
-      stop("nfolds is greater than the number of samples in X2! cannot divide into folds.")
+  if(fold.x2){
+    if (is.null(foldid.miss)) {
+      if(nfolds > N2){
+        stop("nfolds is greater than the number of samples in X2! cannot divide into folds.")
+      }
+      foldid.miss = sample(rep(seq(nfolds), length = N2))
     }
-    foldid.miss = sample(rep(seq(nfolds), length = N2))
   }
   
   if (nfolds < 3){
@@ -320,7 +327,11 @@ cv.semislr <- function(
       which.miss = foldid.miss == i
       x_in <- x[which, ,drop=FALSE]
       x_sub <- x[!which, ,drop=FALSE]
-      x2_sub = x2[!which.miss, ,drop=FALSE]
+      if(fold.x2){
+        x2_sub = x2[!which.miss, ,drop=FALSE]
+      } else{
+        x2_sub = x2
+      }
       y_sub <- y[!which]
       outlist[[i]] <- lapply(threshold, function(l) semislr(
         x_sub, x2_sub, y_sub,screen.method=screen.method,

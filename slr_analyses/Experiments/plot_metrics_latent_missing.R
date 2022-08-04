@@ -6,7 +6,7 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Experiments/outputs/metrics"
+output_dir = "slr_analyses/Experiments/outputs/metrics_missing"
 
 source("slr_analyses/Functions/util.R")
 
@@ -26,16 +26,16 @@ scaling = TRUE
 tol = 1e-4
 sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 0.5 # 1, 0.5, 0.25
-theta.value = 1 # weight on a1 -- 1
+b1 = 0.75 # 0.5, 0.6, 0.75
+theta.value = 0.5 # weight on a1 -- 1, 0.75, 0.5
 a0 = 0 # 0
-prop.missing = 0.5 # 0.2, 0.5
+prop.missing = 0.5 # 0.5
 
 file.end0 = paste0(
   "_", prop.missing,
@@ -59,7 +59,9 @@ classo_sims_list = list()
 slr_spec_sims_list = list()
 slr_hier_sims_list = list()
 semislr_spec_sims_list = list()
+semislr_spec_f_sims_list = list()
 semislr_hier_sims_list = list()
+semislr_hier_f_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
 lrlasso_sims_list = list()
@@ -100,6 +102,14 @@ for(i in 1:numSims){
   rownames(semislr_spec_sim_tmp) = NULL
   semislr_spec_sims_list[[i]] = data.table::data.table(semislr_spec_sim_tmp)
   
+  # semislr - spectral
+  semislr_spec_f_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_spectral_foldx2_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(semislr_spec_f_sim_tmp) = NULL
+  semislr_spec_f_sims_list[[i]] = data.table::data.table(semislr_spec_f_sim_tmp)
+  
   # semislr - hierarchical
   semislr_hier_sim_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/semislr_hierarchical_metrics", file.end0,
@@ -108,15 +118,23 @@ for(i in 1:numSims){
   rownames(semislr_hier_sim_tmp) = NULL
   semislr_hier_sims_list[[i]] = data.table::data.table(semislr_hier_sim_tmp)
   
-  ###
-  
-  # selbal
-  slbl_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/selbal_metrics", file.end0,
+  # semislr - hierarchical
+  semislr_hier_f_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_hierarchical_foldx2_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slbl_sim_tmp) = NULL
-  selbal_sims_list[[i]] = data.table::data.table(slbl_sim_tmp)
+  rownames(semislr_hier_f_sim_tmp) = NULL
+  semislr_hier_f_sims_list[[i]] = data.table::data.table(semislr_hier_f_sim_tmp)
+  
+  ###
+  
+  # # selbal
+  # slbl_sim_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/selbal_metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(slbl_sim_tmp) = NULL
+  # selbal_sims_list[[i]] = data.table::data.table(slbl_sim_tmp)
   
   # codacore
   cdcr_sim_tmp = t(data.frame(readRDS(paste0(
@@ -126,13 +144,13 @@ for(i in 1:numSims){
   rownames(cdcr_sim_tmp) = NULL
   codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
   
-  # log-ratio lasso
-  lrl_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/lrlasso_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(lrl_sim_tmp) = NULL
-  lrlasso_sims_list[[i]] = data.table::data.table(lrl_sim_tmp)
+  # # log-ratio lasso
+  # lrl_sim_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/lrlasso_metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(lrl_sim_tmp) = NULL
+  # lrlasso_sims_list[[i]] = data.table::data.table(lrl_sim_tmp)
 }
 
 # metrics boxplots
@@ -158,27 +176,37 @@ semislr_spec_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "semislr-spec")
+semislr_spec_f_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_f_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "semislr-spec-f")
 semislr_hier_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "semislr-hier")
-###
-selbal_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
+semislr_hier_f_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_f_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "selbal")
+  mutate("Method" = "semislr-hier-f")
+###
+# selbal_sims.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "selbal")
 codacore_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(codacore_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "codacore")
-lrlasso_sims.gg =
-  pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)),
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "lrlasso")
+# lrlasso_sims.gg =
+#   pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)),
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "lrlasso")
 
 ###
 data.gg = rbind(
@@ -187,9 +215,11 @@ data.gg = rbind(
   slr_hier_sims.gg,
   semislr_spec_sims.gg,
   semislr_hier_sims.gg,
-  selbal_sims.gg, 
-  codacore_sims.gg, 
-  lrlasso_sims.gg
+  semislr_spec_f_sims.gg,
+  semislr_hier_f_sims.gg,
+  # selbal_sims.gg, 
+  codacore_sims.gg# ,
+  # lrlasso_sims.gg
 ) %>%
   dplyr::filter(
     Metric %in% c(
@@ -198,6 +228,7 @@ data.gg = rbind(
       # "EA1", 
       "EA2", 
       # "EAInfty",
+      "randindex", "adjrandindex",
       "TPR", "FPR", "Fscore",
       "time"
     )
@@ -213,12 +244,14 @@ data.gg = rbind(
         "PEtr", "PEte",
         "EA1", "EA2", "EAInfty",
         "time",
+        "randindex", "adjrandindex",
         "TPR", "FPR", "Fscore"
       ), 
       labels = c(
         "PEtr", "MSE",
         "EA1", "EA2", "EAInfty",
         "Timing",
+        "RandIdx", "AdjRandIdx",
         "TPR", "FPR", "F1"
       ))
   ) %>% 
@@ -227,7 +260,9 @@ data.gg = rbind(
       Method, 
       levels = c(
         "selbal", "classo", "codacore", "lrlasso", 
-        "slr-spec", "slr-hier", "semislr-spec", "semislr-hier"
+        "slr-spec", "slr-hier", 
+        "semislr-spec", "semislr-hier", 
+        "semislr-spec-f", "semislr-hier-f"
       )
     )
   )
@@ -248,9 +283,9 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220719",
+    "20220726",
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,
-  width = 6, height = 4, units = c("in")
+  width = 6, height = 6, units = c("in")
 )

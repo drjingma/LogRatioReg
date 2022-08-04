@@ -80,7 +80,7 @@ slr = function(
     } else if (response.type=='continuous'){
       model.train <- lm(y~.,data=data.frame(y=y))
     }
-    object <- list(sbp=NULL)
+    object <- list(sbp=NULL, Aitchison.var = NULL, cluster.mat = NULL)
   } else {
     x.reduced <- x[,which.features] # reduced data matrix
     p <- ncol(x.reduced)
@@ -98,10 +98,12 @@ slr = function(
       Aitchison.sim <- max(Aitchison.var) - Aitchison.var 
       ## Perform spectral clustering
       sbp.est <- spectral.clustering(Aitchison.sim,zeta = zeta)
+      cluster.mat = Aitchison.sim
     } else if(cluster.method == "hierarchical"){
         ## Perform hierarchical clustering
         htree.est <- hclust(dist(Aitchison.var))
         sbp.est <- balance::sbp.fromHclust(htree.est)[, 1] # grab 1st partition
+        cluster.mat = Aitchison.var
     } else{
       stop("invalid cluster.method arg was provided!!")
     }
@@ -116,7 +118,8 @@ slr = function(
       model.train <- lm(
         y~balance,data=data.frame(balance=balance,y=y))
     }
-    object <- list(sbp = sbp.est)
+    object <- list(
+      sbp = sbp.est, Aitchison.var = Aitchison.var, cluster.mat = cluster.mat)
   }
   object$feature.scores <- feature.scores 
   object$theta <- as.numeric(coefficients(model.train))

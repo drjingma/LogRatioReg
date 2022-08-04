@@ -28,7 +28,8 @@ packages <- c(
   "parallel", 
   "doFuture",
   "rngtools",
-  "doRNG"
+  "doRNG",
+  "fossi"
 )
 
 sapply(packages, function (pkgname) {

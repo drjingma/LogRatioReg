@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 7/19/2022
+# Date: 8/7/2022
 rm(list=ls())
 
 ################################################################################
@@ -23,7 +23,7 @@ source("slr_analyses/Functions/util.R")
 
 # Settings to toggle with
 sigma.settings = "latentVarModel_miss"
-n = 5000
+n = 100
 p = 30
 sigma_eps1 = 0.1 # zeta (for y)
 sigma_eps2 = 0.1 # sigma_j (for x)
@@ -61,23 +61,28 @@ c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
 linearlogcontrast.coefficients = (b1 / (ilrtrans.true$const * c1plusc2)) * 
   as.vector(ilrtrans.true$ilr.trans)
 
-################################################################################
+##############################################################################
+##############################################################################
+##############################################################################
+# about the chosen settings
 
-# Aitchison variation when j != k ##############################################
+# b1 / c * (c1 + c2)
+b1
+ilrtrans.true$const * c1plusc2
+b1 / (ilrtrans.true$const * c1plusc2)
+
+# Aitchison variation when j != k ############################################
 # when j != k, aitchison var is Sjk = (c1 + c2)^2 Var[U] + 2 * sigma_eps2
 varU = (2 * ulimit)^2 / 12
 c1plusc2^2 * varU # term 1
 2 * sigma_eps2^2 # term 2 (want this term to dominate)
 
-# Correlation bt clr(Xj) & y ###################################################
+# Correlation bt clr(Xj) & y #################################################
 covclrXy = a1 * b1 * varU # covariance, in numerator
 varclrX = a1^2 * varU + (1 - (1 / (p))) * sigma_eps2^2 # variance of clrX
 vary = b1^2 * varU + sigma_eps1^2 # variance of y
 # population correlations?
 covclrXy / (sqrt(varclrX) * sqrt(vary))
-
-var(y.all)
-vary
 
 # data correlations:
 round(apply(
@@ -87,4 +92,6 @@ round(apply(
   function(xj) cor(xj, y.all)
 ), 3)
 
-
+# variance of y
+var(y.all)
+vary

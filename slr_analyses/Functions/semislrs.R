@@ -75,8 +75,8 @@ semislr = function(
   if (screen.method=='correlation'){
     feature.scores <- cor(t(xclr),y)
   }
-  
   which.features <- (abs(feature.scores) >= threshold)
+  
   if (sum(which.features)<2){
     # Fit an intercept only regression model 
     if (response.type=='binary'){
@@ -135,68 +135,6 @@ semislr = function(
   
   class(object) <- 'slr'
   return(object)
-}
-
-#' @param newdata x n by p of relative abundances
-predict.slr <- function(
-  object,newdata = NULL,response.type=c('survival','continuous','binary')
-){
-  # prediction will be based on the canonical space
-  if (missing(newdata) || is.null(newdata)) {
-    stop('No new data provided!')
-  } else {
-    if (is.null(object$sbp)){
-      predictor <- rep(1,nrow(newdata)) * object$theta
-    } else {
-      newdata.reduced <- newdata[,colnames(newdata) %in% names(object$sbp)]
-      new.balance <- slr.fromContrast(newdata.reduced,object$sbp)
-      if (response.type=='binary'){
-        fitted.results <- predict(object$fit,newdata=data.frame(balance=new.balance),type='response')
-        # predictor <- ifelse(fitted.results > 0.5,1,0)
-        predictor = fitted.results
-      } else if (response.type=='continuous'){
-        predictor <- cbind(1,new.balance) %*% object$theta
-      }
-    }
-    as.numeric(predictor)
-  }
-}
-
-buildPredmat <- function(
-    outlist,threshold,x,y,foldid,response.type,type.measure
-){
-  nfolds = max(foldid)
-  # predlist = as.list(seq(nfolds))
-  predmat = matrix(NA, nfolds, length(threshold))
-  for(i in 1:nfolds){ # predict for each fold
-    which = foldid == i
-    y.i = y[which]
-    fitobj = outlist[[i]]
-    x_in = x[which, , drop=FALSE]
-    # predlist[[i]] = sapply(
-    #   fitobj, function(a) predict.slr(
-    #     a,newdata=x_in,response.type=response.type))
-    predy.i = sapply(
-      fitobj, function(a) predict.slr(
-        a,newdata=x_in,response.type=response.type))
-    for(j in 1:length(threshold)){
-      predy.ij = predy.i[, j]
-      if (response.type=='continuous'){ # mse, to be minimized
-        predmat[i, j] <- mean((as.numeric(y.i)-predy.ij)^2)
-      } else if (response.type=='binary'){
-        if(type.measure == "accuracy"){# accuracy, minimize the # that don't match
-          predmat[i, j] <- mean((predy.ij > 0.5) != y.i) 
-        } else if(type.measure == "auc"){# auc, minimize 1 - auc 
-          predmat[i, j] = tryCatch({
-            1 - pROC::auc(
-              y.i,predy.ij, levels = c(0, 1), direction = "<", quiet = TRUE)
-          }, error = function(e){return(NA)}
-          )
-        }
-      }
-    }
-  }
-  predmat
 }
 
 getOptcv <- function(threshold, cvm, cvsd){

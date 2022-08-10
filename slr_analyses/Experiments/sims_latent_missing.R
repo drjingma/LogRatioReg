@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 7/19/2022
+# Date: 8/7/2022
 rm(list=ls())
 
 ################################################################################
@@ -46,10 +46,10 @@ res = foreach(
   source("slr_analyses/Functions/codalasso.R")
   source("slr_analyses/Functions/util.R")
   
-  # Tuning parameters###########################################################
+  # Tuning parameters ##########################################################
   
   # Settings to toggle with
-  sigma.settings = "latentVarModel_miss"
+  sigma.settings = "latentVarModel_missing"
   n = 100
   p = 30
   K = 10
@@ -57,29 +57,31 @@ res = foreach(
   intercept = TRUE
   scaling = TRUE
   tol = 1e-4
-  sigma_eps1 = 0.1 # sigma (for y)
-  sigma_eps2 = 0.1 # sigma_j (for x)
+  sigma_y = 0.01 # sigma (for y)
+  sigma_x = 0.1 # sigma_j (for x)
   SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
-  b1 = 0.75 # 0.5
-  theta.value = 0.5 # weight on a1 -- 1, 0.75, 0.5
+  # (b1 = 0.5, theta.value = 0.5, a0 = 0, prop.missing = 0.75, ulimit = 0.5)
+  # (b1 = 1, theta.value = 0.3, a0 = 0, prop.missing = 0.70, 0.75, ulimit = 0.5)
+  b1 = 0.5 # 0.5
+  theta.value = 0.5 # weight on a1 -- 0.5
   a0 = 0 # 0
-  prop.missing = 0.5 # 0.25, 0.5
+  prop.missing = 0.65 # 0.70, 0.75
   ulimit = 0.5
   
   file.end = paste0(
-    "_", prop.missing,
     "_", sigma.settings,
+    "_", prop.missing,
     "_", paste0(
       paste(which(SBP.true == 1), collapse = ""), "v", 
       paste(which(SBP.true == -1), collapse = "")),
     "_dim", n, "x", p, 
-    "_noisey", sigma_eps1, 
-    "_noisex", sigma_eps2, 
+    "_noisey", sigma_y, 
+    "_noisex", sigma_x, 
     "_b0", b0, 
     "_b1", b1, 
     "_a0", a0, 
@@ -92,9 +94,9 @@ res = foreach(
   # get latent variable
   U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n), ncol = 1)
   # simulate y from latent variable
-  y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
+  y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_y)
   # simulate X: 
-  epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
+  epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
   a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
   #   alpha1j = {
   #     c1=theta*ilr.const/k+   if j \in I+
@@ -122,49 +124,31 @@ res = foreach(
   bspars = sum(non0.beta)
   # solve for beta
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
-  beta.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
+  llc.coefs.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
     as.vector(ilrtrans.true$ilr.trans)
   
   saveRDS(list(
     X = X, Y = Y, X.test = X.test, Y.test = Y.test, 
-    SBP.true = SBP.true, beta.true = beta.true, 
+    SBP.true = SBP.true, beta.true = llc.coefs.true, 
     non0.beta = non0.beta
   ),
   paste0(output_dir, "/data", file.end))
   
   ##############################################################################
-  ##############################################################################
-  ##############################################################################
   # about the chosen settings
   
-  # # b1 / c * (c1 + c2) 
-  # b1
-  # ilrtrans.true$const * c1plusc2
-  # b1 / (ilrtrans.true$const * c1plusc2)
-  
-  # Aitchison variation when j != k ############################################
-  # when j != k, aitchison var is Sjk = (c1 + c2)^2 Var[U] + 2 * sigma_eps2
-  varU = (2 * ulimit)^2 / 12
-  c1plusc2^2 * varU # term 1
-  2 * sigma_eps2^2 # term 2 (want this term to dominate)
-  
-  # Correlation bt clr(Xj) & y #################################################
-  covclrXy = a1 * b1 * varU # covariance, in numerator
-  varclrX = a1^2 * varU + (1 - (1 / (p))) * sigma_eps2^2 # variance of clrX
-  vary = b1^2 * varU + sigma_eps1^2 # variance of y
-  # population correlations?
-  covclrXy / (sqrt(varclrX) * sqrt(vary))
-  
-  var(y.all)
-  vary
-  
-  # data correlations:
-  round(apply(
-    t(apply(
-      X.all,1,
-      function(a) log(a) - mean(log(a)))), 2, 
-    function(xj) cor(xj, y.all)
-  ), 3)
+  # # Aitchison variation when j != k 
+  # # when j != k, aitchison var is Sjk = (c1 + c2)^2 Var[U] + 2 * sigma_eps2
+  # varU = (2 * ulimit)^2 / 12
+  # c1plusc2^2 * varU # term 1
+  # 2 * sigma_x^2 # term 2 (want this term to dominate)
+  # 
+  # # Correlation bt clr(Xj) & y 
+  # covclrXy = a1 * b1 * varU # covariance, in numerator
+  # varclrX = a1^2 * varU + (1 - (1 / (p))) * sigma_x^2 # variance of clrX
+  # vary = b1^2 * varU + sigma_y^2 # variance of y
+  # # population correlations?
+  # covclrXy / (sqrt(varclrX) * sqrt(vary))
   
   ##############################################################################
   ##############################################################################
@@ -199,7 +183,7 @@ res = foreach(
     n.train = n, n.test = n,
     betahat0 = cl.a0, betahat = cl.betahat,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
 
   saveRDS(c(
     cl.metrics,
@@ -226,7 +210,7 @@ res = foreach(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrspec0 = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -252,7 +236,7 @@ res = foreach(
     thetahat0 = slrspec0.coefs$a0, thetahat = slrspec0.coefs$bm.coefs,
     betahat = slrspec0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     slrspec0.metrics,
@@ -279,7 +263,7 @@ res = foreach(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrhier0 = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -305,7 +289,7 @@ res = foreach(
     thetahat0 = slrhier0.coefs$a0, thetahat = slrhier0.coefs$bm.coefs,
     betahat = slrhier0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     slrhier0.metrics,
@@ -334,7 +318,7 @@ res = foreach(
     y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   sslrspec0 = semislr(
     x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -360,7 +344,7 @@ res = foreach(
     thetahat0 = sslrspec0.coefs$a0, thetahat = sslrspec0.coefs$bm.coefs,
     betahat = sslrspec0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     sslrspec0.metrics,
@@ -389,7 +373,7 @@ res = foreach(
     y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   sslrspec1 = semislr(
     x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -415,7 +399,7 @@ res = foreach(
     thetahat0 = sslrspec1.coefs$a0, thetahat = sslrspec1.coefs$bm.coefs,
     betahat = sslrspec1.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     sslrspec1.metrics,
@@ -442,7 +426,7 @@ res = foreach(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   sslrspec2 = semislr(
     x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -468,7 +452,7 @@ res = foreach(
     thetahat0 = sslrspec2.coefs$a0, thetahat = sslrspec2.coefs$bm.coefs,
     betahat = sslrspec2.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     sslrspec2.metrics,
@@ -497,7 +481,7 @@ res = foreach(
     y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   sslrhier0 = semislr(
     x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -523,7 +507,7 @@ res = foreach(
     thetahat0 = sslrhier0.coefs$a0, thetahat = sslrhier0.coefs$bm.coefs,
     betahat = sslrhier0.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     sslrhier0.metrics,
@@ -552,7 +536,7 @@ res = foreach(
     y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   sslrhier1 = semislr(
     x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -578,7 +562,7 @@ res = foreach(
     thetahat0 = sslrhier1.coefs$a0, thetahat = sslrhier1.coefs$bm.coefs,
     betahat = sslrhier1.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     sslrhier1.metrics,
@@ -593,7 +577,7 @@ res = foreach(
   ##############################################################################
   # semislr with no CV on x2
   #   screen.method = "wald"
-  #   cluster.method = "hieararchical"
+  #   cluster.method = "hierarchical"
   #   response.type = "continuous"
   #   s0.perc = 0
   #   zeta = 0
@@ -602,12 +586,12 @@ res = foreach(
   ##############################################################################
   start.time = Sys.time()
   sslrhier2cv = cv.slr(
-    x = X, y = Y, screen.method = "wald", cluster.method = "hieararchical",
+    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   sslrhier2 = semislr(
-    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hieararchical",
+    x = X, x2 = X2, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     threshold = sslrhier2cv$threshold[sslrhier2cv$index["1se",]])
   end.time = Sys.time()
@@ -631,7 +615,7 @@ res = foreach(
     thetahat0 = sslrhier2.coefs$a0, thetahat = sslrhier2.coefs$bm.coefs,
     betahat = sslrhier2.coefs$llc.coefs,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true)
+    true.beta = llc.coefs.true)
   
   saveRDS(c(
     sslrhier2.metrics,
@@ -681,7 +665,7 @@ res = foreach(
   # slbl.metrics = getMetricsBM(
   #   thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
   #   true.sbp = SBP.true, non0.true.beta = non0.beta,
-  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  #   true.beta = llc.coefs.true, metrics = c("betaestimation", "selection"))
   # slbl.metrics = c(PEtr = slbl.PE.train, PEte = slbl.PE.test, slbl.metrics)
   # 
   # saveRDS(c(
@@ -749,7 +733,7 @@ res = foreach(
   codacore0.metrics = getMetricsBM(
     betahat = codacore0.betahat,
     true.sbp = SBP.true, non0.true.beta = non0.beta,
-    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+    true.beta = llc.coefs.true, metrics = c("betaestimation", "selection"))
   codacore0.metrics = c(
     PEtr = codacore0.PE.train, PEte = codacore0.PE.test, codacore0.metrics)
   
@@ -795,7 +779,7 @@ res = foreach(
   # lrl.metrics = getMetricsBM(
   #   betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
   #   true.sbp = SBP.true, non0.true.beta = non0.beta,
-  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  #   true.beta = llc.coefs.true, metrics = c("betaestimation", "selection"))
   # lrl.metrics = c(
   #   PEtr = lrl.PE.train, PEte = lrl.PE.test, lrl.metrics)
   # 

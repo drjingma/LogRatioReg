@@ -15,7 +15,7 @@ library(reshape2)
 
 numSims = 100
 
-sigma.settings = "latentVarModel_miss"
+sigma.settings = "latentVarModel_missing"
 n = 100
 p = 30
 K = 10
@@ -24,22 +24,24 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.1
+sigma_eps1 = 0.01
 sigma_eps2 = 0.1
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
+# (b1 = 0.5, theta.value = 0.5, a0 = 0, prop.missing = 0.75, ulimit = 0.5)
+# (b1 = 1, theta.value = 0.3, a0 = 0, prop.missing = 0.70, 0.75, ulimit = 0.5)
 b0 = 0 # 0
-b1 = 0.75 # 0.5, 0.6, 0.75
+b1 = 0.5 # 0.5
 theta.value = 0.5 # weight on a1 -- 1, 0.75, 0.5
 a0 = 0 # 0
-prop.missing = 0.5 # 0.5
+prop.missing = 0.5 # 0.75, 0.80
 
 file.end0 = paste0(
-  "_", prop.missing,
   "_", sigma.settings,
+  "_", prop.missing,
   "_", paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
@@ -62,6 +64,8 @@ semislr_spec_sims_list = list()
 semislr_spec_f_sims_list = list()
 semislr_hier_sims_list = list()
 semislr_hier_f_sims_list = list()
+semislr_spec_nocv_sims_list = list()
+semislr_hier_nocv_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
 lrlasso_sims_list = list()
@@ -126,6 +130,22 @@ for(i in 1:numSims){
   rownames(semislr_hier_f_sim_tmp) = NULL
   semislr_hier_f_sims_list[[i]] = data.table::data.table(semislr_hier_f_sim_tmp)
   
+  # slr - spectral - no CV
+  slr_spec_nocv_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_spectral_nocvx2_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_spec_nocv_sim_tmp) = NULL
+  semislr_spec_nocv_sims_list[[i]] = data.table::data.table(slr_spec_nocv_sim_tmp)
+  
+  # slr - hierarchical - no CV
+  slr_hier_nocv_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_hierarchical_nocvx2_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(slr_hier_nocv_sim_tmp) = NULL
+  semislr_hier_nocv_sims_list[[i]] = data.table::data.table(slr_hier_nocv_sim_tmp)
+  
   ###
   
   # # selbal
@@ -136,13 +156,13 @@ for(i in 1:numSims){
   # rownames(slbl_sim_tmp) = NULL
   # selbal_sims_list[[i]] = data.table::data.table(slbl_sim_tmp)
   
-  # codacore
-  cdcr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/codacore_metrics", file.end0,
-    "_sim", i, ".rds"
-  ))))
-  rownames(cdcr_sim_tmp) = NULL
-  codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
+  # # codacore
+  # cdcr_sim_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/codacore_metrics", file.end0,
+  #   "_sim", i, ".rds"
+  # ))))
+  # rownames(cdcr_sim_tmp) = NULL
+  # codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
   
   # # log-ratio lasso
   # lrl_sim_tmp = t(data.frame(readRDS(paste0(
@@ -191,17 +211,27 @@ semislr_hier_f_sims.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "semislr-hier-f")
+semislr_spec_nocv_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_nocv_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "semislr-spec-nocv")
+semislr_hier_nocv_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_nocv_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "semislr-hier-nocv")
 ###
 # selbal_sims.gg = 
 #   pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
 #                cols = everything(),
 #                names_to = "Metric") %>%
 #   mutate("Method" = "selbal")
-codacore_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(codacore_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "codacore")
+# codacore_sims.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(codacore_sims_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "codacore")
 # lrlasso_sims.gg =
 #   pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)),
 #                cols = everything(),
@@ -216,9 +246,11 @@ data.gg = rbind(
   semislr_spec_sims.gg,
   semislr_hier_sims.gg,
   semislr_spec_f_sims.gg,
-  semislr_hier_f_sims.gg,
+  semislr_hier_f_sims.gg ,
+  semislr_spec_nocv_sims.gg,
+  semislr_hier_nocv_sims.gg #,
   # selbal_sims.gg, 
-  codacore_sims.gg# ,
+  # codacore_sims.gg,
   # lrlasso_sims.gg
 ) %>%
   dplyr::filter(
@@ -262,7 +294,8 @@ data.gg = rbind(
         "selbal", "classo", "codacore", "lrlasso", 
         "slr-spec", "slr-hier", 
         "semislr-spec", "semislr-hier", 
-        "semislr-spec-f", "semislr-hier-f"
+        "semislr-spec-f", "semislr-hier-f", 
+        "semislr-spec-nocv", "semislr-hier-nocv"
       )
     )
   )

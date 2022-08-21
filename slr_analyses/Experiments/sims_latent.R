@@ -196,8 +196,8 @@ res = foreach(
   # compute metrics on the selected model #
   slrspec.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slrspec.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = slrspec.fullSBP),
+    ilrX.train = slr.fromContrast(X, sbp = slrspec.fullSBP),
+    ilrX.test = slr.fromContrast(X.test, sbp = slrspec.fullSBP),
     n.train = n, n.test = n,
     thetahat0 = slrspec.coefs$a0, thetahat = slrspec.coefs$bm.coefs,
     betahat = slrspec.coefs$llc.coefs,
@@ -247,8 +247,8 @@ res = foreach(
   # compute metrics on the selected model #
   slrhier.metrics = getMetricsBM(
     y.train = Y, y.test = Y.test,
-    ilrX.train = getIlrX(X, sbp = slrhier.fullSBP),
-    ilrX.test = getIlrX(X.test, sbp = slrhier.fullSBP),
+    ilrX.train = slr.fromContrast(X, sbp = slrhier.fullSBP),
+    ilrX.test = slr.fromContrast(X.test, sbp = slrhier.fullSBP),
     n.train = n, n.test = n,
     thetahat0 = slrhier.coefs$a0, thetahat = slrhier.coefs$bm.coefs,
     betahat = slrhier.coefs$llc.coefs,

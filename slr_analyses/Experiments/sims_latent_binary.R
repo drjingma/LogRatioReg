@@ -207,7 +207,7 @@ res = foreach(
   # get prediction error on training set
   slrspec0.Yhat.train = predict(
     slrspec0$fit,
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X, y = slrspec0.fullSBP)),
     type = "response")
   slrspec0.AUC.train = pROC::roc(
@@ -215,7 +215,7 @@ res = foreach(
   # get prediction error on test set
   slrspec0.Yhat.test = predict(
     slrspec0$fit,
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X.test, y = slrspec0.fullSBP)),
     type = "response")
   slrspec0.AUC.test = pROC::roc(
@@ -277,7 +277,7 @@ res = foreach(
   # get prediction error on training set
   slrhier0.Yhat.train = predict(
     slrhier0$fit,
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X, y = slrhier0.fullSBP)),
     type = "response")
   slrhier0.AUC.train = pROC::roc(
@@ -285,7 +285,7 @@ res = foreach(
   # get prediction error on test set
   slrhier0.Yhat.test = predict(
     slrhier0$fit,
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X.test, y = slrhier0.fullSBP)),
     type = "response")
   slrhier0.AUC.test = pROC::roc(
@@ -347,7 +347,7 @@ res = foreach(
   # get prediction error on training set
   slrspec1.Yhat.train = predict(
     slrspec1$fit, 
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X, y = slrspec1.fullSBP)), 
     type = "response")
   slrspec1.AUC.train = pROC::roc(
@@ -355,7 +355,7 @@ res = foreach(
   # get prediction error on test set
   slrspec1.Yhat.test = predict(
     slrspec1$fit, 
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X.test, y = slrspec1.fullSBP)), 
     type = "response")
   slrspec1.AUC.test = pROC::roc(
@@ -417,7 +417,7 @@ res = foreach(
   # get prediction error on training set
   slrhier1.Yhat.train = predict(
     slrhier1$fit, 
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X, y = slrhier1.fullSBP)), 
     type = "response")
   slrhier1.AUC.train = pROC::roc(
@@ -425,7 +425,7 @@ res = foreach(
   # get prediction error on test set
   slrhier1.Yhat.test = predict(
     slrhier1$fit, 
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = X.test, y = slrhier1.fullSBP)), 
     type = "response")
   slrhier1.AUC.test = pROC::roc(
@@ -450,175 +450,175 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_hierarchical_auc_metrics", file.end))
 
-  # ##############################################################################
-  # # selbal method (a balance regression method)
-  # # -- fits a balance regression model with one balance
-  # ##############################################################################
-  # slbl.data = getSelbalData(
-  #   X = X, y = Y, classification = TRUE, levels = c(0, 1), labels = c(0, 1))
-  # 
-  # start.time = Sys.time()
-  # slbl = selbal::selbal.cv(x = slbl.data$X, y = slbl.data$y, n.fold = K)
-  # end.time = Sys.time()
-  # slbl.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slbl.coefs = getCoefsSelbal(
-  #   X = slbl.data$X, y = slbl.data$y, selbal.fit = slbl, classification = TRUE,
-  #   check = TRUE)
-  # 
-  # # compute metrics on the selected model #
-  # # prediction errors
-  # # get prediction error on training set
-  # slbl.Yhat.train = predict.glm(
-  #   slbl$glm,
-  #   newdata = data.frame(V1 = balance::balance.fromSBP(
-  #     x = slbl.data$X, y = slbl.coefs$sbp)),
-  #   type = "response")
-  # slbl.AUC.train = pROC::roc(
-  #   slbl.data$y, slbl.Yhat.train, levels = c(0, 1), direction = "<")$auc
-  # # get prediction error on test set
-  # slbl.test.data = getSelbalData(
-  #   X = X.test, y = Y.test, classification = TRUE,
-  #   levels = c(0, 1), labels = c(0, 1))
-  # slbl.Yhat.test = predict.glm(
-  #   slbl$glm,
-  #   newdata = data.frame(V1 = balance::balance.fromSBP(
-  #     x = slbl.test.data$X, y = slbl.coefs$sbp)),
-  #   type = "response")
-  # slbl.AUC.test = pROC::roc(
-  #   slbl.test.data$y, slbl.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # beta estimation accuracy, selection accuracy #
-  # slbl.metrics = getMetricsBM(
-  #   thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
-  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
-  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  # slbl.metrics = c(AUCtr = slbl.AUC.train, AUCte = slbl.AUC.test, slbl.metrics)
-  # 
-  # saveRDS(c(
-  #   slbl.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = sum(slbl.coefs$bm.coefs != 0),
-  #   "time" = slbl.timing
-  # ),
-  # paste0(output_dir, "/selbal_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # CoDaCoRe (a balance regression method)
-  # # -- fits a balance regression model with possibly multiple balances
-  # ##############################################################################
-  # start.time = Sys.time()
-  # codacore0 = codacore::codacore(
-  #   x = X, y = Y, logRatioType = "ILR",
-  #   objective = "binary classification", cvParams = list(numFolds = K))
-  # end.time = Sys.time()
-  # codacore0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
-  #   codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
-  #   codacore0_coeffs = rep(NA, length(codacore0$ensemble))
-  #   for(col.idx in 1:ncol(codacore0_SBP)){
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-  #     codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
-  #   }
-  # 
-  #   codacore0.betahat = getBetaFromCodacore(
-  #     SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
-  # 
-  #   # compute metrics on the selected model #
-  #   # prediction errors
-  #   # get prediction error on training set
-  #   codacore0.Yhat.train = predict(codacore0, X)
-  #   # get prediction error on test set
-  #   codacore0.Yhat.test = predict(codacore0, X.test)
-  # 
-  # } else{
-  #   print(paste0("sim ", i, " -- codacore has no log-ratios"))
-  #   codacore0_coeffs = c()
-  #   codacore0model = stats::glm(Y ~ 1, family = "binomial")
-  #   codacore0.betahat = rep(0, p)
-  # 
-  #   # compute metrics on the selected model #
-  #   # prediction errors
-  #   # get prediction error on training set
-  #   codacore0.Yhat.train = predict(codacore0model, X)
-  #   # get prediction error on test set
-  #   codacore0.Yhat.test = predict(codacore0model, X.test)
-  # }
-  # codacore0.AUC.train = pROC::roc(
-  #   Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
-  # codacore0.AUC.test = pROC::roc(
-  #   Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # 
-  # # beta estimation accuracy, selection accuracy #
-  # codacore0.metrics = getMetricsBM(
-  #   betahat = codacore0.betahat,
-  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
-  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  # codacore0.metrics = c(
-  #   AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
-  # 
-  # saveRDS(c(
-  #   codacore0.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = length(codacore0_coeffs),
-  #   "time" = codacore0.timing
-  # ),
-  # paste0(output_dir, "/codacore_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # Log-Ratio Lasso
-  # # -- regresses on pairwise log-ratios
-  # ##############################################################################
-  # library(logratiolasso)
-  # source("slr_analyses/Functions/logratiolasso.R")
-  # Wc = scale(log(X), center = TRUE, scale = FALSE)
-  # 
-  # start.time = Sys.time()
-  # lrl <- cv_two_stage(
-  #   z = Wc, y = Y, n_folds = K, family="binomial")
-  # end.time = Sys.time()
-  # lrl.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # compute metrics on the selected model #
-  # # prediction errors
-  # # get prediction error on training set
-  # lrl.Yhat.train = as.numeric(Wc %*% lrl$beta_min)
-  # lrl.AUC.train = pROC::roc(
-  #   Y, lrl.Yhat.train, levels = c(0, 1), direction = "<")$auc
-  # # get prediction error on test set
-  # Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
-  # lrl.Yhat.test = as.numeric(Wc.test %*% lrl$beta_min)
-  # lrl.AUC.test = pROC::roc(
-  #   Y.test, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # 
-  # # beta estimation accuracy, selection accuracy #
-  # lrl.metrics = getMetricsBM(
-  #   betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
-  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
-  #   true.beta = beta.true, metrics = c("betaestimation", "selection"))
-  # lrl.metrics = c(
-  #   AUCtr = lrl.AUC.train, AUCte = lrl.AUC.test, lrl.metrics)
-  # 
-  # saveRDS(c(
-  #   lrl.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = NA,
-  #   "time" = lrl.timing,
-  #   "adhoc" = NA
-  # ),
-  # paste0(output_dir, "/lrlasso_metrics", file.end))
+  ##############################################################################
+  # selbal method (a balance regression method)
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  slbl.data = getSelbalData(
+    X = X, y = Y, classification = TRUE, levels = c(0, 1), labels = c(0, 1))
+
+  start.time = Sys.time()
+  slbl = selbal::selbal.cv(x = slbl.data$X, y = slbl.data$y, n.fold = K)
+  end.time = Sys.time()
+  slbl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  slbl.coefs = getCoefsSelbal(
+    X = slbl.data$X, y = slbl.data$y, selbal.fit = slbl, classification = TRUE,
+    check = TRUE)
+
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  slbl.Yhat.train = predict.glm(
+    slbl$glm,
+    newdata = data.frame(V1 = balance::balance.fromSBP(
+      x = slbl.data$X, y = slbl.coefs$sbp)),
+    type = "response")
+  slbl.AUC.train = pROC::roc(
+    slbl.data$y, slbl.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  # get prediction error on test set
+  slbl.test.data = getSelbalData(
+    X = X.test, y = Y.test, classification = TRUE,
+    levels = c(0, 1), labels = c(0, 1))
+  slbl.Yhat.test = predict.glm(
+    slbl$glm,
+    newdata = data.frame(V1 = balance::balance.fromSBP(
+      x = slbl.test.data$X, y = slbl.coefs$sbp)),
+    type = "response")
+  slbl.AUC.test = pROC::roc(
+    slbl.test.data$y, slbl.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slbl.metrics = getMetricsBM(
+    thetahat = slbl.coefs$bm.coefs, betahat = slbl.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  slbl.metrics = c(AUCtr = slbl.AUC.train, AUCte = slbl.AUC.test, slbl.metrics)
+
+  saveRDS(c(
+    slbl.metrics,
+    "betasparsity" = bspars,
+    "logratios" = sum(slbl.coefs$bm.coefs != 0),
+    "time" = slbl.timing
+  ),
+  paste0(output_dir, "/selbal_metrics", file.end))
+
+  ##############################################################################
+  # CoDaCoRe (a balance regression method)
+  # -- fits a balance regression model with possibly multiple balances
+  ##############################################################################
+  start.time = Sys.time()
+  codacore0 = codacore::codacore(
+    x = X, y = Y, logRatioType = "ILR",
+    objective = "binary classification", cvParams = list(numFolds = K))
+  end.time = Sys.time()
+  codacore0.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
+    codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
+    codacore0_coeffs = rep(NA, length(codacore0$ensemble))
+    for(col.idx in 1:ncol(codacore0_SBP)){
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
+      codacore0_SBP[
+        codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
+      codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
+    }
+
+    codacore0.betahat = getBetaFromCodacore(
+      SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
+
+    # compute metrics on the selected model #
+    # prediction errors
+    # get prediction error on training set
+    codacore0.Yhat.train = predict(codacore0, X)
+    # get prediction error on test set
+    codacore0.Yhat.test = predict(codacore0, X.test)
+
+  } else{
+    print(paste0("sim ", i, " -- codacore has no log-ratios"))
+    codacore0_coeffs = c()
+    codacore0model = stats::glm(Y ~ 1, family = "binomial")
+    codacore0.betahat = rep(0, p)
+
+    # compute metrics on the selected model #
+    # prediction errors
+    # get prediction error on training set
+    codacore0.Yhat.train = predict(codacore0model, X)
+    # get prediction error on test set
+    codacore0.Yhat.test = predict(codacore0model, X.test)
+  }
+  codacore0.AUC.train = pROC::roc(
+    Y, codacore0.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  codacore0.AUC.test = pROC::roc(
+    Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
+
+  # beta estimation accuracy, selection accuracy #
+  codacore0.metrics = getMetricsBM(
+    betahat = codacore0.betahat,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  codacore0.metrics = c(
+    AUCtr = codacore0.AUC.train, AUCte = codacore0.AUC.test, codacore0.metrics)
+
+  saveRDS(c(
+    codacore0.metrics,
+    "betasparsity" = bspars,
+    "logratios" = length(codacore0_coeffs),
+    "time" = codacore0.timing
+  ),
+  paste0(output_dir, "/codacore_metrics", file.end))
+
+  ##############################################################################
+  # Log-Ratio Lasso
+  # -- regresses on pairwise log-ratios
+  ##############################################################################
+  library(logratiolasso)
+  source("slr_analyses/Functions/logratiolasso.R")
+  Wc = scale(log(X), center = TRUE, scale = FALSE)
+
+  start.time = Sys.time()
+  lrl <- cv_two_stage(
+    z = Wc, y = Y, n_folds = K, family="binomial")
+  end.time = Sys.time()
+  lrl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  # compute metrics on the selected model #
+  # prediction errors
+  # get prediction error on training set
+  lrl.Yhat.train = as.numeric(Wc %*% lrl$beta_min)
+  lrl.AUC.train = pROC::roc(
+    Y, lrl.Yhat.train, levels = c(0, 1), direction = "<")$auc
+  # get prediction error on test set
+  Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
+  lrl.Yhat.test = as.numeric(Wc.test %*% lrl$beta_min)
+  lrl.AUC.test = pROC::roc(
+    Y.test, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc
+
+  # beta estimation accuracy, selection accuracy #
+  lrl.metrics = getMetricsBM(
+    betahat = lrl$beta_min, # don't back-scale bc only centered X (didn't scale)
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true, metrics = c("betaestimation", "selection"))
+  lrl.metrics = c(
+    AUCtr = lrl.AUC.train, AUCte = lrl.AUC.test, lrl.metrics)
+
+  saveRDS(c(
+    lrl.metrics,
+    "betasparsity" = bspars,
+    "logratios" = NA,
+    "time" = lrl.timing,
+    "adhoc" = NA
+  ),
+  paste0(output_dir, "/lrlasso_metrics", file.end))
   
   ##############################################################################
   ##############################################################################
   ##############################################################################
   ### fin ###
-  print(paste0("sim ", b, " completed successfully."))
+  # print(paste0("sim ", b, " completed successfully."))
 }
 
 

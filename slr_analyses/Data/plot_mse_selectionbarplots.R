@@ -1,9 +1,9 @@
 # Purpose: plot results from HIV_mse.R
-# Date: 7/5/2022
+# Date: 8/10/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohns"
-date = "20220705"
+data_set = "Crohns" # "HIV", "sCD14", "Crohns"
+date = "20220810"
 
 ################################################################################
 # libraries and settings
@@ -97,7 +97,7 @@ slr_spec_props0 = data.frame(
 )
 slr_spec_props = slr_spec_props0 %>% filter(active != 0) %>%
   arrange(active) %>% 
-  select(-"active") %>% 
+  dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
     names_to = "side", values_to = "proportion") %>%
@@ -134,7 +134,7 @@ slr_hier_props0 = data.frame(
 )
 slr_hier_props = slr_hier_props0 %>% filter(active != 0) %>%
   arrange(active) %>% 
-  select(-"active") %>% 
+  dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
     names_to = "side", values_to = "proportion") %>%
@@ -171,7 +171,7 @@ selbal_props0 = data.frame(
 )
 selbal_props = selbal_props0 %>% filter(active != 0) %>%
   arrange(active) %>% 
-  select(-"active") %>% 
+  dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
     names_to = "side", values_to = "proportion") %>%
@@ -208,7 +208,7 @@ codacore1_props0 = data.frame(
 )
 codacore1_props = codacore1_props0 %>% filter(active != 0) %>%
   arrange(active) %>% 
-  select(-"active") %>% 
+  dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
     names_to = "side", values_to = "proportion") %>%

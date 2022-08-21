@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 8/7/2022
+# Date: 8/16/2022
 rm(list=ls())
 
 ################################################################################
@@ -42,7 +42,6 @@ res = foreach(
   
   source("RCode/func_libs.R")
   source("slr_analyses/Functions/slrs.R")
-  source("slr_analyses/Functions/semislrs.R")
   source("slr_analyses/Functions/codalasso.R")
   source("slr_analyses/Functions/util.R")
   
@@ -68,9 +67,9 @@ res = foreach(
   # (b1 = 0.5, theta.value = 0.5, a0 = 0, prop.missing = 0.75, ulimit = 0.5)
   # (b1 = 1, theta.value = 0.3, a0 = 0, prop.missing = 0.70, 0.75, ulimit = 0.5)
   b1 = 0.5 # 0.5
-  theta.value = 0.5 # weight on a1 -- 0.5
+  theta.value = 0.4 # weight on a1 -- 0.5
   a0 = 0 # 0
-  prop.missing = 0.65 # 0.70, 0.75
+  prop.missing = 0.5 # 0.65, 0.5
   ulimit = 0.5
   
   file.end = paste0(
@@ -80,6 +79,7 @@ res = foreach(
       paste(which(SBP.true == 1), collapse = ""), "v", 
       paste(which(SBP.true == -1), collapse = "")),
     "_dim", n, "x", p, 
+    "_ulimit", ulimit,
     "_noisey", sigma_y, 
     "_noisex", sigma_x, 
     "_b0", b0, 
@@ -684,6 +684,10 @@ res = foreach(
   ##############################################################################
   library(codacore)
   
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+  
   start.time = Sys.time()
   codacore0 = codacore(
     x = X, y = Y, logRatioType = "ILR",
@@ -703,9 +707,17 @@ res = foreach(
       codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
     }
     
-    codacore0.betahat = getBetaFromCodacore(
-      SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
-    
+    # codacore0.betahat = getBetaFromCodacore(
+    #   SBP_codacore = codacore0_SBP, 
+    #   coeffs_codacore = codacore0_coeffs * codacore0$yScale, p = p)
+    names(codacore0_coeffs) = paste(
+      "balance", 1:length(codacore0_coeffs), sep = "")
+    rownames(codacore0_SBP) = colnames(X)
+    codacore0.coefs2 = getCoefsBM(
+      coefs = codacore0_coeffs * codacore0$yScale, 
+      sbp = codacore0_SBP)
+    codacore0.betahat = codacore0.coefs2$llc.coefs
+  
     # compute metrics on the selected model #
     # prediction errors
     # get prediction error on training set
@@ -718,6 +730,7 @@ res = foreach(
     codacore0_coeffs = c()
     codacore0model = stats::glm(Y ~ 1, family = "gaussian")
     codacore0.betahat = rep(0, p)
+    # codacore0.betahat2 = rep(0, p)
     
     # compute metrics on the selected model #
     # prediction errors
@@ -728,6 +741,28 @@ res = foreach(
   }
   codacore0.PE.train = crossprod(Y - codacore0.Yhat.train) / n
   codacore0.PE.test = crossprod(Y.test - codacore0.Yhat.test) / n
+  
+  # # beta estimation accuracy, selection accuracy #
+  # codacore0.metrics = getMetricsBM(
+  #   betahat = codacore0.betahat,
+  #   true.sbp = SBP.true, non0.true.beta = non0.beta,
+  #   true.beta = llc.coefs.true, metrics = c("betaestimation", "selection"))
+  # codacore0.metrics = c(
+  #   PEtr = codacore0.PE.train, PEte = codacore0.PE.test, codacore0.metrics)
+  # 
+  # saveRDS(c(
+  #   codacore0.metrics,
+  #   "betasparsity" = bspars,
+  #   "logratios" = length(codacore0_coeffs), 
+  #   "time" = codacore0.timing, 
+  #   "randindex" = randidx(
+  #     SBP.true, codacore0_SBP[, 1, drop = FALSE], adjusted = FALSE),
+  #   "adjrandindex" = randidx(
+  #     SBP.true, codacore0_SBP[, 1, drop = FALSE], adjusted = TRUE)
+  # ),
+  # paste0(output_dir, "/codacore_metrics", file.end))
+  # 
+  # # another try # -------------------------------------------------------------------
   
   # beta estimation accuracy, selection accuracy #
   codacore0.metrics = getMetricsBM(
@@ -747,7 +782,7 @@ res = foreach(
     "adjrandindex" = randidx(
       SBP.true, codacore0_SBP[, 1, drop = FALSE], adjusted = TRUE)
   ),
-  paste0(output_dir, "/codacore_metrics", file.end))
+  paste0(output_dir, "/codacore_metrics2", file.end))
   
   # ##############################################################################
   # # Log-Ratio Lasso

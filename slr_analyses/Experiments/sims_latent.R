@@ -1,5 +1,5 @@
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
-# Date: 6/16/2022
+# Date: 8/16/2022
 rm(list=ls())
 
 ################################################################################
@@ -56,10 +56,10 @@ res = foreach(
   intercept = TRUE
   scaling = TRUE
   tol = 1e-4
-  sigma_eps1 = 0.1 # sigma (for y)
-  sigma_eps2 = 0.1 # sigma_j (for x)
-  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-  SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+  sigma_y = 0.1 # sigma (for y)
+  sigma_x = 0.1 # sigma_j (for x)
+  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -67,6 +67,7 @@ res = foreach(
   b1 = 0.5 # 0.5
   theta.value = 1 # weight on a1 -- 1
   a0 = 0 # 0
+  ulimit = 0.5
   
   file.end = paste0(
     "_", sigma.settings,
@@ -74,8 +75,9 @@ res = foreach(
       paste(which(SBP.true == 1), collapse = ""), "v", 
       paste(which(SBP.true == -1), collapse = "")),
     "_dim", n, "x", p, 
-    "_noisey", sigma_eps1, 
-    "_noisex", sigma_eps2, 
+    "_ulimit", ulimit,
+    "_noisey", sigma_y, 
+    "_noisex", sigma_x, 
     "_b0", b0, 
     "_b1", b1, 
     "_a0", a0, 
@@ -86,11 +88,11 @@ res = foreach(
   ##############################################################################
   # generate data
   # get latent variable
-  U.all = matrix(runif(min = -0.5, max = 0.5, 2 * n), ncol = 1)
+  U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n), ncol = 1)
   # simulate y from latent variable
-  y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_eps1)
+  y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_y)
   # simulate X: 
-  epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_eps2
+  epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
   a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
   #   alpha1j = {
   #     c1=theta*ilr.const/k+   if j \in I+
@@ -122,43 +124,42 @@ res = foreach(
   ),
   paste0(output_dir, "/data", file.end))
   
-  # ##############################################################################
-  # # compositional lasso
-  # # -- fits a linear log contrast model
-  # ##############################################################################
-  # start.time = Sys.time()
-  # classo = cv.func(
-  #   method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1), 
-  #   nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
-  #   scaling = scaling)
-  # end.time = Sys.time()
-  # cl.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # cl.lam.idx = which.min(classo$cvm)
-  # oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
-  # cl.lam.idx = which(classo$cvm <= oneSErule)[1]
-  # cl.a0 = classo$int[cl.lam.idx]
-  # cl.betahat = classo$bet[, cl.lam.idx]
-  # 
-  # # compute metrics on the selected model #
-  # cl.metrics = getMetricsLLC(
-  #   y.train = Y, y.test = Y.test,
-  #   logX.train = log(X),
-  #   logX.test = log(X.test),
-  #   n.train = n, n.test = n,
-  #   betahat0 = cl.a0, betahat = cl.betahat,
-  #   true.sbp = SBP.true, non0.true.beta = non0.beta, 
-  #   true.beta = beta.true)
-  # 
-  # saveRDS(c(
-  #   cl.metrics,
-  #   "betasparsity" = bspars,
-  #   "logratios" = 0,
-  #   "time" = cl.timing, 
-  #   "adhoc" = NA
-  # ),
-  # paste0(output_dir, "/classo_metrics", file.end))
+  ##############################################################################
+  # compositional lasso
+  # -- fits a linear log contrast model
+  ##############################################################################
+  start.time = Sys.time()
+  classo = cv.func(
+    method="ConstrLasso", y = Y, x = log(X), Cmat = matrix(1, p, 1),
+    nlam = nlam, nfolds = K, tol = tol, intercept = intercept,
+    scaling = scaling)
+  end.time = Sys.time()
+  cl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  # cl.lam.idx = which.min(classo$cvm)
+  oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
+  cl.lam.idx = which(classo$cvm <= oneSErule)[1]
+  cl.a0 = classo$int[cl.lam.idx]
+  cl.betahat = classo$bet[, cl.lam.idx]
+
+  # compute metrics on the selected model #
+  cl.metrics = getMetricsLLC(
+    y.train = Y, y.test = Y.test,
+    logX.train = log(X),
+    logX.test = log(X.test),
+    n.train = n, n.test = n,
+    betahat0 = cl.a0, betahat = cl.betahat,
+    true.sbp = SBP.true, non0.true.beta = non0.beta,
+    true.beta = beta.true)
+
+  saveRDS(c(
+    cl.metrics,
+    "betasparsity" = bspars,
+    "logratios" = 0,
+    "time" = cl.timing
+  ),
+  paste0(output_dir, "/classo_metrics", file.end))
   
   ##############################################################################
   # slr
@@ -175,7 +176,7 @@ res = foreach(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrspec = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -207,8 +208,7 @@ res = foreach(
     slrspec.metrics,
     "betasparsity" = bspars,
     "logratios" = sum(slrspec.coefs$bm.coefs != 0),
-    "time" = slrspec.timing, 
-    "adhoc" = slrspec$adhoc.invoked
+    "time" = slrspec.timing
   ),
   paste0(output_dir, "/slr_spectral_metrics", file.end))
   
@@ -227,7 +227,7 @@ res = foreach(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
     nfolds = K, type.measure = "mse", 
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrhier = slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0, 
@@ -259,8 +259,7 @@ res = foreach(
     slrhier.metrics,
     "betasparsity" = bspars,
     "logratios" = sum(slrhier.coefs$bm.coefs != 0),
-    "time" = slrhier.timing, 
-    "adhoc" = slrhier$adhoc.invoked
+    "time" = slrhier.timing
   ),
   paste0(output_dir, "/slr_hierarchical_metrics", file.end))
   
@@ -309,8 +308,7 @@ res = foreach(
     slbl.metrics,
     "betasparsity" = bspars,
     "logratios" = sum(slbl.coefs$bm.coefs != 0), 
-    "time" = slbl.timing, 
-    "adhoc" = NA
+    "time" = slbl.timing
   ),
   paste0(output_dir, "/selbal_metrics", file.end))
   
@@ -319,6 +317,10 @@ res = foreach(
   # -- fits a balance regression model with possibly multiple balances
   ##############################################################################
   library(codacore)
+  
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
   
   start.time = Sys.time()
   codacore0 = codacore(
@@ -339,8 +341,13 @@ res = foreach(
       codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
     }
     
-    codacore0.betahat = getBetaFromCodacore(
-      SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
+    names(codacore0_coeffs) = paste(
+      "balance", 1:length(codacore0_coeffs), sep = "")
+    rownames(codacore0_SBP) = colnames(X)
+    codacore0.coefs2 = getCoefsBM(
+      coefs = codacore0_coeffs * codacore0$yScale, 
+      sbp = codacore0_SBP)
+    codacore0.betahat = codacore0.coefs2$llc.coefs
     
     # compute metrics on the selected model #
     # prediction errors
@@ -377,8 +384,7 @@ res = foreach(
     codacore0.metrics,
     "betasparsity" = bspars,
     "logratios" = length(codacore0_coeffs), 
-    "time" = codacore0.timing, 
-    "adhoc" = NA
+    "time" = codacore0.timing
   ),
   paste0(output_dir, "/codacore_metrics", file.end))
   
@@ -420,8 +426,7 @@ res = foreach(
     lrl.metrics,
     "betasparsity" = bspars,
     "logratios" = NA,
-    "time" = lrl.timing,
-    "adhoc" = NA
+    "time" = lrl.timing
   ),
   paste0(output_dir, "/lrlasso_metrics", file.end))
   

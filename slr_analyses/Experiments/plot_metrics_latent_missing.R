@@ -35,9 +35,9 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # (b1 = 1, theta.value = 0.3, a0 = 0, prop.missing = 0.70, 0.75, ulimit = 0.5)
 b0 = 0 # 0
 b1 = 0.5 # 0.5
-theta.value = 0.5 # weight on a1 -- 1, 0.75, 0.5
+theta.value = 0.4 # weight on a1 -- 1, 0.75, 0.5
 a0 = 0 # 0
-prop.missing = 0.5 # 0.75, 0.80
+prop.missing = 0.5 # 0.5, 0.65
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -156,13 +156,13 @@ for(i in 1:numSims){
   # rownames(slbl_sim_tmp) = NULL
   # selbal_sims_list[[i]] = data.table::data.table(slbl_sim_tmp)
   
-  # # codacore
-  # cdcr_sim_tmp = t(data.frame(readRDS(paste0(
-  #   output_dir, "/codacore_metrics", file.end0,
-  #   "_sim", i, ".rds"
-  # ))))
-  # rownames(cdcr_sim_tmp) = NULL
-  # codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
+  # codacore
+  cdcr_sim_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/codacore_metrics", file.end0,
+    "_sim", i, ".rds"
+  ))))
+  rownames(cdcr_sim_tmp) = NULL
+  codacore_sims_list[[i]] = data.table::data.table(cdcr_sim_tmp)
   
   # # log-ratio lasso
   # lrl_sim_tmp = t(data.frame(readRDS(paste0(
@@ -227,11 +227,11 @@ semislr_hier_nocv_sims.gg =
 #                cols = everything(),
 #                names_to = "Metric") %>%
 #   mutate("Method" = "selbal")
-# codacore_sims.gg = 
-#   pivot_longer(as.data.frame(data.table::rbindlist(codacore_sims_list)), 
-#                cols = everything(),
-#                names_to = "Metric") %>%
-#   mutate("Method" = "codacore")
+codacore_sims.gg =
+  pivot_longer(as.data.frame(data.table::rbindlist(codacore_sims_list)),
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "codacore")
 # lrlasso_sims.gg =
 #   pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)),
 #                cols = everything(),
@@ -248,9 +248,9 @@ data.gg = rbind(
   semislr_spec_f_sims.gg,
   semislr_hier_f_sims.gg ,
   semislr_spec_nocv_sims.gg,
-  semislr_hier_nocv_sims.gg #,
+  semislr_hier_nocv_sims.gg,
   # selbal_sims.gg, 
-  # codacore_sims.gg,
+  codacore_sims.gg #,
   # lrlasso_sims.gg
 ) %>%
   dplyr::filter(
@@ -316,7 +316,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220726",
+    "20220810",
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,

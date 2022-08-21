@@ -219,8 +219,10 @@ cv.func <- function(method="ConstrLasso", y, x, Cmat=NULL, lambda=NULL, nlam=20,
     res <- do.call(method, list(y=ytrain, x=xtrain, Cmat=Cmat, lambda=lambda, intercept=FALSE, scaling=FALSE, maxiter=maxiter, tol=tol))
     err[,j] <- colMeans((xtest%*%res$bet-res$int-as.vector(ytest))^2)
   }
-  cvm <- rowMeans(err)
-  cvsd <- apply(err,1,sd)
+  cvm <- apply(err, 1, base::mean, na.rm = TRUE)
+  cvsd = apply(err, 1, stats::sd, na.rm = TRUE) / sqrt(nfolds)
+  # cvm <- rowMeans(err)
+  # cvsd <- apply(err,1,sd)
   # fit with all lambda
   res.fit <- do.call(method, list(y=y, x=x, Cmat=Cmat, lambda=lambda, intercept=FALSE, scaling=FALSE, maxiter=maxiter, tol=tol))
   bet <- res.fit$bet

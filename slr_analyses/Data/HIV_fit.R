@@ -1,5 +1,5 @@
 # Purpose: compare slr to other methods on data sets
-# Date: 6/25/2022
+# Date: 8/15/2022
 rm(list=ls())
 
 ################################################################################
@@ -39,7 +39,7 @@ Y2 = ifelse(Y == "Pos", 1, 0)
 
 ################################################################################
 # 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
-# X_gbm = cmultRepl2(W, zero.rep = "bayes")
+X_gbm = cmultRepl2(W, zero.rep = "bayes")
 
 ################################################################################
 # fit methods
@@ -65,12 +65,19 @@ cl = readRDS(
 # slrspeccv = cv.slr(
 #   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
 #   response.type = "binary", s0.perc = 0, zeta = 0,
-#   nfolds = K, type.measure = "mse",
-#   parallel = FALSE, scale = scaling, trace.it = FALSE)
+#   nfolds = K, type.measure = "auc",
+#   scale = scaling, trace.it = FALSE)
 # slrspec = slr(
 #   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
 #   response.type = "binary", s0.perc = 0, zeta = 0,
 #   threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
+# saveRDS(
+#   slrspeccv,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_slrcv_spectral",
+#     "_gbm",
+#     ".rds"))
 # saveRDS(
 #   slrspec,
 #   paste0(
@@ -78,6 +85,13 @@ cl = readRDS(
 #     "_slr_spectral",
 #     "_gbm",
 #     ".rds"))
+
+slrspeccv = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slrcv_spectral",
+    "_gbm",
+    ".rds"))
 slrspec = readRDS(
   paste0(
     output_dir, "/HIV",
@@ -89,12 +103,19 @@ slrspec = readRDS(
 # slrhiercv = cv.slr(
 #   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
 #   response.type = "binary", s0.perc = 0, zeta = 0,
-#   nfolds = K, type.measure = "mse",
-#   parallel = FALSE, scale = scaling, trace.it = FALSE)
+#   nfolds = K, type.measure = "auc",
+#   scale = scaling, trace.it = FALSE)
 # slrhier = slr(
 #   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
 #   response.type = "binary", s0.perc = 0, zeta = 0,
 #   threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+# saveRDS(
+#   slrhiercv,
+#   paste0(
+#     output_dir, "/HIV",
+#     "_slrcv_hierarchical",
+#     "_gbm",
+#     ".rds"))
 # saveRDS(
 #   slrhier,
 #   paste0(
@@ -102,6 +123,13 @@ slrspec = readRDS(
 #     "_slr_hierarchical",
 #     "_gbm",
 #     ".rds"))
+
+slrhiercv = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slrcv_hierarchical",
+    "_gbm",
+    ".rds"))
 slrhier = readRDS(
   paste0(
     output_dir, "/HIV",

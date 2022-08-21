@@ -196,9 +196,15 @@ buildPredmat <- function(
         a,newdata=x.i,response.type=response.type))
     for(j in 1:length(threshold)){
       predy.ij = predy.i[, j]
-      if (response.type=='continuous'){ # mse, to be minimized
+      if (response.type == 'continuous'){ # mse, to be minimized
+        if(type.measure != "mse"){
+          stop("if response.type is continuous, then type.measure must be mse!!")
+        }
         predmat[i, j] <- mean((as.numeric(y.i)-predy.ij)^2)
       } else if (response.type=='binary'){
+        if(!(type.measure %in% c("accuracy", "auc"))){
+          stop("if response.type is binary, then type.measure must be either accuracy or auc!!")
+        }
         if(type.measure == "accuracy"){# accuracy, minimize the # that don't match
           predmat[i, j] <- mean((predy.ij > 0.5) != y.i) 
         } else if(type.measure == "auc"){# auc, minimize 1 - auc 

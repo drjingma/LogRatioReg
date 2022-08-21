@@ -1,5 +1,5 @@
 # Purpose: compare slr to other methods on data sets
-# Date: 6/27/2022
+# Date: 8/15/2022
 rm(list=ls())
 
 ################################################################################
@@ -69,11 +69,18 @@ cl = readRDS(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "spectral",
 #   response.type = "continuous", s0.perc = 0, zeta = 0,
 #   nfolds = K, type.measure = "mse",
-#   parallel = FALSE, scale = scaling, trace.it = FALSE)
+#   scale = scaling, trace.it = FALSE)
 # slrspec = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "spectral",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
 #   threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
+# saveRDS(
+#   slrspeccv,
+#   paste0(
+#     output_dir, "/sCD14",
+#     "_slrcv_spectral",
+#     "_gbm",
+#     ".rds"))
 # saveRDS(
 #   slrspec,
 #   paste0(
@@ -81,6 +88,13 @@ cl = readRDS(
 #     "_slr_spectral",
 #     "_gbm",
 #     ".rds"))
+
+slrspeccv = readRDS(
+  paste0(
+    output_dir, "/sCD14",
+    "_slrcv_spectral",
+    "_gbm",
+    ".rds"))
 slrspec = readRDS(
   paste0(
     output_dir, "/sCD14",
@@ -91,13 +105,20 @@ slrspec = readRDS(
 # slr - hierarchical ###########################################################
 # slrhiercv = cv.slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
-#   nfolds = K, type.measure = "mse", 
-#   parallel = FALSE, scale = scaling, trace.it = FALSE)
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
+#   nfolds = K, type.measure = "mse",
+#   scale = scaling, trace.it = FALSE)
 # slrhier = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-#   response.type = "continuous", s0.perc = 0, zeta = 0, 
+#   response.type = "continuous", s0.perc = 0, zeta = 0,
 #   threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+# saveRDS(
+#   slrhiercv,
+#   paste0(
+#     output_dir, "/sCD14",
+#     "_slrcv_hierarchical",
+#     "_gbm",
+#     ".rds"))
 # saveRDS(
 #   slrhier,
 #   paste0(
@@ -105,6 +126,13 @@ slrspec = readRDS(
 #     "_slr_hierarchical",
 #     "_gbm",
 #     ".rds"))
+
+slrhiercv = readRDS(
+  paste0(
+    output_dir, "/sCD14",
+    "_slrcv_hierarchical",
+    "_gbm",
+    ".rds"))
 slrhier = readRDS(
   paste0(
     output_dir, "/sCD14",
@@ -165,6 +193,8 @@ lrl = readRDS(
     "_lrlasso",
     "_gbm",
     ".rds"))
+
+
 
 ################################################################################
 # get active sets and selected balances (if applicable)
@@ -229,18 +259,219 @@ sum(abs(lrl$beta_min) > 1e-8)
 
 
 
+################################################################################
+# make some plots for supervised log-ratios methods
+################################################################################
+library(tidyverse)
+
+# slr - spectral ###############################################################
+
+# type.measure across different threshold values
+cv_data.spec = data.frame(
+  Threshold = slrspeccv$threshold, 
+  CVMetric = slrspeccv$cvm,
+  Lower = slrspeccv$cvm - slrspeccv$cvsd, 
+  Upper = slrspeccv$cvm + slrspeccv$cvsd
+)
+ggplot(cv_data.spec, aes(x = Threshold, y = CVMetric)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper)) + #, width = 0.2, col = "gray") +
+  geom_vline(xintercept = slrspeccv$threshold.min, linetype = "dashed",
+             col = "blue") +
+  geom_vline(xintercept = slrspeccv$threshold.1se, linetype = "dotted",
+           col = "lightblue") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-spec: threshold vs CV metric")
+
+# plot the balance regression model with the data
+bal_data.spec = data.frame(
+  ilrX = slr.fromContrast(X_gbm, as.vector(slrspec.fullSBP)),
+  y = Y
+)
+bal_data.spec
+slrspec.coefs
+
+lmfit = lm(y ~ ilrX, data = bal_data.spec)
+summary(lmfit)
 
 
+ggplot(bal_data.spec, aes(x = ilrX, y = Y)) + 
+  geom_point() + 
+  geom_abline(
+    aes(
+      intercept = slrspec.coefs$a0, 
+      slope = slrspec.coefs$bm.coefs, 
+      color = "slr-spec")) + 
+  geom_abline(
+    aes(
+      intercept = cl.a0, 
+      slope = 0, 
+      color = "classo")) + 
+  scale_color_manual(values = c(
+    "slr-spec" = "black", "classo" = "blue")
+    ) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-spec: balance regression model")
+
+# slr - hierarchical ###########################################################
+
+# type.measure across different threshold values
+cv_data.hier = data.frame(
+  Threshold = slrhiercv$threshold, 
+  CVMetric = slrhiercv$cvm,
+  Lower = slrhiercv$cvm - slrhiercv$cvsd, 
+  Upper = slrhiercv$cvm + slrhiercv$cvsd
+)
+ggplot(cv_data.hier, aes(x = Threshold, y = CVMetric)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper)) + #, width = 0.2, col = "gray") +
+  geom_vline(xintercept = slrhiercv$threshold.min, linetype = "dashed",
+             col = "blue") +
+  geom_vline(xintercept = slrhiercv$threshold.1se, linetype = "dotted",
+             col = "lightblue") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-hier: threshold vs CV metric")
+
+# plot the balance regression model with the data
+bal_data.hier = data.frame(
+  ilrX = slr.fromContrast(X_gbm, as.vector(slrhier.fullSBP)),
+  y = Y
+)
+bal_data.hier
+slrhier.coefs
+ggplot(bal_data.hier, aes(x = ilrX, y = Y)) + 
+  geom_point() + 
+  geom_abline(
+    aes(
+      intercept = slrhier.coefs$a0, 
+      slope = slrhier.coefs$bm.coefs, 
+      color = "slr-hier")) + 
+  geom_abline(
+    aes(
+      intercept = cl.a0, 
+      slope = 0, 
+      color = "classo")) + 
+  scale_color_manual(values = c(
+    "slr-hier" = "black", "classo" = "blue")
+  ) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-hier: balance regression model")
+
+################################################################################
+# plots for manuscript?
+################################################################################
+library(tidyverse)
 
 
+# slr - spectral ###############################################################
 
+# type.measure across different threshold values
+cv_data.spec = data.frame(
+  Threshold = slrspeccv$threshold, 
+  CVMetric = slrspeccv$cvm,
+  Lower = slrspeccv$cvm - slrspeccv$cvsd, 
+  Upper = slrspeccv$cvm + slrspeccv$cvsd
+)
+ggplot(cv_data.spec, aes(x = Threshold, y = CVMetric)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper)) + #, width = 0.2, col = "gray") +
+  geom_vline(xintercept = slrspeccv$threshold.min, linetype = "dashed",
+             col = "blue") +
+  geom_vline(xintercept = slrspeccv$threshold.1se, linetype = "dotted",
+             col = "lightblue") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-spec: threshold vs CV metric")
 
+# plot the balance regression model with the data
+bal_data.spec = data.frame(
+  ilrX = slr.fromContrast(X_gbm, as.vector(slrspec.fullSBP)),
+  y = Y
+)
+bal_data.spec
+slrspec.coefs
+ggplot(bal_data.spec, aes(x = ilrX, y = Y)) + 
+  geom_point() + 
+  geom_abline(
+    aes(
+      intercept = slrspec.coefs$a0, 
+      slope = slrspec.coefs$bm.coefs, 
+      color = "slr-spec")) + 
+  geom_abline(
+    aes(
+      intercept = cl.a0, 
+      slope = 0, 
+      color = "classo")) + 
+  scale_color_manual(values = c(
+    "slr-spec" = "black", "classo" = "blue")
+  ) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-spec: balance regression model")
 
+# slr - hierarchical ###########################################################
 
+# type.measure across different threshold values
+cv_data.hier = data.frame(
+  Threshold = slrhiercv$threshold, 
+  CVMetric = slrhiercv$cvm,
+  Lower = slrhiercv$cvm - slrhiercv$cvsd, 
+  Upper = slrhiercv$cvm + slrhiercv$cvsd
+)
+ggplot(cv_data.hier, aes(x = Threshold, y = CVMetric)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper)) + #, width = 0.2, col = "gray") +
+  geom_vline(xintercept = slrhiercv$threshold.min, linetype = "dashed",
+             col = "blue") +
+  geom_vline(xintercept = slrhiercv$threshold.1se, linetype = "dotted",
+             col = "lightblue") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-hier: threshold vs CV metric")
 
-
-
-
-
+# plot the balance regression model with the data
+bal_data.hier = data.frame(
+  ilrX = slr.fromContrast(X_gbm, as.vector(slrhier.fullSBP)),
+  y = Y
+)
+bal_data.hier
+slrhier.coefs
+ggplot(bal_data.hier, aes(x = ilrX, y = Y)) + 
+  geom_point() + 
+  geom_abline(
+    aes(
+      intercept = slrhier.coefs$a0, 
+      slope = slrhier.coefs$bm.coefs)) + 
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  ggtitle("slr-hier: balance regression model")
 
 

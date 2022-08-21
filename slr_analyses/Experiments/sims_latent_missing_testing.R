@@ -19,7 +19,6 @@ library(balance)
 
 source("RCode/func_libs.R")
 source("slr_analyses/Functions/slrs.R")
-source("slr_analyses/Functions/semislrs.R")
 source("slr_analyses/Functions/codalasso.R")
 source("slr_analyses/Functions/util.R")
 
@@ -43,7 +42,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
 b1 = 0.5 # 0.5
-theta.value = 0.5 # weight on a1 -- 1, 0.75, 0.5
+theta.value = 0.5 # weight on a1 -- 0.4, 0.5
 a0 = 0 # 0
 prop.missing = 0.5 # 0.25, 0.5
 ulimit = 0.5
@@ -123,7 +122,44 @@ spectral.clustering(
   getAitchisonVar(rbind(X[, SBP.true != 0], X2[, SBP.true != 0]))
 )
 
-# 
+# how does Var[U] affect S_jk?
+funVarU = function(ulim){
+  (2 * ulim)^2 / 12
+}
+funVarUAitchVar = function(varu){
+  c1plusc2^2 * varu # term 1 # or want this to be small????
+  2 * sigma_x^2 # term 2 (want this term to dominate)
+  abs(c1plusc2^2 * varu - 2 * sigma_x^2)
+}
+funVarUAitchVar(varU)
+curve(funVarUAitchVar, from = 0, to = 2)
+curve(funVarU, add = TRUE, lty = 2)
+points(varU, funVarUAitchVar(varU))
+points(ulimit, funVarU(ulimit))
+# points(0.75, funVarU(0.75))
+# points(funVarU(0.75), funVarUAitchVar(funVarU(0.75)))
+
+
+# how does Var[U] affect Cor(clr(X)_j, y)?
+funVarUCorXjY = function(varu, a1j = 0.2041241){
+  covclrXjy = a1j * b1 * varu # covariance, in numerator
+  varclrXj = a1j^2 * varu + (1 - (1 / (p))) * sigma_x^2 # variance of clrX
+  vary = b1^2 * varu + sigma_y^2 # variance of y
+  # population correlations?
+  covclrXjy / (sqrt(varclrXj) * sqrt(vary))
+}
+# funVarUCorXjY(seq(0, 2, 0.1))
+# funVarUCorXjY(seq(0, 2, 0.1)[2])
+curve(funVarUCorXjY, from = 0, to = 2)
+curve(funVarU, add = TRUE, lty = 2)
+points(varU, funVarUCorXjY(varU))
+points(ulimit, funVarU(ulimit))
+# points(0.75, funVarU(0.75))
+# points(funVarU(0.75), funVarUCorXjY(funVarU(0.75)))
+
+# marginal corr is large enough
+#   but clustering is better only when all data (labeled and unlabeled) are used
+
 # ##############################################################################
 # # compositional lasso
 # # -- fits a linear log contrast model

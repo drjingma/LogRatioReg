@@ -2,7 +2,7 @@
 #   added hierarchical clustering option
 #   added option to include extra non-compositional covariate(s)
 # Date: 6/19/2022
-
+# OUTDATED --- DONT USE (slr functions can accommodate unlabeled data now) --------------------------------------------------
 
 ## Potential to speed up the SLR function: do not need to evaluate the feature score each time
 

@@ -1,7 +1,7 @@
 rm(list=ls())
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
 #   explore various sigma_eps & rho values to get specified Rsquared values
-# Date: 5/24/2022
+# Date: 8/16/2022
 
 ################################################################################
 # libraries and settings
@@ -12,6 +12,7 @@ source("slr_analyses/Functions/util.R")
 
 library(tidyverse)
 library(reshape2)
+library(ggrepel)
 
 numSims = 100
 
@@ -24,10 +25,10 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.1
-sigma_eps2 = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+sigma_y = 0.1
+sigma_x = 0.1
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -35,6 +36,7 @@ b0 = 0 # 0
 b1 = 0.5 # 1, 0.5, 0.25
 theta.value = 1 # weight on a1 -- 1
 a0 = 0 # 0
+ulimit = 0.5
 
 file.end0 = paste0(
   "_", sigma.settings,
@@ -42,8 +44,9 @@ file.end0 = paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
   "_dim", n, "x", p, 
-  "_noisey", sigma_eps1, 
-  "_noisex", sigma_eps2, 
+  "_ulimit", ulimit,
+  "_noisey", sigma_y, 
+  "_noisex", sigma_x, 
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
@@ -198,6 +201,13 @@ data.gg = rbind(
     )
   )
 data.gg_main = data.gg
+means.gg = data.gg_main %>% 
+  group_by(Metric) %>%
+  mutate(
+    yrange = abs(max(value, na.rm = TRUE) - min(value, na.rm = TRUE))
+  ) %>%
+  group_by(Metric, Method) %>% 
+  summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -210,11 +220,14 @@ plt_main = ggplot(
   theme(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
+    axis.title.y = element_blank()) +
+  geom_text_repel(
+    data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
+    size = 2.25, color = "black")
 plt_main
 ggsave(
   filename = paste0(
-    "20220630",
+    "20220817",
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,

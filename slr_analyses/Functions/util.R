@@ -85,15 +85,7 @@ getCoefsSelbal = function(
   
   # U (transformation) matrix
   sbp = getSBPSelbal(X = X, selbal.fit = selbal.fit)
-  is.pos = (sbp == 1)
-  is.neg = (sbp == -1)
-  num.pos = sum(is.pos)
-  num.neg = sum(is.neg)
-  ilrU = sbp
-  ilrU[is.pos] = 1 / num.pos
-  ilrU[is.neg] = -1 / num.neg
-  norm.const = sqrt((num.pos * num.neg) / (num.pos + num.neg))
-  ilrU = norm.const * ilrU
+  ilrU = getIlrTrans(sbp = sbp)
   if(check){
     if(is.factor(y)) y = as.numeric(y) - 1
     data = data.frame(cbind(y, covar, log(as.matrix(X)) %*% matrix(ilrU)))
@@ -197,29 +189,29 @@ getIlrTrans = function(sbp = NULL, detailed = FALSE){
   }
 }
 
-getIlrX = function(X, sbp = NULL, U = NULL){
-  p = dim(X)[2]
-  
-  # checks
-  if(!("matrix" %in% class(X))){
-    if("numeric" %in% class(X)){
-      X = matrix(X, ncol = length(X))
-    } else{
-      warning("getIlrX: X is neither of class matrix nor numeric!!")
-    }
-  }
-  if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
-  
-  # get U
-  if(is.null(U)){
-    U = getIlrTrans(sbp = sbp)
-  }
-  
-  # calculate balances from U
-  ilr_balances = log(X) %*% U
-  
-  return(ilr_balances)
-}
+# getIlrX = function(X, sbp = NULL, U = NULL){
+#   p = dim(X)[2]
+#   
+#   # checks
+#   if(!("matrix" %in% class(X))){
+#     if("numeric" %in% class(X)){
+#       X = matrix(X, ncol = length(X))
+#     } else{
+#       warning("getIlrX: X is neither of class matrix nor numeric!!")
+#     }
+#   }
+#   if(is.null(colnames(X))) colnames(X) = paste("V", 1:p, sep = "")
+#   
+#   # get U
+#   if(is.null(U)){
+#     U = getIlrTrans(sbp = sbp)
+#   }
+#   
+#   # calculate balances from U
+#   ilr_balances = log(X) %*% U
+#   
+#   return(ilr_balances)
+# }
 
 
 
@@ -235,44 +227,49 @@ randidx = function(sbp1, sbp2, adjusted = FALSE){
   }
 }
 
-getMSEyhat = function(
-    y, n, betahat0, betahat, predictors, classification = FALSE){
-  if(!classification){
-    yhat = betahat0 + predictors %*% betahat
-    mse = as.vector(crossprod(y - yhat) / n)
-  } else{
-    yhat = NULL
-    mse = NULL
+# getMSEyhat = function(
+#     y, n, betahat0, betahat, predictors){
+#     yhat = betahat0 + predictors %*% betahat
+#     mse = as.vector(crossprod(y - yhat) / n)
+#   return(mse)
+# }
+
+getEstimationAccuracy = function(
+    true.llc.coefs, est.llc.coefs, relative = FALSE
+  ){
+  # L1 distance
+  EA1 = sum(abs(est.llc.coefs - true.llc.coefs))
+  if(relative){
+    EA1 = EA1 / sum(abs(true.llc.coefs))
   }
-  
-  return(mse)
-}
-getEstimationAccuracy = function(true.beta, betahat){
-  # relative L1 distance
-  EA1 = sum(abs(betahat - true.beta)) / sum(abs(true.beta))
-  # relative L2 distance
-  EA2 = as.vector(sqrt(crossprod(betahat - true.beta))) / 
-    sqrt(crossprod(true.beta))
-  # relative LInfty distance
-  EAInfty = max(abs(betahat - true.beta)) / max(abs(true.beta))
+  # L2 distance
+  EA2 = as.vector(sqrt(crossprod(est.llc.coefs - true.llc.coefs)))
+  if(relative){
+    EA2 = EA2 / sqrt(crossprod(true.llc.coefs))
+  }
+  # LInfty distance
+  EAInfty = max(abs(est.llc.coefs - true.llc.coefs))
+  if(relative){
+    EAInfty = EAInfty / max(abs(true.llc.coefs))
+  }
   return(list(
     EA1 = EA1, 
     EA2 = EA2, 
     EAInfty = EAInfty
   ))
 }
-getSelectionAccuracy = function(non0.true.beta, non0.betahat){
-  is0.true.beta = !non0.true.beta
-  is0.betahat = !non0.betahat
-  FP = sum(non0.betahat & is0.true.beta)
-  FN = sum(is0.betahat & non0.true.beta)
-  TP = sum(non0.betahat & non0.true.beta)
-  TPR = TP / sum(non0.true.beta)
-  FPR = FP / sum(is0.true.beta)
+getSelectionAccuracy = function(non0.true.llc.coefs, non0.est.llc.coefs){
+  is0.true.llc.coefs = !non0.true.llc.coefs
+  is0.est.llc.coefs = !non0.est.llc.coefs
+  FP = sum(non0.est.llc.coefs & is0.true.llc.coefs)
+  FN = sum(is0.est.llc.coefs & non0.true.llc.coefs)
+  TP = sum(non0.est.llc.coefs & non0.true.llc.coefs)
+  TPR = TP / sum(non0.true.llc.coefs)
+  FPR = FP / sum(is0.true.llc.coefs)
   # F-score = precision / recall
   # precision = # true positive results / # of positive results
   #   (including those not identified correctly)
-  precision = TP / sum(non0.betahat) 
+  precision = TP / sum(non0.est.llc.coefs) 
   # recall = sensitivity = TPR = # true positive results / # of true positives
   Fscore = 2 * precision * TPR / (precision + TPR)
   return(list(
@@ -283,39 +280,40 @@ getSelectionAccuracy = function(non0.true.beta, non0.betahat){
 }
 # package metrics
 getMetricsLLC = function(
-    y.train = NULL, y.test = NULL, logX.train = NULL, logX.test = NULL, 
-    n.train = NULL, n.test = NULL,
-    betahat0 = NULL, betahat, 
-    true.sbp = NULL, true.beta = NULL, non0.true.beta,
-    metrics = c("prediction", "betaestimation", "selection"), 
-    classification = FALSE
+    # y.train = NULL, y.test = NULL, logX.train = NULL, logX.test = NULL, 
+    # n.train = NULL, n.test = NULL,
+    # betahat0 = NULL, 
+    est.llc.coefs, 
+    true.sbp = NULL, true.llc.coefs = NULL, non0.true.llc.coefs,
+    metrics = c("estimation", "selection"), 
+    relative = FALSE
 ){
   result = list()
   
-  if("prediction" %in% metrics){
-    if(is.null(y.train) | is.null(y.test) | 
-       is.null(logX.train) | is.null(logX.test) | 
-       is.null(n.train) | is.null(n.test) | is.null(betahat0)) {
-      stop("getMetricsLLC() prediction: one or more of these are missing -- y.train, y.test, logX.train, logX.test, n.train, n.test, betahat0")
-    }
-    # 1. prediction error #
-    # 1a. on training set #
-    result$PEtr = getMSEyhat(
-      y = y.train, n = n.train, betahat0 = betahat0, betahat = betahat, 
-      predictors = logX.train, classification = classification)
-    # 1b. on test set #
-    result$PEte = getMSEyhat(
-      y = y.test, n = n.test, betahat0 = betahat0, betahat = betahat, 
-      predictors = logX.test, classification = classification)
-  }
+  # if("prediction" %in% metrics){
+  #   if(is.null(y.train) | is.null(y.test) | 
+  #      is.null(logX.train) | is.null(logX.test) | 
+  #      is.null(n.train) | is.null(n.test) | is.null(betahat0)) {
+  #     stop("getMetricsLLC() prediction: one or more of these are missing -- y.train, y.test, logX.train, logX.test, n.train, n.test, betahat0")
+  #   }
+  #   # 1. prediction error #
+  #   # 1a. on training set #
+  #   result$PEtr = getMSEyhat(
+  #     y = y.train, n = n.train, betahat0 = betahat0, betahat = betahat, 
+  #     predictors = logX.train)
+  #   # 1b. on test set #
+  #   result$PEte = getMSEyhat(
+  #     y = y.test, n = n.test, betahat0 = betahat0, betahat = betahat, 
+  #     predictors = logX.test)
+  # }
   
-  if("betaestimation" %in% metrics){
-    if(is.null(true.beta)) {
-      stop("getMetricsLLC() betaestimation: true.beta arg is missing")
+  if("estimation" %in% metrics){
+    if(is.null(true.llc.coefs)) {
+      stop("getMetricsLLC() estimation: true.llc.coefs arg is missing")
     }
     # 2. estimation accuracy #
     # 2a. estimation of beta #
-    EA = getEstimationAccuracy(true.beta = true.beta, betahat = betahat)
+    EA = getEstimationAccuracy(true.llc.coefs = true.llc.coefs, est.llc.coefs = est.llc.coefs, relative = relative)
     # save
     result$EA1 = EA$EA1
     result$EA2 = EA$EA2
@@ -323,18 +321,18 @@ getMetricsLLC = function(
   }
   
   if("selection" %in% metrics){
-    if(is.null(true.beta) & is.null(true.sbp)) {
-      stop("getMetricsLLC() selection: true.beta and true.sbp args are both missing, need at least one of them")
+    if(is.null(true.llc.coefs) & is.null(true.sbp)) {
+      stop("getMetricsLLC() selection: true.llc.coefs and true.sbp args are both missing, need at least one of them")
     }
-    if(is.null(true.beta) & !is.null(true.sbp)){
-      true.beta = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
+    if(is.null(true.llc.coefs) & !is.null(true.sbp)){
+      true.llc.coefs = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
     }
     
     # 3. selection accuracy #
-    non0.betahat = abs(betahat) > 10e-8
+    non0.est.llc.coefs = abs(est.llc.coefs) > 10e-8
     SA = getSelectionAccuracy(
-      non0.true.beta = non0.true.beta, 
-      non0.betahat = non0.betahat)
+      non0.true.llc.coefs = non0.true.llc.coefs, 
+      non0.est.llc.coefs = non0.est.llc.coefs)
     # save
     result$TPR = SA$TPR
     result$FPR = SA$FPR
@@ -343,39 +341,40 @@ getMetricsLLC = function(
   return(unlist(result))
 }
 getMetricsBM = function(
-    y.train = NULL, y.test = NULL, ilrX.train = NULL, ilrX.test = NULL, 
-    n.train = NULL, n.test = NULL,
-    thetahat0 = NULL, thetahat, betahat, true.sbp = NULL,
-    true.beta = NULL, non0.true.beta,
-    metrics = c("prediction", "betaestimation", "selection"), 
-    classification = FALSE
+    # y.train = NULL, y.test = NULL, ilrX.train = NULL, ilrX.test = NULL, 
+    # n.train = NULL, n.test = NULL,
+    # thetahat0 = NULL, thetahat, 
+    est.llc.coefs, true.sbp = NULL,
+    true.llc.coefs = NULL, non0.true.llc.coefs,
+    metrics = c("estimation", "selection"), 
+    relative = FALSE
 ){
   result = list()
   
-  if("prediction" %in% metrics){
-    if(is.null(y.train) | is.null(y.test) | 
-       is.null(ilrX.train) | is.null(ilrX.test) | 
-       is.null(n.train) | is.null(n.test) | is.null(thetahat0)) {
-      stop("getMetricsBM() prediction: one or more of these are missing -- y.train, y.test, ilrX.train, ilrX.test, n.train, n.test, thetahat0")
-    }
-    # 1. prediction error #
-    # 1a. on training set #
-    result$PEtr = getMSEyhat(
-      y = y.train, n = n.train, betahat0 = thetahat0, betahat = thetahat,
-      predictors = ilrX.train, classification = classification)
-    # 1b. on test set #
-    result$PEte = getMSEyhat(
-      y = y.test, n = n.test, betahat0 = thetahat0, betahat = thetahat,
-      predictors = ilrX.test, classification = classification)
-  }
+  # if("prediction" %in% metrics){
+  #   if(is.null(y.train) | is.null(y.test) | 
+  #      is.null(ilrX.train) | is.null(ilrX.test) | 
+  #      is.null(n.train) | is.null(n.test) | is.null(thetahat0)) {
+  #     stop("getMetricsBM() prediction: one or more of these are missing -- y.train, y.test, ilrX.train, ilrX.test, n.train, n.test, thetahat0")
+  #   }
+  #   # 1. prediction error #
+  #   # 1a. on training set #
+  #   result$PEtr = getMSEyhat(
+  #     y = y.train, n = n.train, betahat0 = thetahat0, betahat = thetahat,
+  #     predictors = ilrX.train)
+  #   # 1b. on test set #
+  #   result$PEte = getMSEyhat(
+  #     y = y.test, n = n.test, betahat0 = thetahat0, betahat = thetahat,
+  #     predictors = ilrX.test)
+  # }
   
-  if("betaestimation" %in% metrics){
-    if(is.null(true.beta)) {
-      stop("getMetricsBM() betaestimation: true.beta arg is missing")
+  if("estimation" %in% metrics){
+    if(is.null(true.llc.coefs)) {
+      stop("getMetricsBM() estimation: true.llc.coefs arg is missing")
     }
     # 2. estimation accuracy #
     # 2a. estimation of beta #
-    EA = getEstimationAccuracy(true.beta = true.beta, betahat = betahat)
+    EA = getEstimationAccuracy(true.llc.coefs = true.llc.coefs, est.llc.coefs = est.llc.coefs, relative = relative)
     # save
     result$EA1 = EA$EA1
     result$EA2 = EA$EA2
@@ -383,17 +382,17 @@ getMetricsBM = function(
   }
   
   if("selection" %in% metrics){
-    if(is.null(true.beta) & is.null(true.sbp)) {
-      stop("getMetricsBM() selection: true.beta and true.sbp args are both missing, need at least one of them")
+    if(is.null(true.llc.coefs) & is.null(true.sbp)) {
+      stop("getMetricsBM() selection: true.llc.coefs and true.sbp args are both missing, need at least one of them")
     }
-    if(is.null(true.beta) & !is.null(true.sbp)){
-      true.beta = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
+    if(is.null(true.llc.coefs) & !is.null(true.sbp)){
+      true.llc.coefs = as.numeric(apply(true.sbp, 1, function(row) any(row != 0)))
     }
     # 3. selection accuracy #
-    non0.betahat = abs(betahat) > 10e-8
+    non0.est.llc.coefs = abs(est.llc.coefs) > 10e-8
     SA = getSelectionAccuracy(
-      non0.true.beta = non0.true.beta,
-      non0.betahat = non0.betahat)
+      non0.true.llc.coefs = non0.true.llc.coefs,
+      non0.est.llc.coefs = non0.est.llc.coefs)
     # save
     result$TPR = SA$TPR
     result$FPR = SA$FPR

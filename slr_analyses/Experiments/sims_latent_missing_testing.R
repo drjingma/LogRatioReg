@@ -25,26 +25,26 @@ source("slr_analyses/Functions/util.R")
 # Tuning parameters###########################################################
 
 # Settings to toggle with
-sigma.settings = "latentVarModel_missing"
-n = 100
+settings.name = "ContinuousResponseUnlabeled"
+n = 30
 p = 30
 K = 10
 nlam = 100
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_y = 0.01
-sigma_x = 0.1
+sigma_y = 0.001
+sigma_x = 0.15
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 0.5 # 0.5
+b1 = 1 # 0.5
 theta.value = 0.5 # weight on a1 -- 0.4, 0.5
 a0 = 0 # 0
-prop.missing = 0.5 # 0.25, 0.5
+n.unlabeled = n * 100
 ulimit = 0.5
 
 ################################################################################
@@ -59,11 +59,11 @@ set.seed(123 + b)
 ##############################################################################
 # generate data
 # get latent variable
-U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n), ncol = 1)
+U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n + n.unlabeled), ncol = 1)
 # simulate y from latent variable
-y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_y)
+y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n + n.unlabeled) * sigma_y)
 # simulate X: 
-epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
+epsj.all = matrix(rnorm((2 * n + n.unlabeled) * (p - 1)), nrow = (2 * n + n.unlabeled)) * sigma_x
 a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
 #   alpha1j = {
 #     c1=theta*ilr.const/k+   if j \in I+
@@ -74,17 +74,15 @@ alrXj.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
 X.all <- alrinv(alrXj.all)
 colnames(X.all) = paste0('s', 1:p)
 
-# subset out training and test sets
-X = X.all[1:n, ]
-X.test = X.all[-(1:n), ]
-Y <- y.all[1:n]
-Y.test <- y.all[-(1:n)]
-
-# missingness in training set
-train.keep.upto = floor(n * (1 - prop.missing))
-Y = Y[1:train.keep.upto]
-X2 = X[(train.keep.upto + 1):n, ]
-X = X[1:train.keep.upto, ]
+# subset out labeled and unlabeled sets
+X.labeled = X.all[1:(2 * n), ]
+Y.labeled = y.all[1:(2 * n)]
+X2 = X.all[-(1:(2 * n)), ]
+# subset out training and test sets from the labeled data
+X = X.labeled[1:n, ]
+X.test = X.labeled[-(1:n), ]
+Y <- Y.labeled[1:n]
+Y.test <- Y.labeled[-(1:n)]
 
 # about beta
 non0.beta = as.vector(SBP.true != 0)
@@ -102,7 +100,7 @@ llc.coefs.true = (b1 / (ilrtrans.true$const * c1plusc2)) *
 varU = (2 * ulimit)^2 / 12
 c1plusc2^2 * varU # term 1 # or want this to be small????
 2 * sigma_x^2 # term 2 (want this term to dominate)
-abs(c1plusc2^2 * varU - 2 * sigma_x^2)
+c1plusc2^2 * varU + 2 * sigma_x^2 # Sjk
 
 # Correlation bt clr(Xj) & y
 covclrXy = a1 * b1 * varU # covariance, in numerator
@@ -126,36 +124,116 @@ spectral.clustering(
 funVarU = function(ulim){
   (2 * ulim)^2 / 12
 }
-funVarUAitchVar = function(varu){
-  c1plusc2^2 * varu # term 1 # or want this to be small????
-  2 * sigma_x^2 # term 2 (want this term to dominate)
-  abs(c1plusc2^2 * varu - 2 * sigma_x^2)
+funUAitchVar = function(ulim){
+  varu = funVarU(ulim)
+  abs(c1plusc2^2 * varu + 2 * sigma_x^2)
 }
-funVarUAitchVar(varU)
-curve(funVarUAitchVar, from = 0, to = 2)
-curve(funVarU, add = TRUE, lty = 2)
-points(varU, funVarUAitchVar(varU))
-points(ulimit, funVarU(ulimit))
-# points(0.75, funVarU(0.75))
-# points(funVarU(0.75), funVarUAitchVar(funVarU(0.75)))
-
+funUAitchVarDiscrepancy = function(ulim){
+  varu = funVarU(ulim)
+  c1plusc2^2 * varu # term 1 # or want this to be small????
+}
+ggplot() + 
+  geom_function(fun = funVarU, xlim = c(0, 1), aes(color = "Var[U]")) + 
+  geom_function(fun = funUAitchVar, xlim = c(0, 1), aes(color = "Aitchison Variation")) + 
+  geom_function(fun = funUAitchVarDiscrepancy, xlim = c(0, 1), aes(color = "Aitchison Variation \nDiscrepancy")) + 
+  geom_point(aes(x = ulimit, y = funVarU(ulimit), color = "Var[U]")) +
+  geom_point(aes(x = ulimit, y = funUAitchVar(ulimit), color = "Aitchison Variation")) + 
+  geom_point(aes(x = ulimit, y = funUAitchVarDiscrepancy(ulimit), color = "Aitchison Variation \nDiscrepancy")) + 
+  labs(x = "x = Boundary of Uniform distribution", y = "")
 
 # how does Var[U] affect Cor(clr(X)_j, y)?
-funVarUCorXjY = function(varu, a1j = 0.2041241){
+funUCorXjY = function(ulim, j = 1){
+  a1j = (theta.value * ilrtrans.true$ilr.trans[j]) # j must be less than p
+  varu = funVarU(ulim)
   covclrXjy = a1j * b1 * varu # covariance, in numerator
   varclrXj = a1j^2 * varu + (1 - (1 / (p))) * sigma_x^2 # variance of clrX
   vary = b1^2 * varu + sigma_y^2 # variance of y
-  # population correlations?
-  covclrXjy / (sqrt(varclrXj) * sqrt(vary))
+  covclrXjy / (sqrt(varclrXj) * sqrt(vary))# population correlation
 }
-# funVarUCorXjY(seq(0, 2, 0.1))
-# funVarUCorXjY(seq(0, 2, 0.1)[2])
-curve(funVarUCorXjY, from = 0, to = 2)
-curve(funVarU, add = TRUE, lty = 2)
-points(varU, funVarUCorXjY(varU))
-points(ulimit, funVarU(ulimit))
-# points(0.75, funVarU(0.75))
-# points(funVarU(0.75), funVarUCorXjY(funVarU(0.75)))
+ggplot() + 
+  geom_function(fun = funVarU, xlim = c(0, 1), aes(color = "Var[U]")) + 
+  geom_function(fun = funUCorXjY, xlim = c(0, 1), aes(color = "Cor(clr(Xj), y)")) + 
+  geom_point(aes(x = ulimit, y = funVarU(ulimit), color = "Var[U]")) +
+  geom_point(aes(x = ulimit, y = funUCorXjY(ulimit), color = "Cor(clr(Xj), y)")) +
+  labs(x = "x = Boundary of Uniform distribution", y = "")
+
+
+
+# how does theta affect S_jk?
+func1 = function(theta){
+  theta * abs(ilrtrans.true$ilr.trans[1, 1])
+}
+func1plusc2 = function(theta){
+  theta * sum(abs(unique(ilrtrans.true$ilr.trans)))
+}
+funThetaAitchVar = function(theta){
+  varu = funVarU(ulimit)
+  c1plusc2 = func1plusc2(theta)
+  abs(c1plusc2^2 * varu + 2 * sigma_x^2)
+}
+funThetaAitchVarDiscrepancy = function(theta){
+  varu = funVarU(ulimit)
+  c1plusc2 = func1plusc2(theta)
+  c1plusc2^2 * varu # term 1 # or want this to be small????
+}
+ggplot() + 
+  geom_function(fun = func1, xlim = c(0, 1.5), aes(color = "c1")) + 
+  geom_function(fun = func1plusc2, xlim = c(0, 1.5), aes(color = "c1+c2")) + 
+  geom_function(fun = funThetaAitchVar, xlim = c(0, 1.5), aes(color = "Aitchison Variation")) + 
+  geom_function(fun = funThetaAitchVarDiscrepancy, xlim = c(0, 1.5), aes(color = "Aitchison Variation \nDiscrepancy")) + 
+  geom_point(aes(x = theta.value, y = func1(theta.value), color = "c1")) +
+  geom_point(aes(x = theta.value, y = func1plusc2(theta.value), color = "c1+c2")) +
+  geom_point(aes(x = theta.value, y = funThetaAitchVar(theta.value), color = "Aitchison Variation")) + 
+  geom_point(aes(x = theta.value, y = funThetaAitchVarDiscrepancy(theta.value), color = "Aitchison Variation \nDiscrepancy")) + 
+  labs(x = "x = value of theta in balance regression model", y = "")
+
+# how does theta affect Cor(clr(X)_j, y)?
+funThetaCorXjY = function(theta, j = 1){
+  a1j = (theta * ilrtrans.true$ilr.trans[j]) # j must be less than p
+  varu = funVarU(ulimit)
+  covclrXjy = a1j * b1 * varu # covariance, in numerator
+  varclrXj = a1j^2 * varu + (1 - (1 / (p))) * sigma_x^2 # variance of clrX
+  vary = b1^2 * varu + sigma_y^2 # variance of y
+  covclrXjy / (sqrt(varclrXj) * sqrt(vary))# population correlation
+}
+ggplot() + 
+  geom_function(fun = func1, xlim = c(0, 1.5), aes(color = "c1")) + 
+  geom_function(fun = func1plusc2, xlim = c(0, 1.5), aes(color = "c1+c2")) + 
+  geom_function(fun = funThetaCorXjY, xlim = c(0, 1.5), aes(color = "Cor(clr(Xj), y)")) + 
+  geom_point(aes(x = theta.value, y = func1(theta.value), color = "c1")) +
+  geom_point(aes(x = theta.value, y = func1plusc2(theta.value), color = "c1+c2")) +
+  geom_point(aes(x = theta.value, y = funThetaCorXjY(theta.value), color = "Cor(clr(Xj), y)")) +
+  labs(x = "x = value of theta in balance regression model", y = "")
+
+
+
+# how does beta1 affect Cor(clr(X)_j, y)?
+funBeta1CorXjY = function(beta1, j = 1){
+  a1j = (theta.value * ilrtrans.true$ilr.trans[j]) # j must be less than p
+  varu = funVarU(ulimit)
+  covclrXjy = a1j * beta1 * varu # covariance, in numerator
+  varclrXj = a1j^2 * varu + (1 - (1 / (p))) * sigma_x^2 # variance of clrX
+  vary = beta1^2 * varu + sigma_y^2 # variance of y
+  covclrXjy / (sqrt(varclrXj) * sqrt(vary))# population correlation
+}
+ggplot() + 
+  geom_function(fun = funBeta1CorXjY, xlim = c(0, 5), aes(color = "Cor(clr(Xj), y)")) + 
+  geom_point(aes(x = b1, y = funBeta1CorXjY(b1), color = "Cor(clr(Xj), y)")) +
+  labs(x = "x = value of theta in balance regression model", y = "")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # marginal corr is large enough
 #   but clustering is better only when all data (labeled and unlabeled) are used
@@ -705,12 +783,6 @@ points(ulimit, funVarU(ulimit))
 # fields::image.plot(slrhier0$cluster.mat)
 # fields::image.plot(sslrhier0$cluster.mat)
 # fields::image.plot(sslrhier1$cluster.mat)
-
-##############################################################################
-##############################################################################
-##############################################################################
-### fin ###
-# }
 
 
 # Aitchison variation when j != k

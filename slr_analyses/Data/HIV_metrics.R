@@ -168,7 +168,7 @@ res = foreach(
   # get prediction error on test set
   slrspec1.Yhat.test = predict(
     slrspec1$fit,
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = XTe, y = slrspec1.fullSBP)),
     type = "response")
   
@@ -217,7 +217,7 @@ res = foreach(
   # get prediction error on test set
   slrhier1.Yhat.test = predict(
     slrhier1$fit,
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = XTe, y = slrhier1.fullSBP)),
     type = "response")
   
@@ -257,7 +257,7 @@ res = foreach(
   # get prediction error on test set
   slbl0.Yhat.test = predict.glm(
     slbl0$glm,
-    newdata = data.frame(V1 = balance::balance.fromSBP(
+    newdata = data.frame(V1 = slr.fromContrast(
       x = XTe, y = slbl0.coefs$sbp)),
     type = "response")
 

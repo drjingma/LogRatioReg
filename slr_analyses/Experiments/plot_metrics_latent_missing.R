@@ -6,17 +6,17 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Experiments/outputs/metrics_missing"
+output_dir = "slr_analyses/Experiments/outputs/metrics_unlabeled"
 
 source("slr_analyses/Functions/util.R")
 
 library(tidyverse)
 library(reshape2)
 
-numSims = 100
+numSims = 25 #100
 
-sigma.settings = "latentVarModel_missing"
-n = 100
+settings.name = "ContinuousResponseUnlabeled"
+n = 30 #100
 p = 30
 K = 10
 nlam = 100
@@ -24,8 +24,8 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-sigma_eps1 = 0.01
-sigma_eps2 = 0.1
+sigma_y = 0.001 # 0.01, 0.1
+sigma_x = 0.15 # 0.1, 0.15
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
@@ -34,20 +34,22 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # (b1 = 0.5, theta.value = 0.5, a0 = 0, prop.missing = 0.75, ulimit = 0.5)
 # (b1 = 1, theta.value = 0.3, a0 = 0, prop.missing = 0.70, 0.75, ulimit = 0.5)
 b0 = 0 # 0
-b1 = 0.5 # 0.5
-theta.value = 0.4 # weight on a1 -- 1, 0.75, 0.5
+b1 = 1 # 0.5
+theta.value = 0.5 # weight on a1 -- 0.5, 0.4
 a0 = 0 # 0
-prop.missing = 0.5 # 0.5, 0.65
+n.unlabeled = n * 100
+ulimit = 0.5
 
 file.end0 = paste0(
-  "_", sigma.settings,
-  "_", prop.missing,
+  "_", settings.name,
+  "_n", n.unlabeled, "unlabeled",
   "_", paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
   "_dim", n, "x", p, 
-  "_noisey", sigma_eps1, 
-  "_noisex", sigma_eps2, 
+  "_ulimit", ulimit,
+  "_noisey", sigma_y, 
+  "_noisex", sigma_x, 
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
@@ -60,12 +62,12 @@ file.end0 = paste0(
 classo_sims_list = list()
 slr_spec_sims_list = list()
 slr_hier_sims_list = list()
-semislr_spec_sims_list = list()
-semislr_spec_f_sims_list = list()
-semislr_hier_sims_list = list()
-semislr_hier_f_sims_list = list()
-semislr_spec_nocv_sims_list = list()
-semislr_hier_nocv_sims_list = list()
+semislr_spec_noCVUnlab_sims_list = list()
+semislr_hier_noCVUnlab_sims_list = list()
+semislr_spec_CVUnlabNoFold_sims_list = list()
+semislr_hier_CVUnlabNoFold_sims_list = list()
+semislr_spec_CVUnlabFold_sims_list = list()
+semislr_hier_CVUnlabFold_sims_list = list()
 selbal_sims_list = list()
 codacore_sims_list = list()
 lrlasso_sims_list = list()
@@ -98,53 +100,53 @@ for(i in 1:numSims){
   rownames(slr_hier_sim_tmp) = NULL
   slr_hier_sims_list[[i]] = data.table::data.table(slr_hier_sim_tmp)
   
-  # semislr - spectral
-  semislr_spec_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/semislr_spectral_metrics", file.end0,
+  # semislr - spectral - no CV on unlabeled data
+  semislr_spec_noCVUnlab_sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_spectral_noCVUnlabeled_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(semislr_spec_sim_tmp) = NULL
-  semislr_spec_sims_list[[i]] = data.table::data.table(semislr_spec_sim_tmp)
+  rownames(semislr_spec_noCVUnlab_sim.tmp) = NULL
+  semislr_spec_noCVUnlab_sims_list[[i]] = data.table::data.table(semislr_spec_noCVUnlab_sim.tmp)
   
-  # semislr - spectral
-  semislr_spec_f_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/semislr_spectral_foldx2_metrics", file.end0,
+  # semislr - hierarchical - no CV on unlabeled data
+  semislr_hier_noCVUnlab_sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_hierarchical_noCVUnlabeled_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(semislr_spec_f_sim_tmp) = NULL
-  semislr_spec_f_sims_list[[i]] = data.table::data.table(semislr_spec_f_sim_tmp)
+  rownames(semislr_hier_noCVUnlab_sim.tmp) = NULL
+  semislr_hier_noCVUnlab_sims_list[[i]] = data.table::data.table(semislr_hier_noCVUnlab_sim.tmp)
   
-  # semislr - hierarchical
-  semislr_hier_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/semislr_hierarchical_metrics", file.end0,
+  # semislr - spectral - CV on unlabeled data, not folded
+  semislr_spec_CVUnlabNoFold_sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_spectral_CVUnlabeledNotFolded_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(semislr_hier_sim_tmp) = NULL
-  semislr_hier_sims_list[[i]] = data.table::data.table(semislr_hier_sim_tmp)
+  rownames(semislr_spec_CVUnlabNoFold_sim.tmp) = NULL
+  semislr_spec_CVUnlabNoFold_sims_list[[i]] = data.table::data.table(semislr_spec_CVUnlabNoFold_sim.tmp)
   
-  # semislr - hierarchical
-  semislr_hier_f_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/semislr_hierarchical_foldx2_metrics", file.end0,
+  # semislr - hierarchical - no CV on unlabeled data, not folded
+  semislr_hier_CVUnlabNoFold_sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_hierarchical_CVUnlabeledNotFolded_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(semislr_hier_f_sim_tmp) = NULL
-  semislr_hier_f_sims_list[[i]] = data.table::data.table(semislr_hier_f_sim_tmp)
+  rownames(semislr_hier_CVUnlabNoFold_sim.tmp) = NULL
+  semislr_hier_CVUnlabNoFold_sims_list[[i]] = data.table::data.table(semislr_hier_CVUnlabNoFold_sim.tmp)
   
-  # slr - spectral - no CV
-  slr_spec_nocv_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/semislr_spectral_nocvx2_metrics", file.end0,
+  # semislr - spectral - CV on unlabeled data, folded
+  semislr_spec_CVUnlabFold_sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_spectral_CVUnlabeledNotFolded_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_spec_nocv_sim_tmp) = NULL
-  semislr_spec_nocv_sims_list[[i]] = data.table::data.table(slr_spec_nocv_sim_tmp)
+  rownames(semislr_spec_CVUnlabFold_sim.tmp) = NULL
+  semislr_spec_CVUnlabFold_sims_list[[i]] = data.table::data.table(semislr_spec_CVUnlabFold_sim.tmp)
   
-  # slr - hierarchical - no CV
-  slr_hier_nocv_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/semislr_hierarchical_nocvx2_metrics", file.end0,
+  # semislr - hierarchical - no CV on unlabeled data, folded
+  semislr_hier_CVUnlabFold_sim.tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/semislr_hierarchical_CVUnlabeledNotFolded_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_hier_nocv_sim_tmp) = NULL
-  semislr_hier_nocv_sims_list[[i]] = data.table::data.table(slr_hier_nocv_sim_tmp)
+  rownames(semislr_hier_CVUnlabFold_sim.tmp) = NULL
+  semislr_hier_CVUnlabFold_sims_list[[i]] = data.table::data.table(semislr_hier_CVUnlabFold_sim.tmp)
   
   ###
   
@@ -191,36 +193,38 @@ slr_hier_sims.gg =
                names_to = "Metric") %>%
   mutate("Method" = "slr-hier")
 #
-semislr_spec_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "semislr-spec")
-semislr_spec_f_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_f_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "semislr-spec-f")
-semislr_hier_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "semislr-hier")
-semislr_hier_f_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_f_sims_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "semislr-hier-f")
-semislr_spec_nocv_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_nocv_sims_list)), 
+semislr_spec_noCVUnlab_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_noCVUnlab_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "semislr-spec-nocv")
-semislr_hier_nocv_sims.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_nocv_sims_list)), 
+semislr_hier_noCVUnlab_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_noCVUnlab_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "semislr-hier-nocv")
+#
+semislr_spec_CVUnlabNoFold_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_CVUnlabNoFold_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "semislr-spec-cv-nofold")
+semislr_hier_CVUnlabNoFold_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_CVUnlabNoFold_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "semislr-hier-cv-nofold")
+#
+semislr_spec_CVUnlabFold_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_spec_CVUnlabFold_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "semislr-spec-cv-fold")
+semislr_hier_CVUnlabFold_sims.gg = 
+  pivot_longer(as.data.frame(data.table::rbindlist(semislr_hier_CVUnlabFold_sims_list)), 
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "semislr-hier-cv-fold")
 ###
 # selbal_sims.gg = 
 #   pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
@@ -243,12 +247,12 @@ data.gg = rbind(
   classo_sims.gg,
   slr_spec_sims.gg,
   slr_hier_sims.gg,
-  semislr_spec_sims.gg,
-  semislr_hier_sims.gg,
-  semislr_spec_f_sims.gg,
-  semislr_hier_f_sims.gg ,
-  semislr_spec_nocv_sims.gg,
-  semislr_hier_nocv_sims.gg,
+  semislr_spec_noCVUnlab_sims.gg,
+  semislr_hier_noCVUnlab_sims.gg,
+  semislr_spec_CVUnlabNoFold_sims.gg,
+  semislr_hier_CVUnlabNoFold_sims.gg,
+  semislr_spec_CVUnlabFold_sims.gg,
+  semislr_hier_CVUnlabFold_sims.gg,
   # selbal_sims.gg, 
   codacore_sims.gg #,
   # lrlasso_sims.gg
@@ -293,9 +297,9 @@ data.gg = rbind(
       levels = c(
         "selbal", "classo", "codacore", "lrlasso", 
         "slr-spec", "slr-hier", 
-        "semislr-spec", "semislr-hier", 
-        "semislr-spec-f", "semislr-hier-f", 
-        "semislr-spec-nocv", "semislr-hier-nocv"
+        "semislr-spec-nocv", "semislr-hier-nocv", 
+        "semislr-spec-cv-nofold", "semislr-hier-cv-nofold", 
+        "semislr-spec-cv-fold", "semislr-hier-cv-fold"
       )
     )
   )
@@ -316,7 +320,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220810",
+    "20220823",
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,

@@ -84,7 +84,8 @@ slr = function(
     threshold,
     s0.perc=0,
     zeta=0,
-    x.unlabeled = NULL, use.unlabeled = FALSE
+    x.unlabeled = NULL, use.unlabeled = FALSE, 
+    positive.slope = FALSE
 ){
   this.call <- match.call()
   screen.method <- match.arg(screen.method)
@@ -106,14 +107,14 @@ slr = function(
   } else {
     x.reduced <- x[,which.features] # reduced data matrix
     if(use.unlabeled){
-      if(!is.null(x.unlabeled)){
+      if(is.null(x.unlabeled)){
         stop("use.unlabeled is TRUE but x.unlabeled is missing!!")
       }
       if(!all.equal(colnames(x), colnames(x.unlabeled))){
         stop("x and x.unlabeled don't have the same components/covariates/columns! cannot use the unlabeled data.")
       }
       all.x = rbind(x, x.unlabeled)
-      all.x.reduced <- allx[,which.features]
+      all.x.reduced <- all.x[,which.features]
       Aitchison.var = getAitchisonVar(all.x.reduced)
       rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(all.x.reduced)
     } else{
@@ -139,10 +140,26 @@ slr = function(
       model.train <- glm(
         y~balance,data=data.frame(balance=balance,y=as.factor(y)),
         family=binomial(link='logit'))
-      
+      if(positive.slope){
+        if(coefficients(model.train)[2] < 0){
+          sbp.est = -sbp.est
+          balance <- slr.fromContrast(x.reduced, sbp.est) 
+          model.train <- glm(
+            y~balance,data=data.frame(balance=balance,y=as.factor(y)),
+            family=binomial(link='logit'))
+        }
+      }
     } else if (response.type=='continuous'){
       model.train <- lm(
         y~balance,data=data.frame(balance=balance,y=y))
+      if(positive.slope){
+        if(coefficients(model.train)[2] < 0){
+          sbp.est = -sbp.est
+          balance <- slr.fromContrast(x.reduced, sbp.est) 
+          model.train <- lm(
+            y~balance,data=data.frame(balance=balance,y=y))
+        }
+      }
     }
     object <- list(
       sbp = sbp.est, Aitchison.var = Aitchison.var, cluster.mat = cluster.mat)
@@ -281,7 +298,7 @@ cv.slr <- function(
   }
   if(fold.unlabeled & is.null(foldid.unlabeled)){
     if(is.null(x.unlabeled)){
-      stop("use.unlabeled is TRUE but x.unlabeled is missing!!")
+      stop("fold.unlabeled is TRUE but x.unlabeled is missing!!")
     }
     if(nfolds > N2){
       stop("nfolds is greater than the number of samples in x.unlabeled! cannot divide into folds.")

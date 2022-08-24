@@ -16,7 +16,7 @@ library(ggrepel)
 
 numSims = 100
 
-sigma.settings = "latentVarModel"
+settings.name = "ContinuousResponse"
 n = 100
 p = 30
 K = 10
@@ -27,8 +27,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1
 sigma_x = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -39,7 +39,7 @@ a0 = 0 # 0
 ulimit = 0.5
 
 file.end0 = paste0(
-  "_", sigma.settings,
+  "_", settings.name,
   "_", paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
@@ -164,7 +164,7 @@ data.gg = rbind(
   dplyr::filter(
     Metric %in% c(
       # "PEtr", 
-      "PEte",
+      "mse",
       # "EA1", 
       "EA2", 
       # "EAInfty",
@@ -180,7 +180,7 @@ data.gg = rbind(
     Metric = factor(
       Metric, 
       levels = c(
-        "PEtr", "PEte",
+        "PEtr", "mse",
         "EA1", "EA2", "EAInfty",
         "time",
         "TPR", "FPR", "Fscore"
@@ -227,7 +227,7 @@ plt_main = ggplot(
 plt_main
 ggsave(
   filename = paste0(
-    "20220817",
+    "20220822",
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,

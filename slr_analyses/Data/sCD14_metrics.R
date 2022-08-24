@@ -163,7 +163,7 @@ res = foreach(
   # get prediction error on test set
   slrspec.Yhat.test = predict(
     slrspec$fit, 
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = XTe, y = slrspec.fullSBP)), 
     type = "response")
   
@@ -209,7 +209,7 @@ res = foreach(
   # get prediction error on test set
   slrhier.Yhat.test = predict(
     slrhier$fit, 
-    data.frame(balance = balance::balance.fromSBP(
+    data.frame(balance = slr.fromContrast(
       x = XTe, y = slrhier.fullSBP)), 
     type = "response")
   
@@ -270,6 +270,10 @@ res = foreach(
   )
   
   # codacore ###################################################################
+  library(codacore)
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
   start.time = Sys.time()
   codacore0 = codacore::codacore(
     x = XTr, y = YTr, logRatioType = "ILR", 
@@ -327,10 +331,10 @@ res = foreach(
   library(logratiolasso)
   source("slr_analyses/Functions/logratiolasso.R")
   WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
-  
+  YTr.c = YTr - mean(YTr)
   start.time = Sys.time()
   lrl <- cv_two_stage(
-    z = WTr.c, y = YTr, n_folds = K, family="gaussian")
+    z = WTr.c, y = YTr.c, n_folds = K, family="gaussian")
   end.time = Sys.time()
   lrl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")

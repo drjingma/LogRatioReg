@@ -49,16 +49,17 @@ res = foreach(
   
   # Settings to toggle with
   settings.name = "ContinuousResponseUnlabeled"
-  n = 30
+  n = 100
   p = 30
   K = 10
   nlam = 100
   intercept = TRUE
   scaling = TRUE
   tol = 1e-4
-  sigma_y = 0.001 # sigma (for y)
-  sigma_x = 0.15 # sigma_j (for x)
-  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  sigma_y = 0.1 # sigma (for y)
+  sigma_x = 0.2 # sigma_j (for x)
+  SBP.true = matrix(c(1, 1, 1, 1, -1, -1, -1, -1, rep(0, p - 8)))
+  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
@@ -66,8 +67,8 @@ res = foreach(
   b0 = 0 # 0
   # (b1 = 0.5, theta.value = 0.5, a0 = 0, prop.missing = 0.75, ulimit = 0.5)
   # (b1 = 1, theta.value = 0.3, a0 = 0, prop.missing = 0.70, 0.75, ulimit = 0.5)
-  b1 = 1 # 0.5
-  theta.value = 0.5 # weight on a1 -- 0.5
+  b1 = 3 # 0.5
+  c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
   a0 = 0 # 0
   n.unlabeled = n * 100
   ulimit = 0.5
@@ -85,7 +86,7 @@ res = foreach(
     "_b0", b0, 
     "_b1", b1, 
     "_a0", a0, 
-    "_theta", theta.value,
+    "_c", c.value,
     "_sim", b,
     ".rds")
   
@@ -96,15 +97,17 @@ res = foreach(
   # simulate y from latent variable
   y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n + n.unlabeled) * sigma_y)
   # simulate X: 
-  epsj.all = matrix(rnorm((2 * n + n.unlabeled) * (p - 1)), nrow = (2 * n + n.unlabeled)) * sigma_x
-  a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+  epsj.all = matrix(
+    rnorm((2 * n + n.unlabeled) * (p - 1)), 
+    nrow = (2 * n + n.unlabeled)) * sigma_x
+  a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 
   #   alpha1j = {
   #     c1=theta*ilr.const/k+   if j \in I+
   #     -c2=-theta*ilr.const/k-  if j \in I-
   #     0                       o/w
   #   }
-  alrXj.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
-  X.all <- alrinv(alrXj.all)
+  alrX.all = a0 + U.all %*% t(a1) + epsj.all #log(Xj/Xp) =alpha0j+alpha1j*U+epsj
+  X.all <- alrinv(alrX.all)
   colnames(X.all) = paste0('s', 1:p)
   
   # subset out labeled and unlabeled sets
@@ -120,6 +123,7 @@ res = foreach(
   # about linear log-contrast models' coefficients
   llc.coefs.non0 = as.vector(SBP.true != 0)
   # solve for beta
+  theta.value = c.value / ilrtrans.true$const
   c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
   llc.coefs.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
     as.vector(ilrtrans.true$ilr.trans)
@@ -304,121 +308,121 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_hierarchical_metrics", file.end))
   
-  ##############################################################################
-  # semislr - don't use unlabeled data in CV
-  #   screen.method = "wald"
-  #   cluster.method = "spectral"
-  #   response.type = "continuous"
-  #   s0.perc = 0
-  #   zeta = 0
-  #   type.measure = "mse"
-  # -- fits a balance regression model with one balance
-  ##############################################################################
-  start.time = Sys.time()
-  semislrspec0cv = cv.slr(
-    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-    response.type = "continuous", s0.perc = 0, zeta = 0, 
-    nfolds = K, type.measure = "mse", 
-    scale = scaling, trace.it = FALSE)
-  semislrspec0 = slr(
-    x = X, y = Y, 
-    x.unlabeled = X2, use.unlabeled = TRUE, 
-    screen.method = "wald", cluster.method = "spectral",
-    response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = semislrspec0cv$threshold[semislrspec0cv$index["1se",]], 
-    positive.slope = TRUE)
-  end.time = Sys.time()
-  semislrspec0.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  semislrspec0.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(semislrspec0.fullSBP) = colnames(X)
-  semislrspec0.fullSBP[match(
-    names(semislrspec0$sbp), rownames(semislrspec0.fullSBP))] = semislrspec0$sbp
-  semislrspec0.coefs = getCoefsBM(
-    coefs = coefficients(semislrspec0$fit), sbp = semislrspec0.fullSBP)
-  
-  # compute metrics on the selected model #
-  # prediction error
-  semislrspec0.Yhat.test = semislrspec0.coefs$a0 + 
-    slr.fromContrast(X.test, semislrspec0.fullSBP) * semislrspec0.coefs$bm.coefs
-  semislrspec0.MSE.test = as.vector(crossprod(Y.test - semislrspec0.Yhat.test) / n)
-  # estimation accuracy, selection accuracy #
-  semislrspec0.metrics = getMetricsBM(
-    est.llc.coefs = semislrspec0.coefs$llc.coefs,
-    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-    true.llc.coefs = llc.coefs.true,
-    metrics = c("estimation", "selection"))
-  
-  saveRDS(c(
-    "mse" = semislrspec0.MSE.test,
-    semislrspec0.metrics,
-    "logratios" = sum(semislrspec0.coefs$bm.coefs != 0),
-    "time" = semislrspec0.timing, 
-    "randindex" = randidx(
-      SBP.true, semislrspec0.fullSBP[, 1, drop = FALSE], adjusted = FALSE),
-    "adjrandindex" = randidx(
-      SBP.true, semislrspec0.fullSBP[, 1, drop = FALSE], adjusted = TRUE)
-  ),
-  paste0(output_dir, "/semislr_spectral_noCVUnlabeled_metrics", file.end))
-  
-  ##############################################################################
-  # semislr - don't use unlabeled data in CV
-  #   screen.method = "wald"
-  #   cluster.method = "hierarchical"
-  #   response.type = "continuous"
-  #   s0.perc = 0
-  #   zeta = 0
-  #   type.measure = "mse"
-  # -- fits a balance regression model with one balance
-  ##############################################################################
-  start.time = Sys.time()
-  semislrhier0cv = cv.slr(
-    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-    response.type = "continuous", s0.perc = 0, zeta = 0, 
-    nfolds = K, type.measure = "mse", 
-    scale = scaling, trace.it = FALSE)
-  semislrhier0 = slr(
-    x = X, y = Y, 
-    x.unlabeled = X2, use.unlabeled = TRUE, 
-    screen.method = "wald", cluster.method = "hierarchical",
-    response.type = "continuous", s0.perc = 0, zeta = 0, 
-    threshold = semislrhier0cv$threshold[semislrhier0cv$index["1se",]], 
-    positive.slope = TRUE)
-  end.time = Sys.time()
-  semislrhier0.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  semislrhier0.fullSBP = matrix(0, nrow = p, ncol = 1)
-  rownames(semislrhier0.fullSBP) = colnames(X)
-  semislrhier0.fullSBP[match(
-    names(semislrhier0$sbp), rownames(semislrhier0.fullSBP))] = semislrhier0$sbp
-  semislrhier0.coefs = getCoefsBM(
-    coefs = coefficients(semislrhier0$fit), sbp = semislrhier0.fullSBP)
-  
-  # compute metrics on the selected model #
-  # prediction error
-  semislrhier0.Yhat.test = semislrhier0.coefs$a0 + 
-    slr.fromContrast(X.test, semislrhier0.fullSBP) * semislrhier0.coefs$bm.coefs
-  semislrhier0.MSE.test = as.vector(crossprod(Y.test - semislrhier0.Yhat.test) / n)
-  # estimation accuracy, selection accuracy #
-  semislrhier0.metrics = getMetricsBM(
-    est.llc.coefs = semislrhier0.coefs$llc.coefs,
-    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-    true.llc.coefs = llc.coefs.true,
-    metrics = c("estimation", "selection"))
-  
-  saveRDS(c(
-    "mse" = semislrhier0.MSE.test,
-    semislrhier0.metrics,
-    "logratios" = sum(semislrhier0.coefs$bm.coefs != 0),
-    "time" = semislrhier0.timing, 
-    "randindex" = randidx(
-      SBP.true, semislrhier0.fullSBP[, 1, drop = FALSE], adjusted = FALSE),
-    "adjrandindex" = randidx(
-      SBP.true, semislrhier0.fullSBP[, 1, drop = FALSE], adjusted = TRUE)
-  ),
-  paste0(output_dir, "/semislr_hierarchical_noCVUnlabeled_metrics", file.end))
+  # ##############################################################################
+  # # semislr - don't use unlabeled data in CV
+  # #   screen.method = "wald"
+  # #   cluster.method = "spectral"
+  # #   response.type = "continuous"
+  # #   s0.perc = 0
+  # #   zeta = 0
+  # #   type.measure = "mse"
+  # # -- fits a balance regression model with one balance
+  # ##############################################################################
+  # start.time = Sys.time()
+  # semislrspec0cv = cv.slr(
+  #   x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+  #   response.type = "continuous", s0.perc = 0, zeta = 0, 
+  #   nfolds = K, type.measure = "mse", 
+  #   scale = scaling, trace.it = FALSE)
+  # semislrspec0 = slr(
+  #   x = X, y = Y, 
+  #   x.unlabeled = X2, use.unlabeled = TRUE, 
+  #   screen.method = "wald", cluster.method = "spectral",
+  #   response.type = "continuous", s0.perc = 0, zeta = 0, 
+  #   threshold = semislrspec0cv$threshold[semislrspec0cv$index["1se",]], 
+  #   positive.slope = TRUE)
+  # end.time = Sys.time()
+  # semislrspec0.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # semislrspec0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  # rownames(semislrspec0.fullSBP) = colnames(X)
+  # semislrspec0.fullSBP[match(
+  #   names(semislrspec0$sbp), rownames(semislrspec0.fullSBP))] = semislrspec0$sbp
+  # semislrspec0.coefs = getCoefsBM(
+  #   coefs = coefficients(semislrspec0$fit), sbp = semislrspec0.fullSBP)
+  # 
+  # # compute metrics on the selected model #
+  # # prediction error
+  # semislrspec0.Yhat.test = semislrspec0.coefs$a0 + 
+  #   slr.fromContrast(X.test, semislrspec0.fullSBP) * semislrspec0.coefs$bm.coefs
+  # semislrspec0.MSE.test = as.vector(crossprod(Y.test - semislrspec0.Yhat.test) / n)
+  # # estimation accuracy, selection accuracy #
+  # semislrspec0.metrics = getMetricsBM(
+  #   est.llc.coefs = semislrspec0.coefs$llc.coefs,
+  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+  #   true.llc.coefs = llc.coefs.true,
+  #   metrics = c("estimation", "selection"))
+  # 
+  # saveRDS(c(
+  #   "mse" = semislrspec0.MSE.test,
+  #   semislrspec0.metrics,
+  #   "logratios" = sum(semislrspec0.coefs$bm.coefs != 0),
+  #   "time" = semislrspec0.timing, 
+  #   "randindex" = randidx(
+  #     SBP.true, semislrspec0.fullSBP[, 1, drop = FALSE], adjusted = FALSE),
+  #   "adjrandindex" = randidx(
+  #     SBP.true, semislrspec0.fullSBP[, 1, drop = FALSE], adjusted = TRUE)
+  # ),
+  # paste0(output_dir, "/semislr_spectral_noCVUnlabeled_metrics", file.end))
+  # 
+  # ##############################################################################
+  # # semislr - don't use unlabeled data in CV
+  # #   screen.method = "wald"
+  # #   cluster.method = "hierarchical"
+  # #   response.type = "continuous"
+  # #   s0.perc = 0
+  # #   zeta = 0
+  # #   type.measure = "mse"
+  # # -- fits a balance regression model with one balance
+  # ##############################################################################
+  # start.time = Sys.time()
+  # semislrhier0cv = cv.slr(
+  #   x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+  #   response.type = "continuous", s0.perc = 0, zeta = 0, 
+  #   nfolds = K, type.measure = "mse", 
+  #   scale = scaling, trace.it = FALSE)
+  # semislrhier0 = slr(
+  #   x = X, y = Y, 
+  #   x.unlabeled = X2, use.unlabeled = TRUE, 
+  #   screen.method = "wald", cluster.method = "hierarchical",
+  #   response.type = "continuous", s0.perc = 0, zeta = 0, 
+  #   threshold = semislrhier0cv$threshold[semislrhier0cv$index["1se",]], 
+  #   positive.slope = TRUE)
+  # end.time = Sys.time()
+  # semislrhier0.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # semislrhier0.fullSBP = matrix(0, nrow = p, ncol = 1)
+  # rownames(semislrhier0.fullSBP) = colnames(X)
+  # semislrhier0.fullSBP[match(
+  #   names(semislrhier0$sbp), rownames(semislrhier0.fullSBP))] = semislrhier0$sbp
+  # semislrhier0.coefs = getCoefsBM(
+  #   coefs = coefficients(semislrhier0$fit), sbp = semislrhier0.fullSBP)
+  # 
+  # # compute metrics on the selected model #
+  # # prediction error
+  # semislrhier0.Yhat.test = semislrhier0.coefs$a0 + 
+  #   slr.fromContrast(X.test, semislrhier0.fullSBP) * semislrhier0.coefs$bm.coefs
+  # semislrhier0.MSE.test = as.vector(crossprod(Y.test - semislrhier0.Yhat.test) / n)
+  # # estimation accuracy, selection accuracy #
+  # semislrhier0.metrics = getMetricsBM(
+  #   est.llc.coefs = semislrhier0.coefs$llc.coefs,
+  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+  #   true.llc.coefs = llc.coefs.true,
+  #   metrics = c("estimation", "selection"))
+  # 
+  # saveRDS(c(
+  #   "mse" = semislrhier0.MSE.test,
+  #   semislrhier0.metrics,
+  #   "logratios" = sum(semislrhier0.coefs$bm.coefs != 0),
+  #   "time" = semislrhier0.timing, 
+  #   "randindex" = randidx(
+  #     SBP.true, semislrhier0.fullSBP[, 1, drop = FALSE], adjusted = FALSE),
+  #   "adjrandindex" = randidx(
+  #     SBP.true, semislrhier0.fullSBP[, 1, drop = FALSE], adjusted = TRUE)
+  # ),
+  # paste0(output_dir, "/semislr_hierarchical_noCVUnlabeled_metrics", file.end))
   
   
   

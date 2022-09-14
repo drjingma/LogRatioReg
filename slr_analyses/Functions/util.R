@@ -166,6 +166,7 @@ getIlrTrans = function(sbp = NULL, detailed = FALSE){
       # divide -1s by neg.vec
       U[(U[, i] == -1), i] = -1 / neg.vec[i]
     }
+    U.unscaled = U
     # multiply by sqrt(rs / (r + s))
     norm.const = sqrt((pos.vec * neg.vec) / (pos.vec + neg.vec))
     U = sweep(U, MARGIN = 2, STATS = norm.const, FUN = "*")
@@ -179,6 +180,7 @@ getIlrTrans = function(sbp = NULL, detailed = FALSE){
     return(
       list(
         ilr.trans = U, 
+        ilr.trans.unscaled = U.unscaled,
         const = norm.const, 
         pos.vec = pos.vec, 
         neg.vec = neg.vec

@@ -52,6 +52,7 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 #     "_classo",
 #     "_gbm",
 #     ".rds"))
+
 cl = readRDS(
   paste0(
     output_dir, "/Crohns",
@@ -68,7 +69,8 @@ cl = readRDS(
 # slrspec = slr(
 #   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
 #   response.type = "binary", s0.perc = 0, zeta = 0,
-#   threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
+#   threshold = slrspeccv$threshold[slrspeccv$index["1se",]], 
+#   positive.slope = TRUE)
 # saveRDS(
 #   slrspeccv,
 #   paste0(
@@ -106,7 +108,8 @@ slrspec = readRDS(
 # slrhier = slr(
 #   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
 #   response.type = "binary", s0.perc = 0, zeta = 0,
-#   threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+#   threshold = slrhiercv$threshold[slrhiercv$index["1se",]], 
+#   positive.slope = TRUE)
 # saveRDS(
 #   slrhiercv,
 #   paste0(
@@ -144,6 +147,7 @@ slrhier = readRDS(
 #     "_selbal",
 #     "_gbm",
 #     ".rds"))
+
 slbl = readRDS(
   paste0(
     output_dir, "/Crohns",
@@ -152,6 +156,10 @@ slbl = readRDS(
     ".rds"))
 
 # codacore #####################################################################
+# library(codacore)
+# if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+#   reticulate::use_condaenv("anaconda3")
+# }
 # codacore0 = codacore::codacore(
 #   x = X_gbm, y = Y2, logRatioType = "ILR",
 #   objective = "binary classification", cvParams = list(numFolds = K))
@@ -162,6 +170,7 @@ slbl = readRDS(
 #     "_codacore",
 #     "_gbm",
 #     ".rds"))
+
 cdcr = readRDS(
   paste0(
     output_dir, "/Crohns",
@@ -182,6 +191,7 @@ cdcr = readRDS(
 #     "_lrlasso",
 #     "_gbm",
 #     ".rds"))
+
 lrl = readRDS(
   paste0(
     output_dir, "/Crohns",

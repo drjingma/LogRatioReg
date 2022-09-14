@@ -1,21 +1,23 @@
 # Purpose: plot results from HIV_mse.R
-# Date: 7/19/2022
+# Date: 8/25/2022
 rm(list=ls())
 
-data_set = "Crohns" # "HIV", "sCD14", "Crohns"
-date = "20220810"
+data_set = "sCD14" # "HIV", "sCD14", "Crohns", "sCD14_Bien"
+date = "20220914"
 
 response_type = NA
-if(data_set == "sCD14"){
+if(data_set %in% c("sCD14", "sCD14_Bien")){
   response_type = "continuous"
 } else{
   response_type = "binary"
 }
 
+testlrpair = FALSE
+
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Data/outputs_mse"
+output_dir = "slr_analyses/Data/outputs_metrics"
 
 source("slr_analyses/Functions/util.R")
 
@@ -133,6 +135,14 @@ selbal.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "selbal")
+
+if(testlrpair){
+  selbal.gg = selbal.gg %>% 
+    filter(Metric %in% c("mse", "time", "percselected.testlrpair")) %>% 
+    mutate(
+      Metric = recode(Metric, "percselected.testlrpair" = "percselected")
+    )
+}
 # selbal_covar.gg = 
 #   pivot_longer(as.data.frame(data.table::rbindlist(selbal_covar_list)), 
 #                cols = everything(),
@@ -209,6 +219,13 @@ if(response_type == "binary"){
     ) 
 
 data.gg_main = data.gg 
+means.gg = data.gg_main %>% 
+  group_by(Metric) %>%
+  mutate(
+    yrange = abs(max(value, na.rm = TRUE) - min(value, na.rm = TRUE))
+  ) %>%
+  group_by(Metric, Method) %>% 
+  dplyr::summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -222,6 +239,13 @@ plt_main = ggplot(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
+
+library(ggrepel)
+plt_main = plt_main  +
+  geom_text_repel(
+    data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
+    size = 2, color = "black")
+
 plt_main
 ggsave(
   filename = paste0(
@@ -229,5 +253,5 @@ ggsave(
     file.end0,
     "_", "metrics", ".png"),
   plot = plt_main,
-  width = 6, height = 2.75, units = c("in") # height is 2.5 usuallly
+  width = 6, height = 2.75, units = c("in") # height is 2.5 usually
 )

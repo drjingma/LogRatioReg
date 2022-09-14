@@ -1,7 +1,9 @@
 rm(list=ls())
 # Purpose: demonstrate hierarchical spectral clustering with a threshold
 #   explore various sigma_eps & rho values to get specified Rsquared values
-# Date: 2/12/2022
+# Date: 8/24/2022
+
+label_means = FALSE
 
 ################################################################################
 # libraries and settings
@@ -27,8 +29,8 @@ scaling = TRUE
 tol = 1e-4
 # sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -199,6 +201,13 @@ data.gg = rbind(
     )
   )
 data.gg_main = data.gg
+means.gg = data.gg_main %>% 
+  group_by(Metric) %>%
+  mutate(
+    yrange = abs(max(value, na.rm = TRUE) - min(value, na.rm = TRUE))
+  ) %>%
+  group_by(Metric, Method) %>% 
+  summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -212,12 +221,30 @@ plt_main = ggplot(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
+if(label_means){
+  plt_main = plt_main  +
+    geom_text_repel(
+      data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
+      size = 2.25, color = "black")
+}
 plt_main
-ggsave(
-  filename = paste0(
-    "20220823",
-    file.end0,
-    "_", "metrics", ".png"),
-  plot = plt_main,
-  width = 6, height = 4, units = c("in")
-)
+
+if(label_means){
+  ggsave(
+    filename = paste0(
+      "20220824",
+      file.end0,
+      "_", "metrics", "_labeledmeans.png"),
+    plot = plt_main,
+    width = 6, height = 4, units = c("in")
+  )
+} else{
+  ggsave(
+    filename = paste0(
+      "20220824",
+      file.end0,
+      "_", "metrics", ".png"),
+    plot = plt_main,
+    width = 6, height = 4, units = c("in")
+  )
+}

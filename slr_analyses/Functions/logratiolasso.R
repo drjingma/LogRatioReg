@@ -56,13 +56,13 @@ cv_two_stage <- function(z, y, family = "gaussian", lambda_1 = NULL, k_max = 10,
   
   mse_full <- lapply(mse[[1]], function(x){x / n_folds})
   #print(length(mse_full))
-  for(i in 2:n_folds) {
+  for(i in 2:n_folds) { # this looks like it's averaging over the folds, but why like this?
     for(j in 1:length(mse[[1]])) {
       mse_full[[j]] <- mse_full[[j]] + mse[[i]][[j]] / n_folds
     }
   }
   mse_full <- simplify2array(mse_full)
-  best <- which(mse_full == min(mse_full), arr.ind = TRUE)
+  best <- which(mse_full == min(mse_full), arr.ind = TRUE) # minimizing lambda and number of log-ratios (1, ..., k_max)
   lambda_min <- best[1,2]
   k_min <- best[1,1]
   beta_min <- out_to_beta(two_step_obj$coef[[lambda_min]], k_max, p)[, k_min]

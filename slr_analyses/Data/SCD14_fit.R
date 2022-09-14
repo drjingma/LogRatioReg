@@ -47,8 +47,8 @@ p = ncol(X)
 
 # classo #######################################################################
 # classo = cv.func(
-#   method="ConstrLasso", y = Y, x = log(X_gbm), Cmat = matrix(1, p, 1), 
-#   nlam = nlam, nfolds = K, tol = tol, intercept = intercept, 
+#   method="ConstrLasso", y = Y, x = log(X_gbm), Cmat = matrix(1, p, 1),
+#   nlam = nlam, nfolds = K, tol = tol, intercept = intercept,
 #   scaling = scaling)
 # saveRDS(
 #   classo,
@@ -57,6 +57,7 @@ p = ncol(X)
 #     "_classo",
 #     "_gbm",
 #     ".rds"))
+
 cl = readRDS(
   paste0(
     output_dir, "/sCD14",
@@ -73,7 +74,8 @@ cl = readRDS(
 # slrspec = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "spectral",
 #   response.type = "continuous", s0.perc = 0, zeta = 0,
-#   threshold = slrspeccv$threshold[slrspeccv$index["1se",]])
+#   threshold = slrspeccv$threshold[slrspeccv$index["1se",]], 
+#   positive.slope = TRUE)
 # saveRDS(
 #   slrspeccv,
 #   paste0(
@@ -111,7 +113,8 @@ slrspec = readRDS(
 # slrhier = slr(
 #   x = X_gbm, y = Y, screen.method = "wald", cluster.method = "hierarchical",
 #   response.type = "continuous", s0.perc = 0, zeta = 0,
-#   threshold = slrhiercv$threshold[slrhiercv$index["1se",]])
+#   threshold = slrhiercv$threshold[slrhiercv$index["1se",]], 
+#   positive.slope = TRUE)
 # saveRDS(
 #   slrhiercv,
 #   paste0(
@@ -149,6 +152,7 @@ slrhier = readRDS(
 #     "_selbal",
 #     "_gbm",
 #     ".rds"))
+
 slbl = readRDS(
   paste0(
     output_dir, "/sCD14",
@@ -157,8 +161,12 @@ slbl = readRDS(
     ".rds"))
 
 # codacore #####################################################################
+# library(codacore)
+# if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+#   reticulate::use_condaenv("anaconda3")
+# }
 # codacore0 = codacore::codacore(
-#   x = X_gbm, y = Y, logRatioType = "ILR", 
+#   x = X_gbm, y = Y, logRatioType = "ILR",
 #   objective = "regression", cvParams = list(numFolds = K))
 # saveRDS(
 #   codacore0,
@@ -167,6 +175,7 @@ slbl = readRDS(
 #     "_codacore",
 #     "_gbm",
 #     ".rds"))
+
 cdcr = readRDS(
   paste0(
     output_dir, "/sCD14",
@@ -187,6 +196,7 @@ cdcr = readRDS(
 #     "_lrlasso",
 #     "_gbm",
 #     ".rds"))
+
 lrl = readRDS(
   paste0(
     output_dir, "/sCD14",
@@ -473,5 +483,44 @@ ggplot(bal_data.hier, aes(x = ilrX, y = Y)) +
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) + 
   ggtitle("slr-hier: balance regression model")
+
+# classo #######################################################################
+
+cl.data = data.frame(
+  "index" = 1:length(cl$lambda),
+  "value" = cl$lambda,
+  "CVmean" = cl$cvm,
+  "CVse" = cl$cvsd
+)
+cl.data.mlt = pivot_longer(
+  cl.data, 
+  cols = c("index", "value"),
+  names_to = "lambda", 
+  values_to = "value"
+)
+cl.idx.pts = data.frame(
+  "x" = c(which.min(cl$cvm), which(cl$cvm <= oneSErule)[1])
+)
+cl.idx.pts$y = cl.data$CVmean[cl.idx.pts$x]
+cl.idx.pts$lambda = "index"
+cl.val.pts = data.frame(
+  "x" = cl$lambda[cl.idx.pts$x], 
+  "y" = cl.idx.pts$y, 
+  "lambda" = "value"
+)
+cl.pts = rbind(cl.idx.pts, cl.val.pts)
+
+cl_plt = ggplot(cl.data.mlt, aes(x = value)) + 
+  geom_ribbon(aes(ymin = CVmean - CVse, ymax = CVmean + CVse), fill = "grey70") +
+  geom_line(aes(y = CVmean)) + 
+  geom_point(data = cl.pts, mapping = aes(x = x, y = y)) + 
+  facet_wrap(vars(lambda), scales = "free")
+ggsave(
+  filename = paste0(
+    "20220906",
+    "_", "sCD14", "_classo.png"),
+  plot = cl_plt,
+  width = 6, height = 3, units = c("in")
+)
 
 

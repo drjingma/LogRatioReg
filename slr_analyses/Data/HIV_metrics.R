@@ -84,17 +84,17 @@ res = foreach(
   #     train/test splits, sampled with stratification by case-control.
   numObs = nrow(X_gbm)
   inputDim = ncol(X_gbm)
-  if(file.exists(paste0(output_dir, "/data", file.end))){
-    data.tmp = readRDS(paste0(output_dir, "/data", file.end))
-    XTr = data.tmp$XTr
-    XTe = data.tmp$XTe
-    YTr = data.tmp$YTr
-    YTe = data.tmp$YTe
-    Y2Tr = data.tmp$Y2Tr
-    Y2Te = data.tmp$Y2Te
-    covarTr = data.tmp$covarTr
-    covarTe = data.tmp$covarTe
-  } else{
+  # if(file.exists(paste0(output_dir, "/data", file.end))){
+  #   data.tmp = readRDS(paste0(output_dir, "/data", file.end))
+  #   XTr = data.tmp$XTr
+  #   XTe = data.tmp$XTe
+  #   YTr = data.tmp$YTr
+  #   YTe = data.tmp$YTe
+  #   Y2Tr = data.tmp$Y2Tr
+  #   Y2Te = data.tmp$Y2Te
+  #   covarTr = data.tmp$covarTr
+  #   covarTe = data.tmp$covarTe
+  # } else{
     # stratified sampling
     trainIdx = 1:numObs
     caseIdx = sample(cut(1:sum(Y2), breaks=5, labels=F))
@@ -115,7 +115,7 @@ res = foreach(
       XTe = XTe, YTe = YTe, Y2Te = Y2Te, covarTe
     ),
     paste0(output_dir, "/data", file.end))
-  }
+  # }
   
   ##############################################################################
   # fit methods
@@ -150,11 +150,12 @@ res = foreach(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
     response.type = "binary", s0.perc = 0, zeta = 0,
     nfolds = K, type.measure = "auc",
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrspec1 = slr(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
     response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]])
+    threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]], 
+    positive.slope = TRUE)
   end.time = Sys.time()
   slrspec1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -168,8 +169,7 @@ res = foreach(
   # get prediction error on test set
   slrspec1.Yhat.test = predict(
     slrspec1$fit,
-    data.frame(balance = slr.fromContrast(
-      x = XTe, y = slrspec1.fullSBP)),
+    data.frame(balance = slr.fromContrast(XTe, slrspec1.fullSBP)),
     type = "response")
   
   slrspec1.metrics = c(
@@ -199,11 +199,12 @@ res = foreach(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "binary", s0.perc = 0, zeta = 0,
     nfolds = K, type.measure = "auc",
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrhier1 = slr(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]])
+    threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]], 
+    positive.slope = TRUE)
   end.time = Sys.time()
   slrhier1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -217,8 +218,7 @@ res = foreach(
   # get prediction error on test set
   slrhier1.Yhat.test = predict(
     slrhier1$fit,
-    data.frame(balance = slr.fromContrast(
-      x = XTe, y = slrhier1.fullSBP)),
+    data.frame(balance = slr.fromContrast(XTe, slrhier1.fullSBP)),
     type = "response")
   
   slrhier1.metrics = c(
@@ -257,8 +257,7 @@ res = foreach(
   # get prediction error on test set
   slbl0.Yhat.test = predict.glm(
     slbl0$glm,
-    newdata = data.frame(V1 = slr.fromContrast(
-      x = XTe, y = slbl0.coefs$sbp)),
+    newdata = data.frame(V1 = balance::balance.fromSBP(XTe, slbl0.coefs$sbp)),
     type = "response")
 
   slbl0.metrics = c(
@@ -301,6 +300,7 @@ res = foreach(
     slbl1$glm,
     newdata = data.frame(
       V1 = balance::balance.fromSBP(x = XTe, y = slbl1.coefs$sbp),
+      
       MSM = covarTe
     ),
     type = "response")
@@ -320,6 +320,11 @@ res = foreach(
     paste0(output_dir, "/selbal_covar_metrics", file.end))
 
   # codacore ###################################################################
+  library(codacore)
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+  
   start.time = Sys.time()
   codacore0 = codacore::codacore(
     x = XTr, y = Y2Tr, logRatioType = "ILR",

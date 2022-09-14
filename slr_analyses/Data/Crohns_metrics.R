@@ -144,11 +144,12 @@ res = foreach(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
     response.type = "binary", s0.perc = 0, zeta = 0,
     nfolds = K, type.measure = "auc",
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrspec1 = slr(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
     response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]])
+    threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]], 
+    positive.slope = TRUE)
   end.time = Sys.time()
   slrspec1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -162,8 +163,7 @@ res = foreach(
   # get prediction error on test set
   slrspec1.Yhat.test = predict(
     slrspec1$fit,
-    data.frame(balance = slr.fromContrast(
-      x = XTe, y = slrspec1.fullSBP)),
+    data.frame(balance = slr.fromContrast(XTe, slrspec1.fullSBP)),
     type = "response")
   
   slrspec1.metrics = c(
@@ -193,11 +193,12 @@ res = foreach(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "binary", s0.perc = 0, zeta = 0,
     nfolds = K, type.measure = "auc",
-    parallel = FALSE, scale = scaling, trace.it = FALSE)
+    scale = scaling, trace.it = FALSE)
   slrhier1 = slr(
     x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]])
+    threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]], 
+    positive.slope = TRUE)
   end.time = Sys.time()
   slrhier1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -211,8 +212,7 @@ res = foreach(
   # get prediction error on test set
   slrhier1.Yhat.test = predict(
     slrhier1$fit,
-    data.frame(balance = slr.fromContrast(
-      x = XTe, y = slrhier1.fullSBP)),
+    data.frame(balance = slr.fromContrast(XTe, slrhier1.fullSBP)),
     type = "response")
   
   slrhier1.metrics = c(
@@ -279,6 +279,11 @@ res = foreach(
   )
 
   # codacore ###################################################################
+  library(codacore)
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+  
   start.time = Sys.time()
   codacore0 = codacore::codacore(
     x = XTr, y = Y2Tr, logRatioType = "ILR",

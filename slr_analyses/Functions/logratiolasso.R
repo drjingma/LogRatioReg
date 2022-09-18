@@ -61,6 +61,8 @@ cv_two_stage <- function(z, y, family = "gaussian", lambda_1 = NULL, k_max = 10,
       mse_full[[j]] <- mse_full[[j]] + mse[[i]][[j]] / n_folds
     }
   }
+  # fix min k, use 1se rule to choose lamdba?
+  # for each k, find the lambda that minimizes (or 1se from minimizer of) mse
   mse_full <- simplify2array(mse_full)
   best <- which(mse_full == min(mse_full), arr.ind = TRUE) # minimizing lambda and number of log-ratios (1, ..., k_max)
   lambda_min <- best[1,2]

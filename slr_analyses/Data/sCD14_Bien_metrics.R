@@ -33,6 +33,7 @@ res = foreach(
   b = 1:numSplits
 ) %dorng% {
   # rm(list=ls())
+  
   library(mvtnorm)
   
   library(Matrix)
@@ -53,6 +54,7 @@ res = foreach(
   }
   
   # tuning parameter settings
+  hparam = "1se" # how to select hyperparameter(s) 
   K = 10
   nlam = 100
   intercept = TRUE
@@ -62,6 +64,7 @@ res = foreach(
   file.end = paste0(
     "_sim", b,
     "_sCD14_Bien", 
+    "_hparam_", hparam,
     "_gbm",
     ".rds")
   
@@ -75,6 +78,9 @@ res = foreach(
   X = sweep(W, 1, rowSums(W), FUN='/')
   Y = sCD14$y
   p = ncol(W)
+  
+  # check whether some variables are too rare
+  #   remove those that are in less than 25% of patients
   
   ##############################################################################
   # 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
@@ -122,11 +128,13 @@ res = foreach(
     time1 = end.time, time2 = start.time, units = "secs")
 
   # get gamma-hat
-  oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
+  if(hparam == "1se"){
+    oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
   cl.lam.idx = which(classo$cvm <= oneSErule)[1]
   cl.a0 = classo$int[cl.lam.idx]
   cl.betahat = classo$bet[, cl.lam.idx]
-
+  }
+  
   # get prediction error on test set
   classo.Yhat.test = cl.a0 + log(as.matrix(XTe)) %*% cl.betahat
 

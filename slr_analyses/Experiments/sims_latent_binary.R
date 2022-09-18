@@ -438,9 +438,13 @@ res = foreach(
 
   start.time = Sys.time()
   if(hparam == "min"){
-    lrl <- cv_two_stage(z = Wc, y = Y, n_folds = K, family="binomial")
+    lrl <- cv_two_stage(
+      z = Wc, y = Y, n_folds = K, family="binomial", gamma = 0)
+    lrl.betahat = lrl$beta_min
   } else if(hparam == "1se"){
-    lrl <- cv_two_stage(z = Wc, y = Y, n_folds = K, family="binomial") # need to implement ############################
+    lrl <- cv_two_stage(
+      z = Wc, y = Y, n_folds = K, family="binomial", gamma = 1)
+    lrl.betahat = lrl$beta_gammase
   } else{
     stop("invalid hparam setting (method for selecting hyperparameter(s)).")
   }
@@ -451,12 +455,12 @@ res = foreach(
   # compute metrics on the selected model #
   # prediction error
   Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
-  lrl.Yhat.test = as.numeric(Wc.test %*% lrl$beta_min)
+  lrl.Yhat.test = as.numeric(Wc.test %*% lrl.betahat)
   lrl.AUC.test = pROC::roc(
     Y.test, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # beta estimation accuracy, selection accuracy #
   lrl.metrics = getMetricsBM(
-    est.llc.coefs = lrl$beta_min,
+    est.llc.coefs = lrl.betahat,
     true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
     true.llc.coefs = llc.coefs.true, metrics = c("estimation", "selection"))
 

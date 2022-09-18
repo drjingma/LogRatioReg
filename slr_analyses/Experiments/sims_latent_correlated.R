@@ -445,9 +445,11 @@ res = foreach(
     
     start.time = Sys.time()
     if(hparam == "min"){
-      lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
+      lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K, gamma = 0)
+      lrl.betahat = lrl$beta_min
     } else if(hparam == "1se"){
-      lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K) # need to implement ############################
+      lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K, gamma = 1) 
+      lrl.betahat = lrl$beta_gammase
     } else{
       stop("invalid hparam setting (method for selecting hyperparameter(s)).")
     }
@@ -459,12 +461,12 @@ res = foreach(
     # prediction error
     Wc.test = scale(log(X.test), center = TRUE, scale = FALSE)
     Yc.test = Y.test - mean(Y.test)
-    lrl.Yhat.test = Wc.test %*% lrl$beta_min
+    lrl.Yhat.test = Wc.test %*% lrl.betahat
     lrl.MSE.test = crossprod(Yc.test - lrl.Yhat.test) / n
     
     # beta estimation accuracy, selection accuracy #
     lrl.metrics = getMetricsBM(
-      est.llc.coefs = lrl$beta_min,
+      est.llc.coefs = lrl.betahat,
       true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
       true.llc.coefs = llc.coefs.true, metrics = c("estimation", "selection"))
     
@@ -475,7 +477,6 @@ res = foreach(
       "time" = lrl.timing
     ),
     paste0(output_dir, "/lrlasso_metrics", file.end))
-    
     
     ##############################################################################
     ##############################################################################

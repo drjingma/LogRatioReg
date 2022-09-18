@@ -461,7 +461,7 @@ trapezInteg  <-  function(x,y) {
 }
 
 
-codalasso = function(x, y, numFolds=5) {
+codalasso = function(x, y, numFolds = 5, gamma = 1) {
   
   lambdas = seq(1.0, 0.0, -0.01)
   
@@ -493,7 +493,7 @@ codalasso = function(x, y, numFolds=5) {
   # Now implement gamma-SE rule
   means = apply(scores, 1, mean)
   stds = apply(scores, 1, sd) / sqrt(numFolds)
-  oneSeRule = max(means) - stds[which.max(means)] * 1
+  oneSeRule = max(means) - stds[which.max(means)] * gamma
   lambda = lambdas[means >= oneSeRule][1]
   
   cll = coda_logistic_lasso(y, x, lambda)

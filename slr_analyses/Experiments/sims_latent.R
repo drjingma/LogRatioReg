@@ -440,8 +440,6 @@ res = foreach(
   Yc = Y - mean(Y)
 
   start.time = Sys.time()
-  lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
-  
   if(hparam == "min"){
     lrl <- cv_two_stage(z = Wc, y = Yc, n_folds = K)
   } else if(hparam == "1se"){

@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = FALSE
+label_means = TRUE
 
 ################################################################################
 # libraries and settings
@@ -19,6 +19,7 @@ numSims = 100
 
 # Settings to toggle with
 settings.name = "BinaryResponse"
+hparam = "min"
 n = 100
 p = 30
 K = 10
@@ -29,8 +30,8 @@ scaling = TRUE
 tol = 1e-4
 # sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -45,6 +46,7 @@ file.end0 = paste0(
   "_", paste0(
     paste(which(SBP.true == 1), collapse = ""), "v", 
     paste(which(SBP.true == -1), collapse = "")),
+  "_hparam", hparam,
   "_dim", n, "x", p, 
   "_ulimit", ulimit,
   "_noisex", sigma_eps2,
@@ -232,7 +234,7 @@ plt_main
 if(label_means){
   ggsave(
     filename = paste0(
-      "20220824",
+      "20220919",
       file.end0,
       "_", "metrics", "_labeledmeans.png"),
     plot = plt_main,
@@ -241,7 +243,7 @@ if(label_means){
 } else{
   ggsave(
     filename = paste0(
-      "20220824",
+      "20220919",
       file.end0,
       "_", "metrics", ".png"),
     plot = plt_main,

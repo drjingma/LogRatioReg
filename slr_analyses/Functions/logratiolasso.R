@@ -102,7 +102,7 @@ cv_two_stage <- function(z, y, family = "gaussian", lambda_1 = NULL, k_max = 10,
   # list(mse = mse_full, best_params = best, lambda_min = lambda_min, k_min = k_min,
   #      two_step_obj = two_step_obj, beta_min = beta_min, lambda = lambda_1)
   list(
-    mse = mse_full, min_params = best0, gammase_params = best1, 
+    mse = mse_full_mean, min_params = best0, gammase_params = best1, 
     lambda_min = lambda_min, k_min = k_min,
     two_step_obj = two_step_obj, 
     beta_min = beta_min, 

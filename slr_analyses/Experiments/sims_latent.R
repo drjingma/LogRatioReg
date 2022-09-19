@@ -313,7 +313,7 @@ res = foreach(
   start.time = Sys.time()
   if(hparam == "min"){
     slbl = selbal.cv(
-      x = slbl.data$X, y = slbl.data$y, n.fold = K, opt.cri = "min")
+      x = slbl.data$X, y = slbl.data$y, n.fold = K, opt.cri = "max")
   } else if(hparam == "1se"){
     slbl = selbal.cv(
       x = slbl.data$X, y = slbl.data$y, n.fold = K, opt.cri = "1se")

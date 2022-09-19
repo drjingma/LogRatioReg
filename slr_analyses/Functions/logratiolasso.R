@@ -94,7 +94,7 @@ cv_two_stage <- function(z, y, family = "gaussian", lambda_1 = NULL, k_max = 10,
   k_min <- best0[1,1]
   # pick the largest lambda with this k_min value (has the 1st index, due to ordering lambda largest -> smallest)
   k_gammase = k_min
-  lambda_gammase = best[best[, "row"] == k_gammase, ][1, 2]
+  lambda_gammase = best[best[, "row"] == k_gammase, , drop = FALSE][1, 2]
   
   beta_min <- out_to_beta(two_step_obj$coef[[lambda_min]], k_max, p)[, k_gammase]
   beta_gammase <- out_to_beta(two_step_obj$coef[[lambda_gammase]], k_max, p)[, k_gammase]
@@ -102,7 +102,7 @@ cv_two_stage <- function(z, y, family = "gaussian", lambda_1 = NULL, k_max = 10,
   # list(mse = mse_full, best_params = best, lambda_min = lambda_min, k_min = k_min,
   #      two_step_obj = two_step_obj, beta_min = beta_min, lambda = lambda_1)
   list(
-    mse = mse_full_mean, min_params = best0, gammase_params = best1, 
+    mse = mse_full_mean, min_params = best0, gammase_params = best, 
     lambda_min = lambda_min, k_min = k_min,
     two_step_obj = two_step_obj, 
     beta_min = beta_min, 

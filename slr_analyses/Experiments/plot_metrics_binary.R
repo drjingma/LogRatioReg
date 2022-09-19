@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = TRUE
+label_means = FALSE
 
 ################################################################################
 # libraries and settings
@@ -11,7 +11,7 @@ label_means = TRUE
 output_dir = "slr_analyses/Experiments/outputs/metrics_binary"
 
 source("slr_analyses/Functions/util.R")
-
+ 
 library(tidyverse)
 library(reshape2)
 

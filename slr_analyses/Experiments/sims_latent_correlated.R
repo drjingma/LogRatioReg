@@ -48,7 +48,7 @@ res = foreach(
   # Tuning parameters###########################################################
   
   # Settings to toggle with
-  sigma.settings = "CorrContinuousResponse"
+  settings.name = "CorrContinuousResponse"
   hparam = "min"
   n = 100
   p = 30
@@ -108,7 +108,7 @@ res = foreach(
     # simulate X: 
     epsj.all = mvrnorm(
       n = 2 * n, mu = rep(0, p - 1), 
-      Sigma = sigma_eps2 * rgExpDecay(p - 1, rho_alrXj)$Sigma)
+      Sigma = sigma_x * rgExpDecay(p - 1, rho_alrXj)$Sigma)
     a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
     #   alpha1j = {
     #     c1=theta*ilr.const/k+   if j \in I+

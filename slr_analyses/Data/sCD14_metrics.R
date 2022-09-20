@@ -262,9 +262,9 @@ res = foreach(
   # selbal #####################################################################
   start.time = Sys.time()
   if(hparam == "min"){
-    slbl = selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "max")
+    slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "max")
   } else if(hparam == "1se"){
-    slbl = selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "1se")
+    slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "1se")
   } else{
     stop("invalid hparam setting (method for selecting hyperparameter(s)).")
   }

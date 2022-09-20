@@ -48,14 +48,14 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 # saveRDS(
 #   cl_gbm,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_classo",
 #     "_gbm",
 #     ".rds"))
 
 cl = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_classo",
     "_gbm",
     ".rds"))
@@ -74,27 +74,27 @@ cl = readRDS(
 # saveRDS(
 #   slrspeccv,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_slrcv_spectral",
 #     "_gbm",
 #     ".rds"))
 # saveRDS(
 #   slrspec,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_slr_spectral",
 #     "_gbm",
 #     ".rds"))
 
 slrspeccv = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_slrcv_spectral",
     "_gbm",
     ".rds"))
 slrspec = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_slr_spectral",
     "_gbm",
     ".rds"))
@@ -113,27 +113,27 @@ slrspec = readRDS(
 # saveRDS(
 #   slrhiercv,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_slrcv_hierarchical",
 #     "_gbm",
 #     ".rds"))
 # saveRDS(
 #   slrhier,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_slr_hierarchical",
 #     "_gbm",
 #     ".rds"))
 
 slrhiercv = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_slrcv_hierarchical",
     "_gbm",
     ".rds"))
 slrhier = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_slr_hierarchical",
     "_gbm",
     ".rds"))
@@ -143,14 +143,14 @@ slrhier = readRDS(
 # saveRDS(
 #   slbl_gbm,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_selbal",
 #     "_gbm",
 #     ".rds"))
 
 slbl = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_selbal",
     "_gbm",
     ".rds"))
@@ -166,14 +166,14 @@ slbl = readRDS(
 # saveRDS(
 #   codacore0,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_codacore",
 #     "_gbm",
 #     ".rds"))
 
 cdcr = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_codacore",
     "_gbm",
     ".rds"))
@@ -187,14 +187,14 @@ cdcr = readRDS(
 # saveRDS(
 #   lrl,
 #   paste0(
-#     output_dir, "/Crohns",
+#     output_dir, "/Crohn",
 #     "_lrlasso",
 #     "_gbm",
 #     ".rds"))
 
 lrl = readRDS(
   paste0(
-    output_dir, "/Crohns",
+    output_dir, "/Crohn",
     "_lrlasso",
     "_gbm",
     ".rds"))

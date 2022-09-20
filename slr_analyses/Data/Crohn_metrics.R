@@ -51,13 +51,15 @@ res = foreach(
   }
   
   # tuning parameter settings
+  hparam = "min"
   K = 10
   scaling = TRUE
   
   file.end = paste0(
-    "_sim", b,
-    "_Crohns", 
+    "_Crohn", 
+    "_hparam", hparam,
     "_gbm",
+    "_sim", b,
     ".rds")
   
   ##############################################################################
@@ -117,7 +119,13 @@ res = foreach(
   
   # classo #####################################################################
   start.time = Sys.time()
-  classo = codalasso(XTr, Y2Tr, numFolds = K)
+  if(hparam == "min"){
+    classo = codalasso(XTr, Y2Tr, numFolds = K, gamma = 0)
+  } else if(hparam == "1se"){
+    classo = codalasso(XTr, Y2Tr, numFolds = K, gamma = 1)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
   end.time = Sys.time()
   cl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -145,11 +153,21 @@ res = foreach(
     response.type = "binary", s0.perc = 0, zeta = 0,
     nfolds = K, type.measure = "auc",
     scale = scaling, trace.it = FALSE)
-  slrspec1 = slr(
-    x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
-    response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]], 
-    positive.slope = TRUE)
+  if(hparam == "min"){
+    slrspec1 = slr(
+      x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrspec1cv$threshold[slrspec1cv$index["min",]], 
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrspec1 = slr(
+      x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]], 
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
   end.time = Sys.time()
   slrspec1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -194,11 +212,21 @@ res = foreach(
     response.type = "binary", s0.perc = 0, zeta = 0,
     nfolds = K, type.measure = "auc",
     scale = scaling, trace.it = FALSE)
-  slrhier1 = slr(
-    x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
-    response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]], 
-    positive.slope = TRUE)
+  if(hparam == "min"){
+    slrhier1 = slr(
+      x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrhier1cv$threshold[slrhier1cv$index["min",]], 
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrhier1 = slr(
+      x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]], 
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
   end.time = Sys.time()
   slrhier1.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -238,7 +266,14 @@ res = foreach(
   
   # selbal #####################################################################
   start.time = Sys.time()
-  slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K)
+  if(hparam == "min"){
+    slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "min")
+  } else if(hparam == "1se"){
+    slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "1se")
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
   end.time = Sys.time()
   slbl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -285,9 +320,19 @@ res = foreach(
   }
   
   start.time = Sys.time()
-  codacore0 = codacore::codacore(
-    x = XTr, y = Y2Tr, logRatioType = "ILR",
-    objective = "binary classification", cvParams = list(numFolds = K))
+  if(hparam == "min"){
+    codacore0 = codacore::codacore(
+      x = XTr, y = Y2Tr, logRatioType = "ILR",
+      objective = "binary classification", cvParams = list(numFolds = K), 
+      lambda = 0) 
+  } else if(hparam == "1se"){
+    codacore0 = codacore::codacore(
+      x = XTr, y = Y2Tr, logRatioType = "ILR",
+      objective = "binary classification", cvParams = list(numFolds = K), 
+      lambda = 1) 
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
   end.time = Sys.time()
   codacore0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
@@ -346,21 +391,30 @@ res = foreach(
   WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
 
   start.time = Sys.time()
-  lrl <- cv_two_stage(
-    z = WTr.c, y = Y2Tr, n_folds = K, family="binomial")
+  if(hparam == "min"){
+    lrl <- cv_two_stage(
+      z = WTr.c, y = Y2Tr, n_folds = K, family="binomial", gamma = 0)
+    lrl.betahat = lrl$beta_min
+  } else if(hparam == "1se"){
+    lrl <- cv_two_stage(
+      z = WTr.c, y = Y2Tr, n_folds = K, family="binomial", gamma = 1)
+    lrl.betahat = lrl$beta_gammase
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
   end.time = Sys.time()
   lrl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
   # get prediction error on test set
   WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
-  lrl.Yhat.test = as.numeric(WTe.c %*% lrl$beta_min) # before sigmoid
+  lrl.Yhat.test = as.numeric(WTe.c %*% lrl.betahat) # before sigmoid
 
   lrl.metrics = c(
     acc = mean((lrl.Yhat.test > 0) == Y2Te),
     auc = pROC::roc(
       Y2Te, lrl.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    percselected = sum(abs(lrl$beta_min) > 10e-8) / p,
+    percselected = sum(abs(lrl.betahat) > 10e-8) / p,
     f1 = getF1(Y2Te, lrl.Yhat.test > 0),
     time = lrl.timing
   )

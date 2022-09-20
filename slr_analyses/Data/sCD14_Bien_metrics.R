@@ -208,24 +208,24 @@ res = foreach(
     paste0(output_dir, "/slr_spectral_sbp", file.end)
   )
   
-  # slr ########################################################################
+  # slr - hierarchical #########################################################
   start.time = Sys.time()
-  slrspeccv = cv.slr(
+  slrhiercv = cv.slr(
     x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
     response.type = "continuous", s0.perc = 0, zeta = 0,
     nfolds = K, type.measure = "mse",
     scale = scaling, trace.it = FALSE)
   if(hparam == "min"){
-    slrspec = slr(
+    slrhier = slr(
       x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
       response.type = "continuous", s0.perc = 0, zeta = 0,
-      threshold = slrspeccv$threshold[slrspeccv$index["min",]],
+      threshold = slrhiercv$threshold[slrhiercv$index["min",]],
       positive.slope = TRUE)
   } else if(hparam == "1se"){
-    slrspec = slr(
+    slrhier = slr(
       x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
       response.type = "continuous", s0.perc = 0, zeta = 0,
-      threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
+      threshold = slrhiercv$threshold[slrhiercv$index["1se",]],
       positive.slope = TRUE)
   } else{
     stop("invalid hparam setting (method for selecting hyperparameter(s)).")

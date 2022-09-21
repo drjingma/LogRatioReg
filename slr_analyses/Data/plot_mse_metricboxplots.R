@@ -2,8 +2,8 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohns", "sCD14_Bien"
-date = "20220914"
+data_set = "Crohns" # "HIV", "sCD14", "Crohns", "sCD14Bien"
+date = "20220921"
 
 response_type = NA
 if(data_set %in% c("sCD14", "sCD14_Bien")){
@@ -27,13 +27,15 @@ library(reshape2)
 numSplits = 20
 
 # tuning parameter settings
+hparam = "min"
 K = 10
 scaling = TRUE
 
 file.end0 = paste0(
-  # "_sim", b,
-  "_", data_set, 
-  "_gbm")
+  "_", data_set,
+  "_hparam", hparam,
+  "_gbm"
+)
 
 ################################################################################
 # plot metrics
@@ -52,35 +54,35 @@ for(i in 1:numSplits){
   # compositional lasso
   cl_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/classo_metrics",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))))
   rownames(cl_tmp) = NULL
   classo_list[[i]] = data.table::data.table(cl_tmp)
   
   ###
   
-    # slr - spectral clustering
-    slr_spec_tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/slr_spectral_metrics",
-      "_sim", i, file.end0, ".rds"
-    ))))
-    rownames(slr_spec_tmp) = NULL
-    slr_spec_list[[i]] = data.table::data.table(slr_spec_tmp)
-    
-    # slr - hierarchical clustering
-    slr_hier_tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/slr_hierarchical_metrics",
-      "_sim", i, file.end0, ".rds"
-    ))))
-    rownames(slr_hier_tmp) = NULL
-    slr_hier_list[[i]] = data.table::data.table(slr_hier_tmp)
+  # slr - spectral clustering
+  slr_spec_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_spectral_metrics",
+    file.end0, "_sim", i, ".rds"
+  ))))
+  rownames(slr_spec_tmp) = NULL
+  slr_spec_list[[i]] = data.table::data.table(slr_spec_tmp)
+  
+  # slr - hierarchical clustering
+  slr_hier_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/slr_hierarchical_metrics",
+    file.end0, "_sim", i, ".rds"
+  ))))
+  rownames(slr_hier_tmp) = NULL
+  slr_hier_list[[i]] = data.table::data.table(slr_hier_tmp)
   
   ###
   
   # selbal
   slbl_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/selbal_metrics",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))))
   rownames(slbl_tmp) = NULL
   selbal_list[[i]] = data.table::data.table(slbl_tmp)
@@ -88,7 +90,7 @@ for(i in 1:numSplits){
   # # selbal - covar
   # slbl_covar_tmp = t(data.frame(readRDS(paste0(
   #   output_dir, "/selbal_covar_metrics",
-  #   "_sim", i, file.end0, ".rds"
+  #   file.end0, "_sim", i, ".rds"
   # ))))
   # rownames(slbl_covar_tmp) = NULL
   # selbal_covar_list[[i]] = data.table::data.table(slbl_covar_tmp)
@@ -98,7 +100,7 @@ for(i in 1:numSplits){
   # codacore
   cdcr_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/codacore_metrics",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))))
   rownames(cdcr_tmp) = NULL
   codacore_list[[i]] = data.table::data.table(cdcr_tmp)
@@ -106,7 +108,7 @@ for(i in 1:numSplits){
   # log-ratio lasso
   lrl_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/lrlasso_metrics",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))))
   rownames(lrl_tmp) = NULL
   lrlasso_list[[i]] = data.table::data.table(lrl_tmp)
@@ -207,16 +209,16 @@ if(response_type == "binary"){
     ) 
 }
 
-  data.gg = data.gg %>% 
-    mutate(
-      Method = factor(
-        Method, 
-        levels = c(
-          "selbal", "classo", "codacore", "lrlasso", 
-          "slr-spec", "slr-hier"
-        )
+data.gg = data.gg %>% 
+  mutate(
+    Method = factor(
+      Method, 
+      levels = c(
+        "selbal", "classo", "codacore", "lrlasso", 
+        "slr-spec", "slr-hier"
       )
-    ) 
+    )
+  ) 
 
 data.gg_main = data.gg 
 means.gg = data.gg_main %>% 

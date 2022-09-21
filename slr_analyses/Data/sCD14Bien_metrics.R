@@ -264,84 +264,84 @@ res = foreach(
     paste0(output_dir, "/slr_hierarchical_sbp", file.end)
   )
   
-  # selbal #####################################################################
-  start.time = Sys.time()
-  if(hparam == "min"){
-    slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "max")
-  } else if(hparam == "1se"){
-    slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "1se")
-  } else{
-    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  }
-  end.time = Sys.time()
-  slbl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # get theta-hat and gamma-hat
-  slbl.coefs = getCoefsSelbal(
-    X = XTr, y = YTr, selbal.fit = slbl, classification = FALSE,
-    check = TRUE)
-  
-  # if log-ratio pair is selected, test its significance (F test of null model)
-  not.signif = FALSE
-  if(sum(slbl.coefs$sbp == 1) == 1 & sum(slbl.coefs$sbp == -1) == 1){
-    ilrU = getIlrTrans(sbp = slbl.coefs$sbp)
-    data.slbl.tr = data.frame(cbind(YTr, log(as.matrix(XTr)) %*% matrix(ilrU)))
-    colnames(data.slbl.tr)[ncol(data.slbl.tr)] <- "V1"
-    supposed.fit = lm(YTr ~ ., data = data.slbl.tr)
-    supposed.fit.summary = summary(supposed.fit)
-    pval.tmp = 1 - pf(supposed.fit.summary$fstatistic["value"], supposed.fit.summary$fstatistic["numdf"], supposed.fit.summary$fstatistic["dendf"])
-    null.fit = lm(YTr ~ 1)
-    Ftest = anova(null.fit, supposed.fit, test = "F")
-    if(Ftest$`Pr(>F)`[2] > 0.05){ # if it's not significant, select null model
-      not.signif = TRUE
-    }
-  }
-  
-  if(not.signif){
-    
-    # get prediction error on test set
-    slbl.Yhat.test = predict.glm(
-      null.fit,
-      newdata = data.frame(V1 = balance::balance.fromSBP(
-        x = XTe, y = slbl.coefs$sbp)),
-      type = "response")
-    
-    slbl.metrics = c(
-      mse = as.vector(crossprod(YTe - slbl.Yhat.test) / nrow(XTe)),
-      percselected = sum(slbl.coefs$sbp > 0) / p,
-      time = slbl.timing,
-      percselected.testlrpair = 0
-    )
-  } else{
-    
-    # get prediction error on test set
-    slbl.Yhat.test = predict.glm(
-      slbl$glm,
-      newdata = data.frame(V1 = balance::balance.fromSBP(
-        x = XTe, y = slbl.coefs$sbp)),
-      type = "response")
-    
-    slbl.metrics = c(
-      mse = as.vector(crossprod(YTe - slbl.Yhat.test) / nrow(XTe)),
-      percselected = sum(slbl.coefs$sbp > 0) / p,
-      time = slbl.timing,
-      percselected.testlrpair = sum(slbl.coefs$sbp > 0) / p
-    )
-  }
-  
-  saveRDS(
-    slbl.metrics,
-    paste0(output_dir, "/selbal_metrics", file.end))
-  
-  slbl_sbp = slbl.coefs$sbp
-  if((length(slbl$glm$coefficients) > 1) & slbl$glm$coefficients[2] < 0){
-    slbl_sbp = -slbl_sbp
-  }
-  saveRDS(
-    slbl_sbp,
-    paste0(output_dir, "/selbal_sbp", file.end)
-  )
+  # # selbal #####################################################################
+  # start.time = Sys.time()
+  # if(hparam == "min"){
+  #   slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "max")
+  # } else if(hparam == "1se"){
+  #   slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "1se")
+  # } else{
+  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  # }
+  # end.time = Sys.time()
+  # slbl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # get theta-hat and gamma-hat
+  # slbl.coefs = getCoefsSelbal(
+  #   X = XTr, y = YTr, selbal.fit = slbl, classification = FALSE,
+  #   check = TRUE)
+  # 
+  # # if log-ratio pair is selected, test its significance (F test of null model)
+  # not.signif = FALSE
+  # if(sum(slbl.coefs$sbp == 1) == 1 & sum(slbl.coefs$sbp == -1) == 1){
+  #   ilrU = getIlrTrans(sbp = slbl.coefs$sbp)
+  #   data.slbl.tr = data.frame(cbind(YTr, log(as.matrix(XTr)) %*% matrix(ilrU)))
+  #   colnames(data.slbl.tr)[ncol(data.slbl.tr)] <- "V1"
+  #   supposed.fit = lm(YTr ~ ., data = data.slbl.tr)
+  #   supposed.fit.summary = summary(supposed.fit)
+  #   pval.tmp = 1 - pf(supposed.fit.summary$fstatistic["value"], supposed.fit.summary$fstatistic["numdf"], supposed.fit.summary$fstatistic["dendf"])
+  #   null.fit = lm(YTr ~ 1)
+  #   Ftest = anova(null.fit, supposed.fit, test = "F")
+  #   if(Ftest$`Pr(>F)`[2] > 0.05){ # if it's not significant, select null model
+  #     not.signif = TRUE
+  #   }
+  # }
+  # 
+  # if(not.signif){
+  #   
+  #   # get prediction error on test set
+  #   slbl.Yhat.test = predict.glm(
+  #     null.fit,
+  #     newdata = data.frame(V1 = balance::balance.fromSBP(
+  #       x = XTe, y = slbl.coefs$sbp)),
+  #     type = "response")
+  #   
+  #   slbl.metrics = c(
+  #     mse = as.vector(crossprod(YTe - slbl.Yhat.test) / nrow(XTe)),
+  #     percselected = sum(slbl.coefs$sbp > 0) / p,
+  #     time = slbl.timing,
+  #     percselected.testlrpair = 0
+  #   )
+  # } else{
+  #   
+  #   # get prediction error on test set
+  #   slbl.Yhat.test = predict.glm(
+  #     slbl$glm,
+  #     newdata = data.frame(V1 = balance::balance.fromSBP(
+  #       x = XTe, y = slbl.coefs$sbp)),
+  #     type = "response")
+  #   
+  #   slbl.metrics = c(
+  #     mse = as.vector(crossprod(YTe - slbl.Yhat.test) / nrow(XTe)),
+  #     percselected = sum(slbl.coefs$sbp > 0) / p,
+  #     time = slbl.timing,
+  #     percselected.testlrpair = sum(slbl.coefs$sbp > 0) / p
+  #   )
+  # }
+  # 
+  # saveRDS(
+  #   slbl.metrics,
+  #   paste0(output_dir, "/selbal_metrics", file.end))
+  # 
+  # slbl_sbp = slbl.coefs$sbp
+  # if((length(slbl$glm$coefficients) > 1) & slbl$glm$coefficients[2] < 0){
+  #   slbl_sbp = -slbl_sbp
+  # }
+  # saveRDS(
+  #   slbl_sbp,
+  #   paste0(output_dir, "/selbal_sbp", file.end)
+  # )
   
   # codacore ###################################################################
   library(codacore)

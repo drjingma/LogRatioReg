@@ -49,7 +49,7 @@ res = foreach(
   
   # Settings to toggle with
   settings.name = "CorrContinuousResponse"
-  hparam = "min"
+  hparam = "1se"
   n = 100
   p = 30
   K = 10
@@ -66,7 +66,7 @@ res = foreach(
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
   b1 = 0.5 # 0.5
-  theta.value = 1 # weight on a1 -- 1
+  c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
   a0 = 0 # 0
   ulimit = 0.5
   rho_alrXj = 0.2
@@ -84,7 +84,7 @@ res = foreach(
     "_b0", b0, 
     "_b1", b1, 
     "_a0", a0, 
-    "_theta", theta.value,
+    "_c", c.value,
     "_rho", rho_alrXj, 
     "_sim", b,
     ".rds")
@@ -128,6 +128,7 @@ res = foreach(
     # about linear log-contrast models' coefficients
     llc.coefs.non0 = as.vector(SBP.true != 0)
     # solve for beta
+    theta.value = c.value / ilrtrans.true$const
     c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
     llc.coefs.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
       as.vector(ilrtrans.true$ilr.trans)

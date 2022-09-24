@@ -2,8 +2,8 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "Crohns" # "HIV", "sCD14", "Crohns", "sCD14Bien"
-date = "20220921"
+data_set = "sCD14" # "HIV", "sCD14", "Crohns", "sCD14Bien"
+date = "20220924"
 
 response_type = NA
 if(data_set %in% c("sCD14", "sCD14_Bien")){
@@ -27,7 +27,7 @@ library(reshape2)
 numSplits = 20
 
 # tuning parameter settings
-hparam = "min"
+hparam = "1se"
 K = 10
 scaling = TRUE
 

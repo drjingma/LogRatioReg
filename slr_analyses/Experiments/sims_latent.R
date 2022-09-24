@@ -49,7 +49,7 @@ res = foreach(
   
   # Settings to toggle with
   settings.name = "ContinuousResponse"
-  hparam = "min"
+  hparam = "1se"
   n = 100
   p = 30
   K = 10
@@ -66,7 +66,8 @@ res = foreach(
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
   b0 = 0 # 0
   b1 = 0.5 # 0.5
-  theta.value = 1 # weight on a1 -- 1
+  # theta.value = 1 # weight on a1 -- 1
+  c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
   a0 = 0 # 0
   ulimit = 0.5
   
@@ -83,29 +84,29 @@ res = foreach(
     "_b0", b0, 
     "_b1", b1, 
     "_a0", a0, 
-    "_theta", theta.value,
+    "_c", c.value,
     "_sim", b,
     ".rds")
   
   ##############################################################################
   # generate data
-  if(file.exists(paste0(output_dir, "/data", file.end))){
-    data.tmp = readRDS(paste0(output_dir, "/data", file.end))
-    X = data.tmp$X
-    Y = data.tmp$Y
-    X.test = data.tmp$X.test
-    Y.test = data.tmp$Y.test
-    SBP.true = data.tmp$SBP.true
-    llc.coefs.true = data.tmp$llc.coefs.true
-    llc.coefs.non0 = data.tmp$llc.coefs.non0
-  } else{
+  # if(file.exists(paste0(output_dir, "/data", file.end))){
+  #   data.tmp = readRDS(paste0(output_dir, "/data", file.end))
+  #   X = data.tmp$X
+  #   Y = data.tmp$Y
+  #   X.test = data.tmp$X.test
+  #   Y.test = data.tmp$Y.test
+  #   SBP.true = data.tmp$SBP.true
+  #   llc.coefs.true = data.tmp$llc.coefs.true
+  #   llc.coefs.non0 = data.tmp$llc.coefs.non0
+  # } else{
     # get latent variable
     U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n), ncol = 1)
     # simulate y from latent variable
     y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_y)
     # simulate X: 
     epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
-    a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+    a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 
     #   alpha1j = {
     #     c1=theta*ilr.const/k+   if j \in I+
     #     -c2=-theta*ilr.const/k-  if j \in I-
@@ -124,6 +125,7 @@ res = foreach(
     # about linear log-contrast models' coefficients
     llc.coefs.non0 = as.vector(SBP.true != 0)
     # solve for beta
+    theta.value = c.value / ilrtrans.true$const
     c1plusc2 = theta.value * sum(abs(unique(ilrtrans.true$ilr.trans)))
     llc.coefs.true = (b1 / (ilrtrans.true$const * c1plusc2)) * 
       as.vector(ilrtrans.true$ilr.trans)
@@ -134,7 +136,7 @@ res = foreach(
       llc.coefs.non0 = llc.coefs.non0
     ),
     paste0(output_dir, "/data", file.end))
-  }
+  # }
   
   ##############################################################################
   # compositional lasso

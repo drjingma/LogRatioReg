@@ -54,7 +54,7 @@ res = foreach(
   }
   
   # tuning parameter settings
-  hparam = "min"
+  hparam = "1se"
   K = 10
   nlam = 100
   intercept = TRUE

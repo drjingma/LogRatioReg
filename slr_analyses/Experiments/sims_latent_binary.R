@@ -103,7 +103,7 @@ res = foreach(
     y.all = rbinom(n = 2 * n, size = 1, p = as.vector(sigmoid(b0 + b1 * U.all)))
     # simulate X: 
     epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
-    a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+    a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 
     #   alpha1j = {
     #     c1=theta*ilr.const/k+   if j \in I+
     #     -c2=-theta*ilr.const/k-  if j \in I-

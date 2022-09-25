@@ -109,7 +109,7 @@ res = foreach(
     epsj.all = mvrnorm(
       n = 2 * n, mu = rep(0, p - 1), 
       Sigma = sigma_x * rgExpDecay(p - 1, rho_alrXj)$Sigma)
-    a1 = theta.value * ilrtrans.true$ilr.trans[-p] 
+    a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 
     #   alpha1j = {
     #     c1=theta*ilr.const/k+   if j \in I+
     #     -c2=-theta*ilr.const/k-  if j \in I-

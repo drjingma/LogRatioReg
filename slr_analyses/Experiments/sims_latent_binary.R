@@ -56,7 +56,7 @@ res = foreach(
   K = 10
   nlam = 100
   scaling = TRUE
-  sigma_x = 0.5
+  sigma_x = 0.01
   # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)

@@ -20,7 +20,7 @@ numSims = 100
 
 # Settings to toggle with
 settings.name = "CorrContinuousResponse"
-hparam = "min"
+hparam = "1se"
 n = 100
 p = 30
 K = 10
@@ -30,14 +30,14 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1 # sigma (for y)
 sigma_x = 0.1 # sigma_j (for x)
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
 b1 = 0.5 # 0.5
-theta.value = 1 # weight on a1 -- 1
+c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 a0 = 0 # 0
 ulimit = 0.5
 rho_alrXj = 0.2
@@ -55,7 +55,7 @@ file.end0 = paste0(
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
-  "_theta", theta.value,
+  "_c", c.value,
   "_rho", rho_alrXj)
 
 ################################################################################
@@ -238,7 +238,7 @@ plt_main
 if(label_means){
   ggsave(
     filename = paste0(
-      "20220919",
+      "20220925",
       file.end0,
       "_", "metrics", "_labeledmeans.png"),
     plot = plt_main,
@@ -247,7 +247,7 @@ if(label_means){
 } else{
   ggsave(
     filename = paste0(
-      "20220919",
+      "20220925",
       file.end0,
       "_", "metrics", ".png"),
     plot = plt_main,

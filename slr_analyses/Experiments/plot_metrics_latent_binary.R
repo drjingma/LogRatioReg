@@ -19,7 +19,7 @@ numSims = 100
 
 # Settings to toggle with
 settings.name = "BinaryResponse"
-hparam = "min"
+hparam = "1se"
 n = 100
 p = 30
 K = 10
@@ -30,14 +30,14 @@ scaling = TRUE
 tol = 1e-4
 # sigma_eps1 = 0.1
 sigma_eps2 = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
 b1 = 6 # 6
-theta.value = 1 # weight on a1 -- 1
+c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 a0 = 0 # 0
 ulimit = 0.5
 
@@ -53,7 +53,7 @@ file.end0 = paste0(
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
-  "_theta", theta.value)
+  "_c", c.value)
 
 ################################################################################
 # plot metrics
@@ -77,21 +77,22 @@ for(i in 1:numSims){
   classo_sims_list[[i]] = data.table::data.table(cl_sim_tmp)
   
   ###
-  # slr - spectral - auc
-  slr_spec_auc_sim_tmp = t(data.frame(readRDS(paste0(
+  
+  # slr - spectral
+  slr_spec_sim_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/slr_spectral_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_spec_auc_sim_tmp) = NULL
-  slr_spec_sims_list[[i]] = data.table::data.table(slr_spec_auc_sim_tmp)
+  rownames(slr_spec_sim_tmp) = NULL
+  slr_spec_sims_list[[i]] = data.table::data.table(slr_spec_sim_tmp)
   
-  # slr - hierarchical - auc
-  slr_hier_auc_sim_tmp = t(data.frame(readRDS(paste0(
+  # slr - hierarchical
+  slr_hier_sim_tmp = t(data.frame(readRDS(paste0(
     output_dir, "/slr_hierarchical_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
-  rownames(slr_hier_auc_sim_tmp) = NULL
-  slr_hier_sims_list[[i]] = data.table::data.table(slr_hier_auc_sim_tmp)
+  rownames(slr_hier_sim_tmp) = NULL
+  slr_hier_sims_list[[i]] = data.table::data.table(slr_hier_sim_tmp)
   
   ###
   
@@ -234,7 +235,7 @@ plt_main
 if(label_means){
   ggsave(
     filename = paste0(
-      "20220919",
+      "20220925",
       file.end0,
       "_", "metrics", "_labeledmeans.png"),
     plot = plt_main,
@@ -243,7 +244,7 @@ if(label_means){
 } else{
   ggsave(
     filename = paste0(
-      "20220919",
+      "20220925",
       file.end0,
       "_", "metrics", ".png"),
     plot = plt_main,

@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = FALSE
+label_means = TRUE
 
 ################################################################################
 # libraries and settings
@@ -29,7 +29,7 @@ intercept = TRUE
 scaling = TRUE
 tol = 1e-4
 # sigma_eps1 = 0.1
-sigma_eps2 = 0.1
+sigma_eps2 = 0.01
 # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
@@ -210,7 +210,7 @@ means.gg = data.gg_main %>%
     yrange = abs(max(value, na.rm = TRUE) - min(value, na.rm = TRUE))
   ) %>%
   group_by(Metric, Method) %>% 
-  summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
+  dplyr::summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +

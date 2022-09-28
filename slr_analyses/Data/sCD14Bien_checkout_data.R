@@ -54,9 +54,17 @@ prop.df = data.frame(
   Proportion = prop.samples
 )
 rownames(prop.df) = NULL
+
 prop.plt = ggplot(data=prop.df, aes(x=Proportion, y=reorder(Taxa, Proportion))) +
   geom_bar(stat="identity")
 prop.plt
+
+ggplot(data = prop.df, aes(x = Proportion)) + geom_histogram()
+summary(prop.samples)
+
+# truncate at 25%
+# run one method at a time, codacore and slr first
+
 ##############################################################################
 # 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
 X_gbm = selbal::cmultRepl2(W, zero.rep = "bayes")

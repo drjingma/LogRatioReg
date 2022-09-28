@@ -5,7 +5,7 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Experiments/outputs/metrics_binary"
+output_dir = "slr_analyses/Experiments/outputs/metrics_binary_correlated"
 
 # set up parallelization
 library(foreach)
@@ -67,6 +67,7 @@ res = foreach(
   c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
   a0 = 0 # 0
   ulimit = 0.5
+  rho_alrXj = 0.2
   
   file.end = paste0(
     "_", settings.name,
@@ -82,6 +83,7 @@ res = foreach(
     "_b1", b1, 
     "_a0", a0, 
     "_c", c.value,
+    "_rho", rho_alrXj, 
     "_sim", b,
     ".rds")
   
@@ -102,7 +104,9 @@ res = foreach(
     # simulate y from latent variable
     y.all = rbinom(n = 2 * n, size = 1, p = as.vector(sigmoid(b0 + b1 * U.all)))
     # simulate X: 
-    epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
+    epsj.all = mvrnorm(
+      n = 2 * n, mu = rep(0, p - 1), 
+      Sigma = sigma_x * rgExpDecay(p - 1, rho_alrXj)$Sigma)
     a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 
     #   alpha1j = {
     #     c1=theta*ilr.const/k+   if j \in I+

@@ -213,7 +213,7 @@ means.gg = data.gg_main %>%
     yrange = abs(max(value, na.rm = TRUE) - min(value, na.rm = TRUE))
   ) %>%
   group_by(Metric, Method) %>% 
-  summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
+  dplyr::summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +

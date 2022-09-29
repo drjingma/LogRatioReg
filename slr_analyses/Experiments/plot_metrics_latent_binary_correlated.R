@@ -8,7 +8,7 @@ label_means = TRUE
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Experiments/outputs/metrics_binary"
+output_dir = "slr_analyses/Experiments/outputs/metrics_binary_correlated"
 
 source("slr_analyses/Functions/util.R")
  
@@ -19,7 +19,7 @@ library(ggrepel)
 numSims = 100 
 
 # Settings to toggle with
-settings.name = "BinaryResponse"
+settings.name = "CorrBinaryResponse"
 hparam = "1se"
 n = 100
 p = 30
@@ -29,10 +29,9 @@ neta = p
 intercept = TRUE
 scaling = TRUE
 tol = 1e-4
-# sigma_eps1 = 0.1
-sigma_eps2 = 0.01
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+sigma_x = 0.1
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -41,6 +40,7 @@ b1 = 6 # 6
 c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 a0 = 0 # 0
 ulimit = 0.5
+rho_alrXj = 0.2
 
 file.end0 = paste0(
   "_", settings.name,
@@ -50,11 +50,12 @@ file.end0 = paste0(
   "_hparam", hparam,
   "_dim", n, "x", p, 
   "_ulimit", ulimit,
-  "_noisex", sigma_eps2,
+  "_noisex", sigma_x,
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 
-  "_c", c.value)
+  "_c", c.value,
+  "_rho", rho_alrXj)
 
 ################################################################################
 # plot metrics
@@ -236,7 +237,7 @@ plt_main
 if(label_means){
   ggsave(
     filename = paste0(
-      "20220925",
+      "20220928",
       file.end0,
       "_", "metrics", "_labeledmeans.png"),
     plot = plt_main,
@@ -245,7 +246,7 @@ if(label_means){
 } else{
   ggsave(
     filename = paste0(
-      "20220925",
+      "20220928",
       file.end0,
       "_", "metrics", ".png"),
     plot = plt_main,

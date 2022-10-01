@@ -103,13 +103,13 @@ res = foreach(
     #     -- since response is continuous, no need to stratify by case-control.
     numObs = nrow(X_gbm)
     inputDim = ncol(X_gbm)
-    # if(file.exists(paste0(output_dir, "/data", file.end))){
-    #   data.tmp = readRDS(paste0(output_dir, "/data", file.end))
-    #   XTr = data.tmp$XTr
-    #   XTe = data.tmp$XTe
-    #   YTr = data.tmp$YTr
-    #   YTe = data.tmp$YTe
-    # } else{
+    if(file.exists(paste0(output_dir, "/data", file.end))){
+      data.tmp = readRDS(paste0(output_dir, "/data", file.end))
+      XTr = data.tmp$XTr
+      XTe = data.tmp$XTe
+      YTr = data.tmp$YTr
+      YTe = data.tmp$YTe
+    } else{
     trainIdx = sample(cut(1:numObs, breaks=5, labels=F))
     XTr = X_gbm[trainIdx != 1,]
     YTr = Y[trainIdx != 1]
@@ -121,7 +121,7 @@ res = foreach(
       XTe = XTe, YTe = YTe
     ),
     paste0(output_dir, "/data", file.end))
-    # }
+    }
     
     ##############################################################################
     # fit methods

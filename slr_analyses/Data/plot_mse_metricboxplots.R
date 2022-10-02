@@ -2,11 +2,11 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohns", "sCD14Bien"
-date = "20220924"
+data_set = "sCD14Bien" # "HIV", "sCD14", "Crohns", "sCD14Bien"
+date = "20221002"
 
 response_type = NA
-if(data_set %in% c("sCD14", "sCD14_Bien")){
+if(data_set %in% c("sCD14", "sCD14Bien")){
   response_type = "continuous"
 } else{
   response_type = "binary"
@@ -51,13 +51,13 @@ lrlasso_list = list()
 for(i in 1:numSplits){
   print(i)
   
-  # compositional lasso
-  cl_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/classo_metrics",
-    file.end0, "_sim", i, ".rds"
-  ))))
-  rownames(cl_tmp) = NULL
-  classo_list[[i]] = data.table::data.table(cl_tmp)
+  # # compositional lasso
+  # cl_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/classo_metrics",
+  #   file.end0, "_sim", i, ".rds"
+  # ))))
+  # rownames(cl_tmp) = NULL
+  # classo_list[[i]] = data.table::data.table(cl_tmp)
   
   ###
   
@@ -79,13 +79,13 @@ for(i in 1:numSplits){
   
   ###
   
-  # selbal
-  slbl_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/selbal_metrics",
-    file.end0, "_sim", i, ".rds"
-  ))))
-  rownames(slbl_tmp) = NULL
-  selbal_list[[i]] = data.table::data.table(slbl_tmp)
+  # # selbal
+  # slbl_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/selbal_metrics",
+  #   file.end0, "_sim", i, ".rds"
+  # ))))
+  # rownames(slbl_tmp) = NULL
+  # selbal_list[[i]] = data.table::data.table(slbl_tmp)
   
   # # selbal - covar
   # slbl_covar_tmp = t(data.frame(readRDS(paste0(
@@ -105,21 +105,21 @@ for(i in 1:numSplits){
   rownames(cdcr_tmp) = NULL
   codacore_list[[i]] = data.table::data.table(cdcr_tmp)
   
-  # log-ratio lasso
-  lrl_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/lrlasso_metrics",
-    file.end0, "_sim", i, ".rds"
-  ))))
-  rownames(lrl_tmp) = NULL
-  lrlasso_list[[i]] = data.table::data.table(lrl_tmp)
+  # # log-ratio lasso
+  # lrl_tmp = t(data.frame(readRDS(paste0(
+  #   output_dir, "/lrlasso_metrics",
+  #   file.end0, "_sim", i, ".rds"
+  # ))))
+  # rownames(lrl_tmp) = NULL
+  # lrlasso_list[[i]] = data.table::data.table(lrl_tmp)
 }
 
 # metrics boxplots
-classo.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(classo_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "classo")
+# classo.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(classo_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "classo")
 ###
 slr_spec.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_list)), 
@@ -132,19 +132,12 @@ slr_hier.gg =
                names_to = "Metric") %>%
   mutate("Method" = "slr-hier")
 ###
-selbal.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(selbal_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "selbal")
+# selbal.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(selbal_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "selbal")
 
-if(testlrpair){
-  selbal.gg = selbal.gg %>% 
-    filter(Metric %in% c("mse", "time", "percselected.testlrpair")) %>% 
-    mutate(
-      Metric = recode(Metric, "percselected.testlrpair" = "percselected")
-    )
-}
 # selbal_covar.gg = 
 #   pivot_longer(as.data.frame(data.table::rbindlist(selbal_covar_list)), 
 #                cols = everything(),
@@ -156,11 +149,11 @@ codacore.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "codacore")
-lrlasso.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_list)), 
-               cols = everything(),
-               names_to = "Metric") %>%
-  mutate("Method" = "lrlasso")
+# lrlasso.gg = 
+#   pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_list)), 
+#                cols = everything(),
+#                names_to = "Metric") %>%
+#   mutate("Method" = "lrlasso")
 ###
 data.gg = rbind(
   classo.gg,

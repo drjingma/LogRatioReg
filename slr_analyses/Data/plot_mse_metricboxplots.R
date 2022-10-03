@@ -3,7 +3,7 @@
 rm(list=ls())
 
 data_set = "sCD14Bien" # "HIV", "sCD14", "Crohns", "sCD14Bien"
-date = "20221002"
+date = "20221003"
 
 response_type = NA
 if(data_set %in% c("sCD14", "sCD14Bien")){
@@ -121,8 +121,8 @@ for(i in 1:numSplits){
 #                names_to = "Metric") %>%
 #   mutate("Method" = "classo")
 ###
-slr_spec.gg = 
-  pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_list)), 
+slr_spec.gg =
+  pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_list)),
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "slr-spec")
@@ -156,13 +156,13 @@ codacore.gg =
 #   mutate("Method" = "lrlasso")
 ###
 data.gg = rbind(
-  classo.gg,
+  # classo.gg,
   slr_spec.gg,
   slr_hier.gg,
-  selbal.gg, 
+  # selbal.gg, 
   # selbal_covar.gg,
-  codacore.gg, 
-  lrlasso.gg
+  codacore.gg #, 
+  # lrlasso.gg
 )
 if(response_type == "binary"){
   data.gg = data.gg %>% 

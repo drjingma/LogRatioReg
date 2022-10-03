@@ -30,7 +30,7 @@ numSplits = 20
 
 registerDoRNG(rng.seed)
 res = foreach(
-  b = c(8, 16, 18)
+  b = 1:numSplits
 ) %dorng% {
   # rm(list=ls())
   
@@ -127,96 +127,96 @@ res = foreach(
     # fit methods
     ##############################################################################
     
-    # # classo #####################################################################
-    # start.time = Sys.time()
-    # classo = cv.func(
-    #   method="ConstrLasso", y = YTr, x = log(XTr), Cmat = matrix(1, p, 1),
-    #   nlam = nlam, nfolds = K, tol = tol, intercept = intercept,
-    #   scaling = scaling)
-    # end.time = Sys.time()
-    # cl.timing = difftime(
-    #   time1 = end.time, time2 = start.time, units = "secs")
-    # 
-    # # get gamma-hat
-    # if(hparam == "min"){
-    #   cl.lam.idx = which.min(classo$cvm)
-    # } else if(hparam == "1se"){
-    #   oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
-    #   cl.lam.idx = which(classo$cvm <= oneSErule)[1]
-    # } else{
-    #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-    # }
-    # cl.a0 = classo$int[cl.lam.idx]
-    # cl.betahat = classo$bet[, cl.lam.idx]
-    # 
-    # # get prediction error on test set
-    # classo.Yhat.test = cl.a0 + log(as.matrix(XTe)) %*% cl.betahat
-    # 
-    # cl.metrics = c(
-    #   mse = as.vector(crossprod(YTe - classo.Yhat.test) / nrow(XTe)),
-    #   percselected = sum(abs(cl.betahat) > 10e-8) / p,
-    #   time = cl.timing
-    # )
-    # 
-    # saveRDS(
-    #   cl.metrics,
-    #   paste0(output_dir, "/classo_metrics", file.end))
-    
-    # slr - spectral #############################################################
+    # classo #####################################################################
     start.time = Sys.time()
-    slrspeccv = cv.slr(
-      x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
-      response.type = "continuous", s0.perc = 0, zeta = 0,
-      nfolds = K, type.measure = "mse",
-      scale = scaling, trace.it = FALSE)
+    classo = cv.func(
+      method="ConstrLasso", y = YTr, x = log(XTr), Cmat = matrix(1, p, 1),
+      nlam = nlam, nfolds = K, tol = tol, intercept = intercept,
+      scaling = scaling)
+    end.time = Sys.time()
+    cl.timing = difftime(
+      time1 = end.time, time2 = start.time, units = "secs")
+
+    # get gamma-hat
     if(hparam == "min"){
-      slrspec = slr(
-        x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
-        response.type = "continuous", s0.perc = 0, zeta = 0,
-        threshold = slrspeccv$threshold[slrspeccv$index["min",]],
-        positive.slope = TRUE)
+      cl.lam.idx = which.min(classo$cvm)
     } else if(hparam == "1se"){
-      slrspec = slr(
-        x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
-        response.type = "continuous", s0.perc = 0, zeta = 0,
-        threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
-        positive.slope = TRUE)
+      oneSErule = min(classo$cvm) + classo$cvsd[which.min(classo$cvm)] * 1
+      cl.lam.idx = which(classo$cvm <= oneSErule)[1]
     } else{
       stop("invalid hparam setting (method for selecting hyperparameter(s)).")
     }
-    end.time = Sys.time()
-    slrspec.timing = difftime(
-      time1 = end.time, time2 = start.time, units = "secs")
-
-    # get SBP
-    slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-    rownames(slrspec.fullSBP) = colnames(X)
-    slrspec.fullSBP[match(
-      names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+    cl.a0 = classo$int[cl.lam.idx]
+    cl.betahat = classo$bet[, cl.lam.idx]
 
     # get prediction error on test set
-    slrspec.Yhat.test = predict(
-      slrspec$fit,
-      data.frame(balance = slr.fromContrast(XTe, slrspec.fullSBP)),
-      type = "response")
+    classo.Yhat.test = cl.a0 + log(as.matrix(XTe)) %*% cl.betahat
 
-    slrspec.metrics = c(
-      mse = as.vector(crossprod(YTe - slrspec.Yhat.test) / nrow(XTe)),
-      percselected = sum(slrspec.fullSBP > 0) / p,
-      time = slrspec.timing
+    cl.metrics = c(
+      mse = as.vector(crossprod(YTe - classo.Yhat.test) / nrow(XTe)),
+      percselected = sum(abs(cl.betahat) > 10e-8) / p,
+      time = cl.timing
     )
 
     saveRDS(
-      slrspec.metrics,
-      paste0(output_dir, "/slr_spectral_metrics", file.end))
-
-    if(!all(slrspec.fullSBP == 0) & slrspec$theta[2] < 0){
-      slrspec.fullSBP = -slrspec.fullSBP
-    }
-    saveRDS(
-      slrspec.fullSBP,
-      paste0(output_dir, "/slr_spectral_sbp", file.end)
-    )
+      cl.metrics,
+      paste0(output_dir, "/classo_metrics", file.end))
+    
+    # # slr - spectral #############################################################
+    # start.time = Sys.time()
+    # slrspeccv = cv.slr(
+    #   x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
+    #   response.type = "continuous", s0.perc = 0, zeta = 0,
+    #   nfolds = K, type.measure = "mse",
+    #   scale = scaling, trace.it = FALSE)
+    # if(hparam == "min"){
+    #   slrspec = slr(
+    #     x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
+    #     response.type = "continuous", s0.perc = 0, zeta = 0,
+    #     threshold = slrspeccv$threshold[slrspeccv$index["min",]],
+    #     positive.slope = TRUE)
+    # } else if(hparam == "1se"){
+    #   slrspec = slr(
+    #     x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
+    #     response.type = "continuous", s0.perc = 0, zeta = 0,
+    #     threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
+    #     positive.slope = TRUE)
+    # } else{
+    #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+    # }
+    # end.time = Sys.time()
+    # slrspec.timing = difftime(
+    #   time1 = end.time, time2 = start.time, units = "secs")
+    # 
+    # # get SBP
+    # slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
+    # rownames(slrspec.fullSBP) = colnames(X)
+    # slrspec.fullSBP[match(
+    #   names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+    # 
+    # # get prediction error on test set
+    # slrspec.Yhat.test = predict(
+    #   slrspec$fit,
+    #   data.frame(balance = slr.fromContrast(XTe, slrspec.fullSBP)),
+    #   type = "response")
+    # 
+    # slrspec.metrics = c(
+    #   mse = as.vector(crossprod(YTe - slrspec.Yhat.test) / nrow(XTe)),
+    #   percselected = sum(slrspec.fullSBP > 0) / p,
+    #   time = slrspec.timing
+    # )
+    # 
+    # saveRDS(
+    #   slrspec.metrics,
+    #   paste0(output_dir, "/slr_spectral_metrics", file.end))
+    # 
+    # if(!all(slrspec.fullSBP == 0) & slrspec$theta[2] < 0){
+    #   slrspec.fullSBP = -slrspec.fullSBP
+    # }
+    # saveRDS(
+    #   slrspec.fullSBP,
+    #   paste0(output_dir, "/slr_spectral_sbp", file.end)
+    # )
 
     # # slr - hierarchical #########################################################
     # start.time = Sys.time()

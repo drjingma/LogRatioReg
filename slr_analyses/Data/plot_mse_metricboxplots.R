@@ -12,7 +12,7 @@ if(data_set %in% c("sCD14", "sCD14Bien")){
   response_type = "binary"
 }
 
-testlrpair = FALSE
+label_means = TRUE
 
 ################################################################################
 # libraries and settings
@@ -23,6 +23,7 @@ source("slr_analyses/Functions/util.R")
 
 library(tidyverse)
 library(reshape2)
+library(ggrepel)
 
 numSplits = 20
 
@@ -235,11 +236,12 @@ plt_main = ggplot(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
 
-library(ggrepel)
-plt_main = plt_main  +
-  geom_text_repel(
-    data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
-    size = 2, color = "black")
+if(label_means){
+  plt_main = plt_main  +
+    geom_text_repel(
+      data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
+      size = 2, color = "black")
+}
 
 plt_main
 ggsave(

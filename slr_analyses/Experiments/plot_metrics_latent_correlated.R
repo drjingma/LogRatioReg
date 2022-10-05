@@ -4,6 +4,7 @@ rm(list=ls())
 # Date: 8/24/2022
 
 label_means = FALSE
+current_date = "20221005"
 
 ################################################################################
 # libraries and settings
@@ -238,7 +239,7 @@ plt_main
 if(label_means){
   ggsave(
     filename = paste0(
-      "20220925",
+      current_date,
       file.end0,
       "_", "metrics", "_labeledmeans.png"),
     plot = plt_main,
@@ -247,7 +248,7 @@ if(label_means){
 } else{
   ggsave(
     filename = paste0(
-      "20220925",
+      current_date,
       file.end0,
       "_", "metrics", ".png"),
     plot = plt_main,

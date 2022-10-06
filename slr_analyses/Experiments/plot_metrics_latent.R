@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = FALSE
+label_means = TRUE
 current_date = "20221005"
 
 ################################################################################
@@ -31,8 +31,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1
 sigma_x = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -108,7 +108,7 @@ for(i in 1:numSims){
   
   # codacore
   cdcr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/codacore_metrics", file.end0,
+    output_dir, "/codacore1_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(cdcr_sim_tmp) = NULL
@@ -220,23 +220,22 @@ plt_main = ggplot(
   geom_boxplot() +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red")
+    color = "red") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank())
 if(label_means){
   plt_main = plt_main  +
     geom_text_repel(
       data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
       size = 2.25, color = "black") + theme_bw()
 }
-plt_main = plt_main +
-  theme(
-    axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
-plt_main
 
-  width = 6
-  height = 4
-  
+width = 6
+height = 4
+
 if(label_means){
   ggsave(
     filename = paste0(

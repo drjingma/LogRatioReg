@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = TRUE
+label_means = FALSE
 current_date = "20221005"
 
 ################################################################################
@@ -108,7 +108,7 @@ for(i in 1:numSims){
   
   # codacore
   cdcr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/codacore_metrics", file.end0,
+    output_dir, "/codacore1_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(cdcr_sim_tmp) = NULL

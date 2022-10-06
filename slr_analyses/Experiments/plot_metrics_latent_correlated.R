@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = FALSE
+label_means = TRUE
 current_date = "20221005"
 
 ################################################################################
@@ -31,8 +31,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1 # sigma (for y)
 sigma_x = 0.1 # sigma_j (for x)
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -110,7 +110,7 @@ for(i in 1:numSims){
   
   # codacore
   cdcr_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/codacore_metrics", file.end0,
+    output_dir, "/codacore1_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(cdcr_sim_tmp) = NULL

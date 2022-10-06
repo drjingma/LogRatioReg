@@ -398,7 +398,7 @@ res = foreach(
       }
     }
   } else{
-    print(paste0("sim ", b, " -- codacore has no log-ratios"))
+    # print(paste0("sim ", b, " -- codacore has no log-ratios"))
     codacore0_coeffs = c()
     codacore0_SBP = matrix(0, nrow = p, ncol = 1) ###############################
     codacore0model = stats::glm(YTr ~ 1, family = "gaussian")

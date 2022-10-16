@@ -82,13 +82,14 @@ YTe = Y[trainIdx == 1]
 # )
 slrspeccv = readRDS("slr_analyses/Data/slrspeccv1.rds")
 
-
+Rprof()
 slrspec = slr(
   x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
   response.type = "continuous", s0.perc = 0, zeta = 0,
   threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
   positive.slope = TRUE)
-
+Rprof(NULL)
+summaryRprof()
 
 # slr - hierarchical #########################################################
 # slrhiercv = cv.slr(
@@ -102,12 +103,14 @@ slrspec = slr(
 # )
 slrhiercv = readRDS("slr_analyses/Data/slrhiercv1.rds")
 
+Rprof()
 slrhier = slr(
   x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
   response.type = "continuous", s0.perc = 0, zeta = 0,
   threshold = slrhiercv$threshold[slrhiercv$index["1se",]],
   positive.slope = TRUE)
-
+Rprof(NULL)
+summaryRprof()
 
 
 

@@ -217,7 +217,7 @@ cv.func <- function(method="ConstrLasso", y, x, Cmat=NULL, lambda=NULL, nlam=20,
     ytest <- y[temp]
     xtest <- x[temp,]
     res <- do.call(method, list(y=ytrain, x=xtrain, Cmat=Cmat, lambda=lambda, intercept=FALSE, scaling=FALSE, maxiter=maxiter, tol=tol))
-    err[,j] <- colMeans((xtest%*%res$bet-res$int-as.vector(ytest))^2)
+    err[,j] <- colMeans((xtest%*%res$bet+res$int-as.vector(ytest))^2) # colMeans((xtest%*%res$bet-res$int-as.vector(ytest))^2) 
   }
   cvm <- apply(err, 1, base::mean, na.rm = TRUE)
   cvsd = apply(err, 1, stats::sd, na.rm = TRUE) / sqrt(nfolds)

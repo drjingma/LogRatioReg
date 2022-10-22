@@ -84,7 +84,6 @@ slr = function(
     threshold,
     s0.perc=0,
     zeta=0,
-    x.unlabeled = NULL, use.unlabeled = FALSE, 
     positive.slope = FALSE
 ){
   this.call <- match.call()
@@ -106,21 +105,8 @@ slr = function(
     object <- list(sbp=NULL, Aitchison.var = NULL, cluster.mat = NULL)
   } else {
     x.reduced <- x[,which.features] # reduced data matrix
-    if(use.unlabeled){
-      if(is.null(x.unlabeled)){
-        stop("use.unlabeled is TRUE but x.unlabeled is missing!!")
-      }
-      if(!all.equal(colnames(x), colnames(x.unlabeled))){
-        stop("x and x.unlabeled don't have the same components/covariates/columns! cannot use the unlabeled data.")
-      }
-      all.x = rbind(x, x.unlabeled)
-      all.x.reduced <- all.x[,which.features]
-      Aitchison.var = getAitchisonVar(all.x.reduced)
-      rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(all.x.reduced)
-    } else{
       Aitchison.var = getAitchisonVar(x.reduced)
       rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(x.reduced)
-    }
     if(cluster.method == "spectral" | nrow(Aitchison.var) == 2){
       Aitchison.sim <- max(Aitchison.var) - Aitchison.var 
       ## Perform spectral clustering
@@ -261,19 +247,16 @@ cv.slr <- function(
     response.type=c('survival', 'continuous', 'binary'),
     threshold = NULL, 
     s0.perc = 0, zeta = 0, 
-    x.unlabeled = NULL, use.unlabeled = FALSE, #
     type.measure = c(
       "default", "mse", "deviance", "class", "auc", "mae", "C", "accuracy"
     ),
     scale = FALSE, nfolds = 10, 
     foldid = NULL, weights = NULL, #
-    fold.unlabeled = FALSE, foldid.unlabeled = NULL, #
     trace.it = FALSE #
 ){
   type.measure = match.arg(type.measure)
   N <- nrow(x)
   p <- ncol(x)
-  N2 = nrow(x.unlabeled)
   
   if (is.null(weights)){
     weights = rep(1, nfolds)
@@ -296,15 +279,6 @@ cv.slr <- function(
   if (nfolds < 3){
     stop("nfolds must be bigger than 3; nfolds=10 recommended")
   }
-  if(fold.unlabeled & is.null(foldid.unlabeled)){
-    if(is.null(x.unlabeled)){
-      stop("fold.unlabeled is TRUE but x.unlabeled is missing!!")
-    }
-    if(nfolds > N2){
-      stop("nfolds is greater than the number of samples in x.unlabeled! cannot divide into folds.")
-    }
-    foldid.unlabeled = sample(rep(seq(nfolds), length = N2))
-  }
   
   if (trace.it){
     cat("Training\n")
@@ -319,26 +293,13 @@ cv.slr <- function(
     # x_in <- x[which.fold.i, ,drop=FALSE]
     x_sub <- x[!which.fold.i, ,drop=FALSE]
     y_sub <- y[!which.fold.i]
-    if(use.unlabeled){
-      if(is.null(x.unlabeled)){
-        stop("use.unlabeled is TRUE but x.unlabeled is missing!!")
-      }
-      if(fold.unlabeled){
-        which.fold.i.unlabeled = foldid.unlabeled == i
-        x.unlab_sub = x.unlabeled[!which.fold.i.unlabeled, ,drop=FALSE]
-      } else{
-        x.unlab_sub = x.unlabeled
-      }
-    } else{
       x.unlab_sub = NULL
-    }
     outlist[[i]] <- lapply(threshold, function(l) slr(
       x = x_sub, y = y_sub, 
       screen.method = screen.method, cluster.method = cluster.method,
       response.type = response.type,
       threshold = l,
-      s0.perc = s0.perc, zeta = zeta, 
-      x.unlabeled = x.unlab_sub, use.unlabeled = use.unlabeled))
+      s0.perc = s0.perc, zeta = zeta))
   }
   
   # collect all out-of-sample predicted values

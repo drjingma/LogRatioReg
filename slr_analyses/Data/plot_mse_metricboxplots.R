@@ -3,7 +3,7 @@
 rm(list=ls())
 
 data_set = "sCD14Bien" # "HIV", "sCD14", "Crohns", "sCD14Bien"
-date = "20221016"
+date = "20221018"
 
 response_type = NA
 if(data_set %in% c("sCD14", "sCD14Bien")){
@@ -49,16 +49,17 @@ selbal_list = list()
 # selbal_covar_list = list() # only applicable to HIV data set
 codacore_list = list()
 lrlasso_list = list()
-for(i in 1:numSplits){
+# for(i in (1:numSplits)){
+for(i in (1:numSplits)[-c(2, 20)]){
   print(i)
   
-  # # compositional lasso
-  # cl_tmp = t(data.frame(readRDS(paste0(
-  #   output_dir, "/classo_metrics",
-  #   file.end0, "_sim", i, ".rds"
-  # ))))
-  # rownames(cl_tmp) = NULL
-  # classo_list[[i]] = data.table::data.table(cl_tmp)
+  # compositional lasso
+  cl_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/classo_metrics",
+    file.end0, "_sim", i, ".rds"
+  ))))
+  rownames(cl_tmp) = NULL
+  classo_list[[i]] = data.table::data.table(cl_tmp)
   
   ###
   
@@ -116,11 +117,11 @@ for(i in 1:numSplits){
 }
 
 # metrics boxplots
-# classo.gg = 
-#   pivot_longer(as.data.frame(data.table::rbindlist(classo_list)), 
-#                cols = everything(),
-#                names_to = "Metric") %>%
-#   mutate("Method" = "classo")
+classo.gg =
+  pivot_longer(as.data.frame(data.table::rbindlist(classo_list)),
+               cols = everything(),
+               names_to = "Metric") %>%
+  mutate("Method" = "classo")
 ###
 slr_spec.gg =
   pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_list)),
@@ -157,7 +158,7 @@ codacore.gg =
 #   mutate("Method" = "lrlasso")
 ###
 data.gg = rbind(
-  # classo.gg,
+  classo.gg,
   slr_spec.gg,
   slr_hier.gg,
   # selbal.gg, 
@@ -241,14 +242,21 @@ if(label_means){
     geom_text_repel(
       data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
       size = 2, color = "black")
-}
-
-plt_main
-ggsave(
   filename = paste0(
     date,
     file.end0,
-    "_", "metrics", ".png"),
+    "_", "metrics_labeledmeans", ".png")
+} else{
+  filename = paste0(
+    date,
+    file.end0,
+    "_", "metrics", ".png")
+}
+
+
+plt_main
+ggsave(
+  filename = filename,
   plot = plt_main,
   width = 6, height = 2.75, units = c("in") # height is 2.5 usually
 )

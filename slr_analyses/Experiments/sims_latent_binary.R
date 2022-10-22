@@ -135,42 +135,42 @@ res = foreach(
     paste0(output_dir, "/data", file.end))
   }
   
-  # ##############################################################################
-  # # compositional lasso (a linear log contrast method)
-  # ##############################################################################
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   classo = codalasso(X, Y, numFolds = K, gamma = 0)
-  # } else if(hparam == "1se"){
-  #   classo = codalasso(X, Y, numFolds = K, gamma = 1)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # cl.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # cl.betahat = classo$cll$betas[-1]
-  # 
-  # # compute metrics on the selected model #
-  # # prediction error
-  # cl.Yhat.test = predict(classo, X.test)
-  # cl.AUC.test = pROC::roc(
-  #   Y.test, cl.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # estimation accuracy, selection accuracy #
-  # cl.metrics = getMetricsLLC(
-  #   est.llc.coefs = cl.betahat,
-  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-  #   true.llc.coefs = llc.coefs.true,
-  #   metrics = c("estimation", "selection"))
-  # 
-  # saveRDS(c(
-  #   "auc" = cl.AUC.test,
-  #   cl.metrics,
-  #   "logratios" = 0,
-  #   "time" = cl.timing
-  # ),
-  # paste0(output_dir, "/classo_metrics", file.end))
+  ##############################################################################
+  # compositional lasso (a linear log contrast method)
+  ##############################################################################
+  start.time = Sys.time()
+  if(hparam == "min"){
+    classo = codalasso(X, Y, numFolds = K, gamma = 0)
+  } else if(hparam == "1se"){
+    classo = codalasso(X, Y, numFolds = K, gamma = 1)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  cl.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  cl.betahat = classo$cll$betas[-1]
+
+  # compute metrics on the selected model #
+  # prediction error
+  cl.Yhat.test = predict(classo, X.test)
+  cl.AUC.test = pROC::roc(
+    Y.test, cl.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # estimation accuracy, selection accuracy #
+  cl.metrics = getMetricsLLC(
+    est.llc.coefs = cl.betahat,
+    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+    true.llc.coefs = llc.coefs.true,
+    metrics = c("estimation", "selection"))
+
+  saveRDS(c(
+    "auc" = cl.AUC.test,
+    cl.metrics,
+    "logratios" = 0,
+    "time" = cl.timing
+  ),
+  paste0(output_dir, "/classo_metrics", file.end))
   # 
   # ##############################################################################
   # # slr
@@ -428,82 +428,82 @@ res = foreach(
   #   "time" = codacore0.timing
   # ),
   # paste0(output_dir, "/codacore_metrics", file.end))
-  
-  ##############################################################################
-  # CoDaCoRe (a balance regression method)
-  # -- fits a balance regression model with possibly multiple balances
-  ##############################################################################
-  library(codacore)
-  
-  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-    reticulate::use_condaenv("anaconda3")
-  }
-  
-  start.time = Sys.time()
-  if(hparam == "min"){
-    codacore1 = codacore::codacore(
-      x = X, y = Y, logRatioType = "ILR",
-      objective = "binary classification", cvParams = list(numFolds = K), 
-      maxBaseLearners = 1,
-      lambda = 0) 
-  } else if(hparam == "1se"){
-    codacore1 = codacore::codacore(
-      x = X, y = Y, logRatioType = "ILR",
-      objective = "binary classification", cvParams = list(numFolds = K), 
-      maxBaseLearners = 1,
-      lambda = 1) 
-  } else{
-    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  }
-  end.time = Sys.time()
-  codacore1.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  if(length(codacore1$ensemble) > 0){ # at least 1 log-ratio found
-    codacore1_SBP = matrix(0, nrow = p, ncol = length(codacore1$ensemble))
-    codacore1_coeffs = rep(NA, length(codacore1$ensemble))
-    for(col.idx in 1:ncol(codacore1_SBP)){
-      codacore1_SBP[
-        codacore1$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-      codacore1_SBP[
-        codacore1$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-      codacore1_coeffs[col.idx] = codacore1$ensemble[[col.idx]]$slope
-    }
-    
-    codacore1.betahat = getBetaFromCodacore(
-      SBP_codacore = codacore1_SBP, coeffs_codacore = codacore1_coeffs, p = p)
-    
-    # compute metrics on the selected model #
-    # prediction error
-    codacore1.Yhat.test = predict(codacore1, X.test)
-    
-  } else{
-    print(paste0("sim ", i, " -- codacore has no log-ratios"))
-    codacore1_coeffs = c()
-    codacore1model = stats::glm(Y ~ 1, family = "binomial")
-    codacore1.betahat = rep(0, p)
-    
-    # compute metrics on the selected model #
-    # prediction error
-    codacore1.Yhat.test = predict(codacore1model, X.test)
-  }
-  codacore1.AUC.test = pROC::roc(
-    Y.test, codacore1.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  
-  # beta estimation accuracy, selection accuracy #
-  codacore1.metrics = getMetricsBM(
-    est.llc.coefs = codacore1.betahat,
-    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-    true.llc.coefs = llc.coefs.true, metrics = c("estimation", "selection"))
-  
-  saveRDS(c(
-    "auc" = codacore1.AUC.test,
-    codacore1.metrics,
-    "logratios" = length(codacore1_coeffs),
-    "time" = codacore1.timing
-  ),
-  paste0(output_dir, "/codacore1_metrics", file.end))
-  
+  # 
+  # ##############################################################################
+  # # CoDaCoRe (a balance regression method)
+  # # -- fits a balance regression model with possibly multiple balances
+  # ##############################################################################
+  # library(codacore)
+  # 
+  # if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+  #   reticulate::use_condaenv("anaconda3")
+  # }
+  # 
+  # start.time = Sys.time()
+  # if(hparam == "min"){
+  #   codacore1 = codacore::codacore(
+  #     x = X, y = Y, logRatioType = "ILR",
+  #     objective = "binary classification", cvParams = list(numFolds = K), 
+  #     maxBaseLearners = 1,
+  #     lambda = 0) 
+  # } else if(hparam == "1se"){
+  #   codacore1 = codacore::codacore(
+  #     x = X, y = Y, logRatioType = "ILR",
+  #     objective = "binary classification", cvParams = list(numFolds = K), 
+  #     maxBaseLearners = 1,
+  #     lambda = 1) 
+  # } else{
+  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  # }
+  # end.time = Sys.time()
+  # codacore1.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # if(length(codacore1$ensemble) > 0){ # at least 1 log-ratio found
+  #   codacore1_SBP = matrix(0, nrow = p, ncol = length(codacore1$ensemble))
+  #   codacore1_coeffs = rep(NA, length(codacore1$ensemble))
+  #   for(col.idx in 1:ncol(codacore1_SBP)){
+  #     codacore1_SBP[
+  #       codacore1$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
+  #     codacore1_SBP[
+  #       codacore1$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
+  #     codacore1_coeffs[col.idx] = codacore1$ensemble[[col.idx]]$slope
+  #   }
+  #   
+  #   codacore1.betahat = getBetaFromCodacore(
+  #     SBP_codacore = codacore1_SBP, coeffs_codacore = codacore1_coeffs, p = p)
+  #   
+  #   # compute metrics on the selected model #
+  #   # prediction error
+  #   codacore1.Yhat.test = predict(codacore1, X.test)
+  #   
+  # } else{
+  #   print(paste0("sim ", i, " -- codacore has no log-ratios"))
+  #   codacore1_coeffs = c()
+  #   codacore1model = stats::glm(Y ~ 1, family = "binomial")
+  #   codacore1.betahat = rep(0, p)
+  #   
+  #   # compute metrics on the selected model #
+  #   # prediction error
+  #   codacore1.Yhat.test = predict(codacore1model, X.test)
+  # }
+  # codacore1.AUC.test = pROC::roc(
+  #   Y.test, codacore1.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # 
+  # # beta estimation accuracy, selection accuracy #
+  # codacore1.metrics = getMetricsBM(
+  #   est.llc.coefs = codacore1.betahat,
+  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+  #   true.llc.coefs = llc.coefs.true, metrics = c("estimation", "selection"))
+  # 
+  # saveRDS(c(
+  #   "auc" = codacore1.AUC.test,
+  #   codacore1.metrics,
+  #   "logratios" = length(codacore1_coeffs),
+  #   "time" = codacore1.timing
+  # ),
+  # paste0(output_dir, "/codacore1_metrics", file.end))
+  # 
   # ##############################################################################
   # # Log-Ratio Lasso
   # # -- regresses on pairwise log-ratios

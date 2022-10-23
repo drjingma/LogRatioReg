@@ -251,16 +251,16 @@ saveRDS(
 # # get active sets and selected balances (if applicable)
 # ################################################################################
 # 
-# # classo #######################################################################
-# # selected variables
-# oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
-# cl.lam.idx = which(cl$cvm <= oneSErule)[1]
-# cl.a0 = cl$int[cl.lam.idx]
-# cl.betahat = cl$bet[, cl.lam.idx]
-# # positive/negative effect on response
-# colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
-# colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
-# sum(abs(cl.betahat) > 1e-8)
+# classo #######################################################################
+# selected variables
+oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
+cl.lam.idx = which(cl$cvm <= oneSErule)[1]
+cl.a0 = cl$int[cl.lam.idx]
+cl.betahat = cl$bet[, cl.lam.idx]
+# positive/negative effect on response
+colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
+colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
+sum(abs(cl.betahat) > 1e-8)
 # 
 # # slr - spectral ###############################################################
 # # SBP

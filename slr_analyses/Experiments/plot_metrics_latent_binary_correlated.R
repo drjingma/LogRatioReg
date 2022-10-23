@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = FALSE
+label_means = TRUE
 current_date = "20221005"
 
 ################################################################################

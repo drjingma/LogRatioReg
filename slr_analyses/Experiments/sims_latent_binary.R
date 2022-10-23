@@ -135,42 +135,42 @@ res = foreach(
     paste0(output_dir, "/data", file.end))
   }
   
-  ##############################################################################
-  # compositional lasso (a linear log contrast method)
-  ##############################################################################
-  start.time = Sys.time()
-  if(hparam == "min"){
-    classo = codalasso(X, Y, numFolds = K, gamma = 0)
-  } else if(hparam == "1se"){
-    classo = codalasso(X, Y, numFolds = K, gamma = 1)
-  } else{
-    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  }
-  end.time = Sys.time()
-  cl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-
-  cl.betahat = classo$cll$betas[-1]
-
-  # compute metrics on the selected model #
-  # prediction error
-  cl.Yhat.test = predict(classo, X.test)
-  cl.AUC.test = pROC::roc(
-    Y.test, cl.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # estimation accuracy, selection accuracy #
-  cl.metrics = getMetricsLLC(
-    est.llc.coefs = cl.betahat,
-    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-    true.llc.coefs = llc.coefs.true,
-    metrics = c("estimation", "selection"))
-
-  saveRDS(c(
-    "auc" = cl.AUC.test,
-    cl.metrics,
-    "logratios" = 0,
-    "time" = cl.timing
-  ),
-  paste0(output_dir, "/classo_metrics", file.end))
+  # ##############################################################################
+  # # compositional lasso (a linear log contrast method)
+  # ##############################################################################
+  # start.time = Sys.time()
+  # if(hparam == "min"){
+  #   classo = codalasso(X, Y, numFolds = K, gamma = 0)
+  # } else if(hparam == "1se"){
+  #   classo = codalasso(X, Y, numFolds = K, gamma = 1)
+  # } else{
+  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  # }
+  # end.time = Sys.time()
+  # cl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # cl.betahat = classo$cll$betas[-1]
+  # 
+  # # compute metrics on the selected model #
+  # # prediction error
+  # cl.Yhat.test = predict(classo, X.test)
+  # cl.AUC.test = pROC::roc(
+  #   Y.test, cl.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # # estimation accuracy, selection accuracy #
+  # cl.metrics = getMetricsLLC(
+  #   est.llc.coefs = cl.betahat,
+  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+  #   true.llc.coefs = llc.coefs.true,
+  #   metrics = c("estimation", "selection"))
+  # 
+  # saveRDS(c(
+  #   "auc" = cl.AUC.test,
+  #   cl.metrics,
+  #   "logratios" = 0,
+  #   "time" = cl.timing
+  # ),
+  # paste0(output_dir, "/classo_metrics", file.end))
   # 
   # ##############################################################################
   # # slr

@@ -4,7 +4,7 @@ rm(list=ls())
 # Date: 8/24/2022
 
 label_means = TRUE
-current_date = "20221005"
+current_date = "20221022"
 
 ################################################################################
 # libraries and settings
@@ -222,19 +222,23 @@ plt_main = ggplot(
   geom_boxplot() +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red") +
+    color = "red")
+if(label_means){
+  plt_main = plt_main  +
+    geom_text_repel(
+      data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
+      size = 2.25, color = "black") + theme_bw()
+}
+plt_main = plt_main + 
   theme_bw() +
   theme(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank())
-if(label_means){
-  plt_main = plt_main  +
-    geom_text_repel(
-      data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
-      size = 2.25, color = "black")
-}
 plt_main
+
+width = 6
+height = 4
 
 if(label_means){
   ggsave(
@@ -243,7 +247,7 @@ if(label_means){
       file.end0,
       "_", "metrics", "_labeledmeans.png"),
     plot = plt_main,
-    width = 6, height = 4, units = c("in")
+    width = width, height = height, units = c("in")
   )
 } else{
   ggsave(
@@ -252,6 +256,7 @@ if(label_means){
       file.end0,
       "_", "metrics", ".png"),
     plot = plt_main,
-    width = 6, height = 4, units = c("in")
+    width = width, height = height, units = c("in")
   )
 }
+

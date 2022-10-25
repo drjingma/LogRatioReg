@@ -60,6 +60,9 @@ res = foreach(
   scaling = TRUE
   tol = 1e-4
   
+  filter.perc = 0.8
+  split.perc = 0.7
+  
   file.end = paste0(
     "_sCD14", 
     "_hparam", hparam,
@@ -73,6 +76,8 @@ res = foreach(
   #   p = 60 taxa (counts for microbial taxa at genus level), 
   #   1 response (sCD14 - continuous)
   W = selbal::sCD14[, 1:60]
+  W.origin <- W
+  W <- W[,apply(W==0,2,mean)<filter.perc]
   X = sweep(W, 1, rowSums(W), FUN='/')
   Y = selbal::sCD14[, 61]
   p = ncol(W)
@@ -88,14 +93,19 @@ res = foreach(
   #     -- since response is continuous, no need to stratify by case-control.
   numObs = nrow(X_gbm)
   inputDim = ncol(X_gbm)
-  if(file.exists(paste0(output_dir, "/data", file.end))){
-    data.tmp = readRDS(paste0(output_dir, "/data", file.end))
+  if(file.exists(paste0(
+    output_dir, "/data", "_split", split.perc, "filter", filter.perc, 
+    file.end))){
+    data.tmp = readRDS(paste0(
+      output_dir, "/data", "_split", split.perc, "filter", filter.perc, 
+      file.end))
     XTr = data.tmp$XTr
     XTe = data.tmp$XTe
     YTr = data.tmp$YTr
     YTe = data.tmp$YTe
   } else{
-    trainIdx = sample(cut(1:numObs, breaks=5, labels=F))
+    # trainIdx = sample(cut(1:numObs, breaks=5, labels=F))
+    trainIdx = 1-seq(numObs) %in% sample(1:numObs,size=ceiling(split.perc*numObs))
     XTr = X_gbm[trainIdx != 1,]
     YTr = Y[trainIdx != 1]
     XTe = X_gbm[trainIdx == 1,]

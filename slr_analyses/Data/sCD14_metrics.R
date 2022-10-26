@@ -60,8 +60,8 @@ res = foreach(
   scaling = TRUE
   tol = 1e-4
   
-  filter.perc = 1 # 0.8, 1
-  split.perc = 0.8 # 0.7, 0.8
+  filter.perc = 0.8 # 0.8, 1
+  split.perc = 0.7 # 0.7, 0.8
   
   file.end = paste0(
     "_sCD14", 

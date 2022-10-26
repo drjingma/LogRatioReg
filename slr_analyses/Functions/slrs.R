@@ -105,8 +105,8 @@ slr = function(
     object <- list(sbp=NULL, Aitchison.var = NULL, cluster.mat = NULL)
   } else {
     x.reduced <- x[,which.features] # reduced data matrix
-      Aitchison.var = getAitchisonVar(x.reduced)
-      rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(x.reduced)
+    Aitchison.var = getAitchisonVar(x.reduced)
+    rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(x.reduced)
     if(cluster.method == "spectral" | nrow(Aitchison.var) == 2){
       Aitchison.sim <- max(Aitchison.var) - Aitchison.var 
       ## Perform spectral clustering
@@ -293,7 +293,7 @@ cv.slr <- function(
     # x_in <- x[which.fold.i, ,drop=FALSE]
     x_sub <- x[!which.fold.i, ,drop=FALSE]
     y_sub <- y[!which.fold.i]
-      x.unlab_sub = NULL
+    x.unlab_sub = NULL
     outlist[[i]] <- lapply(threshold, function(l) slr(
       x = x_sub, y = y_sub, 
       screen.method = screen.method, cluster.method = cluster.method,

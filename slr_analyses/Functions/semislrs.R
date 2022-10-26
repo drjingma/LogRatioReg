@@ -1,84 +1,26 @@
-# Copied from RCode/SLR.R
-#   added hierarchical clustering option
-#   added option to include extra non-compositional covariate(s)
-# Date: 6/19/2022
-# OUTDATED --- DONT USE (slr functions can accommodate unlabeled data now) --------------------------------------------------
 
-## Potential to speed up the SLR function: do not need to evaluate the feature score each time
-
-#' Updated: this version first screens variables and then constructs the balance on the Aitchison similarity. 
-#' @param x a sample by feature data matrix. Note x cannot have zero values.
-#' @param y an n by 1 response variable: continuous or binary
-#' @param screen.method method of variable screening: could be correlation based or wald score based.
-#' @param cluster.method method of clustering.
-#' @param response.type type of response variable: could be survival, continuous, or binary. Currently only continuous and binary responses are allowed.
-#' @param s0.perc Factor for denominator of score statistic, between 0 and 1: the percentile of standard deviation values added to the denominator. Default is 0.
-#' @param threshold a nonnegative constant between 0 and 1. If NULL, then no variable screening is performed.
-semislr = function(
-    x, 
-    x2, # compositional data with no response
-    y, 
+slr = function(
+    x,
+    y,
     screen.method=c('correlation','wald'),
     cluster.method = c('spectral', 'hierarchical'),
     response.type=c('survival','continuous','binary'),
     threshold,
     s0.perc=0,
-    zeta=0
+    zeta=0,
+    x.unlabeled = NULL, use.unlabeled = FALSE,
+    positive.slope = FALSE
 ){
-  if(!all.equal(colnames(x), colnames(x2))){
-    stop("x and x2 don't have the same components/covariates/columns!")
-  }
-  
   this.call <- match.call()
   screen.method <- match.arg(screen.method)
   response.type <- match.arg(response.type)
   
   n <- length(y)
   
-  ## Compute univariate coefficient 
-  xclr <- apply(x,1,function(a) log(a) - mean(log(a)))
-  if (screen.method=='wald'){
-    xclr.centered <- scale(t(xclr),center=TRUE,scale=TRUE)
-    if (response.type=='continuous'){
-      y.centered <- y - mean(y)
-      sxx <- diag(crossprod(xclr.centered))
-      sxy <- crossprod(xclr.centered,y.centered)
-      syy <- sum(y.centered^2)
-      numer <- sxy/sxx
-      sd <- sqrt((syy/sxx - numer^2)/(n - 2)) # variance estimate
-      
-      if (is.null(s0.perc)) {
-        fudge <- median(sd)
-      }
-      if (!is.null(s0.perc)) {
-        if (s0.perc >= 0) {
-          fudge <- quantile(sd, s0.perc)
-        }
-        if (s0.perc < 0) {
-          fudge <- 0
-        }
-      }
-      # this is the wald-statistic 
-      feature.scores <- numer/(sd + fudge) 
-      # t-distribution with n-2 df
-      feature.scores <- stats::pt(abs(feature.scores),df=n-2)
-    } else if (response.type=='binary'){
-      feature.scores <- rep(0,ncol(xclr.centered))
-      for (j in 1:ncol(xclr.centered)){
-        fit <- glm(y~x,data=data.frame(
-          x=xclr.centered[,j],y=as.factor(y)),family=binomial(link='logit'))
-        feature.scores[j] <- coef(summary(fit))[2,3]
-      }
-      feature.scores <- stats::pnorm(abs(feature.scores))
-    }
-  }
-  if (screen.method=='correlation'){
-    feature.scores <- cor(t(xclr),y)
-  }
+  feature.scores = getFeatureScores(x, y, screen.method, response.type, s0.perc)
   which.features <- (abs(feature.scores) >= threshold)
-  
   if (sum(which.features)<2){
-    # Fit an intercept only regression model 
+    # Fit an intercept only regression model
     if (response.type=='binary'){
       model.train <- glm(y~.,data=data.frame(
         y=as.factor(y)),family=binomial(link='logit'))
@@ -87,49 +29,66 @@ semislr = function(
     }
     object <- list(sbp=NULL, Aitchison.var = NULL, cluster.mat = NULL)
   } else {
-    allx = rbind(x, x2) #################################################################
-    allx.reduced <- allx[,which.features] # reduced data matrix, ########################
-    #   this time including the data x2 with missing response
-    p <- ncol(allx.reduced)
-    Aitchison.var <- matrix(0,p,p)
-    rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(allx.reduced)
-    for (j in 1:p){
-      for (k in 1:p){
-        if (k==j){next}
-        else {
-          Aitchison.var[j,k] <- stats::var(
-            log(allx.reduced[,j])-log(allx.reduced[,k])) # Aitchison variation
-        }
+    x.reduced <- x[,which.features] # reduced data matrix
+    if(use.unlabeled){
+      if(is.null(x.unlabeled)){
+        stop("use.unlabeled is TRUE but x.unlabeled is missing!!")
       }
+      if(!all.equal(colnames(x), colnames(x.unlabeled))){
+        stop("x and x.unlabeled don't have the same components/covariates/columns! cannot use the unlabeled data.")
+      }
+      all.x = rbind(x, x.unlabeled)
+      all.x.reduced <- all.x[,which.features]
+      Aitchison.var = getAitchisonVar(all.x.reduced)
+      rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(all.x.reduced)
+    } else{
+      Aitchison.var = getAitchisonVar(x.reduced)
+      rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(x.reduced)
     }
     if(cluster.method == "spectral" | nrow(Aitchison.var) == 2){
-      Aitchison.sim <- max(Aitchison.var) - Aitchison.var 
+      Aitchison.sim <- max(Aitchison.var) - Aitchison.var
       ## Perform spectral clustering
-      sbp.est <- spectral.clustering(Aitchison.sim,zeta = zeta)
+      sbp.est <- spectral.clustering(Aitchison.sim, zeta = zeta)
       cluster.mat = Aitchison.sim
     } else if(cluster.method == "hierarchical"){
-        ## Perform hierarchical clustering
-        htree.est <- hclust(dist(Aitchison.var))
-        sbp.est <- balance::sbp.fromHclust(htree.est)[, 1] # grab 1st partition
-        cluster.mat = Aitchison.var
+      ## Perform hierarchical clustering
+      htree.est <- hclust(dist(Aitchison.var))
+      sbp.est <- balance::sbp.fromHclust(htree.est)[, 1] # grab 1st partition
+      cluster.mat = Aitchison.var
     } else{
       stop("invalid cluster.method arg was provided!!")
     }
-    balance <- slr.fromContrast(x[,which.features],sbp.est) #########################
+    balance <- slr.fromContrast(x.reduced, sbp.est) # predict from labeled data
     # model fitting
     if (response.type=='binary'){
       model.train <- glm(
         y~balance,data=data.frame(balance=balance,y=as.factor(y)),
         family=binomial(link='logit'))
-      
+      if(positive.slope){
+        if(coefficients(model.train)[2] < 0){
+          sbp.est = -sbp.est
+          balance <- slr.fromContrast(x.reduced, sbp.est)
+          model.train <- glm(
+            y~balance,data=data.frame(balance=balance,y=as.factor(y)),
+            family=binomial(link='logit'))
+        }
+      }
     } else if (response.type=='continuous'){
       model.train <- lm(
         y~balance,data=data.frame(balance=balance,y=y))
+      if(positive.slope){
+        if(coefficients(model.train)[2] < 0){
+          sbp.est = -sbp.est
+          balance <- slr.fromContrast(x.reduced, sbp.est)
+          model.train <- lm(
+            y~balance,data=data.frame(balance=balance,y=y))
+        }
+      }
     }
     object <- list(
       sbp = sbp.est, Aitchison.var = Aitchison.var, cluster.mat = cluster.mat)
   }
-  object$feature.scores <- feature.scores 
+  object$feature.scores <- feature.scores
   object$theta <- as.numeric(coefficients(model.train))
   object$fit <- model.train
   
@@ -137,85 +96,39 @@ semislr = function(
   return(object)
 }
 
-getOptcv <- function(threshold, cvm, cvsd){
-  # if(match(cvname,c("AUC","C-index"),0))cvm=-cvm
-  cvmin = min(cvm, na.rm = TRUE)
-  idmin = cvm <= cvmin
-  threshold.min = max(threshold[idmin], na.rm = TRUE)
-  idmin = match(threshold.min, threshold)
-  semin = (cvm + cvsd)[idmin]
-  id1se = cvm <= semin
-  threshold.1se = max(threshold[id1se], na.rm = TRUE)
-  id1se = match(threshold.1se, threshold)
-  index=matrix(c(idmin,id1se),2,1,dimnames=list(c("min","1se"),"threshold"))
-  list(
-    threshold.min = threshold.min, 
-    threshold.1se = threshold.1se, 
-    index = index
-  )
-}
 
-cv.semislr <- function(
-    x,x2,y,
-    fold.x2 = TRUE,
-    screen.method=c('correlation','wald'),
+
+cv.slr <- function(
+    x, y, screen.method = c('correlation', 'wald'),
     cluster.method = c('spectral', 'hierarchical'),
-    response.type=c('survival','continuous','binary'),
-    threshold=NULL,s0.perc=NULL,zeta=0,
-    nfolds=10,foldid=NULL,foldid.miss = NULL,weights=NULL,
+    response.type=c('survival', 'continuous', 'binary'),
+    threshold = NULL,
+    s0.perc = 0, zeta = 0,
+    x.unlabeled = NULL, use.unlabeled = FALSE, #
     type.measure = c(
       "default", "mse", "deviance", "class", "auc", "mae", "C", "accuracy"
     ),
-    parallel=FALSE,scale=FALSE,trace.it=FALSE
+    scale = FALSE, nfolds = 10,
+    foldid = NULL, weights = NULL, #
+    fold.unlabeled = FALSE, foldid.unlabeled = NULL, #
+    trace.it = FALSE #
 ){
   type.measure = match.arg(type.measure)
   N <- nrow(x)
-  N2 = nrow(x2)
   p <- ncol(x)
+  N2 = nrow(x.unlabeled)
   
   if (is.null(weights)){
-    # weights <- rep(1,N)
     weights = rep(1, nfolds)
   }
   
   if (is.null(threshold)) {
     xclr <- apply(x,1,function(a) log(a) - mean(log(a)))
     xclr.centered <- base::scale(t(xclr),center=TRUE, scale=TRUE)
-    # determine threshold based on univariate score statistics or correlations    
-    if (screen.method=='correlation'){
-      threshold = sort(abs(cor(xclr.centered,as.numeric(y))))
-    } else if (screen.method=='wald'){
-      if (response.type=='continuous'){
-        y.centered <- y - mean(y)
-        sxx <- diag(crossprod(xclr.centered))
-        sxy <- crossprod(xclr.centered,y.centered)
-        syy <- sum(y.centered^2)
-        numer <- sxy/sxx
-        sd <- sqrt((syy/sxx - numer^2)/(N - 2)) # variance estimate
-        
-        if (is.null(s0.perc)) {
-          fudge <- median(sd)
-        }
-        if (!is.null(s0.perc)) {
-          if (s0.perc >= 0) {
-            fudge <- quantile(sd, s0.perc)
-          }
-          if (s0.perc < 0) {
-            fudge <- 0
-          }
-        }
-        feature.scores <- numer/(sd + fudge) # this is the wald-statistic
-        threshold <- sort(stats::pt(abs(feature.scores),df=N-2))
-      } else if (response.type=='binary'){
-        feature.scores <- rep(0,p)
-        for (j in 1:p){
-          fit <- glm(y~x,data=data.frame(
-            x=xclr.centered[,j],y=as.factor(y)),family=binomial(link='logit'))
-          feature.scores[j] <- coef(summary(fit))[2,3]
-        }
-        threshold <- sort(stats::pnorm(abs(feature.scores)))
-      }
-    }
+    
+    # determine threshold based on univariate score statistics or correlations
+    threshold = sort(
+      getFeatureScores(x, y, screen.method, response.type, s0.perc))
   }
   
   if (is.null(foldid)) {
@@ -223,17 +136,17 @@ cv.semislr <- function(
   } else {
     nfolds = max(foldid)
   }
-  if(fold.x2){
-    if (is.null(foldid.miss)) {
-      if(nfolds > N2){
-        stop("nfolds is greater than the number of samples in X2! cannot divide into folds.")
-      }
-      foldid.miss = sample(rep(seq(nfolds), length = N2))
-    }
-  }
-  
   if (nfolds < 3){
     stop("nfolds must be bigger than 3; nfolds=10 recommended")
+  }
+  if(fold.unlabeled & is.null(foldid.unlabeled)){
+    if(is.null(x.unlabeled)){
+      stop("fold.unlabeled is TRUE but x.unlabeled is missing!!")
+    }
+    if(nfolds > N2){
+      stop("nfolds is greater than the number of samples in x.unlabeled! cannot divide into folds.")
+    }
+    foldid.unlabeled = sample(rep(seq(nfolds), length = N2))
   }
   
   if (trace.it){
@@ -241,66 +154,55 @@ cv.semislr <- function(
   }
   
   outlist = as.list(seq(nfolds))
-  if (parallel) {
-    # require(foreach)
-    # cl <- makeCluster(detectCores())
-    # 
-    # registerDoParallel(cl)
-    # outlist = foreach(i = seq(nfolds), .packages = c("MASS")) %dopar%
-    #   {
-    #     which = foldid == i
-    #     x_in = lapply(x,function(a) a[which, ,drop=FALSE])
-    #     x_sub <- lapply(x,function(a) a[!which, ,drop=FALSE])
-    #     y_sub <- y[!which]
-    #     
-    #     lapply(threshold, function(l) slr(x_sub,y_sub,type=type,response.type = response.type,s0.perc=s0.perc,l))
-    #   }# end foreach
-    # stopCluster(cl)
-  } else {
-    for (i in seq(nfolds)) {
-      if (trace.it){
-        cat(sprintf("Fold: %d/%d\n", i, nfolds))
+  for (i in seq(nfolds)) {
+    if (trace.it){
+      cat(sprintf("Fold: %d/%d\n", i, nfolds))
+    }
+    which.fold.i = foldid == i
+    # x_in <- x[which.fold.i, ,drop=FALSE]
+    x_sub <- x[!which.fold.i, ,drop=FALSE]
+    y_sub <- y[!which.fold.i]
+    if(use.unlabeled){
+      if(is.null(x.unlabeled)){
+        stop("use.unlabeled is TRUE but x.unlabeled is missing!!")
       }
-      which = foldid == i
-      which.miss = foldid.miss == i
-      x_in <- x[which, ,drop=FALSE]
-      x_sub <- x[!which, ,drop=FALSE]
-      if(fold.x2){
-        x2_sub = x2[!which.miss, ,drop=FALSE]
+      if(fold.unlabeled){
+        which.fold.i.unlabeled = foldid.unlabeled == i
+        x.unlab_sub = x.unlabeled[!which.fold.i.unlabeled, ,drop=FALSE]
       } else{
-        x2_sub = x2
+        x.unlab_sub = x.unlabeled
       }
-      y_sub <- y[!which]
-      outlist[[i]] <- lapply(threshold, function(l) semislr(
-        x_sub, x2_sub, y_sub,screen.method=screen.method,
-        cluster.method=cluster.method, response.type = response.type,
-        threshold=l,s0.perc=s0.perc,zeta = zeta))
-    }# end loop i
+    } else{
+      x.unlab_sub = NULL
+    }
+    outlist[[i]] <- lapply(threshold, function(l) slr(
+      x = x_sub, y = y_sub,
+      screen.method = screen.method, cluster.method = cluster.method,
+      response.type = response.type,
+      threshold = l,
+      s0.perc = s0.perc, zeta = zeta,
+      x.unlabeled = x.unlab_sub, use.unlabeled = use.unlabeled))
   }
   
   # collect all out-of-sample predicted values
+  #   with the updated code, this is more like a CV matrix
   predmat <- buildPredmat(
-    outlist, threshold, x, y, foldid, response.type = response.type, 
+    outlist, threshold, x, y, foldid, response.type = response.type,
     type.measure = type.measure)
-
+  
   cvm <- apply(predmat, 2, weighted.mean, w=weights, na.rm = TRUE)
-  # cvsd <- sqrt(apply(
-  #   scale(predmat, cvm, FALSE)^2, 2, weighted.mean, w = weights, na.rm = TRUE) / 
-  #     (N - 1))
   cvsd = apply(predmat, 2, stats::sd, na.rm = TRUE) / sqrt(nfolds)
   
   out <- list(
-    threshold=threshold,
-    cvm=cvm,cvsd=cvsd,
-    fit.preval = predmat, 
+    threshold = threshold,
+    cvm=cvm,cvsd = cvsd,
+    fit.preval = predmat,
     foldid = foldid
   )
   
-  lamin <- with(out,getOptcv(threshold, cvm, cvsd))
+  lamin <- with(out, getOptcv(threshold, cvm, cvsd))
   
   obj = c(out, as.list(lamin))
   class(obj) = "cv.slr"
   obj
 }
-
-

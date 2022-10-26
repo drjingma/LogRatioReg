@@ -1,0 +1,5 @@
+sample.interval=20000
+"unlist" "apply" "getFeatureScores" "slr" 
+"base::crossprod" "crossprod" "crossprod" "standardGeneric" "diag" "getFeatureScores" "slr" 
+"eigen" "spectral.clustering" "slr" 
+"[[.data.frame" "[[" "na.omit.data.frame" "na.omit" ".External2" "model.frame.default" "stats::model.frame" "eval" "eval" "lm" "slr" 

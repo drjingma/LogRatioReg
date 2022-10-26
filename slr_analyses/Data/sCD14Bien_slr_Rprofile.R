@@ -112,6 +112,39 @@ slrhier = slr(
 Rprof(NULL)
 summaryRprof()
 
+# benchmarking some functions ##################################################
+
+# spectral clustering methods #
+
+# matrix to be spectrally-clustered
+x = XTr
+y = YTr
+screen.method = "wald"
+response.type = "continuous"
+s0.perc = 0
+zeta = 0
+threshold = slrspeccv$threshold[slrspeccv$index["1se",]]
+n <- length(y)
+feature.scores = getFeatureScores(x, y, screen.method, response.type, s0.perc)
+which.features <- (abs(feature.scores) >= threshold)
+x.reduced <- x[,which.features] # reduced data matrix
+Aitchison.var = getAitchisonVar(x.reduced)
+rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(x.reduced)
+Aitchison.sim <- max(Aitchison.var) - Aitchison.var 
+
+# our spectral clustering
+sbp.est <- spectral.clustering(Aitchison.sim, zeta = zeta)
+sbp.est
+
+# sClust
+library(sClust)
+fastClustering(Aitchison.sim, smplPoint = 3)
+
+# kernlab
+library(kernlab)
+kernlab.sc <- specc(x = Aitchison.sim, centers = 2, kernel = "laplacedot")
+plot(my.data, col=sc, pch=4)            # estimated classes (x)
+points(my.data, col=obj$classes, pch=5) # true classes (<>)
 
 
 

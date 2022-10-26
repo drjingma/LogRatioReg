@@ -3,10 +3,10 @@
 rm(list=ls())
 
 data_set = "sCD14" # "HIV", "sCD14", "Crohns", "sCD14Bien"
-date = "20221024"
+date = "20221025"
 
 response_type = NA
-if(data_set %in% c("sCD14", "sCD14Bien")){
+if(data_set %in% c("sCD14")){
   response_type = "continuous"
 } else{
   response_type = "binary"
@@ -29,11 +29,20 @@ numSplits = 20
 
 # tuning parameter settings
 hparam = "1se"
-K = 10
-scaling = TRUE
+filter.perc = 0.8
+split.perc = 0.7
 
 file.end0 = paste0(
-  "_", data_set,
+  "_", data_set)
+if(data_set == "sCD14"){
+  file.end0 = paste0(
+    file.end0, 
+    "_split", split.perc, 
+    "_filter", filter.perc
+  )
+}
+file.end0 = paste0(
+  file.end0,
   "_hparam", hparam,
   "_gbm"
 )

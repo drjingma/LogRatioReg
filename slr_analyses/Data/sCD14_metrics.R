@@ -66,7 +66,7 @@ res = foreach(
   file.end = paste0(
     "_sCD14", 
     "_split", split.perc, 
-    "filter", filter.perc, 
+    "_filter", filter.perc, 
     "_hparam", hparam,
     "_gbm",
     "_sim", b,
@@ -444,6 +444,7 @@ res = foreach(
 
   # get prediction error on test set
   WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
+  YTe.c = YTe - mean(YTe)
   lrl.Yhat.test = as.numeric(WTe.c %*% lrl.betahat)
 
   lrl.metrics = c(

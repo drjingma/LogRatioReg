@@ -103,7 +103,8 @@ res = foreach(
     YTe = data.tmp$YTe
   } else{
     # trainIdx = sample(cut(1:numObs, breaks=5, labels=F))
-    trainIdx = 1-seq(numObs) %in% sample(1:numObs,size=ceiling(split.perc*numObs))
+    trainIdx = 1 - 
+      (seq(numObs) %in% sample(1:numObs, size = ceiling(split.perc * numObs)))
     XTr = X_gbm[trainIdx != 1,]
     YTr = Y[trainIdx != 1]
     XTe = X_gbm[trainIdx == 1,]

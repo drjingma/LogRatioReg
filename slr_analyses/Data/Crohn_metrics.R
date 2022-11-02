@@ -55,8 +55,13 @@ res = foreach(
   K = 10
   scaling = TRUE
   
+  filter.perc = 0.8 # 0.8, 1
+  split.perc = 0.7 # 0.7, 0.8
+  
   file.end = paste0(
     "_Crohn", 
+    "_split", split.perc, 
+    "_filter", filter.perc, 
     "_hparam", hparam,
     "_gbm",
     "_sim", b,
@@ -68,6 +73,8 @@ res = foreach(
   #   p = 48 taxa (counts for microbial taxa at genus level), 
   #   1 response (y - binary)
   W = selbal::Crohn[, 1:48]
+  W.origin <- W
+  W <- W[,apply(W==0,2,mean)<filter.perc]
   X = sweep(W, 1, rowSums(W), FUN='/')
   Y = selbal::Crohn[, 49]
   levels(Y) = c("no", "CD") # (control, case)
@@ -95,8 +102,13 @@ res = foreach(
   # } else{
     # stratified sampling
     trainIdx = 1:numObs
-    caseIdx = sample(cut(1:sum(Y2), breaks=5, labels=F))
-    controlIdx = sample(cut(1:sum(1 - Y2), breaks=5, labels=F))
+    # caseIdx = sample(cut(1:sum(Y2), breaks=5, labels=F))
+    caseIdx = 1 - 
+      (seq(sum(Y2)) %in% sample(1:sum(Y2), size=ceiling(split.perc * sum(Y2))))
+    # controlIdx = sample(cut(1:sum(1 - Y2), breaks=5, labels=F))
+    controlIdx = 1 - 
+      (seq(sum(1 - Y2)) %in% 
+         sample(1:sum(1 - Y2), size = ceiling(split.perc * sum(1 - Y2))))
     trainIdx[Y2 == 1] = caseIdx
     trainIdx[Y2 == 0] = controlIdx
     XTr = X_gbm[trainIdx != 1,]

@@ -31,7 +31,7 @@ intercept = TRUE
 scaling = TRUE
 tol = 1e-4
 # sigma_eps1 = 0.1
-sigma_eps2 = 0.01
+sigma_x = 0.1
 SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
@@ -51,7 +51,7 @@ file.end0 = paste0(
   "_hparam", hparam,
   "_dim", n, "x", p, 
   "_ulimit", ulimit,
-  "_noisex", sigma_eps2,
+  "_noisex", sigma_x,
   "_b0", b0, 
   "_b1", b1, 
   "_a0", a0, 

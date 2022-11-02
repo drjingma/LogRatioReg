@@ -172,138 +172,138 @@ res = foreach(
   # ),
   # paste0(output_dir, "/classo_metrics", file.end))
   # 
-  # ##############################################################################
-  # # slr
-  # #   screening.method = "wald"
-  # #   cluster.method = "spectral"
-  # #   response.type = "binary"
-  # #   s0.perc = 0
-  # #   zeta = 0
-  # #   type.measure = "auc"
-  # # -- fits a balance regression model with one balance
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slrspec1cv = cv.slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #   response.type = "binary", s0.perc = 0, zeta = 0,
-  #   nfolds = K, type.measure = "auc",
-  #    scale = scaling, trace.it = FALSE)
-  # if(hparam == "min"){
-  #   slrspec1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrspec1cv$threshold[slrspec1cv$index["min",]], 
-  #     positive.slope = TRUE)
-  # } else if(hparam == "1se"){
-  #   slrspec1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]], 
-  #     positive.slope = TRUE)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # slrspec1.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slrspec1.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrspec1.fullSBP) = colnames(X)
-  # slrspec1.fullSBP[match(
-  #   names(slrspec1$sbp), rownames(slrspec1.fullSBP))] = slrspec1$sbp
-  # 
-  # slrspec1.coefs = getCoefsBM(
-  #   coefs = coefficients(slrspec1$fit), sbp = slrspec1.fullSBP)
-  # 
-  # # compute metrics on the selected model #
-  # # prediction error
-  # slrspec1.Yhat.test = predict(
-  #   slrspec1$fit,
-  #   data.frame(balance = slr.fromContrast(X.test, slrspec1.fullSBP)),
-  #   type = "response")
-  # slrspec1.AUC.test = pROC::roc(
-  #   Y.test, slrspec1.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # beta estimation accuracy, selection accuracy #
-  # slrspec1.metrics = getMetricsBM(
-  #   est.llc.coefs = slrspec1.coefs$llc.coefs,
-  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-  #   true.llc.coefs = llc.coefs.true,
-  #   metrics = c("estimation", "selection"))
-  # 
-  # saveRDS(c(
-  #   "auc" = slrspec1.AUC.test,
-  #   slrspec1.metrics,
-  #   "logratios" = sum(slrspec1.coefs$bm.coefs != 0),
-  #   "time" = slrspec1.timing
-  # ),
-  # paste0(output_dir, "/slr_spectral_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # slr
-  # #   screening.method = "wald"
-  # #   cluster.method = "hierarchical"
-  # #   response.type = "binary"
-  # #   s0.perc = 0
-  # #   zeta = 0
-  # #   type.measure = "auc"
-  # # -- fits a balance regression model with one balance
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slrhier1cv = cv.slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #   response.type = "binary", s0.perc = 0, zeta = 0,
-  #   nfolds = K, type.measure = "auc",
-  #    scale = scaling, trace.it = FALSE)
-  # if(hparam == "min"){
-  #   slrhier1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrhier1cv$threshold[slrhier1cv$index["min",]], 
-  #     positive.slope = TRUE)
-  # } else if(hparam == "1se"){
-  #   slrhier1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]], 
-  #     positive.slope = TRUE)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # slrhier1.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slrhier1.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrhier1.fullSBP) = colnames(X)
-  # slrhier1.fullSBP[match(
-  #   names(slrhier1$sbp), rownames(slrhier1.fullSBP))] = slrhier1$sbp
-  # 
-  # slrhier1.coefs = getCoefsBM(
-  #   coefs = coefficients(slrhier1$fit), sbp = slrhier1.fullSBP)
-  # 
-  # # compute metrics on the selected model #
-  # # prediction error
-  # slrhier1.Yhat.test = predict(
-  #   slrhier1$fit,
-  #   data.frame(balance = slr.fromContrast(X.test, slrhier1.fullSBP)),
-  #   type = "response")
-  # slrhier1.AUC.test = pROC::roc(
-  #   Y.test, slrhier1.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # beta estimation accuracy, selection accuracy #
-  # slrhier1.metrics = getMetricsBM(
-  #   est.llc.coefs = slrhier1.coefs$llc.coefs,
-  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-  #   true.llc.coefs = llc.coefs.true,
-  #   metrics = c("estimation", "selection"))
-  # 
-  # saveRDS(c(
-  #   "auc" = slrhier1.AUC.test,
-  #   slrhier1.metrics,
-  #   "logratios" = sum(slrhier1.coefs$bm.coefs != 0),
-  #   "time" = slrhier1.timing
-  # ),
-  # paste0(output_dir, "/slr_hierarchical_metrics", file.end))
-  # 
+  ##############################################################################
+  # slr
+  #   screening.method = "wald"
+  #   cluster.method = "spectral"
+  #   response.type = "binary"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "auc"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrspec1cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "auc",
+     scale = scaling, trace.it = FALSE)
+  if(hparam == "min"){
+    slrspec1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrspec1cv$threshold[slrspec1cv$index["min",]],
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrspec1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]],
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  slrspec1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  slrspec1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec1.fullSBP) = colnames(X)
+  slrspec1.fullSBP[match(
+    names(slrspec1$sbp), rownames(slrspec1.fullSBP))] = slrspec1$sbp
+
+  slrspec1.coefs = getCoefsBM(
+    coefs = coefficients(slrspec1$fit), sbp = slrspec1.fullSBP)
+
+  # compute metrics on the selected model #
+  # prediction error
+  slrspec1.Yhat.test = predict(
+    slrspec1$fit,
+    data.frame(balance = slr.fromContrast(X.test, slrspec1.fullSBP)),
+    type = "response")
+  slrspec1.AUC.test = pROC::roc(
+    Y.test, slrspec1.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slrspec1.metrics = getMetricsBM(
+    est.llc.coefs = slrspec1.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+    true.llc.coefs = llc.coefs.true,
+    metrics = c("estimation", "selection"))
+
+  saveRDS(c(
+    "auc" = slrspec1.AUC.test,
+    slrspec1.metrics,
+    "logratios" = sum(slrspec1.coefs$bm.coefs != 0),
+    "time" = slrspec1.timing
+  ),
+  paste0(output_dir, "/slr_spectral_metrics", file.end))
+
+  ##############################################################################
+  # slr
+  #   screening.method = "wald"
+  #   cluster.method = "hierarchical"
+  #   response.type = "binary"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "auc"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrhier1cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "auc",
+     scale = scaling, trace.it = FALSE)
+  if(hparam == "min"){
+    slrhier1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrhier1cv$threshold[slrhier1cv$index["min",]],
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrhier1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]],
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  slrhier1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  slrhier1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier1.fullSBP) = colnames(X)
+  slrhier1.fullSBP[match(
+    names(slrhier1$sbp), rownames(slrhier1.fullSBP))] = slrhier1$sbp
+
+  slrhier1.coefs = getCoefsBM(
+    coefs = coefficients(slrhier1$fit), sbp = slrhier1.fullSBP)
+
+  # compute metrics on the selected model #
+  # prediction error
+  slrhier1.Yhat.test = predict(
+    slrhier1$fit,
+    data.frame(balance = slr.fromContrast(X.test, slrhier1.fullSBP)),
+    type = "response")
+  slrhier1.AUC.test = pROC::roc(
+    Y.test, slrhier1.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slrhier1.metrics = getMetricsBM(
+    est.llc.coefs = slrhier1.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+    true.llc.coefs = llc.coefs.true,
+    metrics = c("estimation", "selection"))
+
+  saveRDS(c(
+    "auc" = slrhier1.AUC.test,
+    slrhier1.metrics,
+    "logratios" = sum(slrhier1.coefs$bm.coefs != 0),
+    "time" = slrhier1.timing
+  ),
+  paste0(output_dir, "/slr_hierarchical_metrics", file.end))
+
   # ##############################################################################
   # # selbal method (a balance regression method)
   # # -- fits a balance regression model with one balance

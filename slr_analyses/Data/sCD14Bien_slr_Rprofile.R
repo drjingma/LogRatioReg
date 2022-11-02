@@ -82,14 +82,14 @@ YTe = Y[trainIdx == 1]
 # )
 slrspeccv = readRDS("slr_analyses/Data/slrspeccv1.rds")
 
-Rprof()
+# Rprof()
 slrspec = slr(
   x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
   response.type = "continuous", s0.perc = 0, zeta = 0,
   threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
   positive.slope = TRUE)
-Rprof(NULL)
-summaryRprof()
+# Rprof(NULL)
+# summaryRprof()
 
 # slr - hierarchical #########################################################
 # slrhiercv = cv.slr(
@@ -103,14 +103,14 @@ summaryRprof()
 # )
 slrhiercv = readRDS("slr_analyses/Data/slrhiercv1.rds")
 
-Rprof()
+# Rprof()
 slrhier = slr(
   x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
   response.type = "continuous", s0.perc = 0, zeta = 0,
   threshold = slrhiercv$threshold[slrhiercv$index["1se",]],
   positive.slope = TRUE)
-Rprof(NULL)
-summaryRprof()
+# Rprof(NULL)
+# summaryRprof()
 
 # benchmark! ###################################################################
 library(microbenchmark)
@@ -129,7 +129,7 @@ n <- length(y)
 
 feature.scores = getFeatureScores(x, y, screen.method, response.type, s0.perc)
 which.features <- (abs(feature.scores) >= threshold)
-x.reduced <- x[,which.features] # reduced data matrix
+x.reduced <- x[,which.features, drop = FALSE] # reduced data matrix
 
 getAitchisonVar = function(x){
   p = ncol(x)

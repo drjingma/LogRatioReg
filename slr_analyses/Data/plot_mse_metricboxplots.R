@@ -2,8 +2,8 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohns", "sCD14Bien"
-date = "20221026"
+data_set = "sCD14" # "HIV", "sCD14", "Crohn", "sCD14Bien"
+date = "20221102"
 
 response_type = NA
 if(data_set %in% c("sCD14")){
@@ -29,20 +29,13 @@ numSplits = 20
 
 # tuning parameter settings
 hparam = "1se"
-filter.perc = 1 # 0.8, 1
-split.perc = 0.8  # 0.7, 0.8
+filter.perc = 0.8 # 0.8, 1
+split.perc = 0.7  # 0.7, 0.8
 
 file.end0 = paste0(
-  "_", data_set)
-if(data_set == "sCD14"){
-  file.end0 = paste0(
-    file.end0, 
-    "_split", split.perc, 
-    "_filter", filter.perc
-  )
-}
-file.end0 = paste0(
-  file.end0,
+  "_", data_set,
+  "_split", split.perc, 
+  "_filter", filter.perc,
   "_hparam", hparam,
   "_gbm"
 )

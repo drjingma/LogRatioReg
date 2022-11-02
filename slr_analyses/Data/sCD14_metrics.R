@@ -156,118 +156,118 @@ res = foreach(
   #   cl.metrics,
   #   paste0(output_dir, "/classo_metrics", file.end))
   # 
-  # # slr - spectral #############################################################
-  # start.time = Sys.time()
-  # slrspeccv = cv.slr(
-  #   x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
-  #   response.type = "continuous", s0.perc = 0, zeta = 0,
-  #   nfolds = K, type.measure = "mse",
-  #   scale = scaling, trace.it = FALSE)
-  # if(hparam == "min"){
-  #   slrspec = slr(
-  #     x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
-  #     response.type = "continuous", s0.perc = 0, zeta = 0,
-  #     threshold = slrspeccv$threshold[slrspeccv$index["min",]],
-  #     positive.slope = TRUE)
-  # } else if(hparam == "1se"){
-  #   slrspec = slr(
-  #     x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
-  #     response.type = "continuous", s0.perc = 0, zeta = 0,
-  #     threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
-  #     positive.slope = TRUE)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # slrspec.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get SBP
-  # slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrspec.fullSBP) = colnames(X)
-  # slrspec.fullSBP[match(
-  #   names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
-  # 
-  # # get prediction error on test set
-  # slrspec.Yhat.test = predict(
-  #   slrspec$fit,
-  #   data.frame(balance = slr.fromContrast(XTe, slrspec.fullSBP)),
-  #   type = "response")
-  # 
-  # slrspec.metrics = c(
-  #   mse = as.vector(crossprod(YTe - slrspec.Yhat.test) / nrow(XTe)),
-  #   percselected = sum(slrspec.fullSBP > 0) / p,
-  #   time = slrspec.timing
-  # )
-  # 
-  # saveRDS(
-  #   slrspec.metrics,
-  #   paste0(output_dir, "/slr_spectral_metrics", file.end))
-  # 
-  # if(!all(slrspec.fullSBP == 0) & slrspec$theta[2] < 0){
-  #   slrspec.fullSBP = -slrspec.fullSBP
-  # }
-  # saveRDS(
-  #   slrspec.fullSBP,
-  #   paste0(output_dir, "/slr_spectral_sbp", file.end)
-  # )
-  # 
-  # # slr - hierarchical #########################################################
-  # start.time = Sys.time()
-  # slrhiercv = cv.slr(
-  #   x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
-  #   response.type = "continuous", s0.perc = 0, zeta = 0,
-  #   nfolds = K, type.measure = "mse",
-  #   scale = scaling, trace.it = FALSE)
-  # if(hparam == "min"){
-  #   slrhier = slr(
-  #     x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
-  #     response.type = "continuous", s0.perc = 0, zeta = 0,
-  #     threshold = slrhiercv$threshold[slrhiercv$index["min",]],
-  #     positive.slope = TRUE)
-  # } else if(hparam == "1se"){
-  #   slrhier = slr(
-  #     x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
-  #     response.type = "continuous", s0.perc = 0, zeta = 0,
-  #     threshold = slrhiercv$threshold[slrhiercv$index["1se",]],
-  #     positive.slope = TRUE)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # slrhier.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get SBP
-  # slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrhier.fullSBP) = colnames(X)
-  # slrhier.fullSBP[match(
-  #   names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
-  # 
-  # # get prediction error on test set
-  # slrhier.Yhat.test = predict(
-  #   slrhier$fit,
-  #   data.frame(balance = slr.fromContrast(XTe, slrhier.fullSBP)),
-  #   type = "response")
-  # 
-  # slrhier.metrics = c(
-  #   mse = as.vector(crossprod(YTe - slrhier.Yhat.test) / nrow(XTe)),
-  #   percselected = sum(slrhier.fullSBP > 0) / p,
-  #   time = slrhier.timing
-  # )
-  # 
-  # saveRDS(
-  #   slrhier.metrics,
-  #   paste0(output_dir, "/slr_hierarchical_metrics", file.end))
-  # 
-  # if(!all(slrhier.fullSBP == 0) & slrhier$theta[2] < 0){
-  #   slrhier.fullSBP = -slrhier.fullSBP
-  # }
-  # saveRDS(
-  #   slrhier.fullSBP,
-  #   paste0(output_dir, "/slr_hierarchical_sbp", file.end)
-  # )
-  # 
+  # slr - spectral #############################################################
+  start.time = Sys.time()
+  slrspeccv = cv.slr(
+    x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
+    response.type = "continuous", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "mse",
+    scale = scaling, trace.it = FALSE)
+  if(hparam == "min"){
+    slrspec = slr(
+      x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
+      response.type = "continuous", s0.perc = 0, zeta = 0,
+      threshold = slrspeccv$threshold[slrspeccv$index["min",]],
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrspec = slr(
+      x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
+      response.type = "continuous", s0.perc = 0, zeta = 0,
+      threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  slrspec.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  # get SBP
+  slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec.fullSBP) = colnames(X)
+  slrspec.fullSBP[match(
+    names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+
+  # get prediction error on test set
+  slrspec.Yhat.test = predict(
+    slrspec$fit,
+    data.frame(balance = slr.fromContrast(XTe, slrspec.fullSBP)),
+    type = "response")
+
+  slrspec.metrics = c(
+    mse = as.vector(crossprod(YTe - slrspec.Yhat.test) / nrow(XTe)),
+    percselected = sum(slrspec.fullSBP > 0) / p,
+    time = slrspec.timing
+  )
+
+  saveRDS(
+    slrspec.metrics,
+    paste0(output_dir, "/slr_spectral_metrics", file.end))
+
+  if(!all(slrspec.fullSBP == 0) & slrspec$theta[2] < 0){
+    slrspec.fullSBP = -slrspec.fullSBP
+  }
+  saveRDS(
+    slrspec.fullSBP,
+    paste0(output_dir, "/slr_spectral_sbp", file.end)
+  )
+
+  # slr - hierarchical #########################################################
+  start.time = Sys.time()
+  slrhiercv = cv.slr(
+    x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "continuous", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "mse",
+    scale = scaling, trace.it = FALSE)
+  if(hparam == "min"){
+    slrhier = slr(
+      x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "continuous", s0.perc = 0, zeta = 0,
+      threshold = slrhiercv$threshold[slrhiercv$index["min",]],
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrhier = slr(
+      x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "continuous", s0.perc = 0, zeta = 0,
+      threshold = slrhiercv$threshold[slrhiercv$index["1se",]],
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  slrhier.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  # get SBP
+  slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier.fullSBP) = colnames(X)
+  slrhier.fullSBP[match(
+    names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
+
+  # get prediction error on test set
+  slrhier.Yhat.test = predict(
+    slrhier$fit,
+    data.frame(balance = slr.fromContrast(XTe, slrhier.fullSBP)),
+    type = "response")
+
+  slrhier.metrics = c(
+    mse = as.vector(crossprod(YTe - slrhier.Yhat.test) / nrow(XTe)),
+    percselected = sum(slrhier.fullSBP > 0) / p,
+    time = slrhier.timing
+  )
+
+  saveRDS(
+    slrhier.metrics,
+    paste0(output_dir, "/slr_hierarchical_metrics", file.end))
+
+  if(!all(slrhier.fullSBP == 0) & slrhier$theta[2] < 0){
+    slrhier.fullSBP = -slrhier.fullSBP
+  }
+  saveRDS(
+    slrhier.fullSBP,
+    paste0(output_dir, "/slr_hierarchical_sbp", file.end)
+  )
+
   # # selbal #####################################################################
   # start.time = Sys.time()
   # if(hparam == "min"){
@@ -423,39 +423,39 @@ res = foreach(
   #   paste0(output_dir, "/codacore_sbp", file.end)
   # )
 
-  # log-ratio lasso ############################################################
-  library(logratiolasso)
-  source("slr_analyses/Functions/logratiolasso.R")
-  WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
-  YTr.c = YTr - mean(YTr)
-
-  start.time = Sys.time()
-  if(hparam == "min"){
-    lrl <- cv_two_stage(z = WTr.c, y = YTr.c, n_folds = K, gamma = 0)
-    lrl.betahat = lrl$beta_min
-  } else if(hparam == "1se"){
-    lrl <- cv_two_stage(z = WTr.c, y = YTr.c, n_folds = K, gamma = 1)
-    lrl.betahat = lrl$beta_gammase
-  } else{
-    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  }
-  end.time = Sys.time()
-  lrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-
-  # get prediction error on test set
-  WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
-  YTe.c = YTe - mean(YTe)
-  lrl.Yhat.test = as.numeric(WTe.c %*% lrl.betahat)
-
-  lrl.metrics = c(
-    mse = as.vector(crossprod(YTe.c - lrl.Yhat.test) / nrow(XTe)),
-    percselected = sum(abs(lrl.betahat) > 10e-8) / p,
-    time = lrl.timing
-  )
-
-  saveRDS(
-    lrl.metrics,
-    paste0(output_dir, "/lrlasso_metrics", file.end))
+  # # log-ratio lasso ############################################################
+  # library(logratiolasso)
+  # source("slr_analyses/Functions/logratiolasso.R")
+  # WTr.c = scale(log(XTr), center = TRUE, scale = FALSE)
+  # YTr.c = YTr - mean(YTr)
+  # 
+  # start.time = Sys.time()
+  # if(hparam == "min"){
+  #   lrl <- cv_two_stage(z = WTr.c, y = YTr.c, n_folds = K, gamma = 0)
+  #   lrl.betahat = lrl$beta_min
+  # } else if(hparam == "1se"){
+  #   lrl <- cv_two_stage(z = WTr.c, y = YTr.c, n_folds = K, gamma = 1)
+  #   lrl.betahat = lrl$beta_gammase
+  # } else{
+  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  # }
+  # end.time = Sys.time()
+  # lrl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # get prediction error on test set
+  # WTe.c = scale(log(XTe), center = TRUE, scale = FALSE)
+  # YTe.c = YTe - mean(YTe)
+  # lrl.Yhat.test = as.numeric(WTe.c %*% lrl.betahat)
+  # 
+  # lrl.metrics = c(
+  #   mse = as.vector(crossprod(YTe.c - lrl.Yhat.test) / nrow(XTe)),
+  #   percselected = sum(abs(lrl.betahat) > 10e-8) / p,
+  #   time = lrl.timing
+  # )
+  # 
+  # saveRDS(
+  #   lrl.metrics,
+  #   paste0(output_dir, "/lrlasso_metrics", file.end))
   
 }

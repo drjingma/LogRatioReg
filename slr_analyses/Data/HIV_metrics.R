@@ -93,17 +93,17 @@ res = foreach(
   #     train/test splits, sampled with stratification by case-control.
   numObs = nrow(X_gbm)
   inputDim = ncol(X_gbm)
-  # if(file.exists(paste0(output_dir, "/data", file.end))){
-  #   data.tmp = readRDS(paste0(output_dir, "/data", file.end))
-  #   XTr = data.tmp$XTr
-  #   XTe = data.tmp$XTe
-  #   YTr = data.tmp$YTr
-  #   YTe = data.tmp$YTe
-  #   Y2Tr = data.tmp$Y2Tr
-  #   Y2Te = data.tmp$Y2Te
-  #   covarTr = data.tmp$covarTr
-  #   covarTe = data.tmp$covarTe
-  # } else{
+  if(file.exists(paste0(output_dir, "/data", file.end))){
+    data.tmp = readRDS(paste0(output_dir, "/data", file.end))
+    XTr = data.tmp$XTr
+    XTe = data.tmp$XTe
+    YTr = data.tmp$YTr
+    YTe = data.tmp$YTe
+    Y2Tr = data.tmp$Y2Tr
+    Y2Te = data.tmp$Y2Te
+    covarTr = data.tmp$covarTr
+    covarTe = data.tmp$covarTe
+  } else{
     # stratified sampling
     trainIdx = 1:numObs
     # caseIdx = sample(cut(1:sum(Y2), breaks=5, labels=F))
@@ -129,7 +129,7 @@ res = foreach(
       XTe = XTe, YTe = YTe, Y2Te = Y2Te, covarTe
     ),
     paste0(output_dir, "/data", file.end))
-  # }
+  }
   
   ##############################################################################
   # fit methods

@@ -112,11 +112,9 @@ slrhier = slr(
 Rprof(NULL)
 summaryRprof()
 
-# benchmarking some functions ##################################################
+# benchmark! ###################################################################
+library(microbenchmark)
 
-# spectral clustering methods #
-
-# matrix to be spectrally-clustered
 x = XTr
 y = YTr
 screen.method = "wald"
@@ -124,6 +122,151 @@ response.type = "continuous"
 s0.perc = 0
 zeta = 0
 threshold = slrspeccv$threshold[slrspeccv$index["1se",]]
+
+# benchmarking getAitchisonVar #################################################
+
+n <- length(y)
+
+feature.scores = getFeatureScores(x, y, screen.method, response.type, s0.perc)
+which.features <- (abs(feature.scores) >= threshold)
+x.reduced <- x[,which.features] # reduced data matrix
+
+getAitchisonVar = function(x){
+  p = ncol(x)
+  A <- matrix(0, p, p)
+  for (j in 1:p){
+    for (k in 1:p){
+      if (k == j){
+        next
+      }
+      else{
+        A[j,k] <- stats::var(log(x[,j])-log(x[,k])) # Aitchison variation
+      }
+    }
+  }
+  return(A)
+}
+
+Aitchison.var = getAitchisonVar(x.reduced)
+
+# try using outer() instead
+AitchVar = function(x, y) stats::var(log(x) - log(y))
+AitchVarVec = Vectorize(AitchVar)
+Aitchison.var2 = outer(X = x.reduced, Y = x.reduced, FUN = AitchVarVec)
+rownames(Aitchison.var2) <- colnames(Aitchison.var2) <- NULL
+
+all.equal(Aitchison.var, Aitchison.var2, check.attributes = FALSE)
+
+# using outer() is faster than using a double for loop!
+microbenchmark(
+  getAitchisonVar(x.reduced), 
+  outer(X = x.reduced, Y = x.reduced, FUN = AitchVarVec),
+  times = 100
+)
+
+# benchmarking slr.fromContrast ################################################
+
+rownames(Aitchison.var) <- colnames(Aitchison.var) <- colnames(x.reduced)
+Aitchison.sim <- max(Aitchison.var) - Aitchison.var
+sbp.est <- spectral.clustering(Aitchison.sim, zeta = zeta)
+cluster.mat = Aitchison.sim
+
+slr.fromContrast <- function(x, contrast){
+  
+  if(length(contrast) != ncol(x)) stop("Contrast must have length ncol(x) = D.")
+  if(any(!contrast %in% c(-1, 0, 1))) stop("Contrast must contain [-1, 0, 1] only.")
+  
+  # lpos <- sum(contrast == 1)
+  # lneg <- sum(contrast == -1)
+  # const <- sqrt((lpos*lneg)/(lpos+lneg))
+  logX <- log(x)
+  ipos <- rowMeans(logX[, contrast == 1, drop = FALSE])
+  ineg <- rowMeans(logX[, contrast == -1, drop = FALSE])
+  
+  ipos - ineg
+}
+
+balance <- slr.fromContrast(x.reduced, sbp.est) 
+
+# try using apply instead
+
+slr.fromContrast2 <- function(x, contrast){
+  if(length(contrast) != ncol(x)) stop("Contrast must have length ncol(x) = D.")
+  if(any(!contrast %in% c(-1, 0, 1))) stop("Contrast must contain [-1, 0, 1] only.")
+  logX <- log(x)
+  ipos <- apply(logX[, contrast == 1, drop = FALSE], 1, mean)
+  ineg <- apply(logX[, contrast == -1, drop = FALSE], 1, mean)
+  ipos - ineg
+}
+
+balance2 <- slr.fromContrast2(x.reduced, sbp.est) 
+all.equal(balance, balance2)
+
+# rowMeans is actually faster in this case -- keep it.
+microbenchmark(
+  slr.fromContrast(x.reduced, sbp.est),
+  slr.fromContrast2(x.reduced, sbp.est),
+  times = 100
+)
+
+# check spectral clustering ####################################################
+#   is ordering necessary?
+
+spectral.clustering <- function(W, n_eig = 2, zeta = 0) {
+  L = graph.laplacian(W,zeta = zeta) # compute graph Laplacian
+  ei = eigen(L, symmetric = TRUE)    # Compute the eigenvectors and values of L
+  # we will use k-means to cluster the eigenvectors corresponding to
+  # the leading smallest eigenvalues
+  ei$vectors <- ei$vectors[,base::order(abs(ei$values),decreasing=TRUE)]
+  obj <- kmeans(ei$vectors[, 1:n_eig], centers = n_eig, nstart = 100, algorithm = "Lloyd")
+  if (n_eig==2){
+    cl <- 2*(obj$cluster - 1) - 1 
+  } else {
+    cl <- obj$cluster
+  }
+  names(cl) <- rownames(W)
+  # return the cluster membership
+  return(cl) 
+}
+
+sbp.est <- spectral.clustering(Aitchison.sim, zeta = zeta)
+
+spectral.clustering2 <- function(W, n_eig = 2, zeta = 0) {
+  L = graph.laplacian(W,zeta = zeta) # compute graph Laplacian
+  ei = eigen(L, symmetric = TRUE)    # Compute the eigenvectors and values of L
+  # we will use k-means to cluster the eigenvectors corresponding to
+  # the leading smallest eigenvalues
+  # ei$vectors <- ei$vectors[,base::order(abs(ei$values),decreasing=TRUE)]
+  obj <- kmeans(ei$vectors[, 1:n_eig], centers = n_eig, nstart = 100, algorithm = "Lloyd")
+  if (n_eig==2){
+    cl <- 2*(obj$cluster - 1) - 1 
+  } else {
+    cl <- obj$cluster
+  }
+  names(cl) <- rownames(W)
+  # return the cluster membership
+  return(cl) 
+}
+
+sbp.est2 <- spectral.clustering2(Aitchison.sim, zeta = zeta)
+
+# they are the same
+sbp.est
+-sbp.est2
+
+# somehow, max is much larger for spectral.clustering2 -- might as well keep it.
+microbenchmark(
+  spectral.clustering(Aitchison.sim, zeta = zeta),
+  spectral.clustering2(Aitchison.sim, zeta = zeta),
+  times = 1000
+)
+
+# benchmarking spectral clustering functions ###################################
+
+# spectral clustering methods #
+
+# matrix to be spectrally-clustered
+
 n <- length(y)
 feature.scores = getFeatureScores(x, y, screen.method, response.type, s0.perc)
 which.features <- (abs(feature.scores) >= threshold)

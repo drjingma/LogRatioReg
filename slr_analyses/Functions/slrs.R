@@ -3,21 +3,24 @@
 #   added option to include extra non-compositional covariate(s)
 # Date: 6/19/2022
 
-getAitchisonVar = function(x){
-  p = ncol(x)
-  A <- matrix(0, p, p)
-  for (j in 1:p){
-    for (k in 1:p){
-      if (k == j){
-        next
-      }
-      else{
-        A[j,k] <- stats::var(log(x[,j])-log(x[,k])) # Aitchison variation
-      }
-    }
-  }
-  return(A)
-}
+# getAitchisonVar = function(x){
+#   p = ncol(x)
+#   A <- matrix(0, p, p)
+#   for (j in 1:p){
+#     for (k in 1:p){
+#       if (k == j){
+#         next
+#       }
+#       else{
+#         A[j,k] <- stats::var(log(x[,j])-log(x[,k])) # Aitchison variation
+#       }
+#     }
+#   }
+#   return(A)
+# }
+AitchVar = function(x, y) stats::var(log(x) - log(y))
+AitchVarVec = Vectorize(AitchVar)
+getAitchisonVar = function(x) outer(X = x, Y = x, FUN = AitchVarVec)
 
 getFeatureScores = function(x, y, screen.method, response.type, s0.perc){
   n = length(y)

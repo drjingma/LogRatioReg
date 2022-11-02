@@ -4,7 +4,7 @@ rm(list=ls())
 # Date: 8/24/2022
 
 label_means = TRUE
-current_date = "20221022"
+current_date = "20221102"
 
 ################################################################################
 # libraries and settings
@@ -31,8 +31,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1
 sigma_x = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)

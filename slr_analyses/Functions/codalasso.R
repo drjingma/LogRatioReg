@@ -461,7 +461,7 @@ trapezInteg  <-  function(x,y) {
 }
 
 
-codalasso = function(x, y, numFolds = 5, gamma = 1) {
+codalasso = function(x, y, numFolds = 5, gamma = 1, type.measure = "AUC") {
   
   lambdas = seq(1.0, 0.0, -0.01)
   
@@ -481,11 +481,21 @@ codalasso = function(x, y, numFolds = 5, gamma = 1) {
         cll = coda_logistic_lasso(y[foldIdx != j], x[foldIdx != j,], lambdas[i])
         yHat = predict(cll, x[foldIdx == j,])
         yObs = y[foldIdx == j]
-        XE = yObs * yHat - yHat - pmax(0, -yHat) - log(exp(0) + exp(-abs(yHat)))
-        XE = mean(XE)
-        # # yHat = 1 / (1 + exp(-yHat))
-        # # XE = mean(yObs * log(yHat) + (1 - yObs) * log(1 - yHat))
-        scores[i, j] = XE
+        if(type.measure == "AUC"){
+          # scores[i, j] = tryCatch({
+          #   pROC::auc(
+          #     yObs,yHat, levels = c(0, 1), direction = "<", quiet = TRUE)
+          # }, error = function(e){return(NA)}
+          # )
+          scores[i, j] = pROC::auc(
+            yObs,yHat, levels = c(0, 1), direction = "<", quiet = TRUE)
+        } else{
+          XE = yObs * yHat - yHat - pmax(0, -yHat) - log(exp(0) + exp(-abs(yHat)))
+          XE = mean(XE)
+          # # yHat = 1 / (1 + exp(-yHat))
+          # # XE = mean(yObs * log(yHat) + (1 - yObs) * log(1 - yHat))
+          scores[i, j] = XE
+        }
       })
       
     }

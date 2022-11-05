@@ -157,11 +157,18 @@ rownames(Aitchison.var2) <- colnames(Aitchison.var2) <- NULL
 
 all.equal(Aitchison.var, Aitchison.var2, check.attributes = FALSE)
 
+Outer <- function(x,y,fun) {
+  mat <- matrix(mapply(fun, rep(x, length(y)), 
+                       rep(y, each=length(x))),
+                length(x), length(y))
+}
+
 # using outer() is faster than using a double for loop!
 microbenchmark(
   getAitchisonVar(x.reduced), 
   outer(X = x.reduced, Y = x.reduced, FUN = AitchVarVec),
-  times = 100
+  Outer(x = x.reduced, y = x.reduced, fun = AitchVar),
+  times = 1000
 )
 
 # benchmarking slr.fromContrast ################################################

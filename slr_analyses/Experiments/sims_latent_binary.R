@@ -76,7 +76,6 @@ res = foreach(
     "_hparam", hparam,
     "_dim", n, "x", p, 
     "_ulimit", ulimit,
-    # "_noisey", sigma_y, 
     "_noisex", sigma_x, 
     "_b0", b0, 
     "_b1", b1, 
@@ -137,12 +136,13 @@ res = foreach(
   
   ##############################################################################
   # compositional lasso (a linear log contrast method)
+  #   keep Gordon-Rodriguez et al. validation method
   ##############################################################################
   start.time = Sys.time()
   if(hparam == "min"){
-    classo = codalasso(X, Y, numFolds = K, gamma = 0)
+    classo0 = codalasso(X, Y, numFolds = K, gamma = 0, type.measure = "original")
   } else if(hparam == "1se"){
-    classo = codalasso(X, Y, numFolds = K, gamma = 1)
+    classo0 = codalasso(X, Y, numFolds = K, gamma = 1, type.measure = "original")
   } else{
     stop("invalid hparam setting (method for selecting hyperparameter(s)).")
   }
@@ -150,11 +150,11 @@ res = foreach(
   cl.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
-  cl.betahat = classo$cll$betas[-1]
+  cl.betahat = classo0$cll$betas[-1]
 
   # compute metrics on the selected model #
   # prediction error
-  cl.Yhat.test = predict(classo, X.test)
+  cl.Yhat.test = predict(classo0, X.test)
   cl.AUC.test = pROC::roc(
     Y.test, cl.Yhat.test, levels = c(0, 1), direction = "<")$auc
   # estimation accuracy, selection accuracy #
@@ -170,7 +170,7 @@ res = foreach(
     "logratios" = 0,
     "time" = cl.timing
   ),
-  paste0(output_dir, "/classo_metrics", file.end))
+  paste0(output_dir, "/classo0_metrics", file.end))
 
   ##############################################################################
   # slr

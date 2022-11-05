@@ -18,9 +18,21 @@
 #   }
 #   return(A)
 # }
-AitchVar = function(x, y) stats::var(log(x) - log(y))
+AitchVar = function(x, y){
+  stats::var(log(x) - log(y))
+}
 AitchVarVec = Vectorize(AitchVar)
-getAitchisonVar = function(x) outer(X = x, Y = x, FUN = AitchVarVec)
+getAitchisonVar = function(x){
+  # browser()
+  outer(X = x, Y = x, FUN = AitchVarVec)
+}
+# Outer <- function(x,y,fun) {
+#   mat <- matrix(mapply(fun, rep(x, length(y)), 
+#                        rep(y, each=length(x))),
+#                 length(x), length(y))
+#   mat
+# }
+# getAitchisonVar = function(x) Outer(x, x, AitchVar)
 
 getFeatureScores = function(x, y, screen.method, response.type, s0.perc){
   n = length(y)
@@ -89,9 +101,11 @@ slr = function(
     zeta=0,
     positive.slope = FALSE
 ){
+  # browser()
   this.call <- match.call()
   screen.method <- match.arg(screen.method)
   response.type <- match.arg(response.type)
+  if(!("data.frame" %in% class(x))) x = data.frame(x)
   
   n <- length(y)
   

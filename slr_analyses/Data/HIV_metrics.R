@@ -25,7 +25,7 @@ registerDoRNG(rng.seed)
 numSplits = 20
 
 ################################################################################
-# 80/20 train/test splits #
+# 70/30 train/test splits with sparsity filtering at 80%
 ################################################################################
 
 registerDoRNG(rng.seed)
@@ -89,7 +89,7 @@ res = foreach(
   
   ##############################################################################
   # Train/Test Split
-  #   Following Gordon-Rodriguez et al. 2022, fit each method on 20 random 80/20
+  #   Following Gordon-Rodriguez et al. 2022, fit each method on 20 random
   #     train/test splits, sampled with stratification by case-control.
   numObs = nrow(X_gbm)
   inputDim = ncol(X_gbm)
@@ -136,33 +136,64 @@ res = foreach(
   ##############################################################################
   
   # classo #####################################################################
+  #   keep Gordon-Rodriguez et al. validation method
   start.time = Sys.time()
   if(hparam == "min"){
-    classo = codalasso(XTr, Y2Tr, numFolds = K, gamma = 0)
+    classo0 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "original")
   } else if(hparam == "1se"){
-    classo = codalasso(XTr, Y2Tr, numFolds = K, gamma = 1)
+    classo0 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "original")
   } else{
     stop("invalid hparam setting (method for selecting hyperparameter(s)).")
   }
   end.time = Sys.time()
-  cl.timing = difftime(
+  cl0.timing = difftime(
     time1 = end.time, time2 = start.time, units = "secs")
 
   # get prediction error on test set
-  classo.Yhat.test = predict(classo, XTe) # before sigmoid
+  classo0.Yhat.test = predict(classo0, XTe) # before sigmoid
 
-  cl.metrics = c(
-    acc = mean((classo.Yhat.test > 0) == Y2Te),
+  cl0.metrics = c(
+    acc = mean((classo0.Yhat.test > 0) == Y2Te),
     auc = pROC::roc(
-      Y2Te, classo.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-    percselected = sum(abs(classo$cll$betas[-1]) > 10e-8) / p,
-    f1 = getF1(Y2Te, classo.Yhat.test > 0),
-    time = cl.timing
+      Y2Te, classo0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(classo0$cll$betas[-1]) > 10e-8) / p,
+    f1 = getF1(Y2Te, classo0.Yhat.test > 0),
+    time = cl0.timing
   )
 
   saveRDS(
-    cl.metrics,
-    paste0(output_dir, "/classo_metrics", file.end))
+    cl0.metrics,
+    paste0(output_dir, "/classo0_metrics", file.end))
+  
+  # classo #####################################################################
+  #   validate on AUC
+  start.time = Sys.time()
+  if(hparam == "min"){
+    classo1 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "AUC")
+  } else if(hparam == "1se"){
+    classo1 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "AUC")
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  cl1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # get prediction error on test set
+  classo1.Yhat.test = predict(classo1, XTe) # before sigmoid
+  
+  cl1.metrics = c(
+    acc = mean((classo1.Yhat.test > 0) == Y2Te),
+    auc = pROC::roc(
+      Y2Te, classo1.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(classo1$cll$betas[-1]) > 10e-8) / p,
+    f1 = getF1(Y2Te, classo1.Yhat.test > 0),
+    time = cl1.timing
+  )
+  
+  saveRDS(
+    cl1.metrics,
+    paste0(output_dir, "/classo1_metrics", file.end))
 
   # slr - spectral clustering with auc #########################################
   start.time = Sys.time()

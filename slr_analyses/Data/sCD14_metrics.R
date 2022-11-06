@@ -25,7 +25,7 @@ registerDoRNG(rng.seed)
 numSplits = 20
 
 ################################################################################
-# 80/20 train/test splits #
+# 70/30 train/test splits with sparsity filtering at 80%
 ################################################################################
 
 registerDoRNG(rng.seed)
@@ -72,7 +72,7 @@ res = foreach(
     "_sim", b,
     ".rds")
   
-  ################################################################################
+  ##############################################################################
   # sCD14: another HIV data set in selbal package
   #   n = 151 samples (a subset from sCD14 data set), 
   #   p = 60 taxa (counts for microbial taxa at genus level), 
@@ -90,7 +90,7 @@ res = foreach(
   
   ##############################################################################
   # Train/Test Split
-  #   Following Gordon-Rodriguez et al. 2022, fit each method on 20 random 80/20
+  #   Following Gordon-Rodriguez et al. 2022, fit each method on random
   #     train/test splits, 
   #     -- since response is continuous, no need to stratify by case-control.
   numObs = nrow(X_gbm)

@@ -144,8 +144,8 @@ Type 'q()' to quit R.
 +     covarTe = data.frame(MSM = covar[trainIdx == 1,])
 +     
 +     saveRDS(list(
-+       XTr = XTr, YTr = YTr, Y2Tr = Y2Tr, covarTr,
-+       XTe = XTe, YTe = YTe, Y2Te = Y2Te, covarTe
++       XTr = XTr, YTr = YTr, Y2Tr = Y2Tr, covarTr = covarTr,
++       XTe = XTe, YTe = YTe, Y2Te = Y2Te, covarTe = covarTe
 +     ),
 +     paste0(output_dir, "/data", file.end))
 +   }
@@ -404,7 +404,6 @@ Type 'q()' to quit R.
 +     slbl1$glm,
 +     newdata = data.frame(
 +       V1 = balance::balance.fromSBP(x = XTe, y = slbl1.coefs$sbp),
-+       
 +       MSM = covarTe
 +     ),
 +     type = "response")
@@ -422,6 +421,15 @@ Type 'q()' to quit R.
 +   saveRDS(
 +     slbl1.metrics,
 +     paste0(output_dir, "/selbal_covar_metrics", file.end))
++   
++   slbl1_sbp = slbl1.coefs$sbp
++   if(slbl1$glm$coefficients[2] < 0){
++     slbl1_sbp = -slbl1_sbp
++   }
++   saveRDS(
++     slbl1_sbp,
++     paste0(output_dir, "/selbal_covar_sbp", file.end)
++   )
 + 
 +   # codacore ###################################################################
 +   library(codacore)
@@ -534,6 +542,222 @@ Type 'q()' to quit R.
 +     paste0(output_dir, "/lrlasso_metrics", file.end))
 +   
 + }
+2022-11-08 21:38:24.960216: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:38:24.960292: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:38:40.788251: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:38:40.788467: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:38:40.788535: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:38:40.791671: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:38:40.791774: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:38:40.791836: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:38:40.791858: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:38:40.792468: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:39:20.205063: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:20.205122: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:39:28.295273: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:28.295330: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:39:34.498771: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:34.498978: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:34.499060: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:34.502096: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:34.502233: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:34.502324: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:34.502347: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:39:34.502926: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:39:39.349632: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:39.349691: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:39:41.446227: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:41.446505: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:41.446598: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:41.458144: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:41.458342: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:41.458439: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:41.458493: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:39:41.458977: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:39:43.212189: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:43.212249: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:39:52.618366: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:52.618599: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:52.618696: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:52.646042: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:52.646205: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:52.646305: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:52.646326: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:39:52.646857: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:39:54.771813: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:54.796140: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:54.796588: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:54.799402: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:54.799517: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:54.799611: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:39:54.799636: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:39:54.800159: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:40:35.726846: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:40:35.726912: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:40:45.805303: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:40:45.805510: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:40:45.805573: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:40:45.808430: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:40:45.808556: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:40:45.808626: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:40:45.808645: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:40:45.809155: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:41:09.453544: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:09.453594: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:41:10.116757: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:10.116808: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:41:16.967042: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:16.967101: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:41:18.456899: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:18.457079: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:18.457152: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:18.459678: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:18.459747: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:18.459797: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:18.459812: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:41:18.460288: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:41:21.290606: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:21.290817: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:21.290905: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:21.314099: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:21.314255: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:21.314342: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:21.314365: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:41:21.314804: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:41:22.306937: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:22.307010: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:41:24.405646: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:24.416460: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:24.416721: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:24.419692: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:24.419806: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:24.419884: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:24.419908: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:41:24.420393: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:41:31.521791: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:31.521927: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:31.521986: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:31.524670: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:31.524768: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:31.524835: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:31.524853: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:41:31.525361: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:41:49.620701: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:49.620765: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:41:55.465231: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:55.465422: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:55.465500: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:55.468097: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:55.468186: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:55.468253: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:41:55.468290: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:41:55.468810: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:42:31.001951: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:31.002000: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:42:35.481532: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:35.481582: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:42:38.260570: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:38.260614: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:42:38.348453: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:38.348563: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:38.348627: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:38.350915: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:38.350984: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:38.351035: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:38.351050: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:42:38.351472: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:42:43.182872: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:43.182985: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:43.183039: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:43.198208: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:43.198299: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:43.198355: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:43.198372: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:42:43.198771: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:42:45.051176: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:45.051379: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:45.051464: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:45.070316: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:45.070404: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:45.070461: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:45.070475: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:42:45.070877: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:42:51.382868: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:51.382921: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:42:58.007056: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:58.007111: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:42:58.467509: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:58.467641: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:58.467692: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:58.470050: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:58.470118: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:58.470173: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:42:58.470186: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:42:58.470618: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:43:04.677140: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:04.677266: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:04.677320: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:04.679637: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:04.679718: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:04.679777: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:04.679791: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:43:04.680194: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:43:09.423942: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:09.424024: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:43:15.588747: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:15.588857: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:15.588915: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:15.591324: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:15.591399: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:15.591457: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:43:15.591473: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:43:15.591848: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2022-11-08 21:44:18.925883: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:44:18.925936: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-11-08 21:44:24.872246: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:44:24.872357: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:44:24.872408: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:44:24.874509: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:44:24.874574: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:44:24.874623: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-08 21:44:24.874650: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-08 21:44:24.874998: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
 
 
 ############################################################### 
@@ -578,63 +802,83 @@ Type 'q()' to quit R.
 #-------------------------------------------------------------# 
 ###############################################################
 
+ The optimal number of variables is: 2 
+
+
+
+############################################################### 
+ . . . FINISHED. 
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+
+
+############################################################### 
+ STARTING selbal.cv FUNCTION 
+###############################################################
+
+#-------------------------------------------------------------# 
+# ZERO REPLACEMENT . . .
+
+
+, . . . FINISHED. 
+#-------------------------------------------------------------#
+
+#-------------------------------------------------------------# 
+# Starting the cross - validation procedure . . .
+ . . . finished. 
+#-------------------------------------------------------------# 
+###############################################################
+
+ The optimal number of variables is: 6 
+
+
+
+############################################################### 
+ . . . FINISHED. 
+###############################################################
+
+############################################################### 
+ STARTING selbal.cv FUNCTION 
+###############################################################
+
+#-------------------------------------------------------------# 
+# ZERO REPLACEMENT . . .
+
+
+, . . . FINISHED. 
+#-------------------------------------------------------------#
+
+#-------------------------------------------------------------# 
+# Starting the cross - validation procedure . . .
+ . . . finished. 
+#-------------------------------------------------------------# 
+###############################################################
+
  The optimal number of variables is: 3 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################
-
-############################################################### 
- STARTING selbal.cv FUNCTION 
-###############################################################
-
-#-------------------------------------------------------------# 
-# ZERO REPLACEMENT . . .
-
-
-, . . . FINISHED. 
-#-------------------------------------------------------------#
-
-#-------------------------------------------------------------# 
-# Starting the cross - validation procedure . . .
- . . . finished. 
-#-------------------------------------------------------------# 
-###############################################################
-
- The optimal number of variables is: 6 
-
-
-
-############################################################### 
- . . . FINISHED. 
-###############################################################
-
-############################################################### 
- STARTING selbal.cv FUNCTION 
-###############################################################
-
-#-------------------------------------------------------------# 
-# ZERO REPLACEMENT . . .
-
-
-, . . . FINISHED. 
-#-------------------------------------------------------------#
-
-#-------------------------------------------------------------# 
-# Starting the cross - validation procedure . . .
- . . . finished. 
-#-------------------------------------------------------------# 
-###############################################################
-
- The optimal number of variables is: 6 
-
-
-
-############################################################### 
- . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -690,6 +934,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -734,13 +979,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -796,6 +1051,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -846,7 +1102,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -902,6 +1168,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -946,13 +1213,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 7 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1008,6 +1285,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1052,13 +1330,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1114,6 +1402,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1164,7 +1453,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1220,6 +1519,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1270,7 +1570,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1326,6 +1636,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1370,13 +1681,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1432,6 +1753,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1476,13 +1798,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1538,6 +1870,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1582,13 +1915,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 8 
+ The optimal number of variables is: 10 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1644,6 +1987,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1694,7 +2038,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1750,6 +2104,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1794,13 +2149,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1856,6 +2221,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -1906,7 +2272,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -1962,6 +2338,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -2012,7 +2389,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -2068,6 +2455,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -2118,7 +2506,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -2174,6 +2572,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -2224,7 +2623,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -2280,6 +2689,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -2330,7 +2740,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -2386,6 +2806,7 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
+Loaded Tensorflow version 2.8.0
 
 
 ############################################################### 
@@ -2436,7 +2857,17 @@ The following object is masked from ‘package:BiocGenerics’:
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+
 
 ############################################################### 
  STARTING selbal.cv FUNCTION 
@@ -2480,13 +2911,23 @@ The following object is masked from ‘package:BiocGenerics’:
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 10 
 
 
 
 ############################################################### 
  . . . FINISHED. 
-###############################################################Loaded glmnet 4.1-4
+###############################################################[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+Loaded glmnet 4.1-4
 Welcome to compositions, a package for compositional data analysis.
 Find an intro with "? compositions"
 
@@ -2542,8 +2983,10 @@ The following object is masked from ‘package:BiocGenerics’:
 
     combine
 
-Error in { : 
-  task 1 failed - "arguments imply differing number of rows: 46, 0"
-Calls: %dorng% -> do.call -> %dopar% -> <Anonymous>
-In addition: There were 50 or more warnings (use warnings() to see the first 50)
-Execution halted
+Loaded Tensorflow version 2.8.0
+There were 50 or more warnings (use warnings() to see the first 50)
+> 
+> 
+> proc.time()
+    user   system  elapsed 
+ 314.845    5.771 2792.484 

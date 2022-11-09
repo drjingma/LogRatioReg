@@ -125,8 +125,8 @@ res = foreach(
     covarTe = data.frame(MSM = covar[trainIdx == 1,])
     
     saveRDS(list(
-      XTr = XTr, YTr = YTr, Y2Tr = Y2Tr, covarTr,
-      XTe = XTe, YTe = YTe, Y2Te = Y2Te, covarTe
+      XTr = XTr, YTr = YTr, Y2Tr = Y2Tr, covarTr = covarTr,
+      XTe = XTe, YTe = YTe, Y2Te = Y2Te, covarTe = covarTe
     ),
     paste0(output_dir, "/data", file.end))
   }
@@ -385,7 +385,6 @@ res = foreach(
     slbl1$glm,
     newdata = data.frame(
       V1 = balance::balance.fromSBP(x = XTe, y = slbl1.coefs$sbp),
-      
       MSM = covarTe
     ),
     type = "response")
@@ -403,6 +402,15 @@ res = foreach(
   saveRDS(
     slbl1.metrics,
     paste0(output_dir, "/selbal_covar_metrics", file.end))
+  
+  slbl1_sbp = slbl1.coefs$sbp
+  if(slbl1$glm$coefficients[2] < 0){
+    slbl1_sbp = -slbl1_sbp
+  }
+  saveRDS(
+    slbl1_sbp,
+    paste0(output_dir, "/selbal_covar_sbp", file.end)
+  )
 
   # codacore ###################################################################
   library(codacore)

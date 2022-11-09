@@ -2,8 +2,8 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohn", "sCD14Bien"
-date = "20221102"
+data_set = "HIV" # "HIV", "sCD14", "Crohn", "sCD14Bien"
+date = "20221108"
 
 response_type = NA
 if(data_set %in% c("sCD14")){
@@ -54,11 +54,18 @@ lrlasso_list = list()
 for(i in (1:numSplits)){
   print(i)
   
-  # compositional lasso
-  cl_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/classo_metrics",
-    file.end0, "_sim", i, ".rds"
-  ))))
+  # compositional lasso (MSE for continuous response, AUC for binary response)
+  if(response_type == "binary"){
+    cl_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/classo1_metrics",
+      file.end0, "_sim", i, ".rds"
+    ))))
+  } else{
+    cl_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/classo_metrics",
+      file.end0, "_sim", i, ".rds"
+    ))))
+  }
   rownames(cl_tmp) = NULL
   classo_list[[i]] = data.table::data.table(cl_tmp)
   

@@ -12,6 +12,9 @@ library(glmnet)
 
 library(pROC)
 
+# devtools::install_github("artemklevtsov/prof.tree")
+library(prof.tree)
+
 source("RCode/func_libs.R")
 source("slr_analyses/Functions/slrs.R")
 source("slr_analyses/Functions/codalasso.R")
@@ -82,14 +85,17 @@ YTe = Y[trainIdx == 1]
 # )
 slrspeccv = readRDS("slr_analyses/Data/slrspeccv1.rds")
 
-# Rprof()
+Rprof(tmp <- tempfile())
 slrspec = slr(
   x = XTr, y = YTr, screen.method = "wald", cluster.method = "spectral",
   response.type = "continuous", s0.perc = 0, zeta = 0,
   threshold = slrspeccv$threshold[slrspeccv$index["1se",]],
   positive.slope = TRUE)
-# Rprof(NULL)
-# summaryRprof()
+Rprof(NULL)
+summaryRprof(tmp)
+
+pr <- prof.tree(tmp)
+print(pr, limit = NULL)
 
 # slr - hierarchical #########################################################
 # slrhiercv = cv.slr(
@@ -103,14 +109,17 @@ slrspec = slr(
 # )
 slrhiercv = readRDS("slr_analyses/Data/slrhiercv1.rds")
 
-# Rprof()
+Rprof(tmp2 <- tempfile())
 slrhier = slr(
   x = XTr, y = YTr, screen.method = "wald", cluster.method = "hierarchical",
   response.type = "continuous", s0.perc = 0, zeta = 0,
   threshold = slrhiercv$threshold[slrhiercv$index["1se",]],
   positive.slope = TRUE)
-# Rprof(NULL)
-# summaryRprof()
+Rprof(NULL)
+summaryRprof(tmp2)
+
+pr2 <- prof.tree(tmp2)
+print(pr2, limit = NULL)
 
 # benchmark! ###################################################################
 library(microbenchmark)

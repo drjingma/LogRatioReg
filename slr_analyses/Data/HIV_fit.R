@@ -25,8 +25,13 @@ hparam = "1se"
 K = 10
 scaling = TRUE
 
+filter.perc = 0.8 # 0.8, 1
+split.perc = 0.7 # 0.7, 0.8
+
 file.end = paste0(
   "/HIV",
+  "_split", split.perc, 
+  "_filter", filter.perc, 
   "_hparam", hparam, 
   "_gbm")
 
@@ -37,6 +42,8 @@ file.end = paste0(
 #   1 covariate (MSM), 
 #   1 response (HIV_Status - binary)
 W = selbal::HIV[, 1:60]
+W.origin <- W
+W <- W[,apply(W==0,2,mean)<filter.perc]
 covar = data.frame(MSM = selbal::HIV[, 61])
 X = sweep(W, 1, rowSums(W), FUN='/')
 Y = selbal::HIV[, 62]
@@ -53,9 +60,9 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 
 # classo #######################################################################
 if(hparam == "min"){
-  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0)
+  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0, type.measure = "AUC")
 } else if(hparam == "1se"){
-  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1)
+  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1, type.measure = "AUC")
 } else{
   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
 }

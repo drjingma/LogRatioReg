@@ -25,8 +25,13 @@ hparam = "1se"
 K = 10
 scaling = TRUE
 
+filter.perc = 0.8 # 0.8, 1
+split.perc = 0.7 # 0.7, 0.8
+
 file.end = paste0(
   "/Crohn",
+  "_split", split.perc, 
+  "_filter", filter.perc, 
   "_hparam", hparam, 
   "_gbm")
 
@@ -36,6 +41,8 @@ file.end = paste0(
 #   p = 48 taxa (counts for microbial taxa at genus level), 
 #   1 response (y - binary)
 W = selbal::Crohn[, 1:48]
+W.origin <- W
+W <- W[,apply(W==0,2,mean)<filter.perc]
 X = sweep(W, 1, rowSums(W), FUN='/')
 Y = selbal::Crohn[, 49]
 levels(Y) = c("no", "CD") # (control, case)
@@ -51,9 +58,9 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 
 # classo #######################################################################
 if(hparam == "min"){
-  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0)
+  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0, type.measure = "AUC")
 } else if(hparam == "1se"){
-  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1)
+  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1, type.measure = "AUC")
 } else{
   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
 }

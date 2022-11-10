@@ -28,8 +28,13 @@ intercept = TRUE
 scaling = TRUE
 tol = 1e-4
 
+filter.perc = 0.8 # 0.8, 1
+split.perc = 0.7 # 0.7, 0.8
+
 file.end = paste0(
   "/sCD14",
+  "_split", split.perc, 
+  "_filter", filter.perc, 
   "_hparam", hparam, 
   "_gbm")
 
@@ -39,6 +44,8 @@ file.end = paste0(
 #   p = 60 taxa (counts for microbial taxa at genus level), 
 #   1 response (sCD14 - continuous)
 W = selbal::sCD14[, 1:60]
+W.origin <- W
+W <- W[,apply(W==0,2,mean)<filter.perc]
 X = sweep(W, 1, rowSums(W), FUN='/')
 Y = selbal::sCD14[, 61]
 
@@ -247,20 +254,20 @@ saveRDS(
 
 
 
-# ################################################################################
-# # get active sets and selected balances (if applicable)
-# ################################################################################
-# 
-# classo #######################################################################
-# selected variables
-oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
-cl.lam.idx = which(cl$cvm <= oneSErule)[1]
-cl.a0 = cl$int[cl.lam.idx]
-cl.betahat = cl$bet[, cl.lam.idx]
-# positive/negative effect on response
-colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
-colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
-sum(abs(cl.betahat) > 1e-8)
+# # ################################################################################
+# # # get active sets and selected balances (if applicable)
+# # ################################################################################
+# # 
+# # classo #######################################################################
+# # selected variables
+# oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
+# cl.lam.idx = which(cl$cvm <= oneSErule)[1]
+# cl.a0 = cl$int[cl.lam.idx]
+# cl.betahat = cl$bet[, cl.lam.idx]
+# # positive/negative effect on response
+# colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
+# colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
+# sum(abs(cl.betahat) > 1e-8)
 # 
 # # slr - spectral ###############################################################
 # # SBP

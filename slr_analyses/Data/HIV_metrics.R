@@ -139,9 +139,11 @@ res = foreach(
   #   keep Gordon-Rodriguez et al. validation method
   start.time = Sys.time()
   if(hparam == "min"){
-    classo0 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "original")
+    classo0 = codalasso(
+      XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "original")
   } else if(hparam == "1se"){
-    classo0 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "original")
+    classo0 = codalasso(
+      XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "original")
   } else{
     stop("invalid hparam setting (method for selecting hyperparameter(s)).")
   }
@@ -169,9 +171,11 @@ res = foreach(
   #   validate on AUC
   start.time = Sys.time()
   if(hparam == "min"){
-    classo1 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "AUC")
+    classo1 = codalasso(
+      XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "AUC")
   } else if(hparam == "1se"){
-    classo1 = codalasso(XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "AUC")
+    classo1 = codalasso(
+      XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "AUC")
   } else{
     stop("invalid hparam setting (method for selecting hyperparameter(s)).")
   }

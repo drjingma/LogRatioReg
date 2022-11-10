@@ -3,7 +3,7 @@
 rm(list=ls())
 
 data_set = "Crohn" # "HIV", "Crohn"
-date = "20221108"
+date = "20221109"
 
 response_type = "binary"
 
@@ -41,6 +41,7 @@ file.end0 = paste0(
 # import metrics
 classo_list = list()
 classo0_list = list()
+classo2_list = list()
 for(i in (1:numSplits)){
   print(i)
   
@@ -60,6 +61,15 @@ for(i in (1:numSplits)){
   rownames(cl0_tmp) = NULL
   classo0_list[[i]] = data.table::data.table(cl0_tmp)
   
+  if(data_set == "Crohn"){
+    # compositional lasso using AUC, without stratification
+    cl2_tmp = t(data.frame(readRDS(paste0(
+      output_dir, "/classo0_metrics",
+      file.end0, "_sim", i, ".rds"
+    ))))
+    rownames(cl2_tmp) = NULL
+    classo2_list[[i]] = data.table::data.table(cl2_tmp)
+  }
 }
 
 # metrics boxplots
@@ -73,11 +83,21 @@ classo0.gg =
                cols = everything(),
                names_to = "Metric") %>%
   mutate("Method" = "classo-orig")
+if(data_set == "Crohn"){
+  classo2.gg =
+    pivot_longer(as.data.frame(data.table::rbindlist(classo2_list)),
+                 cols = everything(),
+                 names_to = "Metric") %>%
+    mutate("Method" = "classo-auc2")
+}
 ###
 data.gg = rbind(
   classo.gg,
   classo0.gg
 )
+if(data_set == "Crohn"){
+  data.gg = rbind(data.gg, classo2.gg)
+}
 data.gg = data.gg %>% 
   dplyr::filter(
     Metric %in% c("auc", "percselected", "time")
@@ -98,7 +118,7 @@ data.gg = data.gg %>%
     Method = factor(
       Method, 
       levels = c(
-        "classo-auc", "classo-orig"
+        "classo-auc", "classo-auc2", "classo-orig"
       )
     )
   ) 

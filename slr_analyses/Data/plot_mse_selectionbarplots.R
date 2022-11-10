@@ -2,13 +2,13 @@
 # Date: 8/10/2022
 rm(list=ls())
 
-data_set = "Crohn" # "HIV", "sCD14", "Crohn"
-date = "20220924"
+data_set = "sCD14" # "HIV", "sCD14", "Crohn"
+date = "20221108"
 
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Data/outputs_mse"
+output_dir = "slr_analyses/Data/outputs_metrics"
 
 source("slr_analyses/Functions/util.R")
 
@@ -18,22 +18,38 @@ library(reshape2)
 numSplits = 20
 
 # tuning parameter settings
+hparam = "1se"
+filter.perc = 0.8 # 0.8, 1
+split.perc = 0.7  # 0.7, 0.8
+
+# tuning parameter settings
 K = 10
 scaling = TRUE
 
 file.end0 = paste0(
-  # "_sim", b,
   "_", data_set,
+  "_split", split.perc, 
+  "_filter", filter.perc,
+  "_hparam", hparam,
   "_gbm")
 
 ################################################################################
 # plot metrics
-if(data_set == "Crohns"){
-  W = selbal::Crohn[, 1:48]
+if(data_set == "Crohn"){
+  W = readRDS(paste0(
+    output_dir, "/data",
+    file.end0, "_sim", 1, ".rds"
+  ))$XTr
 } else if(data_set == "HIV"){
-  W = selbal::HIV[, 1:60]
+  W = readRDS(paste0(
+    output_dir, "/data",
+    file.end0, "_sim", 1, ".rds"
+  ))$XTr
 } else if(data_set == "sCD14"){
-  W = selbal::sCD14[, 1:60]
+  W = readRDS(paste0(
+    output_dir, "/data",
+    file.end0, "_sim", 1, ".rds"
+  ))$XTr
 }
 p = ncol(W)
 
@@ -53,13 +69,13 @@ for(i in 1:numSplits){
   # slr - spectral clustering
   slr_spec_sbps[, i] = readRDS(paste0(
     output_dir, "/slr_spectral_sbp",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))
   
   # slr - hierarchical clustering
   slr_hier_sbps[, i] = readRDS(paste0(
     output_dir, "/slr_hierarchical_sbp",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))
   
   ###
@@ -67,13 +83,13 @@ for(i in 1:numSplits){
   # selbal
   selbal_sbps[, i] = readRDS(paste0(
     output_dir, "/selbal_sbp",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))
   
   # codacore
   codacore_sbp_tmp = readRDS(paste0(
     output_dir, "/codacore_sbp",
-    "_sim", i, file.end0, ".rds"
+    file.end0, "_sim", i, ".rds"
   ))
   print(paste0("ncol(codacore_sbp) = ", ncol(codacore_sbp_tmp)))
   
@@ -111,6 +127,7 @@ slr_spec_bar = ggplot(
   coord_flip() + 
   theme_bw() +
   theme(
+    text = element_text(size=10),
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
@@ -148,6 +165,7 @@ slr_hier_bar = ggplot(
   coord_flip() + 
   theme_bw() +
   theme(
+    text = element_text(size=10),
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
@@ -185,6 +203,7 @@ selbal_bar = ggplot(
   coord_flip() + 
   theme_bw() +
   theme(
+    text = element_text(size=10),
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
@@ -222,6 +241,7 @@ codacore1_bar = ggplot(
   coord_flip() + 
   theme_bw() +
   theme(
+    text = element_text(size=10),
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +

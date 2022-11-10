@@ -461,24 +461,34 @@ trapezInteg  <-  function(x,y) {
 }
 
 
-codalasso = function(x, y, numFolds = 5, gamma = 1, type.measure = "AUC") {
+codalasso = function(
+    x, y, numFolds = 5, gamma = 1, type.measure = "AUC", lambdas = NULL, 
+    stratify = TRUE
+  ) {
   
-  lambdas = seq(1.0, 0.0, -0.01)
+  if(is.null(lambdas)){
+    lambdas = seq(1.0, 0.0, -0.01)
+  }
   
   # Naive way of splitting equally into folds:
   foldIdx = sample(cut(1:length(y), breaks=numFolds, labels=F))
-  # Instead we randomize with equal # of case/controls in each fold
-  # See discussion on stratified CV in page 204 of He & Ma 2013
-  caseIdx = sample(cut(1:sum(y), breaks=numFolds, labels=F))
-  controlIdx = sample(cut(1:sum(1 - y), breaks=numFolds, labels=F))
-  foldIdx[y == 1] = caseIdx
-  foldIdx[y == 0] = controlIdx
+  if(stratify){
+    # Instead we randomize with equal # of case/controls in each fold
+    # See discussion on stratified CV in page 204 of He & Ma 2013
+    caseIdx = sample(cut(1:sum(y), breaks=numFolds, labels=F))
+    controlIdx = sample(cut(1:sum(1 - y), breaks=numFolds, labels=F))
+    foldIdx[y == 1] = caseIdx
+    foldIdx[y == 0] = controlIdx
+  } 
+  
   scores = matrix(nrow=length(lambdas), ncol=numFolds)
+  betas_mat = matrix(NA, nrow = ncol(x), ncol = length(lambdas))
   for (i in 1:length(lambdas)) { #print(lambdas[i])
     for (j in 1:numFolds) {
       scores[i, j] = -Inf
       try({
         cll = coda_logistic_lasso(y[foldIdx != j], x[foldIdx != j,], lambdas[i])
+        betas_mat[, i] = cll$betas[-1]
         yHat = predict(cll, x[foldIdx == j,])
         yObs = y[foldIdx == j]
         if(type.measure == "AUC"){
@@ -509,6 +519,11 @@ codalasso = function(x, y, numFolds = 5, gamma = 1, type.measure = "AUC") {
   cll = coda_logistic_lasso(y, x, lambda)
   
   res = list(
+    betas_mat = betas_mat,
+    scores = scores, 
+    means = means, 
+    stds = stds,
+    lambda = lambda,
     x=x,
     y=y,
     cll=cll

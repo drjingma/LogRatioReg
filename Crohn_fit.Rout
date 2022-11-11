@@ -1,0 +1,455 @@
+
+R version 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Purpose: compare slr to other methods on data sets
+> # Date: 8/15/2022
+> rm(list=ls())
+> 
+> ################################################################################
+> # libraries and settings
+> 
+> output_dir = "slr_analyses/Data/outputs"
+> 
+> library(mvtnorm)
+> 
+> library(Matrix)
+> library(glmnet)
+Loaded glmnet 4.1-4
+> 
+> library(balance)
+> library(selbal)
+> 
+> source("RCode/func_libs.R")
+Welcome to compositions, a package for compositional data analysis.
+Find an intro with "? compositions"
+
+
+Attaching package: ‘compositions’
+
+The following object is masked from ‘package:balance’:
+
+    balance
+
+The following object is masked from ‘package:glmnet’:
+
+    rmult
+
+The following object is masked from ‘package:Matrix’:
+
+    norm
+
+The following objects are masked from ‘package:stats’:
+
+    anova, cor, cov, dist, var
+
+The following objects are masked from ‘package:base’:
+
+    %*%, norm, scale, scale.default
+
+Loading required package: glasso
+> source("slr_analyses/Functions/slrs.R")
+> source("slr_analyses/Functions/codalasso.R")
+> source("slr_analyses/Functions/util.R")
+> 
+> # tuning parameter settings
+> hparam = "1se"
+> K = 10
+> scaling = TRUE
+> 
+> filter.perc = 0.8 # 0.8, 1
+> split.perc = 0.7 # 0.7, 0.8
+> 
+> file.end = paste0(
++   "/Crohn",
++   "_split", split.perc, 
++   "_filter", filter.perc, 
++   "_hparam", hparam, 
++   "_gbm")
+> 
+> ################################################################################
+> # Crohn: a data set in selbal package
+> #   n = 975 samples, 
+> #   p = 48 taxa (counts for microbial taxa at genus level), 
+> #   1 response (y - binary)
+> W = selbal::Crohn[, 1:48]
+> W.origin <- W
+> W <- W[,apply(W==0,2,mean)<filter.perc]
+> X = sweep(W, 1, rowSums(W), FUN='/')
+> Y = selbal::Crohn[, 49]
+> levels(Y) = c("no", "CD") # (control, case)
+> Y2 = ifelse(Y == "CD", 1, 0)
+> 
+> ################################################################################
+> # 0-Handling -- GBM (used in Rivera-Pinto et al. 2018 [selbal])
+> X_gbm = cmultRepl2(W, zero.rep = "bayes")
+Loading required package: NADA
+Loading required package: survival
+
+Attaching package: ‘NADA’
+
+The following object is masked from ‘package:compositions’:
+
+    cor
+
+The following object is masked from ‘package:stats’:
+
+    cor
+
+Loading required package: truncnorm
+Warning message:
+In cmultRepl(x, suppress.print = T) :
+  Row(s) containing more than 80% zeros/unobserved values were found (check it out using zPatterns).
+                  (You can use the z.warning argument to modify the warning threshold).
+> 
+> ################################################################################
+> # fit methods
+> ################################################################################
+> 
+> # classo #######################################################################
+> if(hparam == "min"){
++   classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0, type.measure = "AUC")
++ } else if(hparam == "1se"){
++   classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1, type.measure = "AUC")
++ } else{
++   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
++ }
+> saveRDS(
++   classo,
++   paste0(
++     output_dir, file.end,
++     "_classo",
++     ".rds"))
+> 
+> # cl = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_classo",
+> #     "_gbm",
+> #     ".rds"))
+> 
+> # slr - spectral ###############################################################
+> slrspeccv = cv.slr(
++   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
++   response.type = "binary", s0.perc = 0, zeta = 0,
++   nfolds = K, type.measure = "auc",
++   scale = scaling, trace.it = FALSE)
+> if(hparam == "min"){
++   slrspec = slr(
++     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
++     response.type = "binary", s0.perc = 0, zeta = 0,
++     threshold = slrspeccv$threshold[slrspeccv$index["min",]], 
++     positive.slope = TRUE)
++ } else if(hparam == "1se"){
++   slrspec = slr(
++     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
++     response.type = "binary", s0.perc = 0, zeta = 0,
++     threshold = slrspeccv$threshold[slrspeccv$index["1se",]], 
++     positive.slope = TRUE)
++ } else{
++   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
++ }
+> saveRDS(
++   slrspeccv,
++   paste0(
++     output_dir, file.end,
++     "_slrcv_spectral",
++     ".rds"))
+> saveRDS(
++   slrspec,
++   paste0(
++     output_dir, file.end,
++     "_slr_spectral",
++     ".rds"))
+> 
+> # slrspeccv = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_slrcv_spectral",
+> #     "_gbm",
+> #     ".rds"))
+> # slrspec = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_slr_spectral",
+> #     "_gbm",
+> #     ".rds"))
+> 
+> # slr - hierarchical ###########################################################
+> slrhiercv = cv.slr(
++   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
++   response.type = "binary", s0.perc = 0, zeta = 0,
++   nfolds = K, type.measure = "auc",
++   scale = scaling, trace.it = FALSE)
+> if(hparam == "min"){
++   slrhier = slr(
++     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
++     response.type = "binary", s0.perc = 0, zeta = 0,
++     threshold = slrhiercv$threshold[slrhiercv$index["min",]], 
++     positive.slope = TRUE)
++ } else if(hparam == "1se"){
++   slrhier = slr(
++     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
++     response.type = "binary", s0.perc = 0, zeta = 0,
++     threshold = slrhiercv$threshold[slrhiercv$index["1se",]], 
++     positive.slope = TRUE)
++ } else{
++   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
++ }
+> saveRDS(
++   slrhiercv,
++   paste0(
++     output_dir, file.end,
++     "_slrcv_hierarchical",
++     ".rds"))
+> saveRDS(
++   slrhier,
++   paste0(
++     output_dir, file.end,
++     "_slr_hierarchical",
++     ".rds"))
+> 
+> # slrhiercv = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_slrcv_hierarchical",
+> #     "_gbm",
+> #     ".rds"))
+> # slrhier = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_slr_hierarchical",
+> #     "_gbm",
+> #     ".rds"))
+> 
+> # selbal #######################################################################
+> if(hparam == "min"){
++   slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, opt.cri = "min")
++ } else if(hparam == "1se"){
++   slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, opt.cri = "1se")
++ } else{
++   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
++ }
+
+
+############################################################### 
+ STARTING selbal.cv FUNCTION 
+###############################################################
+
+#-------------------------------------------------------------# 
+# ZERO REPLACEMENT . . .
+
+
+, . . . FINISHED. 
+#-------------------------------------------------------------#
+
+#-------------------------------------------------------------# 
+# Starting the cross - validation procedure . . .
+ . . . finished. 
+#-------------------------------------------------------------# 
+###############################################################
+
+ The optimal number of variables is: 12 
+
+
+Attaching package: ‘gridExtra’
+
+The following object is masked from ‘package:Biobase’:
+
+    combine
+
+The following object is masked from ‘package:BiocGenerics’:
+
+    combine
+
+
+
+############################################################### 
+ . . . FINISHED. 
+###############################################################Warning messages:
+1: `guides(<scale> = FALSE)` is deprecated. Please use `guides(<scale> = "none")` instead. 
+2: In xtfrm.data.frame(x) : cannot xtfrm data frames
+> saveRDS(
++   slbl,
++   paste0(
++     output_dir, file.end,
++     "_selbal",
++     ".rds"))
+> 
+> # slbl = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_selbal",
+> #     "_gbm",
+> #     ".rds"))
+> 
+> # codacore #####################################################################
+> library(codacore)
+> if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
++   reticulate::use_condaenv("anaconda3")
++ }
+> if(hparam == "min"){
++   codacore0 = codacore::codacore(
++     x = X_gbm, y = Y2, logRatioType = "ILR",
++     objective = "binary classification", cvParams = list(numFolds = K), 
++     lambda = 0) 
++ } else if(hparam == "1se"){
++   codacore0 = codacore::codacore(
++     x = X_gbm, y = Y2, logRatioType = "ILR",
++     objective = "binary classification", cvParams = list(numFolds = K), 
++     lambda = 1) 
++ } else{
++   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
++ }
+2022-11-09 20:51:11.009583: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-09 20:51:11.009618: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+Loaded Tensorflow version 2.8.0
+2022-11-09 20:51:12.786068: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-09 20:51:12.786148: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublas.so.11'; dlerror: libcublas.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-09 20:51:12.786189: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcublasLt.so.11'; dlerror: libcublasLt.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-09 20:51:12.787816: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusolver.so.11'; dlerror: libcusolver.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-09 20:51:12.787871: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcusparse.so.11'; dlerror: libcusparse.so.11: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-09 20:51:12.787927: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudnn.so.8'; dlerror: libcudnn.so.8: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-11-09 20:51:12.787942: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2022-11-09 20:51:12.788273: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Warning messages:
+1: In backcompat_fix_rename_lr_to_learning_rate(...) :
+  the `lr` argument has been renamed to `learning_rate`.
+2: In backcompat_fix_rename_lr_to_learning_rate(...) :
+  the `lr` argument has been renamed to `learning_rate`.
+3: In backcompat_fix_rename_lr_to_learning_rate(...) :
+  the `lr` argument has been renamed to `learning_rate`.
+4: In backcompat_fix_rename_lr_to_learning_rate(...) :
+  the `lr` argument has been renamed to `learning_rate`.
+> saveRDS(
++   codacore0,
++   paste0(
++     output_dir, file.end,
++     "_codacore",
++     ".rds"))
+> 
+> # cdcr = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_codacore",
+> #     "_gbm",
+> #     ".rds"))
+> 
+> # log-ratio lasso ############################################################
+> library(logratiolasso)
+> source("slr_analyses/Functions/logratiolasso.R")
+> W_gbm.c = scale(log(X_gbm), center = TRUE, scale = FALSE)
+> if(hparam == "min"){
++   lrl <- cv_two_stage(
++     z = W_gbm.c, y = Y2, n_folds = K, family="binomial", gamma = 0)
++   # lrl.betahat = lrl$beta_min
++ } else if(hparam == "1se"){
++   lrl <- cv_two_stage(
++     z = W_gbm.c, y = Y2, n_folds = K, family="binomial", gamma = 1)
++   # lrl.betahat = lrl$beta_gammase
++ } else{
++   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
++ }
+[1] "Starting CV fold 1"
+[1] "Starting CV fold 2"
+[1] "Starting CV fold 3"
+[1] "Starting CV fold 4"
+[1] "Starting CV fold 5"
+[1] "Starting CV fold 6"
+[1] "Starting CV fold 7"
+[1] "Starting CV fold 8"
+[1] "Starting CV fold 9"
+[1] "Starting CV fold 10"
+> saveRDS(
++   lrl,
++   paste0(
++     output_dir, file.end,
++     "_lrlasso",
++     ".rds"))
+> 
+> # lrl = readRDS(
+> #   paste0(
+> #     output_dir, "/HIV",
+> #     "_lrlasso",
+> #     "_gbm",
+> #     ".rds"))
+> 
+> # ################################################################################
+> # # get active sets and selected balances (if applicable)
+> # ################################################################################
+> # p = ncol(X)
+> # 
+> # # classo #######################################################################
+> # # selected variables
+> # cl.betahat = cl$cll$betas[-1]
+> # # positive/negative effect on response
+> # colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
+> # colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
+> # sum(abs(cl.betahat) > 1e-8)
+> # 
+> # # slr - spectral ###############################################################
+> # # SBP
+> # slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
+> # rownames(slrspec.fullSBP) = colnames(X)
+> # slrspec.fullSBP[match(
+> #   names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+> # # thetahat 
+> # slrspec.coefs = getCoefsBM(
+> #   coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
+> # # numerator (I+) / denominator (I-) of selected balance
+> # rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs > 0]
+> # rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs < 0]
+> # sum(slrspec.fullSBP[, 1] != 0)
+> # 
+> # # slr - hierarchical ###########################################################
+> # # SBP
+> # slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
+> # rownames(slrhier.fullSBP) = colnames(X)
+> # slrhier.fullSBP[match(
+> #   names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
+> # # thetahat 
+> # slrhier.coefs = getCoefsBM(
+> #   coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
+> # # numerator (I+) / denominator (I-) of selected balance
+> # rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs > 0]
+> # rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs < 0]
+> # sum(slrhier.fullSBP[, 1] != 0)
+> # 
+> # # selbal #######################################################################
+> # # numerator (I+) / denominator (I-) of selected balance
+> # slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 4
+> # slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 8
+> # 
+> # # codacore #####################################################################
+> # length(cdcr$ensemble) # one balance selected
+> # # numerator (I+) / denominator (I-) of selected balance
+> # cdcr$ensemble[[1]]$slope # positive (if negative, num -> den & vice versa)
+> # colnames(X)[cdcr$ensemble[[1]]$hard$numerator]
+> # colnames(X)[cdcr$ensemble[[1]]$hard$denominator]
+> # 
+> # # log-ratio lasso ############################################################
+> # # positive/negative effect on response
+> # colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
+> # colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
+> # sum(abs(lrl$beta_min) > 1e-8)
+> 
+> proc.time()
+    user   system  elapsed 
+7556.309    6.956  855.109 

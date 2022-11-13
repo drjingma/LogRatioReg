@@ -460,7 +460,7 @@ res = foreach(
   clrl.metrics = c(
     mse = as.vector(crossprod(YTe - clrl.Yhat.test) / nrow(XTe)),
     percselected = sum(abs(clrl.betahat[-1]) > 10e-8) / p,
-    time = lrl.timing
+    time = clrl.timing
   )
   
   saveRDS(

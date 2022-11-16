@@ -5,7 +5,7 @@ rm(list=ls())
 ################################################################################
 # libraries and settings
 
-output_dir = "slr_analyses/Experiments/outputs/metrics_binary"
+output_dir = "slr_analyses/Experiments/outputs/metrics_binary_codalasso"
 
 # set up parallelization
 library(foreach)

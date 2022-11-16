@@ -22,7 +22,7 @@ rng.seed = 123 # 123, 345
 registerDoRNG(rng.seed)
 
 # Other simulation settings
-numSims = 100
+numSims = 5
 
 ################################################################################
 # Simulations #

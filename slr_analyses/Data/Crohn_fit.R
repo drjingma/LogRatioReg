@@ -58,20 +58,22 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 p = ncol(X)
 
 # classo #######################################################################
-# if(hparam == "min"){
-#   classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0, type.measure = "AUC")
-# } else if(hparam == "1se"){
-#   classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1, type.measure = "AUC")
-# } else{
-#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-# }
-# saveRDS(
-#   classo,
-#   paste0(
-#     output_dir, file.end,
-#     "_classo",
-#     ".rds"))
-# 
+if(hparam == "min"){
+  classo = codalasso(
+    X_gbm, Y2, numFolds = K, gamma = 0, type.measure = "AUC", stratify = FALSE)
+} else if(hparam == "1se"){
+  classo = codalasso(
+    X_gbm, Y2, numFolds = K, gamma = 1, type.measure = "AUC", stratify = FALSE)
+} else{
+  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+}
+saveRDS(
+  classo,
+  paste0(
+    output_dir, file.end,
+    "_classo",
+    ".rds"))
+
 cl = readRDS(
   paste0(
     output_dir, file.end,

@@ -526,47 +526,47 @@ res = foreach(
   #   lrl.metrics,
   #   paste0(output_dir, "/lrlasso_metrics", file.end))
   
-  # clr-lasso ##################################################################
-  start.time = Sys.time()
-  ZTr <- t(apply(XTr, 1, function(a) log(a) - mean(log(a))))
-  clrl = cv.glmnet(
-    ZTr, Y2Tr, family = "binomial", type.measure = "auc", alpha = 1, nfolds = K)
-  end.time = Sys.time()
-  clrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  # get fitted coefficients
+  # # clr-lasso ##################################################################
+  # start.time = Sys.time()
+  # ZTr <- t(apply(XTr, 1, function(a) log(a) - mean(log(a))))
+  # clrl = cv.glmnet(
+  #   ZTr, Y2Tr, family = "binomial", type.measure = "auc", alpha = 1, nfolds = K)
+  # end.time = Sys.time()
+  # clrl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # get fitted coefficients
+  # # if(hparam == "min"){
+  # #   clrl.lam.idx = which.max(clrl$cvm)
+  # # } else if(hparam == "1se"){
+  # #   oneSErule = min(clrl$cvm) + clrl$cvsd[which.max(clrl$cvm)] * 1
+  # #   clrl.lam.idx = which(clrl$cvm >= oneSErule)[1]
+  # # } else{
+  # #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  # # }
+  # # clrl.betahat0 = clrl$glmnet.fit$beta[, clrl.lam.idx]
+  # 
+  # ZTe <- t(apply(XTe, 1, function(a) log(a) - mean(log(a))))
   # if(hparam == "min"){
-  #   clrl.lam.idx = which.max(clrl$cvm)
+  #   clrl.betahat = coef(clrl, s = "lambda.min")[, 1]
+  #   clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.min") # before sigmoid
   # } else if(hparam == "1se"){
-  #   oneSErule = min(clrl$cvm) + clrl$cvsd[which.max(clrl$cvm)] * 1
-  #   clrl.lam.idx = which(clrl$cvm >= oneSErule)[1]
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  #   clrl.betahat = coef(clrl, s = "lambda.1se")[, 1]
+  #   clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.1se") # before sigmoid
   # }
-  # clrl.betahat0 = clrl$glmnet.fit$beta[, clrl.lam.idx]
-  
-  ZTe <- t(apply(XTe, 1, function(a) log(a) - mean(log(a))))
-  if(hparam == "min"){
-    clrl.betahat = coef(clrl, s = "lambda.min")[, 1]
-    clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.min") # before sigmoid
-  } else if(hparam == "1se"){
-    clrl.betahat = coef(clrl, s = "lambda.1se")[, 1]
-    clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.1se") # before sigmoid
-  }
-  
-  clrl.metrics = c(
-    acc = mean((clrl.Yhat.test > 0) == Y2Te),
-    auc = pROC::roc(
-      Y2Te, as.numeric(clrl.Yhat.test), levels = c(0, 1), direction = "<")$auc,
-    percselected = sum(abs(clrl.betahat[-1]) > 10e-8) / p,
-    f1 = getF1(Y2Te, clrl.Yhat.test > 0),
-    time = clrl.timing
-  )
-
-  saveRDS(
-    clrl.metrics,
-    paste0(output_dir, "/clrlasso_metrics", file.end))
+  # 
+  # clrl.metrics = c(
+  #   acc = mean((clrl.Yhat.test > 0) == Y2Te),
+  #   auc = pROC::roc(
+  #     Y2Te, as.numeric(clrl.Yhat.test), levels = c(0, 1), direction = "<")$auc,
+  #   percselected = sum(abs(clrl.betahat[-1]) > 10e-8) / p,
+  #   f1 = getF1(Y2Te, clrl.Yhat.test > 0),
+  #   time = clrl.timing
+  # )
+  # 
+  # saveRDS(
+  #   clrl.metrics,
+  #   paste0(output_dir, "/clrlasso_metrics", file.end))
   
   
   

@@ -463,7 +463,7 @@ trapezInteg  <-  function(x,y) {
 
 codalasso = function(
     x, y, numFolds = 5, gamma = 1, type.measure = "AUC", lambdas = NULL, 
-    stratify = TRUE
+    stratify = FALSE
   ) {
   
   if(is.null(lambdas)){

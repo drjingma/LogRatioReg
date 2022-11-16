@@ -55,261 +55,261 @@ X_gbm = cmultRepl2(W, zero.rep = "bayes")
 ################################################################################
 # fit methods
 ################################################################################
+p = ncol(X)
 
 # classo #######################################################################
-if(hparam == "min"){
-  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0, type.measure = "AUC")
-} else if(hparam == "1se"){
-  classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1, type.measure = "AUC")
-} else{
-  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-}
-saveRDS(
-  classo,
-  paste0(
-    output_dir, file.end,
-    "_classo",
-    ".rds"))
-
-# cl = readRDS(
+# if(hparam == "min"){
+#   classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 0, type.measure = "AUC")
+# } else if(hparam == "1se"){
+#   classo = codalasso(X_gbm, Y2, numFolds = K, gamma = 1, type.measure = "AUC")
+# } else{
+#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+# }
+# saveRDS(
+#   classo,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_classo",
-#     "_gbm",
 #     ".rds"))
+# 
+cl = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_classo",
+    "_gbm",
+    ".rds"))
 
 # slr - spectral ###############################################################
-slrspeccv = cv.slr(
-  x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
-  response.type = "binary", s0.perc = 0, zeta = 0,
-  nfolds = K, type.measure = "auc",
-  scale = scaling, trace.it = FALSE)
-if(hparam == "min"){
-  slrspec = slr(
-    x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
-    response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrspeccv$threshold[slrspeccv$index["min",]], 
-    positive.slope = TRUE)
-} else if(hparam == "1se"){
-  slrspec = slr(
-    x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
-    response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrspeccv$threshold[slrspeccv$index["1se",]], 
-    positive.slope = TRUE)
-} else{
-  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-}
-saveRDS(
-  slrspeccv,
-  paste0(
-    output_dir, file.end,
-    "_slrcv_spectral",
-    ".rds"))
-saveRDS(
-  slrspec,
-  paste0(
-    output_dir, file.end,
-    "_slr_spectral",
-    ".rds"))
-
-# slrspeccv = readRDS(
+# slrspeccv = cv.slr(
+#   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
+#   response.type = "binary", s0.perc = 0, zeta = 0,
+#   nfolds = K, type.measure = "auc",
+#   scale = scaling, trace.it = FALSE)
+# if(hparam == "min"){
+#   slrspec = slr(
+#     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
+#     response.type = "binary", s0.perc = 0, zeta = 0,
+#     threshold = slrspeccv$threshold[slrspeccv$index["min",]], 
+#     positive.slope = TRUE)
+# } else if(hparam == "1se"){
+#   slrspec = slr(
+#     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "spectral",
+#     response.type = "binary", s0.perc = 0, zeta = 0,
+#     threshold = slrspeccv$threshold[slrspeccv$index["1se",]], 
+#     positive.slope = TRUE)
+# } else{
+#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+# }
+# saveRDS(
+#   slrspeccv,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_slrcv_spectral",
-#     "_gbm",
 #     ".rds"))
-# slrspec = readRDS(
+# saveRDS(
+#   slrspec,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_slr_spectral",
-#     "_gbm",
 #     ".rds"))
+
+slrspeccv = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slrcv_spectral",
+    "_gbm",
+    ".rds"))
+slrspec = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slr_spectral",
+    "_gbm",
+    ".rds"))
 
 # slr - hierarchical ###########################################################
-slrhiercv = cv.slr(
-  x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
-  response.type = "binary", s0.perc = 0, zeta = 0,
-  nfolds = K, type.measure = "auc",
-  scale = scaling, trace.it = FALSE)
-if(hparam == "min"){
-  slrhier = slr(
-    x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
-    response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrhiercv$threshold[slrhiercv$index["min",]], 
-    positive.slope = TRUE)
-} else if(hparam == "1se"){
-  slrhier = slr(
-    x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
-    response.type = "binary", s0.perc = 0, zeta = 0,
-    threshold = slrhiercv$threshold[slrhiercv$index["1se",]], 
-    positive.slope = TRUE)
-} else{
-  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-}
-saveRDS(
-  slrhiercv,
-  paste0(
-    output_dir, file.end,
-    "_slrcv_hierarchical",
-    ".rds"))
-saveRDS(
-  slrhier,
-  paste0(
-    output_dir, file.end,
-    "_slr_hierarchical",
-    ".rds"))
-
-# slrhiercv = readRDS(
+# slrhiercv = cv.slr(
+#   x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
+#   response.type = "binary", s0.perc = 0, zeta = 0,
+#   nfolds = K, type.measure = "auc",
+#   scale = scaling, trace.it = FALSE)
+# if(hparam == "min"){
+#   slrhier = slr(
+#     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
+#     response.type = "binary", s0.perc = 0, zeta = 0,
+#     threshold = slrhiercv$threshold[slrhiercv$index["min",]], 
+#     positive.slope = TRUE)
+# } else if(hparam == "1se"){
+#   slrhier = slr(
+#     x = X_gbm, y = Y2, screen.method = "wald", cluster.method = "hierarchical",
+#     response.type = "binary", s0.perc = 0, zeta = 0,
+#     threshold = slrhiercv$threshold[slrhiercv$index["1se",]], 
+#     positive.slope = TRUE)
+# } else{
+#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+# }
+# saveRDS(
+#   slrhiercv,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_slrcv_hierarchical",
-#     "_gbm",
 #     ".rds"))
-# slrhier = readRDS(
+# saveRDS(
+#   slrhier,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_slr_hierarchical",
-#     "_gbm",
 #     ".rds"))
+
+slrhiercv = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slrcv_hierarchical",
+    "_gbm",
+    ".rds"))
+slrhier = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_slr_hierarchical",
+    "_gbm",
+    ".rds"))
 
 # selbal #######################################################################
-if(hparam == "min"){
-  slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, opt.cri = "min")
-} else if(hparam == "1se"){
-  slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, opt.cri = "1se")
-} else{
-  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-}
-saveRDS(
-  slbl,
-  paste0(
-    output_dir, file.end,
-    "_selbal",
-    ".rds"))
-
-# slbl = readRDS(
+# if(hparam == "min"){
+#   slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, opt.cri = "min")
+# } else if(hparam == "1se"){
+#   slbl = selbal::selbal.cv(x = X_gbm, y = Y, n.fold = K, opt.cri = "1se")
+# } else{
+#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+# }
+# saveRDS(
+#   slbl,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_selbal",
-#     "_gbm",
 #     ".rds"))
+
+slbl = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_selbal",
+    "_gbm",
+    ".rds"))
 
 # codacore #####################################################################
-library(codacore)
-if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-  reticulate::use_condaenv("anaconda3")
-}
-if(hparam == "min"){
-  codacore0 = codacore::codacore(
-    x = X_gbm, y = Y2, logRatioType = "ILR",
-    objective = "binary classification", cvParams = list(numFolds = K), 
-    lambda = 0) 
-} else if(hparam == "1se"){
-  codacore0 = codacore::codacore(
-    x = X_gbm, y = Y2, logRatioType = "ILR",
-    objective = "binary classification", cvParams = list(numFolds = K), 
-    lambda = 1) 
-} else{
-  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-}
-saveRDS(
-  codacore0,
-  paste0(
-    output_dir, file.end,
-    "_codacore",
-    ".rds"))
-
-# cdcr = readRDS(
+# library(codacore)
+# if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+#   reticulate::use_condaenv("anaconda3")
+# }
+# if(hparam == "min"){
+#   codacore0 = codacore::codacore(
+#     x = X_gbm, y = Y2, logRatioType = "ILR",
+#     objective = "binary classification", cvParams = list(numFolds = K), 
+#     lambda = 0) 
+# } else if(hparam == "1se"){
+#   codacore0 = codacore::codacore(
+#     x = X_gbm, y = Y2, logRatioType = "ILR",
+#     objective = "binary classification", cvParams = list(numFolds = K), 
+#     lambda = 1) 
+# } else{
+#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+# }
+# saveRDS(
+#   codacore0,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_codacore",
-#     "_gbm",
 #     ".rds"))
+
+cdcr = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_codacore",
+    "_gbm",
+    ".rds"))
 
 # log-ratio lasso ############################################################
-library(logratiolasso)
-source("slr_analyses/Functions/logratiolasso.R")
-W_gbm.c = scale(log(X_gbm), center = TRUE, scale = FALSE)
-if(hparam == "min"){
-  lrl <- cv_two_stage(
-    z = W_gbm.c, y = Y2, n_folds = K, family="binomial", gamma = 0)
-  # lrl.betahat = lrl$beta_min
-} else if(hparam == "1se"){
-  lrl <- cv_two_stage(
-    z = W_gbm.c, y = Y2, n_folds = K, family="binomial", gamma = 1)
-  # lrl.betahat = lrl$beta_gammase
-} else{
-  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-}
-saveRDS(
-  lrl,
-  paste0(
-    output_dir, file.end,
-    "_lrlasso",
-    ".rds"))
-
-# lrl = readRDS(
+# library(logratiolasso)
+# source("slr_analyses/Functions/logratiolasso.R")
+# W_gbm.c = scale(log(X_gbm), center = TRUE, scale = FALSE)
+# if(hparam == "min"){
+#   lrl <- cv_two_stage(
+#     z = W_gbm.c, y = Y2, n_folds = K, family="binomial", gamma = 0)
+#   # lrl.betahat = lrl$beta_min
+# } else if(hparam == "1se"){
+#   lrl <- cv_two_stage(
+#     z = W_gbm.c, y = Y2, n_folds = K, family="binomial", gamma = 1)
+#   # lrl.betahat = lrl$beta_gammase
+# } else{
+#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+# }
+# saveRDS(
+#   lrl,
 #   paste0(
-#     output_dir, "/HIV",
+#     output_dir, file.end,
 #     "_lrlasso",
-#     "_gbm",
 #     ".rds"))
 
-# ################################################################################
-# # get active sets and selected balances (if applicable)
-# ################################################################################
-# p = ncol(X)
-# 
-# # classo #######################################################################
-# # selected variables
-# cl.betahat = cl$cll$betas[-1]
-# # positive/negative effect on response
-# colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
-# colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
-# sum(abs(cl.betahat) > 1e-8)
-# 
-# # slr - spectral ###############################################################
-# # SBP
-# slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-# rownames(slrspec.fullSBP) = colnames(X)
-# slrspec.fullSBP[match(
-#   names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
-# # thetahat 
-# slrspec.coefs = getCoefsBM(
-#   coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
-# # numerator (I+) / denominator (I-) of selected balance
-# rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs > 0]
-# rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs < 0]
-# sum(slrspec.fullSBP[, 1] != 0)
-# 
-# # slr - hierarchical ###########################################################
-# # SBP
-# slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
-# rownames(slrhier.fullSBP) = colnames(X)
-# slrhier.fullSBP[match(
-#   names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
-# # thetahat 
-# slrhier.coefs = getCoefsBM(
-#   coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
-# # numerator (I+) / denominator (I-) of selected balance
-# rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs > 0]
-# rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs < 0]
-# sum(slrhier.fullSBP[, 1] != 0)
-# 
-# # selbal #######################################################################
-# # numerator (I+) / denominator (I-) of selected balance
-# slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 4
-# slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 8
-# 
-# # codacore #####################################################################
-# length(cdcr$ensemble) # one balance selected
-# # numerator (I+) / denominator (I-) of selected balance
-# cdcr$ensemble[[1]]$slope # positive (if negative, num -> den & vice versa)
-# colnames(X)[cdcr$ensemble[[1]]$hard$numerator]
-# colnames(X)[cdcr$ensemble[[1]]$hard$denominator]
-# 
-# # log-ratio lasso ############################################################
-# # positive/negative effect on response
-# colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
-# colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
-# sum(abs(lrl$beta_min) > 1e-8)
+lrl = readRDS(
+  paste0(
+    output_dir, "/HIV",
+    "_lrlasso",
+    "_gbm",
+    ".rds"))
+
+################################################################################
+# get active sets and selected balances (if applicable)
+################################################################################
+
+# classo #######################################################################
+# selected variables
+cl.betahat = cl$cll$betas[-1]
+# positive/negative effect on response
+colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
+colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
+sum(abs(cl.betahat) > 1e-8)
+
+# slr - spectral ###############################################################
+# SBP
+slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
+rownames(slrspec.fullSBP) = colnames(X)
+slrspec.fullSBP[match(
+  names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+# thetahat
+slrspec.coefs = getCoefsBM(
+  coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
+# numerator (I+) / denominator (I-) of selected balance
+rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs > 0]
+rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs < 0]
+sum(slrspec.fullSBP[, 1] != 0)
+
+# slr - hierarchical ###########################################################
+# SBP
+slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
+rownames(slrhier.fullSBP) = colnames(X)
+slrhier.fullSBP[match(
+  names(slrhier$sbp), rownames(slrhier.fullSBP))] = slrhier$sbp
+# thetahat
+slrhier.coefs = getCoefsBM(
+  coefs = coefficients(slrhier$fit), sbp = slrhier.fullSBP)
+# numerator (I+) / denominator (I-) of selected balance
+rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs > 0]
+rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs < 0]
+sum(slrhier.fullSBP[, 1] != 0)
+
+# selbal #######################################################################
+# numerator (I+) / denominator (I-) of selected balance
+slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 4
+slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 8
+
+# codacore #####################################################################
+length(cdcr$ensemble) # one balance selected
+# numerator (I+) / denominator (I-) of selected balance
+cdcr$ensemble[[1]]$slope # positive (if negative, num -> den & vice versa)
+colnames(X)[cdcr$ensemble[[1]]$hard$numerator]
+colnames(X)[cdcr$ensemble[[1]]$hard$denominator]
+
+# log-ratio lasso ############################################################
+# positive/negative effect on response
+colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
+colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
+sum(abs(lrl$beta_min) > 1e-8)

@@ -174,138 +174,138 @@ res = foreach(
   ),
   paste0(output_dir, "/classo_metrics", file.end))
 
-  # ##############################################################################
-  # # slr
-  # #   screening.method = "wald"
-  # #   cluster.method = "spectral"
-  # #   response.type = "binary"
-  # #   s0.perc = 0
-  # #   zeta = 0
-  # #   type.measure = "auc"
-  # # -- fits a balance regression model with one balance
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slrspec1cv = cv.slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #   response.type = "binary", s0.perc = 0, zeta = 0,
-  #   nfolds = K, type.measure = "auc",
-  #    scale = scaling, trace.it = FALSE)
-  # if(hparam == "min"){
-  #   slrspec1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrspec1cv$threshold[slrspec1cv$index["min",]],
-  #     positive.slope = TRUE)
-  # } else if(hparam == "1se"){
-  #   slrspec1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]],
-  #     positive.slope = TRUE)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # slrspec1.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slrspec1.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrspec1.fullSBP) = colnames(X)
-  # slrspec1.fullSBP[match(
-  #   names(slrspec1$sbp), rownames(slrspec1.fullSBP))] = slrspec1$sbp
-  # 
-  # slrspec1.coefs = getCoefsBM(
-  #   coefs = coefficients(slrspec1$fit), sbp = slrspec1.fullSBP)
-  # 
-  # # compute metrics on the selected model #
-  # # prediction error
-  # slrspec1.Yhat.test = predict(
-  #   slrspec1$fit,
-  #   data.frame(balance = slr.fromContrast(X.test, slrspec1.fullSBP)),
-  #   type = "response")
-  # slrspec1.AUC.test = pROC::roc(
-  #   Y.test, slrspec1.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # beta estimation accuracy, selection accuracy #
-  # slrspec1.metrics = getMetricsBM(
-  #   est.llc.coefs = slrspec1.coefs$llc.coefs,
-  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-  #   true.llc.coefs = llc.coefs.true,
-  #   metrics = c("estimation", "selection"))
-  # 
-  # saveRDS(c(
-  #   "auc" = slrspec1.AUC.test,
-  #   slrspec1.metrics,
-  #   "logratios" = sum(slrspec1.coefs$bm.coefs != 0),
-  #   "time" = slrspec1.timing
-  # ),
-  # paste0(output_dir, "/slr_spectral_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # slr
-  # #   screening.method = "wald"
-  # #   cluster.method = "hierarchical"
-  # #   response.type = "binary"
-  # #   s0.perc = 0
-  # #   zeta = 0
-  # #   type.measure = "auc"
-  # # -- fits a balance regression model with one balance
-  # ##############################################################################
-  # start.time = Sys.time()
-  # slrhier1cv = cv.slr(
-  #   x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #   response.type = "binary", s0.perc = 0, zeta = 0,
-  #   nfolds = K, type.measure = "auc",
-  #    scale = scaling, trace.it = FALSE)
-  # if(hparam == "min"){
-  #   slrhier1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrhier1cv$threshold[slrhier1cv$index["min",]],
-  #     positive.slope = TRUE)
-  # } else if(hparam == "1se"){
-  #   slrhier1 = slr(
-  #     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
-  #     response.type = "binary", s0.perc = 0, zeta = 0,
-  #     threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]],
-  #     positive.slope = TRUE)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # slrhier1.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # slrhier1.fullSBP = matrix(0, nrow = p, ncol = 1)
-  # rownames(slrhier1.fullSBP) = colnames(X)
-  # slrhier1.fullSBP[match(
-  #   names(slrhier1$sbp), rownames(slrhier1.fullSBP))] = slrhier1$sbp
-  # 
-  # slrhier1.coefs = getCoefsBM(
-  #   coefs = coefficients(slrhier1$fit), sbp = slrhier1.fullSBP)
-  # 
-  # # compute metrics on the selected model #
-  # # prediction error
-  # slrhier1.Yhat.test = predict(
-  #   slrhier1$fit,
-  #   data.frame(balance = slr.fromContrast(X.test, slrhier1.fullSBP)),
-  #   type = "response")
-  # slrhier1.AUC.test = pROC::roc(
-  #   Y.test, slrhier1.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # # beta estimation accuracy, selection accuracy #
-  # slrhier1.metrics = getMetricsBM(
-  #   est.llc.coefs = slrhier1.coefs$llc.coefs,
-  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-  #   true.llc.coefs = llc.coefs.true,
-  #   metrics = c("estimation", "selection"))
-  # 
-  # saveRDS(c(
-  #   "auc" = slrhier1.AUC.test,
-  #   slrhier1.metrics,
-  #   "logratios" = sum(slrhier1.coefs$bm.coefs != 0),
-  #   "time" = slrhier1.timing
-  # ),
-  # paste0(output_dir, "/slr_hierarchical_metrics", file.end))
-  # 
+  ##############################################################################
+  # slr
+  #   screening.method = "wald"
+  #   cluster.method = "spectral"
+  #   response.type = "binary"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "auc"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrspec1cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "auc",
+     scale = scaling, trace.it = FALSE)
+  if(hparam == "min"){
+    slrspec1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrspec1cv$threshold[slrspec1cv$index["min",]],
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrspec1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrspec1cv$threshold[slrspec1cv$index["1se",]],
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  slrspec1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  slrspec1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrspec1.fullSBP) = colnames(X)
+  slrspec1.fullSBP[match(
+    names(slrspec1$sbp), rownames(slrspec1.fullSBP))] = slrspec1$sbp
+
+  slrspec1.coefs = getCoefsBM(
+    coefs = coefficients(slrspec1$fit), sbp = slrspec1.fullSBP)
+
+  # compute metrics on the selected model #
+  # prediction error
+  slrspec1.Yhat.test = predict(
+    slrspec1$fit,
+    data.frame(balance = slr.fromContrast(X.test, slrspec1.fullSBP)),
+    type = "response")
+  slrspec1.AUC.test = pROC::roc(
+    Y.test, slrspec1.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slrspec1.metrics = getMetricsBM(
+    est.llc.coefs = slrspec1.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+    true.llc.coefs = llc.coefs.true,
+    metrics = c("estimation", "selection"))
+
+  saveRDS(c(
+    "auc" = slrspec1.AUC.test,
+    slrspec1.metrics,
+    "logratios" = sum(slrspec1.coefs$bm.coefs != 0),
+    "time" = slrspec1.timing
+  ),
+  paste0(output_dir, "/slr_spectral_metrics", file.end))
+
+  ##############################################################################
+  # slr
+  #   screening.method = "wald"
+  #   cluster.method = "hierarchical"
+  #   response.type = "binary"
+  #   s0.perc = 0
+  #   zeta = 0
+  #   type.measure = "auc"
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  start.time = Sys.time()
+  slrhier1cv = cv.slr(
+    x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+    response.type = "binary", s0.perc = 0, zeta = 0,
+    nfolds = K, type.measure = "auc",
+     scale = scaling, trace.it = FALSE)
+  if(hparam == "min"){
+    slrhier1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrhier1cv$threshold[slrhier1cv$index["min",]],
+      positive.slope = TRUE)
+  } else if(hparam == "1se"){
+    slrhier1 = slr(
+      x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
+      response.type = "binary", s0.perc = 0, zeta = 0,
+      threshold = slrhier1cv$threshold[slrhier1cv$index["1se",]],
+      positive.slope = TRUE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  slrhier1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  slrhier1.fullSBP = matrix(0, nrow = p, ncol = 1)
+  rownames(slrhier1.fullSBP) = colnames(X)
+  slrhier1.fullSBP[match(
+    names(slrhier1$sbp), rownames(slrhier1.fullSBP))] = slrhier1$sbp
+
+  slrhier1.coefs = getCoefsBM(
+    coefs = coefficients(slrhier1$fit), sbp = slrhier1.fullSBP)
+
+  # compute metrics on the selected model #
+  # prediction error
+  slrhier1.Yhat.test = predict(
+    slrhier1$fit,
+    data.frame(balance = slr.fromContrast(X.test, slrhier1.fullSBP)),
+    type = "response")
+  slrhier1.AUC.test = pROC::roc(
+    Y.test, slrhier1.Yhat.test, levels = c(0, 1), direction = "<")$auc
+  # beta estimation accuracy, selection accuracy #
+  slrhier1.metrics = getMetricsBM(
+    est.llc.coefs = slrhier1.coefs$llc.coefs,
+    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+    true.llc.coefs = llc.coefs.true,
+    metrics = c("estimation", "selection"))
+
+  saveRDS(c(
+    "auc" = slrhier1.AUC.test,
+    slrhier1.metrics,
+    "logratios" = sum(slrhier1.coefs$bm.coefs != 0),
+    "time" = slrhier1.timing
+  ),
+  paste0(output_dir, "/slr_hierarchical_metrics", file.end))
+
   # ##############################################################################
   # # selbal method (a balance regression method)
   # # -- fits a balance regression model with one balance
@@ -357,154 +357,84 @@ res = foreach(
   #   "time" = slbl.timing
   # ),
   # paste0(output_dir, "/selbal_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # CoDaCoRe (a balance regression method)
-  # # -- fits a balance regression model with possibly multiple balances
-  # ##############################################################################
-  # library(codacore)
-  # 
-  # if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-  #   reticulate::use_condaenv("anaconda3")
-  # }
-  # 
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   codacore0 = codacore::codacore(
-  #     x = X, y = Y, logRatioType = "ILR",
-  #     objective = "binary classification", cvParams = list(numFolds = K),
-  #     lambda = 0)
-  # } else if(hparam == "1se"){
-  #   codacore0 = codacore::codacore(
-  #     x = X, y = Y, logRatioType = "ILR",
-  #     objective = "binary classification", cvParams = list(numFolds = K),
-  #     lambda = 1)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # codacore0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
-  #   codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
-  #   codacore0_coeffs = rep(NA, length(codacore0$ensemble))
-  #   for(col.idx in 1:ncol(codacore0_SBP)){
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-  #     codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
-  #   }
-  # 
-  #   codacore0.betahat = getBetaFromCodacore(
-  #     SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
-  # 
-  #   # compute metrics on the selected model #
-  #   # prediction error
-  #   codacore0.Yhat.test = predict(codacore0, X.test)
-  # 
-  # } else{
-  #   print(paste0("sim ", i, " -- codacore has no log-ratios"))
-  #   codacore0_coeffs = c()
-  #   codacore0model = stats::glm(Y ~ 1, family = "binomial")
-  #   codacore0.betahat = rep(0, p)
-  # 
-  #   # compute metrics on the selected model #
-  #   # prediction error
-  #   codacore0.Yhat.test = predict(codacore0model, X.test)
-  # }
-  # codacore0.AUC.test = pROC::roc(
-  #   Y.test, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # 
-  # # beta estimation accuracy, selection accuracy #
-  # codacore0.metrics = getMetricsBM(
-  #   est.llc.coefs = codacore0.betahat,
-  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-  #   true.llc.coefs = llc.coefs.true, metrics = c("estimation", "selection"))
-  # 
-  # saveRDS(c(
-  #   "auc" = codacore0.AUC.test,
-  #   codacore0.metrics,
-  #   "logratios" = length(codacore0_coeffs),
-  #   "time" = codacore0.timing
-  # ),
-  # paste0(output_dir, "/codacore_metrics", file.end))
-  # 
-  # ##############################################################################
-  # # CoDaCoRe (a balance regression method)
-  # # -- fits a balance regression model with possibly multiple balances
-  # ##############################################################################
-  # library(codacore)
-  # 
-  # if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-  #   reticulate::use_condaenv("anaconda3")
-  # }
-  # 
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   codacore1 = codacore::codacore(
-  #     x = X, y = Y, logRatioType = "ILR",
-  #     objective = "binary classification", cvParams = list(numFolds = K),
-  #     maxBaseLearners = 1,
-  #     lambda = 0)
-  # } else if(hparam == "1se"){
-  #   codacore1 = codacore::codacore(
-  #     x = X, y = Y, logRatioType = "ILR",
-  #     objective = "binary classification", cvParams = list(numFolds = K),
-  #     maxBaseLearners = 1,
-  #     lambda = 1)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # codacore1.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # if(length(codacore1$ensemble) > 0){ # at least 1 log-ratio found
-  #   codacore1_SBP = matrix(0, nrow = p, ncol = length(codacore1$ensemble))
-  #   codacore1_coeffs = rep(NA, length(codacore1$ensemble))
-  #   for(col.idx in 1:ncol(codacore1_SBP)){
-  #     codacore1_SBP[
-  #       codacore1$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-  #     codacore1_SBP[
-  #       codacore1$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-  #     codacore1_coeffs[col.idx] = codacore1$ensemble[[col.idx]]$slope
-  #   }
-  # 
-  #   codacore1.betahat = getBetaFromCodacore(
-  #     SBP_codacore = codacore1_SBP, coeffs_codacore = codacore1_coeffs, p = p)
-  # 
-  #   # compute metrics on the selected model #
-  #   # prediction error
-  #   codacore1.Yhat.test = predict(codacore1, X.test)
-  # 
-  # } else{
-  #   print(paste0("sim ", i, " -- codacore has no log-ratios"))
-  #   codacore1_coeffs = c()
-  #   codacore1model = stats::glm(Y ~ 1, family = "binomial")
-  #   codacore1.betahat = rep(0, p)
-  # 
-  #   # compute metrics on the selected model #
-  #   # prediction error
-  #   codacore1.Yhat.test = predict(codacore1model, X.test)
-  # }
-  # codacore1.AUC.test = pROC::roc(
-  #   Y.test, codacore1.Yhat.test, levels = c(0, 1), direction = "<")$auc
-  # 
-  # # beta estimation accuracy, selection accuracy #
-  # codacore1.metrics = getMetricsBM(
-  #   est.llc.coefs = codacore1.betahat,
-  #   true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
-  #   true.llc.coefs = llc.coefs.true, metrics = c("estimation", "selection"))
-  # 
-  # saveRDS(c(
-  #   "auc" = codacore1.AUC.test,
-  #   codacore1.metrics,
-  #   "logratios" = length(codacore1_coeffs),
-  #   "time" = codacore1.timing
-  # ),
-  # paste0(output_dir, "/codacore1_metrics", file.end))
+
+  ##############################################################################
+  # CoDaCoRe (a balance regression method)
+  # -- fits a balance regression model with one balance
+  ##############################################################################
+  library(codacore)
+
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+
+  start.time = Sys.time()
+  if(hparam == "min"){
+    codacore1 = codacore::codacore(
+      x = X, y = Y, logRatioType = "ILR",
+      objective = "binary classification", cvParams = list(numFolds = K),
+      maxBaseLearners = 1,
+      lambda = 0)
+  } else if(hparam == "1se"){
+    codacore1 = codacore::codacore(
+      x = X, y = Y, logRatioType = "ILR",
+      objective = "binary classification", cvParams = list(numFolds = K),
+      maxBaseLearners = 1,
+      lambda = 1)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  codacore1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+
+  if(length(codacore1$ensemble) > 0){ # at least 1 log-ratio found
+    codacore1_SBP = matrix(0, nrow = p, ncol = 1)
+    codacore1_coeffs = rep(NA, 1)
+    codacore1_SBP[
+      codacore1$ensemble[[1]]$hard$numerator, 1] = 1
+    codacore1_SBP[
+      codacore1$ensemble[[1]]$hard$denominator, 1] = -1
+    codacore1_coeffs[1] = codacore1$ensemble[[1]]$slope
+    
+    # codacore1.betahat = getBetaFromCodacore(
+    #   SBP_codacore = codacore1_SBP, coeffs_codacore = codacore1_coeffs, p = p)
+    names(codacore1_coeffs) = "balance1"
+    codacore1.coefs2 = getCoefsBM(
+      coefs = codacore1_coeffs,
+      sbp = codacore1_SBP)
+    codacore1.betahat = codacore1.coefs2$llc.coefs
+
+    # compute metrics on the selected model #
+    # prediction error
+    codacore1.Yhat.test = predict(codacore1, X.test)
+
+  } else{
+    print(paste0("sim ", i, " -- codacore has no log-ratios"))
+    codacore1_coeffs = c()
+    codacore1model = stats::glm(Y ~ 1, family = "binomial")
+    codacore1.betahat = rep(0, p)
+
+    # compute metrics on the selected model #
+    # prediction error
+    codacore1.Yhat.test = predict(codacore1model, X.test)
+  }
+  codacore1.AUC.test = pROC::roc(
+    Y.test, codacore1.Yhat.test, levels = c(0, 1), direction = "<")$auc
+
+  # beta estimation accuracy, selection accuracy #
+  codacore1.metrics = getMetricsBM(
+    est.llc.coefs = codacore1.betahat,
+    true.sbp = SBP.true, non0.true.llc.coefs = llc.coefs.non0,
+    true.llc.coefs = llc.coefs.true, metrics = c("estimation", "selection"))
+
+  saveRDS(c(
+    "auc" = codacore1.AUC.test,
+    codacore1.metrics,
+    "logratios" = length(codacore1_coeffs),
+    "time" = codacore1.timing
+  ),
+  paste0(output_dir, "/codacore1_metrics", file.end))
   # 
   # ##############################################################################
   # # Log-Ratio Lasso

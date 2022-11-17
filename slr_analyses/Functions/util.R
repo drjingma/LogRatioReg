@@ -41,6 +41,7 @@ getSelbalData = function(X = X, y = y, classification = FALSE, levels, labels){
 ##### extract balance regression coefficients ##################################
 
 getCoefsBM = function(coefs, sbp){
+  # balance model defined in manuscript, i.e., without normalizing balance
   if(names(coefs)[1] == "(Intercept)"){ # model with intercept
     a0 = coefs[1]
     if(length(coefs) == 1){
@@ -52,7 +53,7 @@ getCoefsBM = function(coefs, sbp){
     a0 = NA
     bm.coefs = coefs
   }
-  llc.coefs = getBetaFromTheta(bm.coefs, sbp)
+  llc.coefs = getGammaFromTheta(bm.coefs, sbp)
   return(list(
     a0 = a0, 
     bm.coefs = bm.coefs,
@@ -116,39 +117,60 @@ getCoefsSelbal = function(
 
 ##### transform coefficients for linear log contrasts model ####################
 
-getBetaFromTheta = function(
-    theta, sbp = NULL
-){
-  # get U
-  U = getIlrTrans(sbp = sbp)
-  # calculate beta
-  beta = U %*% theta
-  return(beta)
-}
+# getBetaFromTheta = function(
+#     theta, sbp = NULL
+# ){
+#   # get U
+#   U = getIlrTrans(sbp = sbp)
+#   # calculate beta
+#   beta = U %*% theta
+#   return(beta)
+# }
 
-getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
-  if(!is.matrix(SBP_codacore)) SBP_codacore = matrix(SBP_codacore)
-  if(ncol(SBP_codacore) != length(coeffs_codacore)){
-    stop("getBetaFromCodacore: SBP and coefficients don't match")
+# getBetaFromCodacore = function(SBP_codacore, coeffs_codacore, p){
+#   if(!is.matrix(SBP_codacore)) SBP_codacore = matrix(SBP_codacore)
+#   if(ncol(SBP_codacore) != length(coeffs_codacore)){
+#     stop("getBetaFromCodacore: SBP and coefficients don't match")
+#   }
+#   kplus = apply(SBP_codacore, 2, function(col) sum(col == 1))
+#   kminus = apply(SBP_codacore, 2, function(col) sum(col == -1))
+#   reciprocals = matrix(
+#     0, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+#   for(i in 1:ncol(SBP_codacore)){
+#     reciprocals[SBP_codacore[, i] == 1, i] = 1 / kplus[i]
+#     reciprocals[SBP_codacore[, i] == -1, i] = -1 / kminus[i]
+#   }
+#   ReciprocalstimesCoeffs = matrix(
+#     NA, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+#   for(i in 1:ncol(ReciprocalstimesCoeffs)){
+#     ReciprocalstimesCoeffs[, i] = reciprocals[, i] * coeffs_codacore[i]
+#   }
+#   beta = rowSums(ReciprocalstimesCoeffs)
+#   return(beta)
+# }
+
+getGammaFromTheta = function(theta, sbp){
+  # theta defined in manuscript, i.e., coefficient of non-normalized balance
+  if(!is.matrix(sbp)) sbp = matrix(sbp)
+  if(ncol(sbp) != length(theta)){
+    stop("getGammaFromTheta: SBP and coefficients don't match")
   }
-  kplus = apply(SBP_codacore, 2, function(col) sum(col == 1))
-  kminus = apply(SBP_codacore, 2, function(col) sum(col == -1))
+  kplus = apply(sbp, 2, function(col) sum(col == 1))
+  kminus = apply(sbp, 2, function(col) sum(col == -1))
   reciprocals = matrix(
-    0, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
-  for(i in 1:ncol(SBP_codacore)){
-    reciprocals[SBP_codacore[, i] == 1, i] = 1 / kplus[i]
-    reciprocals[SBP_codacore[, i] == -1, i] = -1 / kminus[i]
+    0, nrow = nrow(sbp), ncol = ncol(sbp))
+  for(i in 1:ncol(sbp)){
+    reciprocals[sbp[, i] == 1, i] = 1 / kplus[i]
+    reciprocals[sbp[, i] == -1, i] = -1 / kminus[i]
   }
   ReciprocalstimesCoeffs = matrix(
-    NA, nrow = nrow(SBP_codacore), ncol = ncol(SBP_codacore))
+    NA, nrow = nrow(sbp), ncol = ncol(sbp))
   for(i in 1:ncol(ReciprocalstimesCoeffs)){
-    ReciprocalstimesCoeffs[, i] = reciprocals[, i] * coeffs_codacore[i]
+    ReciprocalstimesCoeffs[, i] = reciprocals[, i] * theta[i]
   }
   beta = rowSums(ReciprocalstimesCoeffs)
   return(beta)
 }
-
-
 
 ##### balance regression model tools ###########################################
 

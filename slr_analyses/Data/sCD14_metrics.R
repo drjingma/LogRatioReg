@@ -155,7 +155,7 @@ res = foreach(
   # saveRDS(
   #   cl.metrics,
   #   paste0(output_dir, "/classo_metrics", file.end))
-  # 
+
   # # slr - spectral #############################################################
   # start.time = Sys.time()
   # slrspeccv = cv.slr(
@@ -327,83 +327,74 @@ res = foreach(
   #   slbl_sbp,
   #   paste0(output_dir, "/selbal_sbp", file.end)
   # )
-  # 
-  # # codacore ###################################################################
-  # library(codacore)
-  # if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-  #   reticulate::use_condaenv("anaconda3")
-  # }
-  # 
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   codacore0 = codacore(
-  #     x = XTr, y = YTr, logRatioType = "ILR",
-  #     objective = "regression", cvParams = list(numFolds = K),
-  #     lambda = 0)
-  # } else if(hparam == "1se"){
-  #   codacore0 = codacore(
-  #     x = XTr, y = YTr, logRatioType = "ILR",
-  #     objective = "regression", cvParams = list(numFolds = K),
-  #     lambda = 1)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # codacore0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get prediction error on test set and gamma-hat
-  # if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
-  #   codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
-  #   codacore0_coeffs = rep(NA, length(codacore0$ensemble))
-  #   for(col.idx in 1:ncol(codacore0_SBP)){
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-  #     codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
-  #   }
-  # 
-  #   names(codacore0_coeffs) = paste(
-  #     "balance", 1:length(codacore0_coeffs), sep = "")
-  #   rownames(codacore0_SBP) = colnames(X)
-  #   codacore0.coefs2 = getCoefsBM(
-  #     coefs = codacore0_coeffs * codacore0$yScale,
-  #     sbp = codacore0_SBP)
-  #   codacore0.betahat = codacore0.coefs2$llc.coefs
-  # 
-  #   codacore0.Yhat.test = predict(codacore0, XTe)
-  #   # adjust codacore_SBP to correspond to positive theta-hats #################
-  #   for(col in 1:ncol(codacore0_SBP)){
-  #     if(codacore0_coeffs[col] < 0){
-  #       codacore0_SBP[, col] = -codacore0_SBP[, col]
-  #     }
-  #   }
-  # } else{
-  #   print(paste0("sim ", b, " -- codacore has no log-ratios"))
-  #   codacore0_coeffs = c()
-  #   codacore0_SBP = matrix(0, nrow = p, ncol = 1) ###############################
-  #   codacore0model = stats::glm(YTr ~ 1, family = "gaussian")
-  #   codacore0.betahat = rep(0, p)
-  #   codacore0.Yhat.test = predict(codacore0model, XTe)
-  # }
-  # rownames(codacore0_SBP) = colnames(XTr) ######################################
-  # 
-  # codacore0.metrics = c(
-  #   mse = as.vector(crossprod(YTe - codacore0.Yhat.test) / nrow(XTe)),
-  #   percselected = sum(abs(codacore0.betahat) > 10e-8) / p,
-  #   time = codacore0.timing
-  # )
-  # 
-  # saveRDS(
-  #   codacore0.metrics,
-  #   paste0(output_dir, "/codacore_metrics", file.end))
-  # 
-  # saveRDS(
-  #   codacore0_SBP,
-  #   paste0(output_dir, "/codacore_sbp", file.end)
-  # )
-  # 
+  
+  # codacore - 1 balance #######################################################
+  library(codacore)
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+  
+  start.time = Sys.time()
+  if(hparam == "min"){
+    codacore1 = codacore(
+      x = XTr, y = YTr, logRatioType = "ILR",
+      objective = "regression", cvParams = list(numFolds = K),
+      maxBaseLearners = 1,
+      lambda = 0)
+  } else if(hparam == "1se"){
+    codacore1 = codacore(
+      x = XTr, y = YTr, logRatioType = "ILR",
+      objective = "regression", cvParams = list(numFolds = K),
+      maxBaseLearners = 1,
+      lambda = 1)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  codacore1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # get prediction error on test set and gamma-hat
+  if(length(codacore1$ensemble) > 0){ # at least 1 log-ratio found
+    codacore1_SBP = matrix(0, nrow = p, ncol = 1)
+    codacore1_SBP[codacore1$ensemble[[1]]$hard$numerator, 1] = 1
+    codacore1_SBP[codacore1$ensemble[[1]]$hard$denominator, 1] = -1
+    codacore1_coeffs = codacore1$ensemble[[1]]$slope
+    names(codacore1_coeffs) = "balance1"
+    codacore1.coefs2 = getCoefsBM(
+      coefs = codacore1_coeffs * codacore1$yScale,
+      sbp = codacore1_SBP)
+    codacore1.betahat = codacore1.coefs2$llc.coefs
+    codacore1.Yhat.test = predict(codacore1, XTe)
+    # adjust codacore_SBP to correspond to positive theta-hats
+    if(codacore1_coeffs[1] < 0){
+      codacore1_SBP[, 1] = -codacore1_SBP[, 1]
+    }
+  } else{
+    print(paste0("sim ", b, " -- codacore has no log-ratios"))
+    codacore1_coeffs = c()
+    codacore1_SBP = matrix(0, nrow = p, ncol = 1) 
+    codacore1model = stats::glm(YTr ~ 1, family = "gaussian")
+    codacore1.betahat = rep(0, p)
+    codacore1.Yhat.test = predict(codacore1model, XTe)
+  }
+  rownames(codacore1_SBP) = colnames(XTr) 
+  
+  codacore1.metrics = c(
+    mse = as.vector(crossprod(YTe - codacore1.Yhat.test) / nrow(XTe)),
+    percselected = sum(abs(codacore1.betahat) > 10e-8) / p,
+    time = codacore1.timing
+  )
+  
+  saveRDS(
+    codacore1.metrics,
+    paste0(output_dir, "/codacore1_metrics", file.end))
+  
+  saveRDS(
+    codacore1_SBP,
+    paste0(output_dir, "/codacore1_sbp", file.end)
+  )
+
   # # log-ratio lasso ############################################################
   # library(logratiolasso)
   # source("slr_analyses/Functions/logratiolasso.R")
@@ -438,37 +429,5 @@ res = foreach(
   # saveRDS(
   #   lrl.metrics,
   #   paste0(output_dir, "/lrlasso_metrics", file.end))
-  
-  # clr-lasso ##################################################################
-  start.time = Sys.time()
-  ZTr <- t(apply(XTr, 1, function(a) log(a) - mean(log(a))))
-  clrl = cv.glmnet(
-    ZTr, YTr, family = "gaussian", type.measure = "mse", alpha = 1, nfolds = K)
-  end.time = Sys.time()
-  clrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  ZTe <- t(apply(XTe, 1, function(a) log(a) - mean(log(a))))
-  if(hparam == "min"){
-    clrl.betahat = coef(clrl, s = "lambda.min")[, 1]
-    clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.min") # before sigmoid
-  } else if(hparam == "1se"){
-    clrl.betahat = coef(clrl, s = "lambda.1se")[, 1]
-    clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.1se") # before sigmoid
-  }
-
-  clrl.metrics = c(
-    mse = as.vector(crossprod(YTe - clrl.Yhat.test) / nrow(XTe)),
-    percselected = sum(abs(clrl.betahat[-1]) > 10e-8) / p,
-    time = clrl.timing
-  )
-  
-  saveRDS(
-    clrl.metrics,
-    paste0(output_dir, "/clrlasso_metrics", file.end))
-  
-  
-  
-  
   
 }

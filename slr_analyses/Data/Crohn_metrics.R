@@ -129,106 +129,41 @@ res = foreach(
   # fit methods
   ##############################################################################
   
-  # # classo #####################################################################
-  # #   keep Gordon-Rodriguez et al. validation method
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   classo0 = codalasso(
-  #     XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "original")
-  # } else if(hparam == "1se"){
-  #   classo0 = codalasso(
-  #     XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "original")
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # cl0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get prediction error on test set
-  # classo0.Yhat.test = predict(classo0, XTe) # before sigmoid
-  # 
-  # cl0.metrics = c(
-  #   acc = mean((classo0.Yhat.test > 0) == Y2Te),
-  #   auc = pROC::roc(
-  #     Y2Te, classo0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-  #   percselected = sum(abs(classo0$cll$betas[-1]) > 10e-8) / p,
-  #   f1 = getF1(Y2Te, classo0.Yhat.test > 0),
-  #   time = cl0.timing
-  # )
-  # 
-  # saveRDS(
-  #   cl0.metrics,
-  #   paste0(output_dir, "/classo0_metrics", file.end))
-  # 
-  # # classo #####################################################################
-  # #   validate on AUC
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   classo1 = codalasso(
-  #     XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "AUC")
-  # } else if(hparam == "1se"){
-  #   classo1 = codalasso(
-  #     XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "AUC")
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # cl1.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get prediction error on test set
-  # classo1.Yhat.test = predict(classo1, XTe) # before sigmoid
-  # 
-  # cl1.metrics = c(
-  #   acc = mean((classo1.Yhat.test > 0) == Y2Te),
-  #   auc = pROC::roc(
-  #     Y2Te, classo1.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-  #   percselected = sum(abs(classo1$cll$betas[-1]) > 10e-8) / p,
-  #   f1 = getF1(Y2Te, classo1.Yhat.test > 0),
-  #   time = cl1.timing
-  # )
-  # 
-  # saveRDS(
-  #   cl1.metrics,
-  #   paste0(output_dir, "/classo1_metrics", file.end))
-  # 
-  # # classo #####################################################################
-  # #   validate on AUC
-  # #   without stratification
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   classo2 = codalasso(
-  #     XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "AUC", 
-  #     stratify = FALSE)
-  # } else if(hparam == "1se"){
-  #   classo2 = codalasso(
-  #     XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "AUC", 
-  #     stratify = FAlSE)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # cl2.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get prediction error on test set
-  # classo2.Yhat.test = predict(classo2, XTe) # before sigmoid
-  # 
-  # cl2.metrics = c(
-  #   acc = mean((classo2.Yhat.test > 0) == Y2Te),
-  #   auc = pROC::roc(
-  #     Y2Te, classo2.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-  #   percselected = sum(abs(classo2$cll$betas[-1]) > 10e-8) / p,
-  #   f1 = getF1(Y2Te, classo2.Yhat.test > 0),
-  #   time = cl2.timing
-  # )
-  # 
-  # saveRDS(
-  #   cl2.metrics,
-  #   paste0(output_dir, "/classo2_metrics", file.end))
-  # 
-  # # slr - spectral clustering - auc ############################################
+  # classo #####################################################################
+  #   validate on AUC
+  start.time = Sys.time()
+  if(hparam == "min"){
+    classo1 = codalasso(
+      XTr, Y2Tr, numFolds = K, gamma = 0, type.measure = "AUC", 
+      stratify = FALSE)
+  } else if(hparam == "1se"){
+    classo1 = codalasso(
+      XTr, Y2Tr, numFolds = K, gamma = 1, type.measure = "AUC", 
+      stratify = FALSE)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  cl1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # get prediction error on test set
+  classo1.Yhat.test = predict(classo1, XTe) # before sigmoid
+  
+  cl1.metrics = c(
+    acc = mean((classo1.Yhat.test > 0) == Y2Te),
+    auc = pROC::roc(
+      Y2Te, classo1.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(classo1$cll$betas[-1]) > 10e-8) / p,
+    f1 = getF1(Y2Te, classo1.Yhat.test > 0),
+    time = cl1.timing
+  )
+  
+  saveRDS(
+    cl1.metrics,
+    paste0(output_dir, "/classo_metrics", file.end))
+  
+  # # slr - spectral clustering with auc #########################################
   # start.time = Sys.time()
   # slrspec1cv = cv.slr(
   #   x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "spectral",
@@ -287,7 +222,7 @@ res = foreach(
   #   paste0(output_dir, "/slr_spectral_sbp", file.end)
   # )
   # 
-  # # slr - hierarchical clustering - auc ########################################
+  # # slr - hierarchical clustering with auc #####################################
   # start.time = Sys.time()
   # slrhier1cv = cv.slr(
   #   x = XTr, y = Y2Tr, screen.method = "wald", cluster.method = "hierarchical",
@@ -349,124 +284,122 @@ res = foreach(
   # # selbal #####################################################################
   # start.time = Sys.time()
   # if(hparam == "min"){
-  #   slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "min")
+  #   slbl0 = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "min")
   # } else if(hparam == "1se"){
-  #   slbl = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "1se")
+  #   slbl0 = selbal::selbal.cv(x = XTr, y = YTr, n.fold = K, opt.cri = "1se")
   # } else{
   #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
   # }
   # end.time = Sys.time()
-  # end.time = Sys.time()
-  # slbl.timing = difftime(
+  # slbl0.timing = difftime(
   #   time1 = end.time, time2 = start.time, units = "secs")
   # 
   # # get theta-hat and gamma-hat
-  # slbl.coefs = getCoefsSelbal(
-  #   X = XTr, y = YTr, selbal.fit = slbl, classification = TRUE,
+  # slbl0.coefs = getCoefsSelbal(
+  #   X = XTr, y = YTr, selbal.fit = slbl0, classification = TRUE,
   #   check = TRUE)
   # 
   # # get prediction error on test set
-  # slbl.Yhat.test = predict.glm(
-  #   slbl$glm,
-  #   newdata = data.frame(V1 = balance::balance.fromSBP(
-  #     x = XTe, y = slbl.coefs$sbp)),
+  # slbl0.Yhat.test = predict.glm(
+  #   slbl0$glm,
+  #   newdata = data.frame(V1 = balance::balance.fromSBP(XTe, slbl0.coefs$sbp)),
   #   type = "response")
   # 
-  # slbl.metrics = c(
-  #   acc = mean((slbl.Yhat.test > 0.5) == Y2Te),
+  # slbl0.metrics = c(
+  #   acc = mean((slbl0.Yhat.test > 0.5) == Y2Te),
   #   # < 0.5 bc order of levels = c(case, control) instead of c(control, case)
   #   auc = pROC::roc(
-  #     YTe, slbl.Yhat.test, levels = c("no", "CD"), direction = "<")$auc,
-  #   percselected = sum(slbl.coefs$sbp > 0) / p,
-  #   f1 = getF1(Y2Te, slbl.Yhat.test > 0.5),
-  #   time = slbl.timing
+  #     YTe, slbl0.Yhat.test, levels = c("Neg", "Pos"), direction = "<")$auc,
+  #   percselected = sum(slbl0.coefs$sbp > 0) / p,
+  #   f1 = getF1(Y2Te, slbl0.Yhat.test > 0.5),
+  #   time = slbl0.timing
   # )
   # 
   # saveRDS(
-  #   slbl.metrics,
+  #   slbl0.metrics,
   #   paste0(output_dir, "/selbal_metrics", file.end))
   # 
-  # slbl_sbp = slbl.coefs$sbp
-  # if(slbl$glm$coefficients[2] < 0){
-  #   slbl_sbp = -slbl_sbp
+  # slbl0_sbp = slbl0.coefs$sbp
+  # if(slbl0$glm$coefficients[2] < 0){
+  #   slbl0_sbp = -slbl0_sbp
   # }
   # saveRDS(
-  #   slbl_sbp,
+  #   slbl0_sbp,
   #   paste0(output_dir, "/selbal_sbp", file.end)
   # )
-  # 
-  # # codacore ###################################################################
-  # library(codacore)
-  # if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-  #   reticulate::use_condaenv("anaconda3")
-  # }
-  # 
-  # start.time = Sys.time()
-  # if(hparam == "min"){
-  #   codacore0 = codacore::codacore(
-  #     x = XTr, y = Y2Tr, logRatioType = "ILR",
-  #     objective = "binary classification", cvParams = list(numFolds = K),
-  #     lambda = 0)
-  # } else if(hparam == "1se"){
-  #   codacore0 = codacore::codacore(
-  #     x = XTr, y = Y2Tr, logRatioType = "ILR",
-  #     objective = "binary classification", cvParams = list(numFolds = K),
-  #     lambda = 1)
-  # } else{
-  #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-  # }
-  # end.time = Sys.time()
-  # codacore0.timing = difftime(
-  #   time1 = end.time, time2 = start.time, units = "secs")
-  # 
-  # # get prediction error on test set and gamma-hat
-  # if(length(codacore0$ensemble) > 0){ # at least 1 log-ratio found
-  #   codacore0_SBP = matrix(0, nrow = p, ncol = length(codacore0$ensemble))
-  #   codacore0_coeffs = rep(NA, length(codacore0$ensemble))
-  #   for(col.idx in 1:ncol(codacore0_SBP)){
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$numerator, col.idx] = 1
-  #     codacore0_SBP[
-  #       codacore0$ensemble[[col.idx]]$hard$denominator, col.idx] = -1
-  #     codacore0_coeffs[col.idx] = codacore0$ensemble[[col.idx]]$slope
-  #   }
-  #   codacore0.betahat = getBetaFromCodacore(
-  #     SBP_codacore = codacore0_SBP, coeffs_codacore = codacore0_coeffs, p = p)
-  #   codacore0.Yhat.test = predict(codacore0, XTe) # before sigmoid
-  #   # adjust codacore_SBP to correspond to positive theta-hats #################
-  #   for(col in 1:ncol(codacore0_SBP)){
-  #     if(codacore0_coeffs[col] < 0){
-  #       codacore0_SBP[, col] = -codacore0_SBP[, col]
-  #     }
-  #   }
-  # } else{
-  #   print(paste0("sim ", i, " -- codacore has no log-ratios"))
-  #   codacore0_coeffs = c()
-  #   SBP_codacore = matrix(0, nrow = p, ncol = 1) ###############################
-  #   codacore0model = stats::glm(Y2Tr ~ 1, family = "binomial")
-  #   codacore0.betahat = rep(0, p)
-  #   codacore0.Yhat.test = predict(codacore0model, XTe) # before sigmoid
-  # }
-  # rownames(codacore0_SBP) = colnames(XTr) ######################################
-  # 
-  # codacore0.metrics = c(
-  #   acc = mean((codacore0.Yhat.test > 0) == Y2Te),
-  #   auc = pROC::roc(
-  #     Y2Te, codacore0.Yhat.test, levels = c(0, 1), direction = "<")$auc,
-  #   percselected = sum(abs(codacore0.betahat) > 10e-8) / p,
-  #   f1 = getF1(Y2Te, codacore0.Yhat.test > 0),
-  #   time = codacore0.timing
-  # )
-  # 
-  # saveRDS(
-  #   codacore0.metrics,
-  #   paste0(output_dir, "/codacore_metrics", file.end))
-  # 
-  # saveRDS(
-  #   codacore0_SBP,
-  #   paste0(output_dir, "/codacore_sbp", file.end)
-  # )
-  # 
+  
+  # codacore - 1 balance #######################################################
+  library(codacore)
+  if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+    reticulate::use_condaenv("anaconda3")
+  }
+  
+  start.time = Sys.time()
+  if(hparam == "min"){
+    codacore1 = codacore::codacore(
+      x = XTr, y = Y2Tr, logRatioType = "ILR",
+      objective = "binary classification", cvParams = list(numFolds = K),
+      maxBaseLearners = 1,
+      lambda = 0)
+  } else if(hparam == "1se"){
+    codacore1 = codacore::codacore(
+      x = XTr, y = Y2Tr, logRatioType = "ILR",
+      objective = "binary classification", cvParams = list(numFolds = K),
+      maxBaseLearners = 1,
+      lambda = 1)
+  } else{
+    stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  }
+  end.time = Sys.time()
+  codacore1.timing = difftime(
+    time1 = end.time, time2 = start.time, units = "secs")
+  
+  # get prediction error on test set and gamma-hat
+  if(length(codacore1$ensemble) > 0){ # at least 1 log-ratio found
+    codacore1_SBP = matrix(0, nrow = p, ncol = 1)
+    codacore1_SBP[codacore1$ensemble[[1]]$hard$numerator, 1] = 1
+    codacore1_SBP[codacore1$ensemble[[1]]$hard$denominator, 1] = -1
+    codacore1_coeffs = codacore1$ensemble[[1]]$slope
+    # codacore1.betahat = getBetaFromCodacore(
+    #   SBP_codacore = codacore1_SBP, coeffs_codacore = codacore1_coeffs, p = p)
+    names(codacore1_coeffs) = "balance1"
+    codacore1.coefs2 = getCoefsBM(
+      coefs = codacore1_coeffs,
+      sbp = codacore1_SBP)
+    codacore1.betahat = codacore1.coefs2$llc.coefs
+    codacore1.Yhat.test = predict(codacore1, XTe)
+    # adjust codacore_SBP to correspond to positive theta-hats
+    if(codacore1_coeffs[1] < 0){
+      codacore1_SBP[, 1] = -codacore1_SBP[, 1]
+    }
+  } else{
+    print(paste0("sim ", b, " -- codacore has no log-ratios"))
+    codacore1_coeffs = c()
+    codacore1_SBP = matrix(0, nrow = p, ncol = 1) 
+    codacore1model = stats::glm(YTr ~ 1, family = "gaussian")
+    codacore1.betahat = rep(0, p)
+    codacore1.Yhat.test = predict(codacore1model, XTe)
+  }
+  rownames(codacore1_SBP) = colnames(XTr) 
+  
+  codacore1.metrics = c(
+    acc = mean((codacore1.Yhat.test > 0) == Y2Te),
+    auc = pROC::roc(
+      Y2Te, codacore1.Yhat.test, levels = c(0, 1), direction = "<")$auc,
+    percselected = sum(abs(codacore1.betahat) > 10e-8) / p,
+    f1 = getF1(Y2Te, codacore1.Yhat.test > 0),
+    time = codacore1.timing
+  )
+  
+  saveRDS(
+    codacore1.metrics,
+    paste0(output_dir, "/codacore1_metrics", file.end))
+  
+  saveRDS(
+    codacore1_SBP,
+    paste0(output_dir, "/codacore1_sbp", file.end)
+  )
+  
   # # log-ratio lasso ############################################################
   # library(logratiolasso)
   # source("slr_analyses/Functions/logratiolasso.R")
@@ -505,37 +438,47 @@ res = foreach(
   #   lrl.metrics,
   #   paste0(output_dir, "/lrlasso_metrics", file.end))
   
-  # clr-lasso ##################################################################
-  start.time = Sys.time()
-  ZTr <- t(apply(XTr, 1, function(a) log(a) - mean(log(a))))
-  clrl = cv.glmnet(
-    ZTr, Y2Tr, family = "binomial", type.measure = "auc", alpha = 1, nfolds = K)
-  end.time = Sys.time()
-  clrl.timing = difftime(
-    time1 = end.time, time2 = start.time, units = "secs")
-  
-  ZTe <- t(apply(XTe, 1, function(a) log(a) - mean(log(a))))
-  if(hparam == "min"){
-    clrl.betahat = coef(clrl, s = "lambda.min")[, 1]
-    clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.min") # before sigmoid
-  } else if(hparam == "1se"){
-    clrl.betahat = coef(clrl, s = "lambda.1se")[, 1]
-    clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.1se") # before sigmoid
-  }
-  
-  clrl.metrics = c(
-    acc = mean((clrl.Yhat.test > 0) == Y2Te),
-    auc = pROC::roc(
-      Y2Te, as.numeric(clrl.Yhat.test), levels = c(0, 1), direction = "<")$auc,
-    percselected = sum(abs(clrl.betahat[-1]) > 10e-8) / p,
-    f1 = getF1(Y2Te, clrl.Yhat.test > 0),
-    time = clrl.timing
-  )
-  
-  saveRDS(
-    clrl.metrics,
-    paste0(output_dir, "/clrlasso_metrics", file.end))
-  
+  # # clr-lasso ##################################################################
+  # start.time = Sys.time()
+  # ZTr <- t(apply(XTr, 1, function(a) log(a) - mean(log(a))))
+  # clrl = cv.glmnet(
+  #   ZTr, Y2Tr, family = "binomial", type.measure = "auc", alpha = 1, nfolds = K)
+  # end.time = Sys.time()
+  # clrl.timing = difftime(
+  #   time1 = end.time, time2 = start.time, units = "secs")
+  # 
+  # # get fitted coefficients
+  # # if(hparam == "min"){
+  # #   clrl.lam.idx = which.max(clrl$cvm)
+  # # } else if(hparam == "1se"){
+  # #   oneSErule = min(clrl$cvm) + clrl$cvsd[which.max(clrl$cvm)] * 1
+  # #   clrl.lam.idx = which(clrl$cvm >= oneSErule)[1]
+  # # } else{
+  # #   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+  # # }
+  # # clrl.betahat0 = clrl$glmnet.fit$beta[, clrl.lam.idx]
+  # 
+  # ZTe <- t(apply(XTe, 1, function(a) log(a) - mean(log(a))))
+  # if(hparam == "min"){
+  #   clrl.betahat = coef(clrl, s = "lambda.min")[, 1]
+  #   clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.min") # before sigmoid
+  # } else if(hparam == "1se"){
+  #   clrl.betahat = coef(clrl, s = "lambda.1se")[, 1]
+  #   clrl.Yhat.test = predict(clrl, ZTe, s = "lambda.1se") # before sigmoid
+  # }
+  # 
+  # clrl.metrics = c(
+  #   acc = mean((clrl.Yhat.test > 0) == Y2Te),
+  #   auc = pROC::roc(
+  #     Y2Te, as.numeric(clrl.Yhat.test), levels = c(0, 1), direction = "<")$auc,
+  #   percselected = sum(abs(clrl.betahat[-1]) > 10e-8) / p,
+  #   f1 = getF1(Y2Te, clrl.Yhat.test > 0),
+  #   time = clrl.timing
+  # )
+  # 
+  # saveRDS(
+  #   clrl.metrics,
+  #   paste0(output_dir, "/clrlasso_metrics", file.end))
   
   
   

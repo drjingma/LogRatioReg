@@ -2,8 +2,8 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "HIV" # "HIV", "sCD14", "Crohn", "sCD14Bien"
-date = "20221108"
+data_set = "sCD14" # "HIV", "sCD14", "Crohn", "sCD14Bien"
+date = "20221118"
 
 response_type = NA
 if(data_set %in% c("sCD14")){
@@ -13,6 +13,7 @@ if(data_set %in% c("sCD14")){
 }
 
 label_means = TRUE
+exclude_slrhier = TRUE
 
 ################################################################################
 # libraries and settings
@@ -55,17 +56,10 @@ for(i in (1:numSplits)){
   print(i)
   
   # compositional lasso (MSE for continuous response, AUC for binary response)
-  if(response_type == "binary"){
-    cl_tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/classo1_metrics",
-      file.end0, "_sim", i, ".rds"
-    ))))
-  } else{
-    cl_tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/classo_metrics",
-      file.end0, "_sim", i, ".rds"
-    ))))
-  }
+  cl_tmp = t(data.frame(readRDS(paste0(
+    output_dir, "/classo_metrics",
+    file.end0, "_sim", i, ".rds"
+  ))))
   rownames(cl_tmp) = NULL
   classo_list[[i]] = data.table::data.table(cl_tmp)
   
@@ -109,7 +103,7 @@ for(i in (1:numSplits)){
   
   # codacore
   cdcr_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/codacore_metrics",
+    output_dir, "/codacore1_metrics",
     file.end0, "_sim", i, ".rds"
   ))))
   rownames(cdcr_tmp) = NULL
@@ -168,12 +162,19 @@ lrlasso.gg =
 data.gg = rbind(
   classo.gg,
   slr_spec.gg,
-  slr_hier.gg,
+  # slr_hier.gg,
   selbal.gg,
   # selbal_covar.gg,
   codacore.gg, 
   lrlasso.gg
 )
+if(!exclude_slrhier){
+  data.gg = rbind(
+    data.gg,
+    slr_hier.gg
+  )
+}
+
 if(response_type == "binary"){
   data.gg = data.gg %>% 
     # mutate(
@@ -253,12 +254,24 @@ if(label_means){
   filename = paste0(
     date,
     file.end0,
-    "_", "metrics_labeledmeans", ".png")
+    "_", "metrics_labeledmeans")
 } else{
   filename = paste0(
     date,
     file.end0,
-    "_", "metrics", ".png")
+    "_", "metrics")
+}
+if(exclude_slrhier){
+  filename = paste0(
+    filename, 
+    "_excludeSLRHIER", 
+    ".png"
+  )
+} else{
+  filename = paste0(
+    filename, 
+    ".png"
+  )
 }
 
 

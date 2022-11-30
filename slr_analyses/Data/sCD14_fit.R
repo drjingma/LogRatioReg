@@ -212,38 +212,38 @@ slbl = readRDS(
 #     "_codacore",
 #     ".rds"))
 
-cdcr = readRDS(
-  paste0(
-    output_dir, file.end,
-    "_codacore",
-    ".rds"))
+# cdcr = readRDS(
+#   paste0(
+#     output_dir, file.end,
+#     "_codacore",
+#     ".rds"))
 
 # codacore - 1 balance #########################################################
-library(codacore)
-if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
-  reticulate::use_condaenv("anaconda3")
-}
-if(hparam == "min"){
-  codacore1 = codacore(
-    x = X_gbm, y = Y, logRatioType = "ILR",
-    objective = "regression", cvParams = list(numFolds = K),
-    maxBaseLearners = 1,
-    lambda = 0)
-} else if(hparam == "1se"){
-  codacore1 = codacore(
-    x = X_gbm, y = Y, logRatioType = "ILR",
-    objective = "regression", cvParams = list(numFolds = K),
-    maxBaseLearners = 1,
-    lambda = 1)
-} else{
-  stop("invalid hparam setting (method for selecting hyperparameter(s)).")
-}
-saveRDS(
-  codacore1,
-  paste0(
-    output_dir, file.end,
-    "_codacore1",
-    ".rds"))
+# library(codacore)
+# if(getwd() == "/home/kristyn/Documents/research/supervisedlogratios/LogRatioReg"){
+#   reticulate::use_condaenv("anaconda3")
+# }
+# if(hparam == "min"){
+#   codacore1 = codacore(
+#     x = X_gbm, y = Y, logRatioType = "ILR",
+#     objective = "regression", cvParams = list(numFolds = K),
+#     maxBaseLearners = 1,
+#     lambda = 0)
+# } else if(hparam == "1se"){
+#   codacore1 = codacore(
+#     x = X_gbm, y = Y, logRatioType = "ILR",
+#     objective = "regression", cvParams = list(numFolds = K),
+#     maxBaseLearners = 1,
+#     lambda = 1)
+# } else{
+#   stop("invalid hparam setting (method for selecting hyperparameter(s)).")
+# }
+# saveRDS(
+#   codacore1,
+#   paste0(
+#     output_dir, file.end,
+#     "_codacore1",
+#     ".rds"))
 
 cdcr1 = readRDS(
   paste0(
@@ -280,51 +280,51 @@ lrl = readRDS(
 
 
 
-# ################################################################################
-# # get active sets and selected balances (if applicable)
-# ################################################################################
-# 
-# # classo #######################################################################
-# # selected variables
-# oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
-# cl.lam.idx = which(cl$cvm <= oneSErule)[1]
-# cl.a0 = cl$int[cl.lam.idx]
-# cl.betahat = cl$bet[, cl.lam.idx]
-# # positive/negative effect on response
-# colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
-# colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
-# sum(abs(cl.betahat) > 1e-8)
-# 
-# # for overleaf
-# cat(paste(str_replace_all(
-#   colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8], 
-#   fixed("_"), "\\_"), collapse = ", "))
-# cat(paste(str_replace_all(
-#   colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8], 
-#   fixed("_"), "\\_"), collapse = ", "))
-# 
-# # slr - spectral ###############################################################
-# # SBP
-# slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
-# rownames(slrspec.fullSBP) = colnames(X)
-# slrspec.fullSBP[match(
-#   names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
-# # thetahat
-# slrspec.coefs = getCoefsBM(
-#   coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
-# # numerator (I+) / denominator (I-) of selected balance
-# rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs > 0]
-# rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs < 0]
-# sum(slrspec.fullSBP[, 1] != 0)
-# 
-# # for overleaf
-# cat(paste(str_replace_all(
-#   rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs > 0], 
-#   fixed("_"), "\\_"), collapse = ", "))
-# cat(paste(str_replace_all(
-#   rownames(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs < 0], 
-#   fixed("_"), "\\_"), collapse = ", "))
-# 
+################################################################################
+# get active sets and selected balances (if applicable)
+################################################################################
+
+# classo #######################################################################
+# selected variables
+oneSErule = min(cl$cvm) + cl$cvsd[which.min(cl$cvm)] * 1
+cl.lam.idx = which(cl$cvm <= oneSErule)[1]
+cl.a0 = cl$int[cl.lam.idx]
+cl.betahat = cl$bet[, cl.lam.idx]
+# positive/negative effect on response
+colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8] # positive effect
+colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8] # negative effect
+sum(abs(cl.betahat) > 1e-8)
+
+# for overleaf
+cat(paste(str_replace_all(
+  colnames(X)[cl.betahat > 0 & abs(cl.betahat) > 1e-8],
+  fixed("_"), "\\_"), collapse = ", "))
+cat(paste(str_replace_all(
+  colnames(X)[cl.betahat < 0 & abs(cl.betahat) > 1e-8],
+  fixed("_"), "\\_"), collapse = ", "))
+
+# slr - spectral ###############################################################
+# SBP
+slrspec.fullSBP = matrix(0, nrow = p, ncol = 1)
+rownames(slrspec.fullSBP) = colnames(X)
+slrspec.fullSBP[match(
+  names(slrspec$sbp), rownames(slrspec.fullSBP))] = slrspec$sbp
+# thetahat
+slrspec.coefs = getCoefsBM(
+  coefs = coefficients(slrspec$fit), sbp = slrspec.fullSBP)
+# numerator (I+) / denominator (I-) of selected balance
+names(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs > 0]
+names(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs < 0]
+sum(slrspec.fullSBP[, 1] != 0)
+
+# for overleaf
+cat(paste(str_replace_all(
+  names(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs > 0],
+  fixed("_"), "\\_"), collapse = ", "))
+cat(paste(str_replace_all(
+  names(slrspec.coefs$llc.coefs)[slrspec.coefs$llc.coefs < 0],
+  fixed("_"), "\\_"), collapse = ", "))
+
 # # slr - hierarchical ###########################################################
 # # SBP
 # slrhier.fullSBP = matrix(0, nrow = p, ncol = 1)
@@ -341,26 +341,26 @@ lrl = readRDS(
 # 
 # # for overleaf
 # cat(paste(str_replace_all(
-#   rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs > 0], 
+#   rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs > 0],
 #   fixed("_"), "\\_"), collapse = ", "))
 # cat(paste(str_replace_all(
-#   rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs < 0], 
+#   rownames(slrhier.coefs$llc.coefs)[slrhier.coefs$llc.coefs < 0],
 #   fixed("_"), "\\_"), collapse = ", "))
-# 
-# # selbal #######################################################################
-# # numerator (I+) / denominator (I-) of selected balance
-# slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 3
-# slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 2
-# length(slbl$global.balance$Group)
-# 
-# # for overleaf
-# cat(paste(str_replace_all(
-#   slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"], 
-#   fixed("_"), "\\_"), collapse = ", "))
-# cat(paste(str_replace_all(
-#   slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] , 
-#   fixed("_"), "\\_"), collapse = ", "))
-# 
+
+# selbal #######################################################################
+# numerator (I+) / denominator (I-) of selected balance
+slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"] # 3
+slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] # 2
+length(slbl$global.balance$Group)
+
+# for overleaf
+cat(paste(str_replace_all(
+  slbl$global.balance[slbl$global.balance$Group == "NUM", "Taxa"],
+  fixed("_"), "\\_"), collapse = ", "))
+cat(paste(str_replace_all(
+  slbl$global.balance[slbl$global.balance$Group == "DEN", "Taxa"] ,
+  fixed("_"), "\\_"), collapse = ", "))
+
 # # codacore #####################################################################
 # length(cdcr$ensemble) # one balance selected
 # # numerator (I+) / denominator (I-) of selected balance
@@ -371,25 +371,41 @@ lrl = readRDS(
 # 
 # # for overleaf
 # cat(paste(str_replace_all(
-#   colnames(X)[cdcr$ensemble[[1]]$hard$numerator], 
+#   colnames(X)[cdcr$ensemble[[1]]$hard$numerator],
 #   fixed("_"), "\\_"), collapse = ", "))
 # cat(paste(str_replace_all(
-#   colnames(X)[cdcr$ensemble[[1]]$hard$denominator], 
+#   colnames(X)[cdcr$ensemble[[1]]$hard$denominator],
 #   fixed("_"), "\\_"), collapse = ", "))
-# 
-# # log-ratio lasso ############################################################
-# # positive/negative effect on response
-# colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
-# colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
-# sum(abs(lrl$beta_min) > 1e-8)
-# 
-# # for overleaf
-# cat(paste(str_replace_all(
-#   colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8], 
-#   fixed("_"), "\\_"), collapse = ", "))
-# cat(paste(str_replace_all(
-#   colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] , 
-#   fixed("_"), "\\_"), collapse = ", "))
+
+# codacore1 ####################################################################
+length(cdcr1$ensemble) # one balance selected
+# numerator (I+) / denominator (I-) of selected balance
+cdcr1$ensemble[[1]]$slope # positive (if negative, num -> den & vice versa)
+colnames(X)[cdcr1$ensemble[[1]]$hard$numerator]
+colnames(X)[cdcr1$ensemble[[1]]$hard$denominator]
+sum(c(cdcr1$ensemble[[1]]$hard$numerator, cdcr1$ensemble[[1]]$hard$denominator))
+
+# for overleaf
+cat(paste(str_replace_all(
+  colnames(X)[cdcr1$ensemble[[1]]$hard$numerator],
+  fixed("_"), "\\_"), collapse = ", "))
+cat(paste(str_replace_all(
+  colnames(X)[cdcr1$ensemble[[1]]$hard$denominator],
+  fixed("_"), "\\_"), collapse = ", "))
+
+# log-ratio lasso ############################################################
+# positive/negative effect on response
+colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8] # positive effect
+colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] # negative effect
+sum(abs(lrl$beta_min) > 1e-8)
+
+# for overleaf
+cat(paste(str_replace_all(
+  colnames(X)[lrl$beta_min > 0 & abs(lrl$beta_min) > 1e-8],
+  fixed("_"), "\\_"), collapse = ", "))
+cat(paste(str_replace_all(
+  colnames(X)[lrl$beta_min < 0 & abs(lrl$beta_min) > 1e-8] ,
+  fixed("_"), "\\_"), collapse = ", "))
 # 
 # 
 # 

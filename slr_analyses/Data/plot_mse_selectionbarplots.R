@@ -3,7 +3,7 @@
 rm(list=ls())
 
 data_set = "sCD14" # "HIV", "sCD14", "Crohn"
-date = "20221108"
+date = "20221128"
 
 ################################################################################
 # libraries and settings
@@ -245,7 +245,7 @@ codacore1_bar = ggplot(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
-  ggtitle("codacore1")
+  ggtitle("codacore")
 codacore1_bar
 ggsave(
   filename = paste0(

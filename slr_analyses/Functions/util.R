@@ -169,6 +169,7 @@ getGammaFromTheta = function(theta, sbp){
     ReciprocalstimesCoeffs[, i] = reciprocals[, i] * theta[i]
   }
   beta = rowSums(ReciprocalstimesCoeffs)
+  names(beta) = rownames(sbp)
   return(beta)
 }
 

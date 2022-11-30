@@ -3,8 +3,8 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-label_means = TRUE
-current_date = "20221108"
+label_means = FALSE
+current_date = "20221118"
 
 ################################################################################
 # libraries and settings
@@ -31,8 +31,8 @@ intercept = TRUE
 scaling = TRUE
 tol = 1e-4
 sigma_x = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -73,7 +73,7 @@ for(i in 1:numSims){
   
   # compositional lasso
   cl_sim_tmp = t(data.frame(readRDS(paste0(
-    output_dir, "/classo1_metrics", file.end0,
+    output_dir, "/classo_metrics", file.end0,
     "_sim", i, ".rds"
   ))))
   rownames(cl_sim_tmp) = NULL

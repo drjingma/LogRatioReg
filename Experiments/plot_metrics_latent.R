@@ -3,15 +3,17 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
+current_date = "20221206"
+
+logtime = TRUE
 label_means = TRUE
-current_date = "20221118"
 
 ################################################################################
 # libraries and settings
 
 output_dir = "Experiments/outputs/metrics"
 
-source("slr_analyses/Functions/util.R")
+source("Functions/util.R")
 
 library(tidyverse)
 library(reshape2)
@@ -161,7 +163,7 @@ lrlasso_sims.gg =
 data.gg = rbind(
   classo_sims.gg,
   slr_spec_sims.gg,
-  slr_hier_sims.gg,
+  # slr_hier_sims.gg,
   selbal_sims.gg, 
   codacore_sims.gg, 
   lrlasso_sims.gg
@@ -205,6 +207,30 @@ data.gg = rbind(
       )
     )
   )
+
+if(logtime){
+  data.gg = data.gg %>% 
+    mutate(
+      value = ifelse(Metric == "Timing", log(value), value)
+    ) %>%
+    mutate(
+      Metric = factor(
+        Metric, 
+        levels = c(
+          "PEtr", "MSE",
+          "EA1", "EA2", "EAInfty",
+          "Timing",
+          "TPR", "FPR", "F1"
+        ), 
+        labels = c(
+          "PEtr", "MSE",
+          "EA1", "EA2", "EAInfty",
+          "log(Timing)",
+          "TPR", "FPR", "F1"
+        ))
+    ) 
+}
+
 data.gg_main = data.gg
 means.gg = data.gg_main %>% 
   group_by(Metric) %>%
@@ -239,22 +265,36 @@ width = 6
 height = 4
 
 if(label_means){
-  ggsave(
-    filename = paste0(
-      current_date,
-      file.end0,
-      "_", "metrics", "_labeledmeans.png"),
-    plot = plt_main,
-    width = width, height = height, units = c("in")
+  plt_main = plt_main  +
+    geom_text_repel(
+      data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
+      size = 2, color = "black")
+  filename = paste0(
+    current_date,
+    file.end0,
+    "_", "metrics_labeledmeans")
+} else{
+  filename = paste0(
+    current_date,
+    file.end0,
+    "_", "metrics")
+}
+if(logtime){
+  filename = paste0(
+    filename, 
+    "_logtime", 
+    ".png"
   )
 } else{
-  ggsave(
-    filename = paste0(
-      current_date,
-      file.end0,
-      "_", "metrics", ".png"),
-    plot = plt_main,
-    width = width, height = height, units = c("in")
+  filename = paste0(
+    filename, 
+    ".png"
   )
 }
+
+ggsave(
+  filename = filename,
+  plot = plt_main,
+  width = width, height = height, units = c("in")
+)
 

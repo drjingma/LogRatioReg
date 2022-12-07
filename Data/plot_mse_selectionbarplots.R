@@ -2,8 +2,8 @@
 # Date: 8/10/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohn"
-date = "20221128"
+data_set = "Crohn" # "HIV", "sCD14", "Crohn"
+date = "20221206"
 
 ################################################################################
 # libraries and settings
@@ -131,7 +131,8 @@ slr_spec_bar = ggplot(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
-  ggtitle("slr-spec")
+  ggtitle("slr-spec") + 
+  scale_y_continuous(limits = c(0, 1))
 slr_spec_bar
 ggsave(
   filename = paste0(
@@ -169,7 +170,8 @@ slr_hier_bar = ggplot(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
-  ggtitle("slr-hier")
+  ggtitle("slr-hier") + 
+  scale_y_continuous(limits = c(0, 1))
 slr_hier_bar
 ggsave(
   filename = paste0(
@@ -207,7 +209,8 @@ selbal_bar = ggplot(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
-  ggtitle("selbal")
+  ggtitle("selbal") + 
+  scale_y_continuous(limits = c(0, 1))
 selbal_bar
 ggsave(
   filename = paste0(
@@ -245,7 +248,8 @@ codacore1_bar = ggplot(
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
-  ggtitle("codacore")
+  ggtitle("codacore") + 
+  scale_y_continuous(limits = c(0, 1))
 codacore1_bar
 ggsave(
   filename = paste0(

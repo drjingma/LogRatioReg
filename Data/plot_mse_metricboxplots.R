@@ -2,8 +2,8 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "sCD14" # "HIV", "sCD14", "Crohn", "sCD14Bien"
-date = "20221118"
+data_set = "Crohn" # "HIV", "sCD14", "Crohn"
+date = "20221206"
 
 response_type = NA
 if(data_set %in% c("sCD14")){
@@ -12,8 +12,8 @@ if(data_set %in% c("sCD14")){
   response_type = "binary"
 }
 
-label_means = TRUE
-exclude_slrhier = TRUE
+label_means = FALSE
+logtime = TRUE
 
 ################################################################################
 # libraries and settings
@@ -168,18 +168,9 @@ data.gg = rbind(
   codacore.gg, 
   lrlasso.gg
 )
-if(!exclude_slrhier){
-  data.gg = rbind(
-    data.gg,
-    slr_hier.gg
-  )
-}
 
 if(response_type == "binary"){
   data.gg = data.gg %>% 
-    # mutate(
-    #   value = ifelse(Metric == "time", log(value), value)
-    # ) %>%
     dplyr::filter(
       Metric %in% c("auc", "percselected", "time")
     ) %>%
@@ -224,6 +215,23 @@ data.gg = data.gg %>%
     )
   ) 
 
+if(logtime){
+  data.gg = data.gg %>% 
+    mutate(
+      value = ifelse(Metric == "Timing", log(value), value)
+    ) %>%
+    mutate(
+      Metric = factor(
+        Metric, 
+        levels = c(
+          "MSE", "% Selected", "Timing"
+        ), 
+        labels = c(
+          "MSE", "% Selected", "log(Timing)"
+        ))
+    ) 
+}
+
 data.gg_main = data.gg 
 means.gg = data.gg_main %>% 
   group_by(Metric) %>%
@@ -261,10 +269,10 @@ if(label_means){
     file.end0,
     "_", "metrics")
 }
-if(exclude_slrhier){
+if(logtime){
   filename = paste0(
     filename, 
-    "_excludeSLRHIER", 
+    "_logtime", 
     ".png"
   )
 } else{

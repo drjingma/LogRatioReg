@@ -34,6 +34,7 @@ res = foreach(
 ) %dorng% {
   # rm(list=ls())
   library(mvtnorm)
+  library(mvrnorm)
   
   library(Matrix)
   library(glmnet)

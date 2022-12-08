@@ -35,6 +35,7 @@ res = foreach(
   print(b)
   # rm(list=ls())
   library(mvtnorm)
+  library(mvrnorm)
   
   library(Matrix)
   library(glmnet)

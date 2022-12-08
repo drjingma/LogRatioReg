@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-current_date = "20221206"
+current_date = "20221207"
 
 logtime = TRUE
 label_means = TRUE
@@ -19,6 +19,11 @@ library(tidyverse)
 library(reshape2)
 library(ggrepel)
 
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
 numSims = 100
 
 settings.name = "ContinuousResponse"
@@ -33,8 +38,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1
 sigma_x = 0.1
-SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
+# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -163,7 +168,7 @@ lrlasso_sims.gg =
 data.gg = rbind(
   classo_sims.gg,
   slr_spec_sims.gg,
-  # slr_hier_sims.gg,
+  slr_hier_sims.gg,
   selbal_sims.gg, 
   codacore_sims.gg, 
   lrlasso_sims.gg
@@ -195,7 +200,7 @@ data.gg = rbind(
       labels = c(
         "PEtr", "MSE",
         "EA1", "EA2", "EAInfty",
-        "Timing",
+        "Time (s)",
         "TPR", "FPR", "F1"
       ))
   ) %>% 
@@ -211,7 +216,7 @@ data.gg = rbind(
 if(logtime){
   data.gg = data.gg %>% 
     mutate(
-      value = ifelse(Metric == "Timing", log(value), value)
+      value = ifelse(Metric == "Time (s)", log(value), value)
     ) %>%
     mutate(
       Metric = factor(
@@ -219,13 +224,13 @@ if(logtime){
         levels = c(
           "PEtr", "MSE",
           "EA1", "EA2", "EAInfty",
-          "Timing",
+          "Time (s)",
           "TPR", "FPR", "F1"
         ), 
         labels = c(
           "PEtr", "MSE",
           "EA1", "EA2", "EAInfty",
-          "log(Timing)",
+          "log(Time (s))",
           "TPR", "FPR", "F1"
         ))
     ) 
@@ -239,6 +244,9 @@ means.gg = data.gg_main %>%
   ) %>%
   group_by(Metric, Method) %>% 
   dplyr::summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
+
+plt_colors = gg_color_hue(6)
+names(plt_colors) = c("selbal", "classo", "codacore", "lrlasso", "slr-spec", "slr-hier")
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -246,7 +254,8 @@ plt_main = ggplot(
   geom_boxplot() +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red")
+    color = "red") + 
+  scale_color_manual(values = plt_colors)
 if(label_means){
   plt_main = plt_main  +
     geom_text_repel(

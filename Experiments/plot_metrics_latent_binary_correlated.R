@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-current_date = "20221206"
+current_date = "20221207"
 
 logtime = TRUE
 label_means = TRUE
@@ -18,6 +18,11 @@ source("Functions/util.R")
 library(tidyverse)
 library(reshape2)
 library(ggrepel)
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
 
 numSims = 100 
 
@@ -39,7 +44,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 6 # 6
+b1 = 10 # 6
 c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 a0 = 0 # 0
 ulimit = 0.5
@@ -164,7 +169,7 @@ lrlasso_sims.gg =
 data.gg = rbind(
   classo_sims.gg,
   slr_spec_auc_sims.gg,
-  # slr_hier_auc_sims.gg,
+  slr_hier_auc_sims.gg,
   selbal_sims.gg, 
   codacore_sims.gg,
   lrlasso_sims.gg
@@ -195,7 +200,7 @@ data.gg = rbind(
       labels = c(
         "AUC",
         "EA1", "EA2", "EAInfty",
-        "Timing",
+        "Time (s)",
         "TPR", "FPR", "F1"
       ))
   ) %>% 
@@ -212,7 +217,7 @@ data.gg = rbind(
 if(logtime){
   data.gg = data.gg %>% 
     mutate(
-      value = ifelse(Metric == "Timing", log(value), value)
+      value = ifelse(Metric == "Time (s)", log(value), value)
     ) %>%
     mutate(
       Metric = factor(
@@ -220,13 +225,13 @@ if(logtime){
         levels = c(
           "AUC",
           "EA1", "EA2", "EAInfty",
-          "Timing",
+          "Time (s)",
           "TPR", "FPR", "F1"
         ), 
         labels = c(
           "AUC",
           "EA1", "EA2", "EAInfty",
-          "log(Timing)",
+          "log(Time (s))",
           "TPR", "FPR", "F1"
         ))
     ) 
@@ -240,6 +245,9 @@ means.gg = data.gg_main %>%
   ) %>%
   group_by(Metric, Method) %>% 
   dplyr::summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
+
+plt_colors = gg_color_hue(6)
+names(plt_colors) = c("selbal", "classo", "codacore", "lrlasso", "slr-spec", "slr-hier")
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -247,18 +255,20 @@ plt_main = ggplot(
   geom_boxplot() +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
+    color = "red")
 if(label_means){
   plt_main = plt_main  +
     geom_text_repel(
       data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
       size = 2.25, color = "black")
 }
+plt_main = plt_main +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  scale_color_manual(values = plt_colors)
 plt_main
 
 width = 6
@@ -297,4 +307,3 @@ ggsave(
   plot = plt_main,
   width = width, height = height, units = c("in")
 )
-

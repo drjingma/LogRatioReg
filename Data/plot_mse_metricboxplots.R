@@ -3,7 +3,7 @@
 rm(list=ls())
 
 data_set = "Crohn" # "HIV", "sCD14", "Crohn"
-date = "20221206"
+date = "20221207"
 
 response_type = NA
 if(data_set %in% c("sCD14")){
@@ -12,7 +12,7 @@ if(data_set %in% c("sCD14")){
   response_type = "binary"
 }
 
-label_means = FALSE
+label_means = TRUE
 logtime = TRUE
 
 ################################################################################
@@ -25,6 +25,11 @@ source("Functions/util.R")
 library(tidyverse)
 library(reshape2)
 library(ggrepel)
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
 
 numSplits = 20
 
@@ -170,39 +175,27 @@ data.gg = rbind(
 )
 
 if(response_type == "binary"){
-  data.gg = data.gg %>% 
-    dplyr::filter(
-      Metric %in% c("auc", "percselected", "time")
-    ) %>%
-    mutate(
-      Metric = factor(
-        Metric, 
-        levels = c(
-          "acc", "auc", "f1", "percselected",  "time"
-        ), 
-        labels = c(
-          "Accuracy", "AUC", "F1", "% Selected", "Timing"
-        ))
-    ) 
+  prediction_metric = "auc"
+  prediction_metric_label = "AUC"
 } else if(response_type == "continuous"){
-  data.gg = data.gg %>% 
-    # mutate(
-    #   value = ifelse(Metric == "time", log(value), value)
-    # ) %>%
-    dplyr::filter(
-      Metric %in% c("mse", "percselected", "time")
-    ) %>%
-    mutate(
-      Metric = factor(
-        Metric, 
-        levels = c(
-          "mse", "percselected",  "time"
-        ), 
-        labels = c(
-          "MSE", "% Selected", "Timing"
-        ))
-    ) 
+  prediction_metric = "mse"
+  prediction_metric_label = "MSE"
 }
+
+data.gg = data.gg %>% 
+  dplyr::filter(
+    Metric %in% c(prediction_metric, "percselected", "time")
+  ) %>%
+  mutate(
+    Metric = factor(
+      Metric, 
+      levels = c(
+        prediction_metric, "percselected",  "time"
+      ), 
+      labels = c(
+        prediction_metric_label, "% Selected", "Time (s)"
+      ))
+  ) 
 
 data.gg = data.gg %>% 
   mutate(
@@ -218,16 +211,16 @@ data.gg = data.gg %>%
 if(logtime){
   data.gg = data.gg %>% 
     mutate(
-      value = ifelse(Metric == "Timing", log(value), value)
+      value = ifelse(Metric == "Time (s)", log(value), value)
     ) %>%
     mutate(
       Metric = factor(
         Metric, 
         levels = c(
-          "MSE", "% Selected", "Timing"
+          prediction_metric_label, "% Selected", "Time (s)"
         ), 
         labels = c(
-          "MSE", "% Selected", "log(Timing)"
+          prediction_metric_label, "% Selected", "log(Time (s))"
         ))
     ) 
 }
@@ -240,6 +233,9 @@ means.gg = data.gg_main %>%
   ) %>%
   group_by(Metric, Method) %>% 
   dplyr::summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
+
+plt_colors = gg_color_hue(6)[1:5]
+names(plt_colors) = c("selbal", "classo", "codacore", "lrlasso", "slr-spec")
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -247,13 +243,7 @@ plt_main = ggplot(
   geom_boxplot() +
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
-    color = "red") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
-
+    color = "red")
 if(label_means){
   plt_main = plt_main  +
     geom_text_repel(
@@ -281,9 +271,15 @@ if(logtime){
     ".png"
   )
 }
-
-
+plt_main = plt_main +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+    axis.title.y = element_blank()) + 
+  scale_color_manual(values = plt_colors)
 plt_main
+
 ggsave(
   filename = filename,
   plot = plt_main,

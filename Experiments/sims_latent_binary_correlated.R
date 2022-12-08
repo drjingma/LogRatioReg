@@ -103,7 +103,7 @@ res = foreach(
     # simulate y from latent variable
     y.all = rbinom(n = 2 * n, size = 1, p = as.vector(sigmoid(b0 + b1 * U.all)))
     # simulate X: 
-    epsj.all = mvrnorm(
+    epsj.all = MASS::mvrnorm(
       n = 2 * n, mu = rep(0, p - 1), 
       Sigma = sigma_x * rgExpDecay(p - 1, rho_alrXj)$Sigma)
     a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 

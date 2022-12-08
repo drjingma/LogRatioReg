@@ -105,7 +105,9 @@ res = foreach(
     # simulate y from latent variable
     y.all = as.vector(b0 + b1 * U.all + rnorm(2 * n) * sigma_y)
     # simulate X: 
-    epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
+    epsj.all = MASS::mvrnorm(
+      n = 2 * n, mu = rep(0, p - 1), 
+      Sigma = sigma_x * rgExpDecay(p - 1, rho_alrXj)$Sigma)
     a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 
     #   alpha1j = {
     #     c1=theta*ilr.const/k+   if j \in I+

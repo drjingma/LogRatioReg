@@ -34,6 +34,7 @@ res = foreach(
 ) %dorng% {
   # rm(list=ls())
   library(mvtnorm)
+  library(mvrnorm)
   
   library(Matrix)
   library(glmnet)
@@ -89,16 +90,16 @@ res = foreach(
   
   ##############################################################################
   # generate data
-  if(!is.null(file.exists(paste0(output_dir, "/data", file.end)))){
-    data.tmp = readRDS(paste0(output_dir, "/data", file.end))
-    X = data.tmp$X
-    Y = data.tmp$Y
-    X.test = data.tmp$X.test
-    Y.test = data.tmp$Y.test
-    SBP.true = data.tmp$SBP.true
-    llc.coefs.true = data.tmp$llc.coefs.true
-    llc.coefs.non0 = data.tmp$llc.coefs.non0
-  } else{
+  # if(file.exists(paste0(output_dir, "/data", file.end))){
+  #   data.tmp = readRDS(paste0(output_dir, "/data", file.end))
+  #   X = data.tmp$X
+  #   Y = data.tmp$Y
+  #   X.test = data.tmp$X.test
+  #   Y.test = data.tmp$Y.test
+  #   SBP.true = data.tmp$SBP.true
+  #   llc.coefs.true = data.tmp$llc.coefs.true
+  #   llc.coefs.non0 = data.tmp$llc.coefs.non0
+  # } else{
     # get latent variable
     U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n), ncol = 1)
     # simulate y from latent variable
@@ -137,7 +138,7 @@ res = foreach(
       llc.coefs.non0 = llc.coefs.non0
     ),
     paste0(output_dir, "/data", file.end))
-  }
+  # }
   
   ##############################################################################
   # compositional lasso

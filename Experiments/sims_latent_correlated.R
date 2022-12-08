@@ -34,7 +34,6 @@ res = foreach(
 ) %dorng% {
   # rm(list=ls())
   library(mvtnorm)
-  library(mvrnorm)
   
   library(Matrix)
   library(glmnet)
@@ -90,7 +89,7 @@ res = foreach(
   
   ##############################################################################
   # generate data
-  if(file.exists(paste0(output_dir, "/data", file.end))){
+  if(!is.null(file.exists(paste0(output_dir, "/data", file.end)))){
     data.tmp = readRDS(paste0(output_dir, "/data", file.end))
     X = data.tmp$X
     Y = data.tmp$Y

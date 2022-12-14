@@ -3,7 +3,7 @@
 rm(list=ls())
 
 data_set = "sCD14" # "HIV", "sCD14", "Crohn"
-date = "20221207"
+date = "20221214"
 
 ################################################################################
 # libraries and settings
@@ -99,7 +99,6 @@ for(i in 1:numSplits){
   # }
   
 }
-
 ################################################################################
 # get active sets and selected balances (if applicable)
 ################################################################################
@@ -121,28 +120,6 @@ slr_spec_props = slr_spec_props0 %>% filter(active != 0) %>%
 slr_spec_props = slr_spec_props %>% 
   mutate(taxa = factor(taxa, levels = unique(slr_spec_props$taxa)))
 
-slr_spec_bar = ggplot(
-  slr_spec_props, aes(x = taxa, y = proportion, fill = side)) + 
-  geom_bar(stat = "identity") + 
-  coord_flip() + 
-  theme_bw() +
-  theme(
-    text = element_text(size=10),
-    axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank()) +
-  ggtitle("slr-spec") + 
-  scale_y_continuous(limits = c(0, 1))
-slr_spec_bar
-# ggsave(
-#   filename = paste0(
-#     date,
-#     file.end0,
-#     "_", "slr_spectral", ".png"),
-#   plot = slr_spec_bar,
-#   width = 6, height = 3.25, units = c("in")
-# )
-
 # slr - hierarchical ###########################################################
 slr_hier_props0 = data.frame(
   taxa = rownames(slr_hier_sbps),
@@ -159,28 +136,6 @@ slr_hier_props = slr_hier_props0 %>% filter(active != 0) %>%
   filter(proportion != 0)
 slr_hier_props = slr_hier_props %>% 
   mutate(taxa = factor(taxa, levels = unique(slr_hier_props$taxa)))
-
-slr_hier_bar = ggplot(
-  slr_hier_props, aes(x = taxa, y = proportion, fill = side)) + 
-  geom_bar(stat = "identity") + 
-  coord_flip() + 
-  theme_bw() +
-  theme(
-    text = element_text(size=10),
-    axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank()) +
-  ggtitle("slr-hier") + 
-  scale_y_continuous(limits = c(0, 1))
-slr_hier_bar
-# ggsave(
-#   filename = paste0(
-#     date,
-#     file.end0,
-#     "_", "slr_hierarchical", ".png"),
-#   plot = slr_hier_bar,
-#   width = 6, height = 3.25, units = c("in")
-# )
 
 # selbal #######################################################################
 selbal_props0 = data.frame(
@@ -199,28 +154,6 @@ selbal_props = selbal_props0 %>% filter(active != 0) %>%
 selbal_props = selbal_props %>% 
   mutate(taxa = factor(taxa, levels = unique(selbal_props$taxa)))
 
-selbal_bar = ggplot(
-  selbal_props, aes(x = taxa, y = proportion, fill = side)) + 
-  geom_bar(stat = "identity") + 
-  coord_flip() + 
-  theme_bw() +
-  theme(
-    text = element_text(size=10),
-    axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank()) +
-  ggtitle("selbal") + 
-  scale_y_continuous(limits = c(0, 1))
-selbal_bar
-# ggsave(
-#   filename = paste0(
-#     date,
-#     file.end0,
-#     "_", "selbal", ".png"),
-#   plot = selbal_bar,
-#   width = 6, height = 3.25, units = c("in")
-# )
-
 # codacore1 ####################################################################
 codacore1_props0 = data.frame(
   taxa = rownames(codacore1_sbps),
@@ -238,33 +171,37 @@ codacore1_props = codacore1_props0 %>% filter(active != 0) %>%
 codacore1_props = codacore1_props %>% 
   mutate(taxa = factor(taxa, levels = unique(codacore1_props$taxa)))
 
-codacore1_bar = ggplot(
-  codacore1_props, aes(x = taxa, y = proportion, fill = side)) + 
+# combine ######################################################################
+
+method_props = rbind(
+  cbind(slr_spec_props, method = "slr-spec"), 
+  # cbind(slr_spec_props, method = "slr-hier"), 
+  cbind(selbal_props, method = "selbal"), 
+  cbind(codacore1_props, method = "codacore") 
+) %>% 
+  arrange(side, desc(proportion)) %>% 
+  mutate(method = factor(
+    method, labels = c("slr-spec", "selbal", "codacore"), 
+    levels = rev(c("selbal", "codacore", "slr-spec"))))
+
+barplt = ggplot(
+  method_props, aes(x = reorder(taxa, -proportion, function(vec) sum(vec, na.rm = TRUE)), y = proportion, fill = side)) + 
+  facet_wrap(vars(method), ncol = 1) +
   geom_bar(stat = "identity") + 
-  coord_flip() + 
+  # coord_flip() + 
   theme_bw() +
   theme(
     text = element_text(size=10),
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
     axis.title.y = element_blank()) +
-  ggtitle("codacore") + 
   scale_y_continuous(limits = c(0, 1))
-codacore1_bar
-# ggsave(
-#   filename = paste0(
-#     date,
-#     file.end0,
-#     "_", "codacore1", ".png"),
-#   plot = codacore1_bar,
-#   width = 6, height = 3.25, units = c("in")
-# )
-
-
-
-
-
-
-
-
-
+barplt
+ggsave(
+  filename = paste0(
+    date,
+    file.end0,
+    "_", "selectionbars", ".png"),
+  plot = barplt,
+  width = 6, height = 9, units = c("in")
+)

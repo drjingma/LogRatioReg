@@ -6,7 +6,7 @@ rm(list=ls())
 current_date = "20221214"
 
 logtime = TRUE
-label_means = TRUE
+label_means = FALSE
 
 ################################################################################
 # libraries and settings
@@ -46,7 +46,7 @@ ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
 b0 = 0 # 0
-b1 = 10 # 6, 8
+b1 = 6 # 6, 8
 c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 a0 = 0 # 0
 ulimit = 0.5

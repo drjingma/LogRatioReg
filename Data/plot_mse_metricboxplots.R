@@ -2,8 +2,8 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-data_set = "Crohn" # "HIV", "sCD14", "Crohn"
-date = "20221207"
+data_set = "sCD14" # "HIV", "sCD14", "Crohn"
+date = "20221214"
 
 response_type = NA
 if(data_set %in% c("sCD14")){
@@ -12,8 +12,8 @@ if(data_set %in% c("sCD14")){
   response_type = "binary"
 }
 
-label_means = TRUE
 logtime = TRUE
+label_means = TRUE
 
 ################################################################################
 # libraries and settings

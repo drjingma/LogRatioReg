@@ -55,14 +55,15 @@ res = foreach(
   nlam = 100
   scaling = TRUE
   sigma_x = 0.1
-  SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+  # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
   # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
   # SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
+  SBP.true = matrix(c(1, 1, 1, 1, 1, -1, rep(0, p - 6)))
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-  b0 = 1 # 0
-  b1 = 6 # 6, 10
+  b0 = 1 # 0, 1
+  b1 = 6 # 6
   c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
   a0 = 0 # 0
   ulimit = 0.5

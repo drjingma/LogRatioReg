@@ -6,7 +6,7 @@ rm(list=ls())
 current_date = "20221214"
 
 logtime = TRUE
-label_means = TRUE
+label_means = FALSE
 
 ################################################################################
 # libraries and settings
@@ -304,3 +304,25 @@ ggsave(
   plot = plt_main,
   width = width, height = height, units = c("in")
 )
+
+################################################################################
+# case control ratio
+
+casecontrol_ratio_sims = matrix(NA, nrow = numSims, ncol = 2)
+for(i in 1:numSims){
+  print(i)
+  
+  # compositional lasso
+  data_sims_tmp = readRDS(paste0(
+    output_dir, "/data", file.end0,
+    "_sim", i, ".rds"
+  ))
+  
+  if(i == 1){
+    colnames(casecontrol_ratio_sims) = names(data_sims_tmp$yprop)
+  }
+  
+  casecontrol_ratio_sims[i, ] = data_sims_tmp$yprop
+}
+
+

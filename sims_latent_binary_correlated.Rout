@@ -74,14 +74,15 @@ Type 'q()' to quit R.
 +   nlam = 100
 +   scaling = TRUE
 +   sigma_x = 0.1
-+   SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
++   # SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 +   # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
 +   # SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
++   SBP.true = matrix(c(1, 1, 1, 1, 1, -1, rep(0, p - 6)))
 +   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 +   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 +   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-+   b0 = 1 # 0
-+   b1 = 6 # 6, 10
++   b0 = 0 # 0, 1
++   b1 = 6 # 6
 +   c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 +   a0 = 0 # 0
 +   ulimit = 0.5
@@ -509,185 +510,185 @@ Type 'q()' to quit R.
 +   ### fin ###
 +   # print(paste0("sim ", b, " completed successfully."))
 + }
-2022-12-17 11:37:12.191814: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:12.191870: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:13.961230: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:13.961271: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:15.099486: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:15.099561: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:17.880001: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:17.880077: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:17.880084: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:17.880384: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:17.880426: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:17.880435: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:17.880928: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:41:09.929376: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:41:09.929422: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:41:23.157094: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:41:23.157169: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:41:23.157180: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:41:23.157489: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:41:23.157534: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:41:23.157544: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:41:23.158154: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:18.051936: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:18.052026: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:18.052035: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:18.052321: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:18.052355: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:18.052362: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:18.052870: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:41:30.421938: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:41:30.422165: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:41:41.840164: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:41:41.840254: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:41:41.840262: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:41:41.840576: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:41:41.840625: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:41:41.840633: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:41:41.841140: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:18.193500: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:18.193556: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:18.193561: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:18.193762: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:18.193784: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:18.193789: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:18.194167: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:41:50.154299: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:41:50.154351: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:41:52.960875: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:41:52.960921: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:41:53.686644: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:41:53.686696: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:41:55.863913: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:41:55.864004: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:41:55.864015: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:41:55.864305: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:41:55.864342: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:41:55.864350: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:41:55.864819: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:19.372443: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:19.372482: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:19.573833: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:19.573876: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:21.550826: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:21.550863: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:21.925623: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:21.925680: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:21.925690: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:21.925900: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:21.925933: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:21.925941: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:21.926361: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:41:58.209689: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:41:58.209964: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:41:58.359808: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:41:58.359889: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:41:58.359896: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:41:58.360181: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:41:58.360218: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:41:58.360225: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:41:58.360637: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:22.088515: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:22.088572: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:22.088579: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:22.088793: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:22.088815: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:22.088833: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:22.089187: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:41:58.460528: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:41:58.460600: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:41:58.460608: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:41:58.460904: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:41:58.460937: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:41:58.460949: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:41:58.461415: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:22.679858: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:22.679905: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:24.582438: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:24.582495: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:24.582502: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:24.582730: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:24.582759: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:24.582765: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:24.583185: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:03.829579: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:03.829642: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:03.829648: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:03.829877: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:03.829902: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:03.829909: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:03.830364: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:25.939591: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:25.939647: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:25.939654: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:25.939876: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:25.939903: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:25.939911: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:25.940297: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:06.307356: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:06.307404: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:06.317429: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:06.317479: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:07.313204: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:07.313244: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:09.365379: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:09.365429: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:09.559382: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:09.559427: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:10.343669: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:10.343744: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:10.343754: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:10.344073: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:10.344120: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:10.344130: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:10.344649: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:26.156422: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:26.156483: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:26.246026: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:26.246060: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:26.297391: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:26.297436: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:26.426243: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:26.426285: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:26.511366: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:26.511408: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:28.913061: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:28.913116: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:28.961177: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:28.961240: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:28.961259: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:28.961496: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:28.961525: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:28.961531: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:28.961945: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:11.544667: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:11.544733: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:11.544740: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:11.544981: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:11.545010: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:11.545016: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:11.545453: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:29.148547: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:29.148615: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:29.148624: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:29.148888: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:29.148923: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:29.148930: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:29.149391: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:12.472096: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:12.472169: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:12.472183: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:12.472485: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:12.472540: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:12.472549: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:12.473000: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:29.374412: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:29.374480: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:29.374487: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:29.374742: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:29.374776: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:29.374782: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:29.375173: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:13.330739: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:13.330782: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:14.276172: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:14.276242: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:14.276250: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:14.276508: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:14.276538: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:14.276547: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:14.276973: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:29.466357: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:29.466412: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:29.466418: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:29.466631: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:29.466668: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:29.466674: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:29.467015: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:14.899758: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:14.899822: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:14.899832: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:14.900110: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:14.900152: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:14.900162: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:14.900613: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:29.687159: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:29.687217: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:29.687224: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:29.687437: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:29.687461: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:29.687468: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:29.687797: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:15.908990: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:15.909034: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:16.254048: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:16.254102: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:16.859821: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:16.859872: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:16.943441: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:16.943490: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:17.761449: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:17.761523: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:17.761532: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:17.761830: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:17.761872: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:17.761882: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:17.762379: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:32.071024: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:32.071075: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:32.071081: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:32.071271: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:32.071297: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:32.071303: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:32.071689: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:20.963691: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:20.963739: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:21.455166: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:21.455249: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:21.455261: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:21.455563: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:21.455627: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:21.455638: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:21.456121: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:32.944387: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:32.944429: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:33.100346: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:33.100393: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:36.075198: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:36.075241: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:36.634553: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:36.634595: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:38.188725: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:38.188777: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:38.188784: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:38.188961: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:38.188984: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:38.188990: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:38.189316: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:22.368278: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:22.368337: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:22.368344: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:22.368554: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:22.368577: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:22.368582: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:22.368933: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:38.209467: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:38.209522: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:38.209529: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:38.209753: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:38.209778: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:38.209784: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:38.210175: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:22.736304: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:22.736368: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:22.736375: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:22.736582: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:22.736605: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:22.736610: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:22.736998: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:41.551572: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:41.551640: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:41.551647: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:41.551879: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:41.551907: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:41.551913: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:41.552271: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:22.743418: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:22.743477: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:22.743485: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:22.743736: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:22.743766: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:22.743773: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:22.744206: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:42.252907: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:42.252965: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:42.252973: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:42.253174: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:42.253198: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:42.253204: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:42.253542: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:24.391120: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
+2022-12-17 12:42:24.391178: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2022-12-17 12:42:26.924002: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:26.924080: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:26.924089: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:26.924394: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:26.924448: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:26.924458: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:26.924894: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2022-12-17 11:37:48.733413: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/usr/lib/R/lib:/usr/lib/x86_64-linux-gnu:/usr/lib/jvm/default-java/lib/server:/home/patrick/anaconda3/pkgs/cudatoolkit-10.0.130-0/lib/
-2022-12-17 11:37:48.733477: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
-2022-12-17 11:37:55.473630: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
-2022-12-17 11:37:55.473691: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
-2022-12-17 11:37:55.473698: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
-2022-12-17 11:37:55.473925: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
-2022-12-17 11:37:55.473949: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
-2022-12-17 11:37:55.473955: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
-2022-12-17 11:37:55.474359: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+2022-12-17 12:42:31.826316: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2022-12-17 12:42:31.826412: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: patrick-desktop
+2022-12-17 12:42:31.826421: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: patrick-desktop
+2022-12-17 12:42:31.826684: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:200] libcuda reported version is: 470.161.3
+2022-12-17 12:42:31.826728: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:204] kernel reported version is: 470.141.3
+2022-12-17 12:42:31.826734: E tensorflow/stream_executor/cuda/cuda_diagnostics.cc:313] kernel version 470.141.3 does not match DSO version 470.161.3 -- cannot find working devices in this configuration
+2022-12-17 12:42:31.827186: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
 [1] 1
 
@@ -709,7 +710,7 @@ To enable them in other operations, rebuild TensorFlow with the appropriate comp
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -745,7 +746,7 @@ To enable them in other operations, rebuild TensorFlow with the appropriate comp
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 3 
 
 
 
@@ -817,7 +818,7 @@ To enable them in other operations, rebuild TensorFlow with the appropriate comp
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -889,7 +890,7 @@ To enable them in other operations, rebuild TensorFlow with the appropriate comp
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -956,7 +957,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 3 
 
 
 
@@ -1028,7 +1029,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 7 
 
 
 
@@ -1064,7 +1065,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 4 
 
 
 
@@ -1100,7 +1101,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 2 
 
 
 
@@ -1167,7 +1168,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 4 
 
 
 
@@ -1203,7 +1204,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 2 
 
 
 
@@ -1239,7 +1240,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -1414,7 +1415,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -1450,7 +1451,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 14 
+ The optimal number of variables is: 2 
 
 
 
@@ -1486,7 +1487,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -1522,7 +1523,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 2 
 
 
 
@@ -1558,7 +1559,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 2 
 
 
 
@@ -1625,7 +1626,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 12 
+ The optimal number of variables is: 2 
 
 
 
@@ -1661,7 +1662,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 6 
 
 
 
@@ -1697,7 +1698,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -1733,7 +1734,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 11 
+ The optimal number of variables is: 3 
 
 
 
@@ -1769,7 +1770,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 2 
 
 
 
@@ -1805,7 +1806,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -1908,7 +1909,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 8 
+ The optimal number of variables is: 2 
 
 
 
@@ -1944,7 +1945,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 3 
 
 
 
@@ -2083,7 +2084,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 5 
 
 
 
@@ -2119,7 +2120,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -2155,7 +2156,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -2191,7 +2192,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 5 
+ The optimal number of variables is: 3 
 
 
 
@@ -2227,7 +2228,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 2 
 
 
 
@@ -2263,7 +2264,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -2438,7 +2439,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 3 
 
 
 
@@ -2474,7 +2475,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 2 
 
 
 
@@ -2577,7 +2578,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 3 
 
 
 
@@ -2649,7 +2650,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 5 
 
 
 
@@ -2685,7 +2686,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 3 
 
 
 
@@ -2721,7 +2722,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -2788,7 +2789,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 15 
+ The optimal number of variables is: 2 
 
 
 
@@ -2824,7 +2825,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -2896,7 +2897,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -2932,7 +2933,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 5 
+ The optimal number of variables is: 2 
 
 
 
@@ -2968,7 +2969,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -3143,7 +3144,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -3179,7 +3180,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -3246,7 +3247,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 3 
 
 
 
@@ -3282,7 +3283,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 5 
+ The optimal number of variables is: 3 
 
 
 
@@ -3318,7 +3319,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 5 
+ The optimal number of variables is: 3 
 
 
 
@@ -3354,7 +3355,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 12 
+ The optimal number of variables is: 4 
 
 
 
@@ -3390,7 +3391,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 10 
+ The optimal number of variables is: 2 
 
 
 
@@ -3529,7 +3530,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 5 
+ The optimal number of variables is: 3 
 
 
 
@@ -3565,7 +3566,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -3601,7 +3602,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -3637,7 +3638,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -3704,7 +3705,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 3 
 
 
 
@@ -3776,7 +3777,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -3848,7 +3849,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -3884,7 +3885,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 8 
+ The optimal number of variables is: 2 
 
 
 
@@ -3951,7 +3952,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 2 
 
 
 
@@ -3987,7 +3988,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 5 
+ The optimal number of variables is: 2 
 
 
 
@@ -4023,7 +4024,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -4059,7 +4060,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 7 
+ The optimal number of variables is: 3 
 
 
 
@@ -4095,7 +4096,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 5 
 
 
 
@@ -4162,7 +4163,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 5 
 
 
 
@@ -4198,7 +4199,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -4234,7 +4235,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 2 
 
 
 
@@ -4270,7 +4271,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -4306,7 +4307,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 4 
 
 
 
@@ -4409,7 +4410,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 4 
 
 
 
@@ -4445,7 +4446,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 6 
+ The optimal number of variables is: 4 
 
 
 
@@ -4481,7 +4482,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -4553,7 +4554,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 4 
 
 
 
@@ -4620,7 +4621,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 5 
+ The optimal number of variables is: 2 
 
 
 
@@ -4656,7 +4657,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 3 
+ The optimal number of variables is: 2 
 
 
 
@@ -4692,7 +4693,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 2 
+ The optimal number of variables is: 3 
 
 
 
@@ -4764,7 +4765,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 8 
+ The optimal number of variables is: 4 
 
 
 
@@ -4800,7 +4801,7 @@ Loaded Tensorflow version 2.8.0
 #-------------------------------------------------------------# 
 ###############################################################
 
- The optimal number of variables is: 4 
+ The optimal number of variables is: 2 
 
 
 
@@ -4853,4 +4854,5 @@ There were 50 or more warnings (use warnings() to see the first 50)
 > 
 > proc.time()
     user   system  elapsed 
- 300.850    5.402 2568.854 
+ 534.676    8.706 4620.947 
+

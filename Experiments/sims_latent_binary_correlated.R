@@ -62,7 +62,7 @@ res = foreach(
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-  b0 = 1 # 0, 1
+  b0 = 0 # 0, 1
   b1 = 6 # 6
   c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
   a0 = 0 # 0

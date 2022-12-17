@@ -61,7 +61,7 @@ res = foreach(
   ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
   # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
   #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-  b0 = 0 # 0
+  b0 = 1 # 0
   b1 = 6 # 6
   c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
   a0 = 0 # 0
@@ -99,6 +99,7 @@ res = foreach(
     U.all = matrix(runif(min = -ulimit, max = ulimit, 2 * n), ncol = 1)
     # simulate y from latent variable
     y.all = rbinom(n = 2 * n, size = 1, p = as.vector(sigmoid(b0 + b1 * U.all)))
+    yprop = prop.table(table(y.all))
     # simulate X: 
     epsj.all = matrix(rnorm(2 * n * (p - 1)), nrow = (2 * n)) * sigma_x
     a1 = c.value * ilrtrans.true$ilr.trans.unscaled[-p] 
@@ -128,7 +129,8 @@ res = foreach(
     saveRDS(list(
       X = X, Y = Y, X.test = X.test, Y.test = Y.test, 
       SBP.true = SBP.true, llc.coefs.true = llc.coefs.true, 
-      llc.coefs.non0 = llc.coefs.non0
+      llc.coefs.non0 = llc.coefs.non0, 
+      yprop = yprop
     ),
     paste0(output_dir, "/data", file.end))
   }

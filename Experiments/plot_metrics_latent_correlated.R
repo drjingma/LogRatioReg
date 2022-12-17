@@ -6,7 +6,7 @@ rm(list=ls())
 current_date = "20221214"
 
 logtime = TRUE
-label_means = TRUE
+label_means = FALSE
 
 ################################################################################
 # libraries and settings

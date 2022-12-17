@@ -6,7 +6,7 @@ rm(list=ls())
 current_date = "20221214"
 
 logtime = TRUE
-label_means = FALSE
+label_means = TRUE
 
 ################################################################################
 # libraries and settings
@@ -38,13 +38,13 @@ intercept = TRUE
 scaling = TRUE
 tol = 1e-4
 sigma_x = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-b0 = 0 # 0
+b0 = 1 # 0
 b1 = 6 # 6
 c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 a0 = 0 # 0

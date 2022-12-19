@@ -3,7 +3,7 @@
 rm(list=ls())
 
 data_set = "sCD14" # "HIV", "sCD14", "Crohn"
-date = "20221214"
+date = "20221218"
 
 response_type = NA
 if(data_set %in% c("sCD14")){
@@ -14,6 +14,8 @@ if(data_set %in% c("sCD14")){
 
 logtime = TRUE
 label_means = TRUE
+
+remove_xaxis = TRUE
 
 ################################################################################
 # libraries and settings

@@ -2,8 +2,8 @@
 # Date: 8/10/2022
 rm(list=ls())
 
-data_set = "HIV" # "HIV", "sCD14", "Crohn"
-date = "20221214"
+data_set = "Crohn" # "HIV", "sCD14", "Crohn"
+date = "20221217"
 
 ################################################################################
 # libraries and settings
@@ -184,17 +184,27 @@ method_props = rbind(
     method, labels = c("slr-spec", "selbal", "codacore"), 
     levels = rev(c("selbal", "codacore", "slr-spec"))))
 
+if(data_set == "HIV"){
+  margin.add = 32
+} else if(data_set == "sCD14"){
+  margin.add = 31
+} else if(data_set == "Crohn"){
+  margin.add = 12
+}
+
 barplt = ggplot(
   method_props, aes(x = reorder(taxa, -proportion, function(vec) sum(vec, na.rm = TRUE)), y = proportion, fill = side)) + 
   facet_wrap(vars(method), ncol = 1) +
   geom_bar(stat = "identity") + 
   # coord_flip() + 
+  coord_cartesian(clip = "off") +
   theme_bw() +
   theme(
-    text = element_text(size=10),
+    text = element_text(size=8),
     axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank()) +
+    axis.text.x = element_text(angle = 45, hjust=1), 
+    axis.title.y = element_blank(),
+    plot.margin = margin(l = 0 + margin.add)) +
   scale_y_continuous(limits = c(0, 1))
 barplt
 ggsave(
@@ -203,5 +213,5 @@ ggsave(
     file.end0,
     "_", "selectionbars", ".png"),
   plot = barplt,
-  width = 6, height = 9, units = c("in")
+  width = 6.5, height = 6.5, units = c("in")
 )

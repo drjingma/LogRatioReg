@@ -3,10 +3,12 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-current_date = "20221214"
+current_date = "20221218"
 
 logtime = TRUE
 label_means = FALSE
+
+remove_xaxis = TRUE
 
 ################################################################################
 # libraries and settings
@@ -38,9 +40,9 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1
 sigma_x = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 # SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -263,16 +265,29 @@ if(label_means){
       data = means.gg, aes(label = mean, y = mean), # + 0.05 * yrange), 
       size = 2.25, color = "black") + theme_bw()
 }
-plt_main = plt_main + 
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(), 
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
-    axis.title.y = element_blank())
+if(remove_xaxis){
+  plt_main = plt_main +
+    theme_bw() +
+    theme(
+      axis.title.x = element_blank(), 
+      axis.text.x = element_blank(), 
+      axis.ticks.x = element_blank(), 
+      axis.title.y = element_blank()) + 
+    scale_color_manual(values = plt_colors)
+  width = 6
+  height = 3.5
+} else{
+  plt_main = plt_main +
+    theme_bw() +
+    theme(
+      axis.title.x = element_blank(), 
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+      axis.title.y = element_blank()) + 
+    scale_color_manual(values = plt_colors)
+  width = 6
+  height = 4
+}
 plt_main
-
-width = 6
-height = 4
 
 if(label_means){
   filename = paste0(

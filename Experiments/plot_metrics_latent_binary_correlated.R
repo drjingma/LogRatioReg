@@ -3,10 +3,10 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-current_date = "20221219"
+current_date = "20221220"
 
 logtime = TRUE
-label_means = TRUE
+label_means = FALSE
 
 remove_xaxis = TRUE
 
@@ -40,10 +40,8 @@ intercept = TRUE
 scaling = TRUE
 tol = 1e-4
 sigma_x = 0.1
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, 1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, 1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
@@ -321,24 +319,24 @@ ggsave(
   width = width, height = height, units = c("in")
 )
 
-################################################################################
-# case control ratio
-
-casecontrol_ratio_sims = matrix(NA, nrow = numSims, ncol = 2)
-for(i in 1:numSims){
-  print(i)
-  
-  # compositional lasso
-  data_sims_tmp = readRDS(paste0(
-    output_dir, "/data", file.end0,
-    "_sim", i, ".rds"
-  ))
-  
-  if(i == 1){
-    colnames(casecontrol_ratio_sims) = names(data_sims_tmp$yprop)
-  }
-  
-  casecontrol_ratio_sims[i, ] = data_sims_tmp$yprop
-}
+# ################################################################################
+# # case control ratio
+# 
+# casecontrol_ratio_sims = matrix(NA, nrow = numSims, ncol = 2)
+# for(i in 1:numSims){
+#   print(i)
+#   
+#   # compositional lasso
+#   data_sims_tmp = readRDS(paste0(
+#     output_dir, "/data", file.end0,
+#     "_sim", i, ".rds"
+#   ))
+#   
+#   if(i == 1){
+#     colnames(casecontrol_ratio_sims) = names(data_sims_tmp$yprop)
+#   }
+#   
+#   casecontrol_ratio_sims[i, ] = data_sims_tmp$yprop
+# }
 
 

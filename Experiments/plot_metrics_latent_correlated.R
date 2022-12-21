@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-current_date = "20221219"
+current_date = "20221220"
 
 logtime = TRUE
 label_means = TRUE
@@ -40,10 +40,8 @@ scaling = TRUE
 tol = 1e-4
 sigma_y = 0.1 # sigma (for y)
 sigma_x = 0.1 # sigma_j (for x)
-# SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, rep(0, p - 5)))
-# SBP.true = matrix(c(1, 1, 1, 1, -1, -1, rep(0, p - 6)))
-SBP.true = matrix(c(1, 1, 1, 1, 1, -1, rep(0, p - 6)))
+SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
+# SBP.true = matrix(c(1, 1, 1, 1, 1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)

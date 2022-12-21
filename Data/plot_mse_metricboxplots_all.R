@@ -2,10 +2,10 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-date = "20221218"
+date = "20221220"
 
 logtime = TRUE
-label_means = TRUE
+label_means = FALSE
 
 remove_xaxis = TRUE
 
@@ -337,7 +337,7 @@ if(remove_xaxis){
       axis.title.y = element_blank()) + 
     scale_color_manual(values = plt_colors)
   width = 6
-  height = 6
+  height = 4
 } else{
   plt_main = plt_main +
     theme_bw() +

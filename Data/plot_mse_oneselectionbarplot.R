@@ -2,8 +2,8 @@
 # Date: 8/10/2022
 rm(list=ls())
 
-data_set = "Crohn" # "HIV", "sCD14", "Crohn"
-date = "20221217"
+data_set = "HIV" # "HIV", "sCD14", "Crohn"
+date = "20221220"
 
 ################################################################################
 # libraries and settings
@@ -115,7 +115,7 @@ slr_spec_props = slr_spec_props0 %>% filter(active != 0) %>%
   dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
-    names_to = "side", values_to = "proportion") %>%
+    names_to = "Position", values_to = "proportion") %>%
   filter(proportion != 0)
 slr_spec_props = slr_spec_props %>% 
   mutate(taxa = factor(taxa, levels = unique(slr_spec_props$taxa)))
@@ -132,7 +132,7 @@ slr_hier_props = slr_hier_props0 %>% filter(active != 0) %>%
   dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
-    names_to = "side", values_to = "proportion") %>%
+    names_to = "Position", values_to = "proportion") %>%
   filter(proportion != 0)
 slr_hier_props = slr_hier_props %>% 
   mutate(taxa = factor(taxa, levels = unique(slr_hier_props$taxa)))
@@ -149,7 +149,7 @@ selbal_props = selbal_props0 %>% filter(active != 0) %>%
   dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
-    names_to = "side", values_to = "proportion") %>%
+    names_to = "Position", values_to = "proportion") %>%
   filter(proportion != 0)
 selbal_props = selbal_props %>% 
   mutate(taxa = factor(taxa, levels = unique(selbal_props$taxa)))
@@ -166,7 +166,7 @@ codacore1_props = codacore1_props0 %>% filter(active != 0) %>%
   dplyr::select(!(active)) %>% 
   pivot_longer(
     cols = numerator:denominator, 
-    names_to = "side", values_to = "proportion") %>%
+    names_to = "Position", values_to = "proportion") %>%
   filter(proportion != 0)
 codacore1_props = codacore1_props %>% 
   mutate(taxa = factor(taxa, levels = unique(codacore1_props$taxa)))
@@ -179,7 +179,7 @@ method_props = rbind(
   cbind(selbal_props, method = "selbal"), 
   cbind(codacore1_props, method = "codacore") 
 ) %>% 
-  arrange(side, desc(proportion)) %>% 
+  arrange(Position, desc(proportion)) %>% 
   mutate(method = factor(
     method, labels = c("slr-spec", "selbal", "codacore"), 
     levels = rev(c("selbal", "codacore", "slr-spec"))))
@@ -193,7 +193,7 @@ if(data_set == "HIV"){
 }
 
 barplt = ggplot(
-  method_props, aes(x = reorder(taxa, -proportion, function(vec) sum(vec, na.rm = TRUE)), y = proportion, fill = side)) + 
+  method_props, aes(x = reorder(taxa, -proportion, function(vec) sum(vec, na.rm = TRUE)), y = proportion, fill = Position)) + 
   facet_wrap(vars(method), ncol = 1) +
   geom_bar(stat = "identity") + 
   # coord_flip() + 
@@ -201,8 +201,12 @@ barplt = ggplot(
   theme_bw() +
   theme(
     text = element_text(size=8),
+    strip.text.x = element_text(size = 10),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8),
     axis.title.x = element_blank(), 
     axis.text.x = element_text(angle = 45, hjust=1), 
+    axis.text.y = element_text(size = 10), 
     axis.title.y = element_blank(),
     plot.margin = margin(l = 0 + margin.add)) +
   scale_y_continuous(limits = c(0, 1))
@@ -213,5 +217,5 @@ ggsave(
     file.end0,
     "_", "selectionbars", ".png"),
   plot = barplt,
-  width = 6.5, height = 6.5, units = c("in")
+  width = 6.5, height = 4, units = c("in")
 )

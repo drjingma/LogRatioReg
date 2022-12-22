@@ -2,8 +2,8 @@
 # Date: 8/10/2022
 rm(list=ls())
 
-data_set = "HIV" # "HIV", "sCD14", "Crohn"
-date = "20221220"
+data_set = "sCD14" # "HIV", "sCD14", "Crohn"
+date = "20221221"
 
 ################################################################################
 # libraries and settings
@@ -58,9 +58,10 @@ slr_spec_sbps = matrix(NA, nrow = p, ncol = numSplits)
 slr_hier_sbps = matrix(NA, nrow = p, ncol = numSplits)
 selbal_sbps = matrix(NA, nrow = p, ncol = numSplits)
 codacore1_sbps = matrix(NA, nrow = p, ncol = numSplits) # codacore has up to 5 balances selected...
+lrlasso_sbps = matrix(NA, nrow = p, ncol = numSplits) 
 # codacore2_sbps = matrix(NA, nrow = p, ncol = numSplits)
 rownames(slr_spec_sbps) <- rownames(slr_hier_sbps) <- rownames(selbal_sbps) <- 
-  rownames(codacore1_sbps) <- 
+  rownames(codacore1_sbps) <- rownames(lrlasso_sbps) <-
   # rownames(codacore2_sbps) <- 
   colnames(W)
 for(i in 1:numSplits){
@@ -97,6 +98,12 @@ for(i in 1:numSplits){
   # if(ncol(codacore_sbp_tmp) >= 2){
   #   codacore2_sbps[, i] = codacore_sbp_tmp[, 2]
   # }
+  
+  # lrlasso
+  lrlasso_sbps[, i] = readRDS(paste0(
+    output_dir, "/lrlasso2_sbp",
+    file.end0, "_sim", i, ".rds"
+  ))
   
 }
 ################################################################################
@@ -171,18 +178,35 @@ codacore1_props = codacore1_props0 %>% filter(active != 0) %>%
 codacore1_props = codacore1_props %>% 
   mutate(taxa = factor(taxa, levels = unique(codacore1_props$taxa)))
 
+# lrlasso ######################################################################
+lrlasso_props0 = data.frame(
+  taxa = rownames(lrlasso_sbps),
+  active = apply(lrlasso_sbps != 0, 1, function(row) mean(row)), 
+  numerator = apply(lrlasso_sbps == 1, 1, function(row) mean(row)), 
+  denominator = apply(lrlasso_sbps == -1, 1, function(row) mean(row))
+)
+lrlasso_props = lrlasso_props0 %>% filter(active != 0) %>%
+  arrange(active) %>% 
+  dplyr::select(!(active)) %>% 
+  pivot_longer(
+    cols = numerator:denominator, 
+    names_to = "Position", values_to = "proportion") %>%
+  filter(proportion != 0)
+lrlasso_props = lrlasso_props %>% 
+  mutate(taxa = factor(taxa, levels = unique(lrlasso_props$taxa)))
+
 # combine ######################################################################
 
 method_props = rbind(
-  cbind(slr_spec_props, method = "slr-spec"), 
+  cbind(slr_spec_props, method = "SLR-spec"), 
   # cbind(slr_spec_props, method = "slr-hier"), 
   cbind(selbal_props, method = "selbal"), 
-  cbind(codacore1_props, method = "codacore") 
+  cbind(codacore1_props, method = "CoDaCoRe"), 
+  cbind(lrlasso_props, method = "lrlasso")
 ) %>% 
   arrange(Position, desc(proportion)) %>% 
   mutate(method = factor(
-    method, labels = c("slr-spec", "selbal", "codacore"), 
-    levels = rev(c("selbal", "codacore", "slr-spec"))))
+    method, levels = c("selbal", "CoDaCoRe", "lrlasso", "SLR-spec")))
 
 if(data_set == "HIV"){
   margin.add = 32
@@ -217,5 +241,5 @@ ggsave(
     file.end0,
     "_", "selectionbars", ".png"),
   plot = barplt,
-  width = 6.5, height = 4, units = c("in")
+  width = 6.5, height = 6, units = c("in")
 )

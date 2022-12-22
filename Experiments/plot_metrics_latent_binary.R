@@ -3,7 +3,7 @@ rm(list=ls())
 #   explore various sigma_eps & rho values to get specified Rsquared values
 # Date: 8/24/2022
 
-current_date = "20221220"
+current_date = "20221221"
 
 logtime = TRUE
 label_means = TRUE
@@ -46,7 +46,7 @@ SBP.true = matrix(c(1, 1, 1, -1, -1, -1, rep(0, p - 6)))
 ilrtrans.true = getIlrTrans(sbp = SBP.true, detailed = TRUE)
 # ilrtrans.true$ilr.trans = transformation matrix (used to be called U) 
 #   = ilr.const*c(1/k+,1/k+,1/k+,1/k-,1/k-,1/k-,0,...,0)
-b0 = 0 # 0
+b0 = 1.75 # 0
 b1 = 6 # 6, 8
 c.value = 1 # a1 = c.value / k+ or c.value / k- or 0
 a0 = 0 # 0
@@ -143,12 +143,12 @@ slr_spec_auc_sims.gg =
   pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr-spec")
+  mutate("Method" = "SLR-spec")
 slr_hier_auc_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(slr_hier_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "slr-hier")
+  mutate("Method" = "SLR-hier")
 ###
 selbal_sims.gg = 
   pivot_longer(as.data.frame(data.table::rbindlist(selbal_sims_list)), 
@@ -159,7 +159,7 @@ codacore_sims.gg =
   pivot_longer(as.data.frame(data.table::rbindlist(codacore_sims_list)), 
                cols = everything(),
                names_to = "Metric") %>%
-  mutate("Method" = "codacore")
+  mutate("Method" = "CoDaCoRe")
 lrlasso_sims.gg =
   pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_sims_list)),
                cols = everything(),
@@ -209,8 +209,8 @@ data.gg = rbind(
     Method = factor(
       Method, 
       levels = c(
-        "selbal", "classo", "codacore", "lrlasso", 
-        "slr-spec", "slr-hier"
+        "selbal", "classo", "CoDaCoRe", "lrlasso", 
+        "SLR-spec", "SLR-hier"
       )
     )
   )
@@ -248,7 +248,7 @@ means.gg = data.gg_main %>%
   dplyr::summarize(mean = signif(mean(value, na.rm = TRUE), 2), yrange = first(yrange))
 
 plt_colors = gg_color_hue(6)
-names(plt_colors) = c("selbal", "classo", "codacore", "lrlasso", "slr-spec", "slr-hier")
+names(plt_colors) = c("selbal", "classo", "CoDaCoRe", "lrlasso", "SLR-spec", "SLR-hier")
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +

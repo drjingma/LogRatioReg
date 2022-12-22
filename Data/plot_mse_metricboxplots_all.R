@@ -2,10 +2,10 @@
 # Date: 8/25/2022
 rm(list=ls())
 
-date = "20221220"
+date = "20221221"
 
 logtime = TRUE
-label_means = FALSE
+label_means = TRUE
 
 remove_xaxis = TRUE
 
@@ -129,7 +129,7 @@ for(d in 1:length(data_sets)){
     
     # log-ratio lasso
     lrl_tmp = t(data.frame(readRDS(paste0(
-      output_dir, "/lrlasso_metrics",
+      output_dir, "/lrlasso2_metrics",
       file.end0, "_sim", i, ".rds"
     ))))
     rownames(lrl_tmp) = NULL
@@ -160,12 +160,12 @@ for(d in 1:length(data_sets)){
     pivot_longer(as.data.frame(data.table::rbindlist(slr_spec_master_list[[d]])),
                  cols = everything(),
                  names_to = "Metric") %>%
-    mutate("Method" = "slr-spec")
+    mutate("Method" = "SLR-spec")
   slr_hier.gg = 
     pivot_longer(as.data.frame(data.table::rbindlist(slr_hier_master_list[[d]])), 
                  cols = everything(),
                  names_to = "Metric") %>%
-    mutate("Method" = "slr-hier")
+    mutate("Method" = "SLR-hier")
   ###
   selbal.gg =
     pivot_longer(as.data.frame(data.table::rbindlist(selbal_master_list[[d]])),
@@ -183,7 +183,7 @@ for(d in 1:length(data_sets)){
     pivot_longer(as.data.frame(data.table::rbindlist(codacore_master_list[[d]])), 
                  cols = everything(),
                  names_to = "Metric") %>%
-    mutate("Method" = "codacore")
+    mutate("Method" = "CoDaCoRe")
   lrlasso.gg =
     pivot_longer(as.data.frame(data.table::rbindlist(lrlasso_master_list[[d]])),
                  cols = everything(),
@@ -228,8 +228,8 @@ for(d in 1:length(data_sets)){
       Method = factor(
         Method, 
         levels = c(
-          "selbal", "classo", "codacore", "lrlasso", 
-          "slr-spec", "slr-hier"
+          "selbal", "classo", "CoDaCoRe", "lrlasso", 
+          "SLR-spec", "SLR-hier"
         )
       )
     ) 
@@ -279,7 +279,7 @@ means.gg = data.gg_main %>%
   ungroup()
 
 plt_colors = gg_color_hue(6)[1:5]
-names(plt_colors) = c("selbal", "classo", "codacore", "lrlasso", "slr-spec")
+names(plt_colors) = c("selbal", "classo", "CoDaCoRe", "lrlasso", "SLR-spec")
 plt_main = ggplot(
   data.gg_main, 
   aes(x = Method, y = value, color = Method)) +
@@ -290,7 +290,6 @@ plt_main = ggplot(
   stat_summary(
     fun = mean, geom = "point", shape = 4, size = 1.5,
     color = "red")
-plt_main
 
 file.end0 = paste0(
   "_split", split.perc, 

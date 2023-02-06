@@ -1,42 +1,38 @@
-# About
+# Supervised Log-Ratios
 
-This repo provides code, data, and references for the supervised log-ratio project. 
+This repository contains the R code for reproducing the results in our paper titled ``Regression and Classification of Compositional Data via a novel Supervised Log Ratio Method,'' which are organized in three folders:
 
-## To-dos 05/25
+* Functions: Functions for various methods, e.g., our supervised log-ratio method, and utility functions for their comparison.
+* Experiments: Simulated data and results from comparing the methods on them.
+* Data: Results from comparing the methods on three real data sets.
 
-- Consider a semi-supervised experimental design. Check if unlabelled data are useful in spectral clustering with Aitchison similarity.
+If you are interested in fitting our supervised log-ratios method for your own analyses, please see the GitHub repository [drjingma/slr](https://github.com/drjingma/slr) for instructions on how to install the most updated version of our R package.
 
-## To-dos 05/18
+## Functions
 
-- Explore a new method that combines feature screening and spectral clustering
+This folder contains:
 
-- Use the Crohn's data set to study classification problems
+* slrs.R: An implementation of our supervised log-ratio method.
+* compositionallasso.R: An implementation of compositional lasso for regression problems.
+* codalasso.R: An implementation of codalasso (i.e., compositional lasso for classification problems), borrowed from this [GitHub repository](https://github.com/cunningham-lab/codacore) which incorporates cross-validation. We edit this code to perform cross-validation on AUC.
+* logratiolasso.R: An implementation of log-ratio lasso borrowed from this [GitHub repository](https://github.com/stephenbates19/logratiolasso) which we have edited to be able to use the 1-standard error rule in model selection via cross-validation.
+* util.R: Helper functions that are used to facilitate data simulation and the comparison of the methods on metrics of interest.
 
-- Consider an example with 2 latent variables.
+## Experiments
 
-**RCode**
+This folder contains:
 
-This folder consists of the code used in simulations.
+* R scripts for generating the simulated data and comparing the methods on each of them by computing various metrics. These metrics results are saved in the outputs subfolder. 
+    * sims_latent.R: simulated data with continuous response, generated from independent covariates.
+    * sims_latent_binary.R: simulated data with binary response, generated from independent covariates.
+    * sims_latent_correlated.R: simulated data with continuous response, generated from correlated covariates using an error term with exponential decay.
+    * sims_latent_binary_correlated.R: simulated data with binary response, generated from correlated covariates using an error term with exponential decay.
+* R scripts for plotting the results that compare the methods on the four simulation settings above: plot_metrics_latent.R, plot_metrics_latent_binary.R, plot_metrics_latent_correlated.R, and plot_metrics_latent_binary_correlated.R.
 
+## Data
 
-**COAT-master**
+This folder contains:
 
-This folder consists of code for implementing the COAT method (see [here](https://doi.org/10.1080/01621459.2018.1442340) for the paper).
-
-**Refs**
-
-A few relevant papers:
-
-  - Pawlowsky-Glahn, Vera, Juan José Egozcue, and Raimon Tolosana Delgado. "Principal balances." (2011).
-  - Lin, Wei, et al. "Variable selection in regression with compositional covariates." Biometrika 101.4 (2014): 785-797.
-  - Rivera-Pinto, J., et al. "Balances: a new perspective for microbiome analysis." mSystems 3.4 (2018).
-  - Bates, Stephen, and Robert Tibshirani. "Log‐ratio lasso: Scalable, sparse estimation for log‐ratio models." Biometrics 75.2 (2019): 613-624.
-  - Quinn, Thomas P., and Ionas Erb. "Interpretable Log Contrasts for the Classification of Health Biomarkers: a New Approach to Balance Selection." mSystems 5.2 (2020).
-  - Gordon-Rodriguez, et al. "Learning sparse log-ratios for high-throughput sequencing data." Bioinformatics. 38(1):157--163 (2022) 
-
-**Data**
-
-The first data set comes from the following papers. The response variable is BMI, and predictors are microbiome otu data obtained with 16S. There are 98 samples and 87 variables. Note the predictors (`X`) are sparse. In addition, the total number of reads varies greatly across samples. To remove the artificial differences in total reads, we transformed the raw counts into compositional data after replacing zero counts by the maximum rounding error 0.5. This is a common practice as seen in Lin et al. (2014).  
-
-  - Wu, Gary D., et al. "Linking long-term dietary patterns with gut microbial enterotypes." Science 334.6052 (2011): 105-108.
-  - Lin, Wei, et al. "Variable selection in regression with compositional covariates." Biometrika 101.4 (2014): 785-797.
+* R scripts for fitting the methods on a Crohn's disease data set, an HIV data set, and an HIV inflammation data set: Crohn_fit.R, HIV_fit.R, sCD14_fit.R.
+* R scripts for randomly splitting the three data sets into training/test sets and comparing the methods on each of them by computing various metrics. These metrics results are saved in the outputs subfolder: Crohn_metrics.R, HIV_metrics.R, sCD14_metrics.R.
+* R scripts for plotting the results from each method and comparisons of the methods.

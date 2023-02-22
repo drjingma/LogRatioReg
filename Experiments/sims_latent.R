@@ -2,8 +2,7 @@
 # Date: 8/16/2022
 rm(list=ls())
 
-################################################################################
-# libraries and settings
+# libraries and settings----
 
 output_dir = "Experiments/outputs/metrics"
 
@@ -24,9 +23,7 @@ registerDoRNG(rng.seed)
 # Other simulation settings
 numSims = 100
 
-################################################################################
 # Simulations #
-################################################################################
 
 registerDoRNG(rng.seed)
 res = foreach(
@@ -88,8 +85,8 @@ res = foreach(
     "_sim", b,
     ".rds")
   
-  ##############################################################################
-  # generate data
+
+  # generate data ----
   if(file.exists(paste0(output_dir, "/data", file.end))){
     data.tmp = readRDS(paste0(output_dir, "/data", file.end))
     X = data.tmp$X
@@ -138,10 +135,9 @@ res = foreach(
     paste0(output_dir, "/data", file.end))
   }
   
-  ##############################################################################
-  # compositional lasso
+
+  # compositional lasso ----
   # -- fits a linear log contrast model
-  ##############################################################################
   source("Functions/compositionallasso.R")
   
   start.time = Sys.time()
@@ -183,8 +179,7 @@ res = foreach(
   ),
   paste0(output_dir, "/classo_metrics", file.end))
 
-  ##############################################################################
-  # slr
+  # slr-spectral----
   #   screen.method = "wald"
   #   cluster.method = "spectral"
   #   response.type = "continuous"
@@ -192,7 +187,7 @@ res = foreach(
   #   zeta = 0
   #   type.measure = "mse"
   # -- fits a balance regression model with one balance
-  ##############################################################################
+
   start.time = Sys.time()
   slrspeccv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
@@ -245,8 +240,7 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_spectral_metrics", file.end))
 
-  ##############################################################################
-  # slr
+  # slr-hier----
   #   screen.method = "wald"
   #   cluster.method = "hierarchical"
   #   response.type = "continuous"
@@ -254,7 +248,7 @@ res = foreach(
   #   zeta = 0
   #   type.measure = "mse"
   # -- fits a balance regression model with one balance
-  ##############################################################################
+
   start.time = Sys.time()
   slrhiercv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
@@ -307,10 +301,10 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_hierarchical_metrics", file.end))
 
-  ##############################################################################
-  # selbal method (a balance regression method)
+
+  # selbal method (a balance regression method)----
   # -- fits a balance regression model with one balance
-  ##############################################################################
+
   library(selbal) # masks stats::cor()
   slbl.data = getSelbalData(X = X, y = Y, classification = FALSE)
 
@@ -357,10 +351,9 @@ res = foreach(
   ),
   paste0(output_dir, "/selbal_metrics", file.end))
 
-  ##############################################################################
-  # CoDaCoRe
+  # CoDaCoRe----
   # -- fits a balance regression model with one balance
-  ##############################################################################
+
   library(codacore)
 
   start.time = Sys.time()
@@ -428,10 +421,10 @@ res = foreach(
   ),
   paste0(output_dir, "/codacore1_metrics", file.end))
 
-  ##############################################################################
-  # Log-Ratio Lasso
+
+  # Log-Ratio Lasso ----
   # -- regresses on pairwise log-ratios
-  ##############################################################################
+
   library(logratiolasso)
   source("Functions/logratiolasso.R")
   Wc = scale(log(X), center = TRUE, scale = FALSE)
@@ -473,8 +466,5 @@ res = foreach(
   paste0(output_dir, "/lrlasso_metrics", file.end))
   
   
-  ##############################################################################
-  ##############################################################################
-  ##############################################################################
   ### fin ###
 }

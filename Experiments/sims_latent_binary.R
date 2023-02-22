@@ -2,8 +2,7 @@
 # Date: 7/19/2022
 rm(list=ls())
 
-################################################################################
-# libraries and settings
+# libraries and settings ----
 
 output_dir = "Experiments/outputs/metrics_binary"
 
@@ -24,9 +23,7 @@ registerDoRNG(rng.seed)
 # Other simulation settings
 numSims = 100
 
-################################################################################
 # Simulations #
-################################################################################
 
 registerDoRNG(rng.seed)
 res = foreach(
@@ -44,8 +41,7 @@ res = foreach(
   source("Functions/slrs.R")
   source("Functions/util.R")
   
-  # Tuning parameters###########################################################
-  
+  # Tuning parameters----
   # Settings to toggle with
   settings.name = "BinaryResponse"
   hparam = "1se"
@@ -84,8 +80,7 @@ res = foreach(
     "_sim", b,
     ".rds")
   
-  ##############################################################################
-  # generate data
+  # generate data ----
   if(file.exists(paste0(output_dir, "/data", file.end))){
     data.tmp = readRDS(paste0(output_dir, "/data", file.end))
     X = data.tmp$X
@@ -136,10 +131,8 @@ res = foreach(
     paste0(output_dir, "/data", file.end))
   }
   
-  ##############################################################################
-  # compositional lasso (a linear log contrast method)
+  # compositional lasso (a linear log contrast method) ----
   #   validate on AUC
-  ##############################################################################
   source("Functions/codalasso.R")
   
   start.time = Sys.time()
@@ -178,8 +171,7 @@ res = foreach(
   ),
   paste0(output_dir, "/classo_metrics", file.end))
 
-  ##############################################################################
-  # slr
+  # slr----
   #   screening.method = "wald"
   #   cluster.method = "spectral"
   #   response.type = "binary"
@@ -187,7 +179,6 @@ res = foreach(
   #   zeta = 0
   #   type.measure = "auc"
   # -- fits a balance regression model with one balance
-  ##############################################################################
   start.time = Sys.time()
   slrspec1cv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "spectral",
@@ -244,8 +235,7 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_spectral_metrics", file.end))
 
-  ##############################################################################
-  # slr
+  # slr-hier ----
   #   screening.method = "wald"
   #   cluster.method = "hierarchical"
   #   response.type = "binary"
@@ -253,7 +243,6 @@ res = foreach(
   #   zeta = 0
   #   type.measure = "auc"
   # -- fits a balance regression model with one balance
-  ##############################################################################
   start.time = Sys.time()
   slrhier1cv = cv.slr(
     x = X, y = Y, screen.method = "wald", cluster.method = "hierarchical",
@@ -310,10 +299,8 @@ res = foreach(
   ),
   paste0(output_dir, "/slr_hierarchical_metrics", file.end))
 
-  ##############################################################################
-  # selbal method (a balance regression method)
+  # selbal method (a balance regression method) ----
   # -- fits a balance regression model with one balance
-  ##############################################################################
   library(selbal) # masks stats::cor()
   slbl.data = getSelbalData(
     X = X, y = Y, classification = TRUE, levels = c(0, 1), labels = c(0, 1))
@@ -362,10 +349,8 @@ res = foreach(
   ),
   paste0(output_dir, "/selbal_metrics", file.end))
 
-  ##############################################################################
-  # CoDaCoRe (a balance regression method)
+  # CoDaCoRe (a balance regression method) ----
   # -- fits a balance regression model with one balance
-  ##############################################################################
   library(codacore)
   
   start.time = Sys.time()
@@ -436,10 +421,8 @@ res = foreach(
   ),
   paste0(output_dir, "/codacore1_metrics", file.end))
 
-  ##############################################################################
-  # Log-Ratio Lasso
+  # Log-Ratio Lasso ----
   # -- regresses on pairwise log-ratios
-  ##############################################################################
   library(logratiolasso)
   source("Functions/logratiolasso.R")
   Wc = scale(log(X), center = TRUE, scale = FALSE)
@@ -480,9 +463,6 @@ res = foreach(
   ),
   paste0(output_dir, "/lrlasso_metrics", file.end))
   
-  ##############################################################################
-  ##############################################################################
-  ##############################################################################
   ### fin ###
   # print(paste0("sim ", b, " completed successfully."))
 }

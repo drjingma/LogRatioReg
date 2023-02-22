@@ -20,11 +20,9 @@ This folder contains:
 
 This folder contains:
 * R scripts for generating the simulated data and comparing the methods on each of them by computing various metrics. These metrics results are saved in the outputs subfolder. 
-    * `sims_latent.R`: simulated data with continuous response, generated from independent covariates.
-    * `sims_latent_binary.R`: simulated data with binary response, generated from independent covariates.
-    * `sims_latent_correlated.R`: simulated data with continuous response, generated from correlated covariates using an error term with exponential decay.
-    * `sims_latent_binary_correlated.R`: simulated data with binary response, generated from correlated covariates using an error term with exponential decay.
-* R scripts for plotting the results that compare the methods on the four simulation settings above: `plot_metrics_latent.R`, `plot_metrics_latent_binary.R`, `plot_metrics_latent_correlated.R`, and `plot_metrics_latent_binary_correlated.R`.
+    * `sims_latent.R`: simulated data with continuous response
+    * `sims_latent_binary.R`: simulated data with binary response
+* R scripts for plotting the results that compare the methods on the two simulation settings above: `plot_metrics_latent.R`, `plot_metrics_latent_binary.R`, 
 
 ## Data
 

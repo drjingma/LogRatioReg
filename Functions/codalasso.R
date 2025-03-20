@@ -462,12 +462,14 @@ trapezInteg  <-  function(x,y) {
 
 
 codalasso = function(
-    x, y, numFolds = 5, gamma = 1, type.measure = "AUC", lambdas = NULL, 
+    x, y, numFolds = 5, gamma = 1, type.measure = "auc", lambdas = NULL, 
     stratify = FALSE
-  ) {
+) {
   
   if(is.null(lambdas)){
-    lambdas = seq(1.0, 0.0, -0.01)
+    # use the lambda values from fitting a regular lasso regression
+    fit.glmnet <- glmnet::glmnet(log(x),y,family = binomial,nlambda=100)
+    lambdas = fit.glmnet$lambda #seq(1.0, 0.0, -0.01)
   }
   
   # Naive way of splitting equally into folds:
@@ -491,7 +493,7 @@ codalasso = function(
         betas_mat[, i] = cll$betas[-1]
         yHat = predict(cll, x[foldIdx == j,])
         yObs = y[foldIdx == j]
-        if(type.measure == "AUC"){
+        if(type.measure == "auc"){
           # scores[i, j] = tryCatch({
           #   pROC::auc(
           #     yObs,yHat, levels = c(0, 1), direction = "<", quiet = TRUE)

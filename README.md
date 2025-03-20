@@ -2,8 +2,8 @@
 
 This repository contains the R code for reproducing the results in our paper titled ``Variable selection for balance regression with applications to microbiome compositional data'' which are organized in three folders:
 * Functions/: Functions for various methods, e.g., our supervised log-ratio method, and utility functions for their comparison.
-* Simulations/: Simulated data and results from comparing the methods on them.
-* Data/: Results from comparing the methods on two case studies.
+* Experiments/: Simulated data and R scripts for comparing the methods on simulations.
+* Data/: Data and R scripts for comparing the methods on two case studies.
 
 If you are interested in fitting our supervised log-ratios method for your own analyses, please see the GitHub repository [drjingma/slr](https://github.com/drjingma/slr) for instructions on how to install the most updated version of our R package.
 
@@ -20,13 +20,13 @@ This folder contains:
 * R scripts for generating the simulated data. 
     * `sim_data_IBD.R`: simulate data based on the IBD study
     * `sim_data_CRC.R`: simulate data based on the CRC study
-* R scripts for comparing different methods on the simulated data. 
+* R scripts for running different methods on the simulated data. 
     * `run_IBD.R`: run different methods on data simulated based on the IBD study
     * `run_CRC.R`: run different methods on data simulated based on the CRC study
 * R scripts for summarizing the results: 
     * `metrics.R`: need to adjust the `condition` argument to toggle between different 
 settings
-* Parameters/: a folder where each file contains the parameters (`X`, `X.test`, `sbp`) used in one simulation setting.
+* Parameters/: a folder where each file contains the parameters (`X`, `X.test`, `sbp`) used in one simulation setting. These parameters can also be obtained by running the `sim_data_IBD.R` or `sim_data_CRC.R` script. 
 
 ## Data
 

@@ -207,7 +207,6 @@ if (run_CLASSO){
 
 # slr - constrained PC  ----
 if (run_slr_PC){
-  source("lib/PLS-PBs/R: functions/fBalChip.r")
   cat('slr with constrained PC ...','\n')
   start.time = Sys.time()
   slrPCcv = cv.slr(x = X, y = Y, covar=NULL, method = "C", 
